@@ -139,6 +139,16 @@ by hand for the map filter.
     the id and region too.
   - Works offline: ids still work without names; names just show as "Map 1234".
 
+### Refresh map info
+
+- On the first launch (and maybe after a game build change), check the API/wiki for new or
+  updated map info, instead of only looking up maps as you visit them (PR #9's cache).
+- A button in the settings window to force that check now.
+- To discuss: how to handle a map's name or id changing (renames, maps that are removed or
+  replaced with a new id). Filters store ids, so a rename only changes the label, but a new id
+  would silently stop a filter from matching. Options: keep old names alongside new ones, flag
+  filters that use ids the API no longer knows, or offer to swap to the new id.
+
 ## Open questions
 
 - Whisper sending: find a way that needs no Tab key (test in game before building the sender).
