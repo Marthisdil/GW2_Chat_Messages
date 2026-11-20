@@ -6,6 +6,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Macro editor:** select a macro to edit the messages it sends.
+  - **Lines mode:** each line has a channel dropdown (Current channel, Say, Map, Party, Squad, Team,
+    Reply, Whisper, Emote, Guild, Guild 1-6) and a message box.
+    - Whisper lines have a recipient box. Squad lines have a **Broadcast** option, which only works
+      while you're the commander.
+    - You can add lines (a new line copies the previous line's channel and recipient), remove them,
+      and reorder them with the up and down arrows. A macro can have up to 50 lines.
+  - **Raw text mode:** type the lines the way you would in game, one per row, for example
+    `/s hello`, `/w [Name] hi`, `/d ! Stack on tag`, `/g3 hi`.
+    - The German, French and Spanish chat commands are understood too, and so are the long forms
+      such as `/say` and `/guild3`.
+    - Anything else starting with `/` (like `/wave`) is sent as typed.
+    - A "Will send" list under the text shows how each row will be sent.
+  - Each line shows a live character count against the game's 199-character limit, turning red
+    when a line is too long. Lines with no message, and whispers with no recipient, are flagged.
+  - In the tree, each macro is coloured by the channel of its first line.
 - **Macro library window:** a folder tree on the left and details of the selected item on the right.
   - Create folders and macros at the top level or inside any folder. Folders can be nested up to
     6 levels deep.

@@ -1,24 +1,15 @@
 // Standalone tests for src/MacroTree.cpp (no Nexus, no ImGui).
 // Build and run: tools\run_tests.ps1 (CI runs it too).
 
-#include <cstdio>
 #include <string>
 
 #include <nlohmann/json.hpp>
 
 #include "MacroTree.h"
+#include "TestCheck.h"
 
 using namespace MacroTree;
 using nlohmann::json;
-
-static int s_Failures = 0;
-static int s_Checks   = 0;
-
-#define CHECK(cond)                                                                 \
-    do {                                                                            \
-        s_Checks++;                                                                 \
-        if (!(cond)) { s_Failures++; std::printf("FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond); } \
-    } while (0)
 
 // Builds a chain of nested folders aCount deep under aParent and returns the deepest.
 static Node* Chain(Tree& t, Node* aParent, int aCount, const std::string& aPrefix = "L")
@@ -254,7 +245,7 @@ static void TestChannels()
     }
 }
 
-int main()
+void RunMacroTreeTests()
 {
     TestDepthLimit();
     TestMoveDepth();
@@ -266,6 +257,4 @@ int main()
     TestJsonRoundTrip();
     TestJsonDamaged();
     TestChannels();
-    std::printf("%d checks, %d failures\n", s_Checks, s_Failures);
-    return s_Failures == 0 ? 0 : 1;
 }

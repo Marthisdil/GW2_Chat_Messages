@@ -83,12 +83,14 @@
   </ItemDefinitionGroup>
 
   <ItemGroup>
+    <ClCompile Include="src\ChatLine.cpp" />
     <ClCompile Include="src\entry.cpp" />
     <ClCompile Include="src\MacroTree.cpp" />
     <ClCompile Include="src\Storage.cpp" />
     <ClCompile Include="src\Ui.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\ChatLine.h" />
     <ClInclude Include="src\Globals.h" />
     <ClInclude Include="src\MacroTree.h" />
     <ClInclude Include="src\resource.h" />
