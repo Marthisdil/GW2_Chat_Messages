@@ -28,6 +28,14 @@ static Context Ctx()
         lines = it->second;
         return true;
     };
+    c.MapName = [](std::string& name, std::string&) { name = "Lion's Arch"; return true; };
+    c.FetchUrl = [](const std::string& url, std::string& body, std::string& err) {
+        if (url == "https://example.test/build") { body = R"({"id": 171234, "name": "Line\nbreak", "ok": true, "f": 1.5,
+                                                       "list": [{"name": "first"}, {"name": "second"}], "nothing": null})"; return true; }
+        if (url == "https://example.test/bad") { body = "<html>"; return true; }
+        err = "couldn't reach the address.";
+        return false;
+    };
     return c;
 }
 
@@ -104,6 +112,42 @@ static void TestSafePath()
     CHECK(!IsSafeRelativePath("./x.txt"));
 }
 
+static void TestMap()
+{
+    CHECK(X("We're in {map}!") == "We're in Lion's Arch!");
+    CHECK(!E("{map extra}").empty());
+
+    Context c = Ctx();
+    c.MapName = [](std::string&, std::string& err) { err = "the map name couldn't be looked up."; return false; };
+    CHECK(Expand("{map}", c).Error == "{map}: the map name couldn't be looked up.");
+    c.MapName = nullptr;
+    CHECK(!Expand("{map}", c).Error.empty());
+}
+
+static void TestJson()
+{
+    CHECK(X("{json id https://example.test/build}") == "171234");
+    CHECK(X("{json name https://example.test/build}") == "Line break"); // newlines become spaces
+    CHECK(X("{json ok https://example.test/build}") == "true");
+    CHECK(X("{json f https://example.test/build}") == "1.5");
+    CHECK(X("{json list.1.name https://example.test/build}") == "second");
+    CHECK(X("{JSON list.0.name HTTPS://example.test/build}").empty()); // the URL is passed as typed
+    CHECK(!E("{json list https://example.test/build}").empty());       // a list isn't one value
+    CHECK(!E("{json nothing https://example.test/build}").empty());    // null
+    CHECK(!E("{json list.5.name https://example.test/build}").empty()); // past the end
+    CHECK(!E("{json missing https://example.test/build}").empty());
+    CHECK(!E("{json id https://example.test/bad}").empty());           // not JSON
+    CHECK(!E("{json id https://example.test/down}").empty());          // download failed
+    CHECK(!E("{json id ftp://example.test/build}").empty());           // http(s) only
+    CHECK(!E("{json id file:///C:/x.json}").empty());
+    CHECK(!E("{json https://example.test/build}").empty());            // missing path
+
+    std::string out, err;
+    CHECK(JsonValue("[1, [2, 3]]", "1.0", out, err) && out == "2");
+    CHECK(JsonValue("{\"a\": {\"b\": \"c\"}}", "a.b", out, err) && out == "c");
+    CHECK(!JsonValue("{\"a\": 1}", "", out, err));
+}
+
 static void TestHas()
 {
     CHECK(HasPlaceholders("at {time}"));
@@ -120,5 +164,7 @@ void RunPlaceholderTests()
     TestRandom();
     TestTxt();
     TestSafePath();
+    TestMap();
+    TestJson();
     TestHas();
 }

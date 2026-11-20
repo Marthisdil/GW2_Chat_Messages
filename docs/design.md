@@ -71,16 +71,23 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
     `{random}` (0-100), `{random max}` (0-max), `{random min max}` (inclusive, swapped if
     reversed), `{txt file}` (a random non-blank line), `{txt file line}` (1-based), and `{nexus}`
     (bhm's `{blish}`: "Chat Messages v0.1.0").
-  - Next PR: `{map}` (current map name, from a cached GW2 API `/v2/maps` lookup, which also gives
-    the filter editor map names) and `{json path url}`.
+  - Also built: `{map}` (the current map's name) and `{json path url}` (one value from a JSON
+    page: dot-separated path, numbers index arrays, like bhm; objects, lists and null are refused;
+    http/https only, at most 512 KB, 3 s timeouts).
+  - Map names: `src/MapNames.*` asks `https://api.guildwars2.com/v2/maps?ids=...&lang=en` (no API
+    key) and caches the names in `<GW2>\addons\Chat Messages\maps.json`. The current map is
+    looked up in the background whenever it changes; ids the API doesn't know aren't asked again
+    for 5 minutes. A bad cache file is just rebuilt. The filter editor shows names instead of ids.
+    English only until the multi-language UI (docs/todo.md).
   - Syntax: `{name arg arg}`, case-insensitive, `"quotes"` for arguments with spaces.
   - Differences from bhm, on purpose: an unknown `{word}` is sent as typed (bhm drops the whole
     line), and a known placeholder that fails stops the whole macro with a message (bhm silently
     drops that line).
   - `{txt}` files must be inside `<GW2>\addons\Chat Messages\` (relative path, no `..`, no
     drive), at most 1 MB, UTF-8. This keeps an imported macro from typing out other files.
-  - Filled in on the render thread in `Sender::Start`, before the plan is built, so the 199-unit
-    check uses the real text and nothing is typed if a placeholder fails. Text from a file isn't
+  - Filled in on the sender's worker thread (`{map}` and `{json}` may wait on the network), before
+    the plan is built, so the 199-unit check uses the real text and nothing is typed if a
+    placeholder fails. The status shows "Preparing..." meanwhile. Text from a file isn't
     expanded again. The editor shows "~" on lengths of lines with placeholders.
   - Waypoint and other chat links (`[&BDAEAAA=]`) need no feature: they're typed as text and the
     game turns them into links.
@@ -136,7 +143,8 @@ Rules this addon follows:
   is typing), when the game is not focused, or when not in gameplay (`NexusLink.IsGameplay`).
 - **Every step is verified.** After opening chat, wait (bounded) for `IsTextboxFocused`. After
   each Enter, wait for it to clear. If anything fails, close chat with a single Escape (only if
-  the box is still focused) and abort the rest of the macro.
+  the box is still focused, and only if we opened it: a chat box the user opened is never
+  touched) and abort the rest of the macro.
 - **Avoid Tab where possible.** Whisper handling will be tested in game first, to look for a way
   that needs no Tab. If Tab is needed, it is only sent while the whisper box is verified as
   focused, and focus is verified as released afterwards.
@@ -182,6 +190,5 @@ policy and mention the behaviour when registering with Raidcore.
    tested in game)*
 5. Per-macro hotkeys, Quick Access and pop-up nested menus, game-mode and map filters. *(done;
    not yet tested in game)*
-6. Placeholders: local ones *(done; not yet tested in game)*, then `{map}` with a cached GW2 API
-   map-name lookup and `{json}`.
+6. Placeholders, with a cached GW2 API map-name lookup. *(done; not yet tested in game)*
 7. Import/export with preview, `.txt` import/export and link-file sync.

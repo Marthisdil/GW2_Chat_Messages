@@ -12,6 +12,7 @@
 
 #include "Globals.h"
 #include "Hotkeys.h"
+#include "MapNames.h"
 #include "Sender.h"
 #include "Ui.h"
 #include "resource.h"
@@ -79,6 +80,7 @@ namespace
             reinterpret_cast<void (*)(void*, void*)>(g_Api->ImguiFree));
 
         // Initialise state before registering anything that can call back into us.
+        MapNames::Init(); // before Ui and Sender, which ask it for names
         Ui::Init();
         Sender::Init();  // its WndProc hook only reacts to our own private message
         Hotkeys::Init(); // its WndProc hook only reads key presses, never blocks them
@@ -116,6 +118,7 @@ namespace
         Hotkeys::Shutdown(); // no new presses from here on
         Sender::Shutdown(); // joins the send thread, then removes the WndProc hook
         Ui::Shutdown();     // saves pending changes
+        MapNames::Shutdown(); // stops its lookup thread, saves maps.json
 
         LogF(LOGL_INFO, "Unloaded.");
         g_Api = nullptr;

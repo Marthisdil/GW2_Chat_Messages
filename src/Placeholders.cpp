@@ -3,6 +3,8 @@
 #include <cctype>
 #include <cstdio>
 
+#include <nlohmann/json.hpp>
+
 namespace
 {
     std::string Lower(std::string s)
@@ -58,7 +60,21 @@ namespace
         return true;
     }
 
-    const char* const kNames[] = {"time", "hour", "min", "today", "random", "txt", "nexus"};
+    const char* const kNames[] = {"time", "hour", "min", "today", "random", "txt", "nexus", "map", "json"};
+
+    bool IsWebLink(const std::string& aUrl)
+    {
+        const std::string l = Lower(aUrl.substr(0, 8));
+        return (l.rfind("https://", 0) == 0 && aUrl.size() > 8) || (l.rfind("http://", 0) == 0 && aUrl.size() > 7);
+    }
+
+    // Chat is one line: newlines and tabs in fetched text become spaces.
+    std::string OneLine(std::string s)
+    {
+        for (char& c : s)
+            if (c == '\n' || c == '\r' || c == '\t') c = ' ';
+        return s;
+    }
 
     bool IsKnown(const std::string& aLowerName)
     {
@@ -147,6 +163,24 @@ namespace
             aOut = used[static_cast<size_t>(line - 1)];
             return true;
         }
+        if (aName == "map")
+        {
+            if (!aArgs.empty()) { aError = tag + "it doesn't take anything after the name."; return false; }
+            std::string why;
+            if (!c.MapName || !c.MapName(aOut, why)) { aError = tag + (why.empty() ? "the map name isn't known." : why); return false; }
+            aOut = OneLine(aOut);
+            return true;
+        }
+        if (aName == "json")
+        {
+            if (aArgs.size() != 2) { aError = tag + "use {json path url}, e.g. {json name https://api.guildwars2.com/v2/build}."; return false; }
+            if (!IsWebLink(aArgs[1])) { aError = tag + "the address must start with https:// or http://."; return false; }
+            std::string body, why;
+            if (!c.FetchUrl || !c.FetchUrl(aArgs[1], body, why)) { aError = tag + (why.empty() ? "the download failed." : why); return false; }
+            if (!Placeholders::JsonValue(body, aArgs[0], aOut, why)) { aError = tag + why; return false; }
+            aOut = OneLine(aOut);
+            return true;
+        }
         aError = tag + "unknown placeholder.";
         return false;
     }
@@ -203,6 +237,54 @@ bool Placeholders::HasPlaceholders(const std::string& aText)
     return false;
 }
 
+bool Placeholders::JsonValue(const std::string& aJson, const std::string& aPath, std::string& aOut, std::string& aError)
+{
+    const nlohmann::json doc = nlohmann::json::parse(aJson, nullptr, false);
+    if (doc.is_discarded()) { aError = "the page isn't valid JSON."; return false; }
+    if (aPath.empty()) { aError = "the path is empty."; return false; }
+
+    const nlohmann::json* cur = &doc;
+    size_t start = 0;
+    while (start <= aPath.size())
+    {
+        size_t end = aPath.find('.', start);
+        if (end == std::string::npos) end = aPath.size();
+        const std::string seg = aPath.substr(start, end - start);
+        long long index = 0;
+        if (cur->is_array() && ParseInt(seg, index))
+        {
+            if (index < 0 || index >= static_cast<long long>(cur->size()))
+            {
+                aError = "\"" + seg + "\" is past the end of the list.";
+                return false;
+            }
+            cur = &(*cur)[static_cast<size_t>(index)];
+        }
+        else if (cur->is_object() && cur->contains(seg))
+        {
+            cur = &(*cur)[seg];
+        }
+        else
+        {
+            aError = "\"" + aPath + "\" wasn't found in the page.";
+            return false;
+        }
+        start = end + 1;
+    }
+
+    if (cur->is_string()) aOut = cur->get<std::string>();
+    else if (cur->is_boolean()) aOut = cur->get<bool>() ? "true" : "false";
+    else if (cur->is_number_integer()) aOut = std::to_string(cur->get<long long>());
+    else if (cur->is_number_unsigned()) aOut = std::to_string(cur->get<unsigned long long>());
+    else if (cur->is_number_float()) aOut = cur->dump();
+    else
+    {
+        aError = "\"" + aPath + "\" isn't a single value (it's a list, an object or empty).";
+        return false;
+    }
+    return true;
+}
+
 bool Placeholders::IsSafeRelativePath(const std::string& aPath)
 {
     if (aPath.empty() || aPath[0] == '/' || aPath[0] == '\\') return false;
@@ -231,6 +313,8 @@ const std::vector<Placeholders::Info>& Placeholders::List()
         {"{random min max}",       "a random number from min to max"},
         {"{txt file}",             "a random line from a text file in the addon folder"},
         {"{txt file line}",        "that line of the file (1 = first)"},
+        {"{map}",                  "the name of the map you're on"},
+        {"{json path url}",        "one value from a JSON page, e.g. {json id https://...}"},
         {"{nexus}",                "this addon's name and version"},
     };
     return kList;

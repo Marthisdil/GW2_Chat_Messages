@@ -28,6 +28,10 @@ namespace Placeholders
         // Reads a text file relative to the addon folder (already checked by IsSafeRelativePath).
         // Returns false with aError set if it can't.
         std::function<bool(const std::string& aRelPath, std::vector<std::string>& aLines, std::string& aError)> ReadLines;
+        // The current map's name. May block briefly (a cached GW2 API lookup).
+        std::function<bool(std::string& aName, std::string& aError)> MapName;
+        // Downloads aUrl (http/https only, already checked). May block briefly.
+        std::function<bool(const std::string& aUrl, std::string& aBody, std::string& aError)> FetchUrl;
     };
 
     struct Result
@@ -37,6 +41,10 @@ namespace Placeholders
     };
 
     Result Expand(const std::string& aText, const Context& aContext);
+
+    // One value from a JSON document: aPath is dot-separated, numbers index arrays
+    // ("data.0.name"). Strings, numbers and true/false work; objects, arrays and null don't.
+    bool JsonValue(const std::string& aJson, const std::string& aPath, std::string& aOut, std::string& aError);
 
     // Whether aText has at least one known placeholder (for "filled in when sent" hints).
     bool HasPlaceholders(const std::string& aText);

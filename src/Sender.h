@@ -25,6 +25,7 @@ namespace Sender
         size_t      Lines = 0;  // lines to send in this macro
         std::string Message;    // what happened (Done / Failed)
         uint64_t    MacroId = 0;
+        uint64_t    Seq = 0;    // goes up each time a send ends (Done or Failed), so none is missed
     };
 
     void Init();     // in AddonLoad, after g_Api is set
