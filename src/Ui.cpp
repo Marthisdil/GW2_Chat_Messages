@@ -11,6 +11,7 @@
 
 #include "ChatLine.h"
 #include "Globals.h"
+#include "Hotkeys.h"
 #include "MacroTree.h"
 #include "Sender.h"
 #include "Storage.h"
@@ -101,14 +102,29 @@ namespace
     bool           s_SendNoteError = false;
     double         s_SendNoteUntil = 0.0;
 
-    void SendMacro(const Node& aMacro)
+    bool s_SendViaHotkey = false; // the current/last send came from a hotkey: report failures as alerts
+
+    // A short Nexus on-screen alert: the only feedback a hotkey has when the library is closed.
+    void Alert(const std::string& aText)
     {
+        const std::string text = std::string(kAddonName) + ": " + aText;
+        g_Api->GUI_SendAlert(text.c_str());
+    }
+
+    void SendMacro(const Node& aMacro, bool aFromHotkey = false)
+    {
+        if (aFromHotkey && Sender::IsBusy()) return; // one macro at a time; extra presses are ignored
         std::string error;
-        if (Sender::Start(aMacro.Id, aMacro.Lines, error)) return;
+        if (Sender::Start(aMacro.Id, aMacro.Lines, error))
+        {
+            s_SendViaHotkey = aFromHotkey;
+            return;
+        }
         s_SendNote      = error;
         s_SendNoteError = true;
         s_SendNoteUntil = ImGui::GetTime() + kStatusShowSec;
         s_SendSeen      = Sender::GetStatus().State; // already reported here
+        if (aFromHotkey) Alert(aMacro.Name + ": " + error);
     }
 
     void PollSender()
@@ -121,6 +137,112 @@ namespace
             s_SendNote      = st.Message;
             s_SendNoteError = st.State == Sender::EState::Failed;
             s_SendNoteUntil = ImGui::GetTime() + kStatusShowSec;
+            if (s_SendNoteError && s_SendViaHotkey)
+            {
+                const Node* m = s_Tree.Find(st.MacroId);
+                Alert((m ? m->Name + ": " : std::string()) + st.Message);
+            }
+        }
+    }
+
+    // --- Hotkeys ------------------------------------------------------------------------------
+    // Presses are read on the window thread (Hotkeys.cpp) and handled here, on the render thread.
+
+    uint64_t s_CaptureFor = 0; // macro getting a new hotkey (0 = none)
+
+    void CancelCapture()
+    {
+        Hotkeys::CancelCapture();
+        s_CaptureFor = 0;
+    }
+
+    void HandleHotkeys()
+    {
+        Hotkeys::SetUiTyping(ImGui::GetIO().WantTextInput);
+
+        // A capture only lasts while its macro is on screen.
+        if (s_CaptureFor && (!s_ShowMainWindow || s_SelectedId != s_CaptureFor)) CancelCapture();
+
+        Hotkey::Combo combo;
+        bool cancelled = false;
+        if (Hotkeys::PopCapture(combo, cancelled))
+        {
+            Node* m = s_Tree.Find(s_CaptureFor);
+            s_CaptureFor = 0;
+            if (!cancelled && m && m->IsMacro())
+            {
+                const std::string why = Hotkey::Refusal(combo);
+                if (!why.empty()) SetStatus(why);
+                else
+                {
+                    m->Hotkey = combo;
+                    MarkDirty();
+                }
+            }
+        }
+
+        while (Hotkeys::PopPress(combo))
+        {
+            if (s_CaptureFor) continue;
+            const std::vector<Node*> macros = s_Tree.MacrosWithHotkey(combo);
+            if (macros.empty()) continue;
+            if (macros.size() > 1)
+            {
+                Alert(Hotkey::ToString(combo) + " is set on " + std::to_string(macros.size()) +
+                      " macros, so nothing was sent. Give each macro its own hotkey.");
+                continue;
+            }
+            SendMacro(*macros[0], true);
+        }
+    }
+
+    void DrawHotkeyRow(Node& aMacro)
+    {
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted("Hotkey:");
+        ImGui::SameLine();
+        if (s_CaptureFor == aMacro.Id && Hotkeys::IsCapturing())
+        {
+            ImGui::TextColored(kWarnColor, "Press a key or mouse button (Escape cancels)...");
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Cancel")) CancelCapture();
+            return;
+        }
+
+        if (aMacro.Hotkey.Empty()) ImGui::TextDisabled("None");
+        else ImGui::TextUnformatted(Hotkey::ToString(aMacro.Hotkey).c_str());
+        ImGui::SameLine();
+        if (ImGui::SmallButton(aMacro.Hotkey.Empty() ? "Set..." : "Change..."))
+        {
+            s_CaptureFor = aMacro.Id;
+            Hotkeys::StartCapture();
+        }
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Then press the key you want, with Ctrl, Alt or Shift if you like.\n"
+                              "Mouse 3 (middle), Mouse 4 and Mouse 5 work too.\n"
+                              "The key still does its normal job in game, so pick one you don't use there.\n"
+                              "Hotkeys don't fire while you're typing in chat or in a text box.");
+        if (!aMacro.Hotkey.Empty())
+        {
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Clear##hotkey"))
+            {
+                aMacro.Hotkey = {};
+                MarkDirty();
+            }
+            const std::vector<Node*> users = s_Tree.MacrosWithHotkey(aMacro.Hotkey);
+            if (users.size() > 1)
+            {
+                std::string names;
+                for (const Node* n : users)
+                    if (n != &aMacro) names += (names.empty() ? "" : ", ") + n->Name;
+                ImGui::TextColored(kWarnColor, "Also set on: %s. A shared hotkey sends nothing.", names.c_str());
+            }
+            else if (!aMacro.Hotkey.HasModifier() && aMacro.Hotkey.Key < 0x60 && aMacro.Hotkey.Key > Hotkey::kVkXButton2)
+            {
+                ImGui::TextColored(kWarnColor, "Plain letters, numbers and keys like Space are usually game keys. "
+                                               "Adding Ctrl, Alt or Shift is safer.");
+            }
         }
     }
 
@@ -134,6 +256,7 @@ namespace
             if (s_SendNoteError) ImGui::TextColored(kErrorColor, "%s", s_SendNote.c_str());
             else ImGui::TextDisabled("%s", s_SendNote.c_str());
         }
+        else ImGui::NewLine(); // callers put this after SameLine: end the row
     }
 
     Node* NodeOrRoot(uint64_t aId)
@@ -306,7 +429,8 @@ namespace
             // Macros take their first line's channel colour, like in bhm-chat-macros.
             const EChannel first = aNode.Lines.empty() ? EChannel::Current : aNode.Lines.front().Channel;
             ImGui::PushStyleColor(ImGuiCol_Text, ChannelColorVec(first));
-            ImGui::TreeNodeEx("##node", flags, "%s", aNode.Name.c_str());
+            if (aNode.Hotkey.Empty()) ImGui::TreeNodeEx("##node", flags, "%s", aNode.Name.c_str());
+            else ImGui::TreeNodeEx("##node", flags, "%s  [%s]", aNode.Name.c_str(), Hotkey::ToString(aNode.Hotkey).c_str());
             ImGui::PopStyleColor();
         }
 
@@ -694,6 +818,7 @@ namespace
                               "Needs your Chat key set in Nexus > Options > Game Keybinds.");
         ImGui::SameLine();
         DrawSendStatus();
+        DrawHotkeyRow(aMacro);
         ImGui::Separator();
 
         int mode = static_cast<int>(s_EditMode);
@@ -850,6 +975,7 @@ void Ui::Shutdown()
 void Ui::Render()
 {
     PollSender();
+    HandleHotkeys();
     if (s_ShowMainWindow) DrawMainWindow();
     if (s_Dirty && ImGui::GetTime() >= s_SaveAt) SaveNow();
 }

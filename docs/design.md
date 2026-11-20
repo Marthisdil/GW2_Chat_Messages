@@ -11,7 +11,7 @@ A Nexus addon that sends pre-written chat messages. It is modelled on the Blish 
 | Tree depth | At most **6 levels of folders** (root → folder 1 → … → folder 6). Macros can sit at the root or in any folder. |
 | Features | Every chat feature from bhm-chat-macros, including raw edit mode and `.txt` import/export. **No voice commands.** |
 | Multi-line | A macro is an ordered list of lines. Each line has its own channel and its own message. One trigger sends the lines in order. |
-| Hotkeys | Each macro can have a hotkey. CTRL, ALT and SHIFT modifiers are allowed, and so are mouse buttons. |
+| Hotkeys | Each macro can have a hotkey. CTRL, ALT and SHIFT modifiers are allowed, and so are mouse buttons. Built into the addon, set in the macro editor (not Nexus keybinds). |
 | Import/export | Folder structure is carried along. An import **always shows a preview** (folders created, where each macro goes, conflicts) and changes nothing until the user confirms. |
 | Game usability | Top priority: the addon must never break normal game input. See "Input safety". |
 
@@ -119,9 +119,20 @@ Rules this addon follows:
   sent per macro, because Mumble lags a frame and a second Escape would open the game menu.
 - The step sequence is built by `src/SendPlan.cpp` (no Nexus code, unit tested) and executed by
   `src/Sender.cpp`. In-game checks: `docs/in-game-tests.md`.
-- **Hotkeys use Nexus InputBinds.** Macros are registered **with no default key**
-  (`"(null)"`), so the addon never takes a key the user has not chosen. Keys and mouse buttons
-  are assigned in Nexus's own keybind settings.
+- **Hotkeys are built in (decided 2026-11-20), not Nexus InputBinds.** Each macro's hotkey is
+  set in the macro editor ("Set...", then press the key) and saved in `macros.json` as text
+  (`"hotkey": "Ctrl+Shift+F1"`), so it travels with import/export. A macro has no hotkey until the
+  user sets one. Rules (`src/Hotkey.*`, unit tested; `src/Hotkeys.*` reads the presses):
+  - Presses are read in a WndProc hook and **never blocked or changed**: the key still reaches the
+    game. The user picks keys they don't use in game; plain letters and numbers get a warning.
+  - Keyboard keys plus Mouse 3, 4 and 5, with Ctrl, Alt and Shift. Refused: left/right mouse,
+    Escape, modifier keys alone, and plain Tab, Enter, Space and Backspace.
+  - Ignored: auto-repeat, a focused game text box (Mumble), ImGui text input in any addon
+    (`WantTextInput`), and outside gameplay.
+  - The window thread only queues the press. The render thread matches it against the tree and
+    starts the sender. A hotkey set on more than one macro sends nothing and shows an alert.
+  - A hotkey send that fails shows a Nexus alert, since the library window may be closed.
+  - Only the Nexus toggle keybind for the library window stays a Nexus InputBind (`"(null)"`).
 
 ## Policy note
 
@@ -137,6 +148,7 @@ policy and mention the behaviour when registering with Raidcore.
 3. Macro editor: fancy and raw modes, parser and serializer, character count. *(done)*
 4. Sender: the safe input pipeline (focus, `WM_CHAR`, verification), test button. *(done; not yet
    tested in game)*
-5. Per-macro hotkeys, Quick Access and pop-up nested menus, game-mode and map filters.
+5. Per-macro hotkeys *(done; not yet tested in game)*, Quick Access and pop-up nested menus,
+   game-mode and map filters.
 6. Placeholders (plus the GW2 API map, waypoint and point-of-interest cache).
 7. Import/export with preview, `.txt` import/export and link-file sync.
