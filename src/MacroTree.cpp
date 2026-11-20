@@ -1,0 +1,516 @@
+#include "MacroTree.h"
+
+#include <algorithm>
+#include <cctype>
+#include <cstdio>
+#include <random>
+#include <unordered_set>
+
+#include <nlohmann/json.hpp>
+
+using nlohmann::json;
+
+namespace MacroTree
+{
+    namespace
+    {
+        struct ChannelInfo { const char* Key; const char* Label; };
+
+        constexpr ChannelInfo kChannels[] = {
+            {"current", "Current channel"},
+            {"emote",   "Emote"},
+            {"say",     "Say"},
+            {"map",     "Map"},
+            {"party",   "Party"},
+            {"squad",   "Squad"},
+            {"team",    "Team"},
+            {"reply",   "Reply"},
+            {"whisper", "Whisper"},
+            {"guild",   "Guild"},
+            {"guild1",  "Guild 1"},
+            {"guild2",  "Guild 2"},
+            {"guild3",  "Guild 3"},
+            {"guild4",  "Guild 4"},
+            {"guild5",  "Guild 5"},
+            {"guild6",  "Guild 6"},
+        };
+        static_assert(sizeof(kChannels) / sizeof(kChannels[0]) == static_cast<size_t>(EChannel::Count),
+                      "kChannels must list every EChannel");
+
+        // Guards against stack overflow on hostile or corrupt files. Far above kMaxFolderDepth.
+        constexpr int kMaxParseDepth = 64;
+
+        std::string Lower(const std::string& s)
+        {
+            std::string out = s;
+            for (char& c : out)
+                if (static_cast<unsigned char>(c) < 0x80) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+            return out;
+        }
+
+        std::string IdToString(uint64_t aId)
+        {
+            char buf[17];
+            std::snprintf(buf, sizeof(buf), "%016llx", static_cast<unsigned long long>(aId));
+            return buf;
+        }
+
+        uint64_t IdFromString(const std::string& s)
+        {
+            if (s.empty() || s.size() > 16) return 0;
+            uint64_t v = 0;
+            for (char c : s)
+            {
+                int d;
+                if (c >= '0' && c <= '9') d = c - '0';
+                else if (c >= 'a' && c <= 'f') d = c - 'a' + 10;
+                else if (c >= 'A' && c <= 'F') d = c - 'A' + 10;
+                else return 0;
+                v = (v << 4) | static_cast<uint64_t>(d);
+            }
+            return v;
+        }
+
+        const char* TypeWord(ENodeType t) { return t == ENodeType::Folder ? "folder" : "macro"; }
+
+        Node* FindIn(const Node& aNode, uint64_t aId)
+        {
+            for (const auto& child : aNode.Children)
+            {
+                if (child->Id == aId) return child.get();
+                if (Node* found = FindIn(*child, aId)) return found;
+            }
+            return nullptr;
+        }
+
+        size_t IndexInParent(const Node& aNode)
+        {
+            const auto& siblings = aNode.Parent->Children;
+            for (size_t i = 0; i < siblings.size(); i++)
+                if (siblings[i].get() == &aNode) return i;
+            return siblings.size();
+        }
+
+        json NodeToJson(const Node& n)
+        {
+            json j;
+            j["type"] = TypeWord(n.Type);
+            j["id"]   = IdToString(n.Id);
+            j["name"] = n.Name;
+            if (n.IsFolder())
+            {
+                j["expanded"] = n.Expanded;
+                json children = json::array();
+                for (const auto& c : n.Children) children.push_back(NodeToJson(*c));
+                j["children"] = std::move(children);
+            }
+            else
+            {
+                json lines = json::array();
+                for (const Line& l : n.Lines)
+                {
+                    json jl = {{"channel", ChannelKey(l.Channel)}, {"message", l.Message}};
+                    if (l.Channel == EChannel::Whisper) jl["whisper_to"] = l.WhisperTo;
+                    if (l.Channel == EChannel::Squad) jl["squad_broadcast"] = l.SquadBroadcast;
+                    lines.push_back(std::move(jl));
+                }
+                j["lines"] = std::move(lines);
+                json modes = json::array();
+                if (n.GameModes & GM_PvE) modes.push_back("pve");
+                if (n.GameModes & GM_WvW) modes.push_back("wvw");
+                if (n.GameModes & GM_PvP) modes.push_back("pvp");
+                j["game_modes"] = std::move(modes);
+                j["map_ids"]    = n.MapIds;
+                if (!n.LinkFile.empty()) j["link_file"] = n.LinkFile;
+            }
+            return j;
+        }
+
+        std::string StringField(const json& j, const char* aKey)
+        {
+            auto it = j.find(aKey);
+            return it != j.end() && it->is_string() ? it->get<std::string>() : std::string();
+        }
+
+        struct Parser
+        {
+            std::unordered_set<uint64_t> SeenIds;
+            std::vector<Node*>           NeedIdNodes; // given ids after parsing, so fresh ids can't collide
+            std::vector<std::string>*    Warnings = nullptr;
+            bool                         WarnedDepth = false;
+
+            void Warn(std::string s) { if (Warnings) Warnings->push_back(std::move(s)); }
+
+            // Parses the children of a folder json into aFolder. aLevel = aFolder's folder level.
+            void ParseChildren(const json& aJson, Node& aFolder, int aLevel)
+            {
+                auto it = aJson.find("children");
+                if (it == aJson.end() || !it->is_array()) return;
+                for (const json& jc : *it)
+                {
+                    if (!jc.is_object()) { Warn("Skipped an entry that isn't a folder or macro."); continue; }
+                    const std::string type = StringField(jc, "type");
+                    ENodeType t;
+                    if (type == "folder") t = ENodeType::Folder;
+                    else if (type == "macro") t = ENodeType::Macro;
+                    else { Warn("Skipped an entry of unknown type \"" + type + "\"."); continue; }
+
+                    if (t == ENodeType::Folder && aLevel + 1 > kMaxParseDepth)
+                    {
+                        Warn("Skipped folders nested too deeply to read.");
+                        continue;
+                    }
+
+                    auto node = std::make_unique<Node>();
+                    node->Type   = t;
+                    node->Parent = &aFolder;
+                    node->Name   = Tree::CleanName(StringField(jc, "name"));
+                    if (node->Name.empty()) node->Name = t == ENodeType::Folder ? "New folder" : "New macro";
+
+                    const uint64_t id = IdFromString(StringField(jc, "id"));
+                    if (id != 0 && SeenIds.insert(id).second) node->Id = id;
+                    else NeedIdNodes.push_back(node.get());
+
+                    if (t == ENodeType::Folder)
+                    {
+                        if (aLevel + 1 > kMaxFolderDepth && !WarnedDepth)
+                        {
+                            Warn("Some folders are nested deeper than " + std::to_string(kMaxFolderDepth) +
+                                 " levels. They were kept, but you can't add more folders inside them.");
+                            WarnedDepth = true;
+                        }
+                        node->Expanded = jc.value("expanded", true);
+                        ParseChildren(jc, *node, aLevel + 1);
+                    }
+                    else
+                    {
+                        ParseMacro(jc, *node);
+                    }
+                    aFolder.Children.push_back(std::move(node));
+                }
+                MakeNamesUnique(aFolder);
+            }
+
+            void ParseMacro(const json& j, Node& n)
+            {
+                auto lines = j.find("lines");
+                if (lines != j.end() && lines->is_array())
+                {
+                    for (const json& jl : *lines)
+                    {
+                        if (!jl.is_object()) continue;
+                        Line l;
+                        l.Channel        = ChannelFromKey(StringField(jl, "channel"));
+                        l.Message        = StringField(jl, "message");
+                        l.WhisperTo      = StringField(jl, "whisper_to");
+                        auto sb = jl.find("squad_broadcast");
+                        l.SquadBroadcast = sb != jl.end() && sb->is_boolean() && sb->get<bool>();
+                        n.Lines.push_back(std::move(l));
+                    }
+                }
+                auto modes = j.find("game_modes");
+                if (modes != j.end() && modes->is_array())
+                {
+                    uint8_t m = GM_None;
+                    for (const json& jm : *modes)
+                    {
+                        if (!jm.is_string()) continue;
+                        const std::string s = jm.get<std::string>();
+                        if (s == "pve") m |= GM_PvE;
+                        else if (s == "wvw") m |= GM_WvW;
+                        else if (s == "pvp") m |= GM_PvP;
+                    }
+                    n.GameModes = m == GM_None ? static_cast<uint8_t>(GM_All) : m;
+                }
+                auto maps = j.find("map_ids");
+                if (maps != j.end() && maps->is_array())
+                    for (const json& jm : *maps)
+                        if (jm.is_number_integer()) n.MapIds.push_back(jm.get<int>());
+                n.LinkFile = StringField(j, "link_file");
+            }
+
+            // Two siblings of the same type with the same name: rename the later one "Name (2)" etc.
+            void MakeNamesUnique(Node& aFolder)
+            {
+                for (size_t i = 0; i < aFolder.Children.size(); i++)
+                {
+                    Node& a = *aFolder.Children[i];
+                    for (size_t k = 0; k < i; k++)
+                    {
+                        const Node& b = *aFolder.Children[k];
+                        if (b.Type != a.Type || Lower(b.Name) != Lower(a.Name)) continue;
+                        const std::string old = a.Name;
+                        for (int n = 2;; n++)
+                        {
+                            std::string candidate = Tree::CleanName(old + " (" + std::to_string(n) + ")");
+                            bool taken = false;
+                            for (const auto& s : aFolder.Children)
+                                if (s.get() != &a && s->Type == a.Type && Lower(s->Name) == Lower(candidate)) taken = true;
+                            if (!taken) { a.Name = candidate; break; }
+                        }
+                        Warn("Renamed duplicate " + std::string(TypeWord(a.Type)) + " \"" + old + "\" to \"" + a.Name + "\".");
+                        break;
+                    }
+                }
+            }
+        };
+    }
+
+    const char* ChannelKey(EChannel c)
+    {
+        const size_t i = static_cast<size_t>(c);
+        return i < static_cast<size_t>(EChannel::Count) ? kChannels[i].Key : kChannels[0].Key;
+    }
+
+    const char* ChannelLabel(EChannel c)
+    {
+        const size_t i = static_cast<size_t>(c);
+        return i < static_cast<size_t>(EChannel::Count) ? kChannels[i].Label : kChannels[0].Label;
+    }
+
+    EChannel ChannelFromKey(const std::string& aKey)
+    {
+        for (size_t i = 0; i < static_cast<size_t>(EChannel::Count); i++)
+            if (aKey == kChannels[i].Key) return static_cast<EChannel>(i);
+        return EChannel::Current;
+    }
+
+    Tree::Tree() : m_Root(std::make_unique<Node>())
+    {
+        m_Root->Type = ENodeType::Folder;
+        m_Root->Expanded = true;
+    }
+
+    Node* Tree::Find(uint64_t aId) const
+    {
+        if (aId == 0) return nullptr;
+        return FindIn(*m_Root, aId);
+    }
+
+    int Tree::FolderLevel(const Node& aNode)
+    {
+        const Node* n = aNode.IsFolder() ? &aNode : aNode.Parent;
+        int level = 0;
+        while (n && n->Parent) { level++; n = n->Parent; }
+        return level;
+    }
+
+    int Tree::FolderHeight(const Node& aNode)
+    {
+        if (!aNode.IsFolder()) return 0;
+        int deepest = 0;
+        for (const auto& c : aNode.Children) deepest = std::max(deepest, FolderHeight(*c));
+        return 1 + deepest;
+    }
+
+    bool Tree::IsAncestorOf(const Node& aAncestor, const Node& aNode)
+    {
+        for (const Node* n = aNode.Parent; n; n = n->Parent)
+            if (n == &aAncestor) return true;
+        return false;
+    }
+
+    size_t Tree::CountDescendants(const Node& aNode, size_t* aFolders, size_t* aMacros)
+    {
+        size_t total = 0;
+        for (const auto& c : aNode.Children)
+        {
+            total++;
+            if (c->IsFolder()) { if (aFolders) (*aFolders)++; }
+            else if (aMacros) (*aMacros)++;
+            total += CountDescendants(*c, aFolders, aMacros);
+        }
+        return total;
+    }
+
+    std::string Tree::CleanName(const std::string& aName)
+    {
+        std::string s = aName;
+        for (char& c : s)
+            if (static_cast<unsigned char>(c) < 0x20) c = ' '; // no newlines or tabs in names
+        const size_t first = s.find_first_not_of(' ');
+        if (first == std::string::npos) return {};
+        s = s.substr(first, s.find_last_not_of(' ') - first + 1);
+        if (s.size() > kMaxNameLength)
+        {
+            size_t cut = kMaxNameLength;
+            // Don't split a UTF-8 sequence: back up over continuation bytes (10xxxxxx).
+            while (cut > 0 && (static_cast<unsigned char>(s[cut]) & 0xC0) == 0x80) cut--;
+            s.resize(cut);
+            const size_t last = s.find_last_not_of(' ');
+            s.resize(last == std::string::npos ? 0 : last + 1);
+        }
+        return s;
+    }
+
+    uint64_t Tree::NewId() const
+    {
+        static std::mt19937_64 rng{std::random_device{}()};
+        for (;;)
+        {
+            const uint64_t id = rng();
+            if (id != 0 && !Find(id)) return id;
+        }
+    }
+
+    Result Tree::CheckName(const Node& aParent, ENodeType aType, const std::string& aName, const Node* aIgnore) const
+    {
+        if (aName.empty()) return Result::Fail("The name can't be empty.");
+        const std::string lower = Lower(aName);
+        for (const auto& c : aParent.Children)
+            if (c.get() != aIgnore && c->Type == aType && Lower(c->Name) == lower)
+                return Result::Fail(std::string("There is already a ") + TypeWord(aType) + " called \"" + c->Name + "\" here.");
+        return {};
+    }
+
+    Result Tree::Add(Node* aParent, ENodeType aType, const std::string& aName)
+    {
+        Node& parent = aParent ? *aParent : *m_Root;
+        if (!parent.IsFolder()) return Result::Fail("Items can only be added to a folder.");
+        if (aType == ENodeType::Folder && FolderLevel(parent) + 1 > kMaxFolderDepth)
+            return Result::Fail("Folders can be nested at most " + std::to_string(kMaxFolderDepth) + " levels deep.");
+
+        const std::string name = CleanName(aName);
+        Result check = CheckName(parent, aType, name, nullptr);
+        if (!check.Ok) return check;
+
+        auto node = std::make_unique<Node>();
+        node->Id     = NewId();
+        node->Type   = aType;
+        node->Name   = name;
+        node->Parent = &parent;
+        Result r;
+        r.Target = node.get();
+        parent.Children.push_back(std::move(node));
+        parent.Expanded = true;
+        return r;
+    }
+
+    Result Tree::AddFolder(Node* aParent, const std::string& aName) { return Add(aParent, ENodeType::Folder, aName); }
+    Result Tree::AddMacro(Node* aParent, const std::string& aTitle) { return Add(aParent, ENodeType::Macro, aTitle); }
+
+    Result Tree::Rename(Node& aNode, const std::string& aName)
+    {
+        if (!aNode.Parent) return Result::Fail("The top level can't be renamed.");
+        const std::string name = CleanName(aName);
+        Result check = CheckName(*aNode.Parent, aNode.Type, name, &aNode);
+        if (!check.Ok) return check;
+        aNode.Name = name;
+        Result r;
+        r.Target = &aNode;
+        return r;
+    }
+
+    Result Tree::Delete(Node& aNode)
+    {
+        if (!aNode.Parent) return Result::Fail("The top level can't be deleted.");
+        auto& siblings = aNode.Parent->Children;
+        siblings.erase(siblings.begin() + static_cast<std::ptrdiff_t>(IndexInParent(aNode)));
+        return {};
+    }
+
+    Result Tree::CanMove(const Node& aNode, const Node& aTarget, EDrop aDrop) const
+    {
+        if (!aNode.Parent) return Result::Fail("The top level can't be moved.");
+        const Node* dest = aDrop == EDrop::Into ? &aTarget : aTarget.Parent;
+        if (!dest) return Result::Fail("Items can't be placed there.");
+        if (!dest->IsFolder()) return Result::Fail("Items can only be moved into a folder.");
+        if (&aNode == &aTarget) return aDrop == EDrop::Into ? Result::Fail("A folder can't be moved into itself.") : Result();
+        if (dest == &aNode || IsAncestorOf(aNode, *dest))
+            return Result::Fail("A folder can't be moved into one of its own subfolders.");
+        if (aNode.IsFolder() && FolderLevel(*dest) + FolderHeight(aNode) > kMaxFolderDepth)
+            return Result::Fail("That would nest folders more than " + std::to_string(kMaxFolderDepth) + " levels deep.");
+        if (dest != aNode.Parent)
+        {
+            Result check = CheckName(*dest, aNode.Type, aNode.Name, &aNode);
+            if (!check.Ok) return check;
+        }
+        return {};
+    }
+
+    Result Tree::Move(Node& aNode, Node& aTarget, EDrop aDrop)
+    {
+        Result check = CanMove(aNode, aTarget, aDrop);
+        if (!check.Ok) return check;
+        if (&aNode == &aTarget) { Result r; r.Target = &aNode; return r; }
+
+        Node* dest = aDrop == EDrop::Into ? &aTarget : aTarget.Parent;
+
+        auto& from = aNode.Parent->Children;
+        const size_t fromIndex = IndexInParent(aNode);
+        std::unique_ptr<Node> moving = std::move(from[fromIndex]);
+        from.erase(from.begin() + static_cast<std::ptrdiff_t>(fromIndex));
+
+        auto& to = dest->Children;
+        size_t at = to.size();
+        if (aDrop != EDrop::Into)
+        {
+            at = IndexInParent(aTarget); // aTarget is still in dest; aNode is already out
+            if (aDrop == EDrop::After) at++;
+        }
+        moving->Parent = dest;
+        Result r;
+        r.Target = moving.get();
+        to.insert(to.begin() + static_cast<std::ptrdiff_t>(at), std::move(moving));
+        if (aDrop == EDrop::Into) dest->Expanded = true;
+        return r;
+    }
+
+    bool Tree::Shift(Node& aNode, int aDelta)
+    {
+        if (!aNode.Parent || aDelta == 0) return false;
+        auto& siblings = aNode.Parent->Children;
+        const size_t i = IndexInParent(aNode);
+        const long long j = static_cast<long long>(i) + aDelta;
+        if (j < 0 || j >= static_cast<long long>(siblings.size())) return false;
+        std::swap(siblings[i], siblings[static_cast<size_t>(j)]);
+        return true;
+    }
+
+    void Tree::SortChildren(Node& aFolder, bool aRecursive)
+    {
+        std::stable_sort(aFolder.Children.begin(), aFolder.Children.end(),
+            [](const std::unique_ptr<Node>& a, const std::unique_ptr<Node>& b)
+            {
+                if (a->Type != b->Type) return a->IsFolder();
+                return Lower(a->Name) < Lower(b->Name);
+            });
+        if (aRecursive)
+            for (auto& c : aFolder.Children)
+                if (c->IsFolder()) SortChildren(*c, true);
+    }
+
+    json Tree::ToJson() const
+    {
+        json root = json::object();
+        json children = json::array();
+        for (const auto& c : m_Root->Children) children.push_back(NodeToJson(*c));
+        root["children"] = std::move(children);
+        return json{{"format", kFormatVersion}, {"root", std::move(root)}};
+    }
+
+    bool Tree::FromJson(const json& aJson, std::vector<std::string>* aWarnings)
+    {
+        if (!aJson.is_object()) return false;
+        auto root = aJson.find("root");
+        if (root == aJson.end() || !root->is_object()) return false;
+
+        const int format = aJson.value("format", 0);
+        if (format > kFormatVersion && aWarnings)
+            aWarnings->push_back("This file was saved by a newer version of the addon. Some details may be lost.");
+
+        auto fresh = std::make_unique<Node>();
+        fresh->Type = ENodeType::Folder;
+        Parser p;
+        p.Warnings = aWarnings;
+        p.ParseChildren(*root, *fresh, 0);
+
+        m_Root = std::move(fresh);
+        if (!p.NeedIdNodes.empty())
+        {
+            for (Node* n : p.NeedIdNodes) n->Id = NewId();
+            if (aWarnings) aWarnings->push_back("Gave new ids to " + std::to_string(p.NeedIdNodes.size()) + " item(s) with a missing or repeated id.");
+        }
+        return true;
+    }
+}

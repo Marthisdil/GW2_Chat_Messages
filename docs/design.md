@@ -125,8 +125,8 @@ policy and mention the behaviour when registering with Raidcore.
 
 ## Implementation phases (one small PR each)
 
-1. Scaffolding: submodules, VS project, CI, an addon that loads and shows an empty window.
-2. Data model, JSON storage, tree editor (create, rename, delete, drag-drop, depth limit).
+1. Scaffolding: submodules, VS project, CI, an addon that loads and shows an empty window. *(done)*
+2. Data model, JSON storage, tree editor (create, rename, delete, drag-drop, depth limit). *(done)*
 3. Macro editor: fancy and raw modes, parser and serializer, character count.
 4. Sender: the safe input pipeline (focus, `WM_CHAR`, verification), test button.
 5. Per-macro hotkeys, Quick Access and pop-up nested menus, game-mode and map filters.

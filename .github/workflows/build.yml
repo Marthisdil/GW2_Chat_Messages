@@ -29,6 +29,11 @@ jobs:
           $exports
           if (-not ($exports -match '\bGetAddonDef\b')) { throw "GetAddonDef is not exported" }
 
+      - name: Unit tests
+        if: matrix.configuration == 'Debug'
+        shell: pwsh
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tools\run_tests.ps1
+
       - uses: actions/upload-artifact@v4
         if: matrix.configuration == 'Release'
         with:
