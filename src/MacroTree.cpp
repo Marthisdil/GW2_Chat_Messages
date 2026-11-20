@@ -541,3 +541,41 @@ std::vector<MacroTree::Node*> MacroTree::Tree::MacrosWithHotkey(const Hotkey::Co
     if (!aCombo.Empty()) CollectHotkey(*m_Root, aCombo, out);
     return out;
 }
+
+uint8_t MacroTree::GameModeOfMapType(uint32_t aMapType)
+{
+    switch (aMapType)
+    {
+    case 2: case 3: case 6: case 8:                                  // PvP, GvG, Tournament, UserTournament
+        return GM_PvP;
+    case 9: case 10: case 11: case 12: case 13: case 14: case 15: case 18: // WvW maps, Edge of the Mists, lounge
+        return GM_WvW;
+    case 4: case 5: case 7: case 16: case 17:                        // Instance, Public, Tutorial, PublicMini, BigBattle
+        return GM_PvE;
+    default:                                                         // redirect, character creation, unknown
+        return GM_None;
+    }
+}
+
+bool MacroTree::IsActive(const Node& aMacro, uint8_t aMode, uint32_t aMapId)
+{
+    if (!aMacro.IsMacro()) return false;
+    const uint8_t modes = aMacro.GameModes == GM_None ? static_cast<uint8_t>(GM_All) : aMacro.GameModes;
+    if (modes != GM_All && (modes & aMode) == 0) return false;
+    if (aMacro.MapIds.empty()) return true;
+    for (int id : aMacro.MapIds)
+        if (id > 0 && static_cast<uint32_t>(id) == aMapId) return true;
+    return false;
+}
+
+bool MacroTree::FiltersOverlap(const Node& aA, const Node& aB)
+{
+    const uint8_t ma = aA.GameModes == GM_None ? static_cast<uint8_t>(GM_All) : aA.GameModes;
+    const uint8_t mb = aB.GameModes == GM_None ? static_cast<uint8_t>(GM_All) : aB.GameModes;
+    if ((ma & mb) == 0) return false;
+    if (aA.MapIds.empty() || aB.MapIds.empty()) return true;
+    for (int x : aA.MapIds)
+        for (int y : aB.MapIds)
+            if (x == y) return true;
+    return false;
+}

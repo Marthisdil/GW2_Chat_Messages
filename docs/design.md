@@ -47,6 +47,18 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
   Spanish clients (taken from bhm's localized resources).
 - **Filters**: game mode (PvE/WvW/PvP) and an optional list of map ids. A macro is *active* when
   it matches the current map. Inactive macros never fire from a hotkey.
+  *(Built.)* Rules, in `MacroTree` (unit tested in `tests/FilterTests.cpp`):
+  - The game mode comes from Mumble's map type. PvP: PvP, GvG and tournament maps. WvW: the WvW
+    maps, Edge of the Mists and Armistice Bastion. PvE: instance, public, tutorial, public-mini and
+    big-battle maps. Redirects and character creation are "no mode", where only macros active
+    everywhere match.
+  - A macro needs at least one game mode (the editor refuses to untick the last one). An empty
+    map list means any map; otherwise the current map id must be listed (at most 50 ids).
+  - A hotkey only counts for active macros, so two macros can share a hotkey if their filters
+    never overlap (for example one WvW and one PvE). The editor warns only about overlapping ones.
+  - The quick menu lists only active macros, and hides folders without any. The library tree
+    shows every macro, with inactive ones dimmed. **Send now** in the library always works.
+  - Map names (GW2 API) come with phase 6; for now maps are entered by id or with "Add this map".
 - **Quick menu**: the Quick Access right-click menu and a hotkey-opened pop-up show the tree as
   nested menus, with only the active macros listed. *(Built: folders without macros are hidden;
   macros are coloured by channel, show their hotkey, and preview their lines on hover. The pop-up
@@ -152,7 +164,7 @@ policy and mention the behaviour when registering with Raidcore.
 3. Macro editor: fancy and raw modes, parser and serializer, character count. *(done)*
 4. Sender: the safe input pipeline (focus, `WM_CHAR`, verification), test button. *(done; not yet
    tested in game)*
-5. Per-macro hotkeys *(done)*, Quick Access and pop-up nested menus *(done)*, game-mode and map
-   filters. *(Not yet tested in game.)*
+5. Per-macro hotkeys, Quick Access and pop-up nested menus, game-mode and map filters. *(done;
+   not yet tested in game)*
 6. Placeholders (plus the GW2 API map, waypoint and point-of-interest cache).
 7. Import/export with preview, `.txt` import/export and link-file sync.

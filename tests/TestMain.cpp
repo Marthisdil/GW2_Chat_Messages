@@ -6,6 +6,7 @@ void RunMacroTreeTests();
 void RunChatLineTests();
 void RunSendPlanTests();
 void RunHotkeyTests();
+void RunFilterTests();
 
 int main()
 {
@@ -13,6 +14,7 @@ int main()
     RunChatLineTests();
     RunSendPlanTests();
     RunHotkeyTests();
+    RunFilterTests();
     std::printf("%d checks, %d failures\n", g_TestChecks, g_TestFailures);
     return g_TestFailures == 0 ? 0 : 1;
 }

@@ -75,6 +75,19 @@ namespace MacroTree
     // Where a moved node goes relative to the drop target.
     enum class EDrop : uint8_t { Before, Into, After };
 
+    // --- Filters (docs/design.md, "Filters") ---
+    // A macro is *active* when it matches where the player is. Inactive macros never fire from a
+    // hotkey and are hidden from the quick menu; "Send now" in the library still works.
+    constexpr size_t kMaxMapIds = 50;
+
+    // The game mode of a Mumble map type (Mumble::EMapType as a number). Character select,
+    // creation and redirects are GM_None. Armistice Bastion (the WvW lounge) counts as WvW.
+    uint8_t GameModeOfMapType(uint32_t aMapType);
+    // aMode: GM_PvE/GM_WvW/GM_PvP or GM_None (unknown: only macros active in every mode match).
+    bool    IsActive(const Node& aMacro, uint8_t aMode, uint32_t aMapId);
+    // Whether two macros can ever be active at the same time (a shared hotkey is then a conflict).
+    bool    FiltersOverlap(const Node& aA, const Node& aB);
+
     const char* ChannelKey(EChannel aChannel);   // stable JSON key, e.g. "say", "guild3"
     const char* ChannelLabel(EChannel aChannel); // display name, e.g. "Say", "Guild 3"
     EChannel    ChannelFromKey(const std::string& aKey); // unknown keys -> Current
