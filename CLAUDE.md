@@ -67,6 +67,12 @@ to the todo list", add it there (don't start building it). Move agreed items int
 - `src/Storage.*`: the addon folder, atomic JSON writes (temp + rename, `.bak` of the previous
   file), and `LoadMacros`/`SaveMacros`. An unreadable `macros.json` is renamed aside, never
   overwritten. Don't name functions `LoadLibrary` etc.: `windows.h` macros clash.
+- `src/SendPlan.*`: turns a macro's lines into the exact send steps (open chat, wait, type, Tab
+  for whispers, Enter, wait) and validates them. No Nexus or ImGui dependency. Tested by
+  `tests/SendPlanTests.cpp`.
+- `src/Sender.*`: runs a plan on its own thread. Keys and text are executed on the game's window
+  thread via a private posted message handled in our WndProc hook (`WndProc_SendToGameOnly`).
+  In-game checks live in `docs/in-game-tests.md`.
 - `src/Ui.*`: the library window (tree + details pane), popups, and debounced saving. The tree is
   only touched on the render thread. Never change the tree while drawing it: queue an `Action`
   and apply it after. Open popups at the main window's ID level, not from inside a child window.

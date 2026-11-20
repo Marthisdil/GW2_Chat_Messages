@@ -11,6 +11,7 @@
 #include "imgui.h"
 
 #include "Globals.h"
+#include "Sender.h"
 #include "Ui.h"
 #include "resource.h"
 
@@ -73,6 +74,7 @@ namespace
 
         // Initialise state before registering anything that can call back into us.
         Ui::Init();
+        Sender::Init(); // its WndProc hook only reacts to our own private message
 
         // Quick Access textures must exist before the shortcut is added.
         g_Api->Textures_LoadFromResource(kIconId, IDB_ICON, s_Module, nullptr);
@@ -99,7 +101,8 @@ namespace
         g_Api->QuickAccess_Remove(kShortcutId);
         g_Api->InputBinds_Deregister(kToggleKeybind);
 
-        Ui::Shutdown(); // saves pending changes
+        Sender::Shutdown(); // joins the send thread, then removes the WndProc hook
+        Ui::Shutdown();     // saves pending changes
 
         LogF(LOGL_INFO, "Unloaded.");
         g_Api = nullptr;

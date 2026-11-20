@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Send now:** a button in the macro editor (and "Send now" in a macro's right-click menu) types
+  each line into its chat channel and sends it, one line after another.
+  - Chat is opened with your own Chat key from Nexus > Options > Game Keybinds. If it isn't set
+    there, you're told so and nothing is sent.
+  - Keys go only to the game window, never through Windows' global keyboard input, so your real
+    Tab, Shift, Ctrl and Alt are never pressed or released for you.
+  - Nothing is sent while you're typing in a game text box, while the game isn't focused, outside
+    gameplay, or while you're holding Shift, Ctrl, Alt or Windows.
+  - Each step is checked. If one fails, chat is closed and the rest of the macro is dropped, with
+    a message saying why.
+  - A macro with a line that's too long, or a whisper with no recipient, isn't sent at all.
+  - One macro at a time: a second trigger while sending is ignored.
 - **Macro editor:** select a macro to edit the messages it sends.
   - **Lines mode:** each line has a channel dropdown (Current channel, Say, Map, Party, Squad, Team,
     Reply, Whisper, Emote, Guild, Guild 1-6) and a message box.

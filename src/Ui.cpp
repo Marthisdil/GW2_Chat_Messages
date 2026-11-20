@@ -12,6 +12,7 @@
 #include "ChatLine.h"
 #include "Globals.h"
 #include "MacroTree.h"
+#include "Sender.h"
 #include "Storage.h"
 
 using namespace MacroTree;
@@ -90,6 +91,49 @@ namespace
     {
         s_Status      = aText;
         s_StatusUntil = ImGui::GetTime() + kStatusShowSec;
+    }
+
+    // --- Sending ------------------------------------------------------------------------------
+    // The sender runs on its own thread; the UI only starts it and shows its status.
+
+    Sender::EState s_SendSeen = Sender::EState::Idle; // last state shown, to notice when a send ends
+    std::string    s_SendNote;                        // "Sent 2 lines." / why it failed
+    bool           s_SendNoteError = false;
+    double         s_SendNoteUntil = 0.0;
+
+    void SendMacro(const Node& aMacro)
+    {
+        std::string error;
+        if (Sender::Start(aMacro.Id, aMacro.Lines, error)) return;
+        s_SendNote      = error;
+        s_SendNoteError = true;
+        s_SendNoteUntil = ImGui::GetTime() + kStatusShowSec;
+        s_SendSeen      = Sender::GetStatus().State; // already reported here
+    }
+
+    void PollSender()
+    {
+        const Sender::Status st = Sender::GetStatus();
+        if (st.State == s_SendSeen) return;
+        s_SendSeen = st.State;
+        if (st.State == Sender::EState::Done || st.State == Sender::EState::Failed)
+        {
+            s_SendNote      = st.Message;
+            s_SendNoteError = st.State == Sender::EState::Failed;
+            s_SendNoteUntil = ImGui::GetTime() + kStatusShowSec;
+        }
+    }
+
+    void DrawSendStatus()
+    {
+        const Sender::Status st = Sender::GetStatus();
+        if (st.State == Sender::EState::Sending)
+            ImGui::TextColored(kWarnColor, "Sending line %zu of %zu...", st.Line, st.Lines);
+        else if (!s_SendNote.empty() && ImGui::GetTime() < s_SendNoteUntil)
+        {
+            if (s_SendNoteError) ImGui::TextColored(kErrorColor, "%s", s_SendNote.c_str());
+            else ImGui::TextDisabled("%s", s_SendNote.c_str());
+        }
     }
 
     Node* NodeOrRoot(uint64_t aId)
@@ -211,6 +255,11 @@ namespace
                 s_Pending = {EAction::OpenName, 0, aNode.Id, EDrop::Into, 0, ENameMode::NewFolder};
             if (ImGui::MenuItem("New macro inside"))
                 s_Pending = {EAction::OpenName, 0, aNode.Id, EDrop::Into, 0, ENameMode::NewMacro};
+            ImGui::Separator();
+        }
+        else
+        {
+            if (ImGui::MenuItem("Send now", nullptr, false, !Sender::IsBusy())) SendMacro(aNode); // doesn't change the tree
             ImGui::Separator();
         }
         if (ImGui::MenuItem("Rename"))
@@ -636,6 +685,17 @@ namespace
 
     void DrawMacroEditor(Node& aMacro)
     {
+        const bool busy = Sender::IsBusy();
+        if (busy) ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+        if (ImGui::Button("Send now") && !busy) SendMacro(aMacro);
+        if (busy) ImGui::PopStyleVar();
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Types each line into its chat channel and sends it.\n"
+                              "Needs your Chat key set in Nexus > Options > Game Keybinds.");
+        ImGui::SameLine();
+        DrawSendStatus();
+        ImGui::Separator();
+
         int mode = static_cast<int>(s_EditMode);
         if (ImGui::RadioButton("Lines", &mode, static_cast<int>(EEditMode::Lines))) s_RawForId = 0;
         ImGui::SameLine();
@@ -789,6 +849,7 @@ void Ui::Shutdown()
 
 void Ui::Render()
 {
+    PollSender();
     if (s_ShowMainWindow) DrawMainWindow();
     if (s_Dirty && ImGui::GetTime() >= s_SaveAt) SaveNow();
 }
