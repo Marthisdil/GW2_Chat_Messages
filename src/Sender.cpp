@@ -16,6 +16,8 @@
 #include <random>
 
 #include "Globals.h"
+#include "Http.h"
+#include "MapNames.h"
 #include "Mumble.h"
 #include "Placeholders.h"
 #include "SendPlan.h"
@@ -169,7 +171,7 @@ namespace
     std::atomic<bool>       s_Busy{false};
     std::mutex              s_JobMutex;
     std::condition_variable s_JobCv;
-    std::optional<SendPlan::Plan> s_Job;
+    std::optional<std::vector<MacroTree::Line>> s_Job; // the macro's lines, placeholders not filled in yet
     uint64_t                s_JobMacro = 0;
 
     std::mutex      s_StatusMutex;
@@ -183,6 +185,7 @@ namespace
         s_Status.Lines   = aLines;
         s_Status.Message = aMsg;
         s_Status.MacroId = aMacro;
+        if (aState == Sender::EState::Done || aState == Sender::EState::Failed) s_Status.Seq++;
     }
 
     // Why the game isn't ready for us to type, or empty if it is.
@@ -196,13 +199,15 @@ namespace
         return {};
     }
 
-    // Closes chat if we left it open, so the game is back to normal. At most one Escape per macro:
-    // Mumble lags a frame behind, and a second Escape on the open game would open its menu.
-    bool s_EscapeSent = false;
+    // Closes chat if *we* left it open, so the game is back to normal. Never touches a chat box
+    // the user opened themselves (e.g. a send refused because they're typing). At most one Escape
+    // per macro: Mumble lags a frame behind, and a second Escape on the open game opens its menu.
+    bool s_EscapeSent    = false;
+    bool s_WeOpenedChat  = false; // set when we press the chat key, cleared once chat has closed
 
     void CloseChatIfOpen()
     {
-        if (s_EscapeSent || !TextboxFocused()) return;
+        if (!s_WeOpenedChat || s_EscapeSent || !TextboxFocused()) return;
         s_EscapeSent = true;
         Key(VK_ESCAPE, 0x1B);
     }
@@ -243,6 +248,7 @@ namespace
                 g_Api->GameBinds_Press(bind);
                 std::this_thread::sleep_for(std::chrono::milliseconds(kBindHoldMs));
                 g_Api->GameBinds_Release(bind);
+                s_WeOpenedChat = true;
                 break;
             }
             case EStep::WaitChatOpen:
@@ -268,6 +274,7 @@ namespace
                     CloseChatIfOpen();
                     return where + "the game didn't take the message; chat was closed.";
                 }
+                s_WeOpenedChat = false; // the game closed it: it's no longer ours to close
                 sent++;
                 break;
             case EStep::Pause:
@@ -344,26 +351,63 @@ namespace
             return std::uniform_int_distribution<long long>(aMin, aMax)(rng);
         };
         c.ReadLines = ReadAddonTextFile;
+        c.MapName = [](std::string& aName, std::string& aError) {
+            const uint32_t id = s_Mumble ? s_Mumble->Context.MapID : 0;
+            return MapNames::Get(id, aName, aError);
+        };
+        c.FetchUrl = [](const std::string& aUrl, std::string& aBody, std::string& aError) {
+            const Http::Response r = Http::Get(aUrl);
+            if (!r.Ok())
+            {
+                aError = r.Error.empty() ? "the download failed." : r.Error;
+                return false;
+            }
+            aBody = r.Body;
+            return true;
+        };
         return c;
+    }
+
+    // Fills in placeholders, then builds the steps. Runs on the worker: {map} and {json} may wait
+    // on the network. Returns the error, or "" with aPlan ready.
+    std::string Prepare(std::vector<MacroTree::Line> aLines, SendPlan::Plan& aPlan)
+    {
+        const Placeholders::Context ctx = PlaceholderContext();
+        for (size_t i = 0; i < aLines.size(); i++)
+        {
+            for (std::string* field : {&aLines[i].Message, &aLines[i].WhisperTo})
+            {
+                if (s_Stop) return "Stopped.";
+                Placeholders::Result r = Placeholders::Expand(*field, ctx);
+                if (!r.Error.empty()) return "Line " + std::to_string(i + 1) + ": " + r.Error;
+                *field = std::move(r.Text);
+            }
+        }
+        // Built from the filled-in text, so the 199-character check is on what's really typed.
+        aPlan = SendPlan::Build(aLines, IsCommander());
+        return aPlan.Error;
     }
 
     void WorkerMain()
     {
         for (;;)
         {
-            SendPlan::Plan plan;
+            std::vector<MacroTree::Line> lines;
             uint64_t macro = 0;
             {
                 std::unique_lock<std::mutex> lock(s_JobMutex);
                 s_JobCv.wait(lock, [] { return s_Stop.load() || s_Job.has_value(); });
                 if (s_Stop) return;
-                plan = std::move(*s_Job);
+                lines = std::move(*s_Job);
                 s_Job.reset();
                 macro = s_JobMacro;
             }
 
-            s_EscapeSent = false;
-            const std::string error = Run(plan, macro);
+            s_EscapeSent   = false;
+            s_WeOpenedChat = false;
+            SendPlan::Plan plan;
+            std::string error = Prepare(std::move(lines), plan);
+            if (error.empty()) error = Run(plan, macro);
             if (error.empty())
             {
                 SetStatus(Sender::EState::Done, plan.LinesToSend, plan.LinesToSend,
@@ -397,7 +441,8 @@ void Sender::Shutdown()
 {
     s_Stop = true;
     s_JobCv.notify_all();
-    if (s_Thread.joinable()) s_Thread.join(); // bounded: every wait in the worker times out within ~1 s
+    // Bounded: every wait in the worker times out (game steps ~1 s, a {map}/{json} download ~3 s per stage).
+    if (s_Thread.joinable()) s_Thread.join();
     g_Api->WndProc_Deregister(OnWndProc);
     {
         std::lock_guard<std::mutex> lock(s_CallMutex);
@@ -416,33 +461,8 @@ bool Sender::Start(uint64_t aMacroId, const std::vector<MacroTree::Line>& aLines
         aError = "Already sending a macro.";
         return false;
     }
-    // Placeholders are filled in first, so the length check and the plan use the real text.
-    std::vector<MacroTree::Line> lines = aLines;
-    const Placeholders::Context ctx = PlaceholderContext();
-    for (size_t i = 0; i < lines.size(); i++)
-    {
-        for (std::string* field : {&lines[i].Message, &lines[i].WhisperTo})
-        {
-            Placeholders::Result r = Placeholders::Expand(*field, ctx);
-            if (!r.Error.empty())
-            {
-                s_Busy = false;
-                aError = "Line " + std::to_string(i + 1) + ": " + r.Error;
-                SetStatus(EState::Failed, 0, 0, aError, aMacroId);
-                return false;
-            }
-            *field = std::move(r.Text);
-        }
-    }
-
-    SendPlan::Plan plan = SendPlan::Build(lines, IsCommander());
-    if (!plan.Error.empty())
-    {
-        s_Busy = false;
-        aError = plan.Error;
-        SetStatus(EState::Failed, 0, 0, aError, aMacroId);
-        return false;
-    }
+    // Placeholders and the plan are prepared on the worker (they may need the network); every
+    // step there checks the game again, so this is only the quick "can we start at all" test.
     const std::string why = NotReadyReason();
     if (!why.empty())
     {
@@ -451,10 +471,10 @@ bool Sender::Start(uint64_t aMacroId, const std::vector<MacroTree::Line>& aLines
         SetStatus(EState::Failed, 0, 0, aError, aMacroId);
         return false;
     }
-    SetStatus(EState::Sending, 1, plan.LinesToSend, {}, aMacroId);
+    SetStatus(EState::Sending, 0, 0, {}, aMacroId); // Line 0: still preparing
     {
         std::lock_guard<std::mutex> lock(s_JobMutex);
-        s_Job = std::move(plan);
+        s_Job = aLines;
         s_JobMacro = aMacroId;
     }
     s_JobCv.notify_one();

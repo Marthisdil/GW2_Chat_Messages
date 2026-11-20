@@ -52,7 +52,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>winhttp.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
@@ -87,7 +87,9 @@
     <ClCompile Include="src\entry.cpp" />
     <ClCompile Include="src\Hotkey.cpp" />
     <ClCompile Include="src\Hotkeys.cpp" />
+    <ClCompile Include="src\Http.cpp" />
     <ClCompile Include="src\MacroTree.cpp" />
+    <ClCompile Include="src\MapNames.cpp" />
     <ClCompile Include="src\Placeholders.cpp" />
     <ClCompile Include="src\Sender.cpp" />
     <ClCompile Include="src\SendPlan.cpp" />
@@ -99,7 +101,9 @@
     <ClInclude Include="src\Globals.h" />
     <ClInclude Include="src\Hotkey.h" />
     <ClInclude Include="src\Hotkeys.h" />
+    <ClInclude Include="src\Http.h" />
     <ClInclude Include="src\MacroTree.h" />
+    <ClInclude Include="src\MapNames.h" />
     <ClInclude Include="src\Placeholders.h" />
     <ClInclude Include="src\resource.h" />
     <ClInclude Include="src\Sender.h" />

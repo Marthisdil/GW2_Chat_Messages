@@ -78,6 +78,8 @@ to the todo list", add it there (don't start building it). Move agreed items int
 - `src/Placeholders.*`: fills in `{time}`, `{random}`, `{txt}` and the other placeholders. The clock,
   random numbers and file reads come in through a `Context`. No Nexus or ImGui dependency. Tested
   by `tests/PlaceholderTests.cpp`. `{txt}` may only read files inside the addon folder.
+- `src/Http.*`: a small blocking WinHTTP GET (worker threads only). `src/MapNames.*`: GW2 API map
+  names cached in `maps.json`, looked up on a background thread. Link `winhttp.lib`.
 - `src/SendPlan.*`: turns a macro's lines into the exact send steps (open chat, wait, type, Tab
   for whispers, Enter, wait) and validates them. No Nexus or ImGui dependency. Tested by
   `tests/SendPlanTests.cpp`.

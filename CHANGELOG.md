@@ -5,7 +5,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- When a send was refused because you were typing in chat, the addon could press Escape and close
+  your chat box. It now only ever closes a chat box it opened itself.
+
 ### Added
+- **More placeholders:**
+  - `{map}` is the name of the map you're on, like "Lion's Arch".
+  - `{json path url}` is one value from a JSON web page, for example
+    `{json id https://api.guildwars2.com/v2/build}`. The path is separated by dots, and numbers
+    pick list entries (`data.0.name`).
+- **Map names in filters:** the map list in "Where it's active" shows names like
+  "Queensdale (15)" instead of bare ids.
+  - Names come from the official GW2 API (no API key) and are saved in
+    `<GW2>\addons\Chat Messages\maps.json`, so each map is only looked up once.
+- While placeholders are being filled in, the status says "Preparing...".
 - **Placeholders:** type these in a message and they're filled in when it's sent:
   - `{time}` (like 21:05), `{hour}`, `{min}` and `{today}` (like Friday, 20.11.2026).
   - `{random}` (0 to 100), `{random max}` and `{random min max}`.

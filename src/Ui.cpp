@@ -12,6 +12,7 @@
 #include "ChatLine.h"
 #include "Globals.h"
 #include "Hotkeys.h"
+#include "MapNames.h"
 #include "MacroTree.h"
 #include "Mumble.h"
 #include "Placeholders.h"
@@ -147,7 +148,7 @@ namespace
     // --- Sending ------------------------------------------------------------------------------
     // The sender runs on its own thread; the UI only starts it and shows its status.
 
-    Sender::EState s_SendSeen = Sender::EState::Idle; // last state shown, to notice when a send ends
+    uint64_t       s_SendSeenSeq = 0; // Sender::Status::Seq of the last ended send we reported
     std::string    s_SendNote;                        // "Sent 2 lines." / why it failed
     bool           s_SendNoteError = false;
     double         s_SendNoteUntil = 0.0;
@@ -177,15 +178,15 @@ namespace
         s_SendNote      = error;
         s_SendNoteError = true;
         s_SendNoteUntil = ImGui::GetTime() + kStatusShowSec;
-        s_SendSeen      = Sender::GetStatus().State; // already reported here
+        s_SendSeenSeq   = Sender::GetStatus().Seq; // already reported here
         if (alert) Alert(aMacro.Name + ": " + error);
     }
 
     void PollSender()
     {
         const Sender::Status st = Sender::GetStatus();
-        if (st.State == s_SendSeen) return;
-        s_SendSeen = st.State;
+        if (st.Seq == s_SendSeenSeq) return;
+        s_SendSeenSeq = st.Seq;
         if (st.State == Sender::EState::Done || st.State == Sender::EState::Failed)
         {
             s_SendNote      = st.Message;
@@ -208,6 +209,18 @@ namespace
     {
         Hotkeys::CancelCapture();
         s_CaptureFor = 0;
+    }
+
+    // Looks up the current map's name in the background whenever the map changes, so {map} and
+    // the filter editor rarely have to wait for it.
+    uint32_t s_LastMapId = 0;
+
+    void WatchMap()
+    {
+        const uint32_t id = WhereAmI().MapId;
+        if (id == s_LastMapId) return;
+        s_LastMapId = id;
+        MapNames::Request(id);
     }
 
     void HandleHotkeys()
@@ -359,9 +372,10 @@ namespace
         {
             ImGui::SameLine();
             ImGui::PushID(static_cast<int>(i));
-            const std::string label = std::to_string(aMacro.MapIds[i]) + " x";
+            const std::string name = MapNames::Label(static_cast<uint32_t>(aMacro.MapIds[i]));
+            const std::string label = name + " x";
             if (ImGui::SmallButton(label.c_str())) removeAt = static_cast<int>(i);
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Remove map %d", aMacro.MapIds[i]);
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Remove %s", name.c_str());
             ImGui::PopID();
         }
         if (removeAt >= 0)
@@ -390,7 +404,7 @@ namespace
         const int current = static_cast<int>(here.MapId);
         const bool canAddCurrent = current > 0 && !hasMap(current);
         if (!canAddCurrent) ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
-        const std::string addCurrent = current > 0 ? "Add this map (" + std::to_string(current) + ")" : "Add this map";
+        const std::string addCurrent = current > 0 ? "Add this map: " + MapNames::Label(here.MapId) : "Add this map";
         if (ImGui::SmallButton(addCurrent.c_str()) && canAddCurrent) addMap(current);
         if (!canAddCurrent) ImGui::PopStyleVar();
         ImGui::SameLine();
@@ -398,10 +412,11 @@ namespace
         ImGui::InputInt("##mapid", &s_MapIdInput, 0, 0);
         ImGui::SameLine();
         if (ImGui::SmallButton("Add id")) addMap(s_MapIdInput);
-        ImGui::TextDisabled("Map names come later. Ids are on the GW2 wiki and in the API (/v2/maps).");
+        ImGui::TextDisabled("Map names come from the GW2 API. Ids are also listed on the GW2 wiki.");
 
-        if (active) ImGui::TextDisabled("Active here (%s, map %u).", ModeName(here.Mode), here.MapId);
-        else ImGui::TextColored(kWarnColor, "Not active here (%s, map %u).", ModeName(here.Mode), here.MapId);
+        const std::string where = here.MapId ? MapNames::Label(here.MapId) : std::string("no map");
+        if (active) ImGui::TextDisabled("Active here (%s, %s).", ModeName(here.Mode), where.c_str());
+        else ImGui::TextColored(kWarnColor, "Not active here (%s, %s).", ModeName(here.Mode), where.c_str());
         ImGui::Unindent();
     }
 
@@ -409,7 +424,10 @@ namespace
     {
         const Sender::Status st = Sender::GetStatus();
         if (st.State == Sender::EState::Sending)
-            ImGui::TextColored(kWarnColor, "Sending line %zu of %zu...", st.Line, st.Lines);
+        {
+            if (st.Line == 0) ImGui::TextColored(kWarnColor, "Preparing..."); // filling in placeholders
+            else ImGui::TextColored(kWarnColor, "Sending line %zu of %zu...", st.Line, st.Lines);
+        }
         else if (!s_SendNote.empty() && ImGui::GetTime() < s_SendNoteUntil)
         {
             if (s_SendNoteError) ImGui::TextColored(kErrorColor, "%s", s_SendNote.c_str());
@@ -1267,6 +1285,7 @@ void Ui::Shutdown()
 void Ui::Render()
 {
     PollSender();
+    WatchMap();
     HandleHotkeys();
     if (s_ShowMainWindow) DrawMainWindow();
     DrawQuickMenuPopup();

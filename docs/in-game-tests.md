@@ -132,3 +132,16 @@ the Nexus log for `Chat Messages` warnings.
     waypoint link.
 59. A line that's under 199 characters as typed but over 199 once filled in (e.g. a long
     `{txt}` line): refused with the "too long" message, nothing sent.
+
+### Map names and {json}
+60. Change maps a few times, then open a macro's "Where it's active": "Add this map" shows the
+    map's name, and `maps.json` appears in the addon folder.
+61. `/s Hello from {map}`: sends the map's name. Try a map you've never been to since loading.
+62. Disconnect from the internet, delete `maps.json`, reload, enter a new map: `{map}` fails with
+    a "couldn't be reached" message and nothing is sent. The game doesn't stutter.
+63. `{json id https://api.guildwars2.com/v2/build}`: sends the current game build number.
+64. `{json nope https://api.guildwars2.com/v2/build}`: nothing is sent; the message says the path
+    wasn't found.
+65. While "Preparing..." shows, start typing in chat yourself: the send stops ("A text box is
+    open") and **your chat box stays open with your text** (the Escape fix).
+66. Unload the addon right after sending a `{json}` macro: unload finishes within a few seconds.
