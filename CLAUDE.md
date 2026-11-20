@@ -60,6 +60,8 @@ to the todo list", add it there (don't start building it). Move agreed items int
 - `src/MacroTree.*`: the library data model (`Tree`, `Node` folder/macro, `Line`, channels) with the
   rules (6-folder depth, unique sibling names, move checks) and JSON (de)serialization. No Nexus or
   ImGui dependency. Tested by `tests/MacroTreeTests.cpp`; run `tools/run_tests.ps1` (CI runs it too).
+  It also holds the filter rules (`GameModeOfMapType`, `IsActive`, `FiltersOverlap`), tested by
+  `tests/FilterTests.cpp`.
   Every tree rule change needs a test.
 - `src/ChatLine.*`: the raw text format (parse and serialize, with English, German, French and
   Spanish commands), the text typed into chat, channel colours, and the 199-unit length (UTF-16

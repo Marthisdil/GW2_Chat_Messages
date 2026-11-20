@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Filters:** choose where each macro is active, under "Where it's active" in the macro editor.
+  - Tick the game modes it's for: PvE, WvW (including Armistice Bastion and Edge of the Mists)
+    and PvP.
+  - Optionally limit it to certain maps: "Add this map" adds the map you're on, or type a map id.
+  - Hotkeys and the quick menu only use macros that are active where you are. **Send now** in the
+    library always works.
+  - The same hotkey can now be used by macros that are never active together, for example one
+    for WvW and one for PvE. The editor only warns when two macros with the same hotkey can both
+    be active.
+  - In the library, macros that aren't active where you are are shown dimmed.
 - **Quick menu:** right-click the scroll icon in the Nexus bar to see your library as menus and
   send any macro with one click.
   - Folders open as sub-menus. Folders with no macros inside are hidden.

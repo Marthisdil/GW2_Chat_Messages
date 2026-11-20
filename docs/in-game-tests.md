@@ -100,3 +100,20 @@ the Nexus log for `Chat Messages` warnings.
 42. Send from the menu with the chat key unbound: an alert explains why.
 43. A folder and a macro with the same name in one folder both work in the menu.
 44. Game input check: after using the menu, left/right click, camera turning and Tab still work.
+
+## Phase 5: filters
+
+45. A macro with no filters ("Everywhere") is active in PvE, WvW, PvP and Armistice Bastion.
+46. Untick PvE on a macro: in open world it's dimmed in the library, missing from the quick menu,
+    and its hotkey does nothing. **Send now** still sends it.
+47. Try to untick the last game mode: refused with a message.
+48. "Add this map" adds the current map id; the macro is then active only on that map. Remove it
+    with its "x" button.
+49. Check what mode these report ("Active here (..., map N)"): Heart of the Mists (PvP lobby),
+    Edge of the Mists, Armistice Bastion, a fractal, a raid, a strike mission, the home instance,
+    a guild hall, and a story instance. Note any that land in the wrong mode.
+50. Two macros with the same hotkey, one WvW-only and one PvE-only: no warning in the editor;
+    the hotkey sends the right one in each mode.
+51. Same hotkey on two macros that are both active in PvE: warning in the editor; pressing it in
+    PvE shows the "set on 2 macros" alert and sends nothing.
+52. On a map with no active macros the quick menu says "No macros for this map."

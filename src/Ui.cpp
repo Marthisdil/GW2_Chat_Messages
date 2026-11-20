@@ -13,6 +13,7 @@
 #include "Globals.h"
 #include "Hotkeys.h"
 #include "MacroTree.h"
+#include "Mumble.h"
 #include "Sender.h"
 #include "Storage.h"
 
@@ -92,6 +93,54 @@ namespace
     {
         s_Status      = aText;
         s_StatusUntil = ImGui::GetTime() + kStatusShowSec;
+    }
+
+    // --- Where the player is (for filters) ------------------------------------------------------
+
+    Mumble::Data* s_Mumble = nullptr;
+
+    struct Here
+    {
+        uint8_t  Mode  = GM_None; // GM_PvE / GM_WvW / GM_PvP, or GM_None when unknown
+        uint32_t MapId = 0;
+    };
+
+    Here WhereAmI()
+    {
+        Here h;
+        if (!s_Mumble) return h;
+        h.Mode  = GameModeOfMapType(static_cast<uint32_t>(s_Mumble->Context.MapType));
+        h.MapId = s_Mumble->Context.MapID;
+        return h;
+    }
+
+    bool IsActiveHere(const Node& aMacro, const Here& aHere) { return IsActive(aMacro, aHere.Mode, aHere.MapId); }
+
+    const char* ModeName(uint8_t aMode)
+    {
+        switch (aMode)
+        {
+        case GM_PvE: return "PvE";
+        case GM_WvW: return "WvW";
+        case GM_PvP: return "PvP";
+        default:     return "no game mode";
+        }
+    }
+
+    // "Everywhere", "WvW", "PvE, PvP", "PvE on 2 maps"...
+    std::string FilterSummary(const Node& aMacro)
+    {
+        std::string modes;
+        const uint8_t m = aMacro.GameModes == GM_None ? static_cast<uint8_t>(GM_All) : aMacro.GameModes;
+        if (m != GM_All)
+        {
+            const uint8_t bits[] = {GM_PvE, GM_WvW, GM_PvP};
+            for (uint8_t b : bits)
+                if (m & b) modes += (modes.empty() ? "" : ", ") + std::string(ModeName(b));
+        }
+        if (aMacro.MapIds.empty()) return modes.empty() ? "Everywhere" : modes;
+        const std::string maps = aMacro.MapIds.size() == 1 ? "1 map" : std::to_string(aMacro.MapIds.size()) + " maps";
+        return modes.empty() ? "On " + maps : modes + " on " + maps;
     }
 
     // --- Sending ------------------------------------------------------------------------------
@@ -188,7 +237,11 @@ namespace
         while (Hotkeys::PopPress(combo))
         {
             if (s_CaptureFor) continue;
-            const std::vector<Node*> macros = s_Tree.MacrosWithHotkey(combo);
+            // Only macros active here count: the same hotkey can be used for, say, a WvW macro and a PvE one.
+            const Here here = WhereAmI();
+            std::vector<Node*> macros;
+            for (Node* m : s_Tree.MacrosWithHotkey(combo))
+                if (IsActiveHere(*m, here)) macros.push_back(m);
             if (macros.empty()) continue;
             if (macros.size() > 1)
             {
@@ -234,13 +287,14 @@ namespace
                 aMacro.Hotkey = {};
                 MarkDirty();
             }
-            const std::vector<Node*> users = s_Tree.MacrosWithHotkey(aMacro.Hotkey);
-            if (users.size() > 1)
+            // A shared hotkey is only a conflict where both macros can be active at once.
+            std::string names;
+            for (const Node* n : s_Tree.MacrosWithHotkey(aMacro.Hotkey))
+                if (n != &aMacro && FiltersOverlap(aMacro, *n)) names += (names.empty() ? "" : ", ") + n->Name;
+            if (!names.empty())
             {
-                std::string names;
-                for (const Node* n : users)
-                    if (n != &aMacro) names += (names.empty() ? "" : ", ") + n->Name;
-                ImGui::TextColored(kWarnColor, "Also set on: %s. A shared hotkey sends nothing.", names.c_str());
+                ImGui::TextColored(kWarnColor, "Also set on: %s. Where both are active, this hotkey sends nothing.",
+                                   names.c_str());
             }
             else if (!aMacro.Hotkey.HasModifier() && aMacro.Hotkey.Key < 0x60 && aMacro.Hotkey.Key > Hotkey::kVkXButton2)
             {
@@ -248,6 +302,106 @@ namespace
                                                "Adding Ctrl, Alt or Shift is safer.");
             }
         }
+    }
+
+    int s_MapIdInput = 0;
+
+    void DrawFilters(Node& aMacro)
+    {
+        const Here here = WhereAmI();
+        const bool active = IsActiveHere(aMacro, here);
+        // "###filters" keeps the header's open state while its label changes.
+        const std::string header = "Where it's active: " + FilterSummary(aMacro) + (active ? "" : "  (not here)") + "###filters";
+        if (!active) ImGui::PushStyleColor(ImGuiCol_Text, kWarnColor);
+        const bool open = ImGui::CollapsingHeader(header.c_str());
+        if (!active) ImGui::PopStyleColor();
+        if (!open) return;
+        ImGui::Indent();
+        ImGui::TextWrapped("Hotkeys and the quick menu only use a macro where it's active. "
+                           "Send now here in the library always works.");
+
+        // Game modes. At least one stays ticked: "none" would mean the macro can never be used.
+        if (aMacro.GameModes == GM_None) aMacro.GameModes = GM_All;
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted("Game modes:");
+        const uint8_t bits[] = {GM_PvE, GM_WvW, GM_PvP};
+        for (uint8_t b : bits)
+        {
+            ImGui::SameLine();
+            bool on = (aMacro.GameModes & b) != 0;
+            if (ImGui::Checkbox(ModeName(b), &on))
+            {
+                const uint8_t next = on ? static_cast<uint8_t>(aMacro.GameModes | b)
+                                        : static_cast<uint8_t>(aMacro.GameModes & ~b);
+                if (next == GM_None) SetStatus("A macro needs at least one game mode.");
+                else
+                {
+                    aMacro.GameModes = next;
+                    MarkDirty();
+                }
+            }
+            if (ImGui::IsItemHovered())
+            {
+                if (b == GM_WvW) ImGui::SetTooltip("Includes Armistice Bastion and Edge of the Mists.");
+                else if (b == GM_PvE) ImGui::SetTooltip("Open world, story, fractals, raids and strikes.");
+                else ImGui::SetTooltip("PvP maps, including the Heart of the Mists lobby.");
+            }
+        }
+
+        // Maps.
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted("Maps:");
+        ImGui::SameLine();
+        if (aMacro.MapIds.empty()) ImGui::TextDisabled("Any map");
+        int removeAt = -1;
+        for (size_t i = 0; i < aMacro.MapIds.size(); i++)
+        {
+            ImGui::SameLine();
+            ImGui::PushID(static_cast<int>(i));
+            const std::string label = std::to_string(aMacro.MapIds[i]) + " x";
+            if (ImGui::SmallButton(label.c_str())) removeAt = static_cast<int>(i);
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Remove map %d", aMacro.MapIds[i]);
+            ImGui::PopID();
+        }
+        if (removeAt >= 0)
+        {
+            aMacro.MapIds.erase(aMacro.MapIds.begin() + removeAt);
+            MarkDirty();
+        }
+
+        auto hasMap = [&](int aId) {
+            for (int m : aMacro.MapIds)
+                if (m == aId) return true;
+            return false;
+        };
+        auto addMap = [&](int aId) {
+            if (aId <= 0) SetStatus("Map ids are positive numbers.");
+            else if (hasMap(aId)) SetStatus("That map is already in the list.");
+            else if (aMacro.MapIds.size() >= kMaxMapIds)
+                SetStatus("A macro can list at most " + std::to_string(kMaxMapIds) + " maps.");
+            else
+            {
+                aMacro.MapIds.push_back(aId);
+                MarkDirty();
+            }
+        };
+
+        const int current = static_cast<int>(here.MapId);
+        const bool canAddCurrent = current > 0 && !hasMap(current);
+        if (!canAddCurrent) ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+        const std::string addCurrent = current > 0 ? "Add this map (" + std::to_string(current) + ")" : "Add this map";
+        if (ImGui::SmallButton(addCurrent.c_str()) && canAddCurrent) addMap(current);
+        if (!canAddCurrent) ImGui::PopStyleVar();
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(90.0f);
+        ImGui::InputInt("##mapid", &s_MapIdInput, 0, 0);
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Add id")) addMap(s_MapIdInput);
+        ImGui::TextDisabled("Map names come later. Ids are on the GW2 wiki and in the API (/v2/maps).");
+
+        if (active) ImGui::TextDisabled("Active here (%s, map %u).", ModeName(here.Mode), here.MapId);
+        else ImGui::TextColored(kWarnColor, "Not active here (%s, map %u).", ModeName(here.Mode), here.MapId);
+        ImGui::Unindent();
     }
 
     void DrawSendStatus()
@@ -432,7 +586,9 @@ namespace
             flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_Bullet;
             // Macros take their first line's channel colour, like in bhm-chat-macros.
             const EChannel first = aNode.Lines.empty() ? EChannel::Current : aNode.Lines.front().Channel;
-            ImGui::PushStyleColor(ImGuiCol_Text, ChannelColorVec(first));
+            ImVec4 color = ChannelColorVec(first);
+            if (!IsActiveHere(aNode, WhereAmI())) color.w *= 0.45f; // filtered out here: dimmed
+            ImGui::PushStyleColor(ImGuiCol_Text, color);
             if (aNode.Hotkey.Empty()) ImGui::TreeNodeEx("##node", flags, "%s", aNode.Name.c_str());
             else ImGui::TreeNodeEx("##node", flags, "%s  [%s]", aNode.Name.c_str(), Hotkey::ToString(aNode.Hotkey).c_str());
             ImGui::PopStyleColor();
@@ -823,6 +979,7 @@ namespace
         ImGui::SameLine();
         DrawSendStatus();
         DrawHotkeyRow(aMacro);
+        DrawFilters(aMacro);
         ImGui::Separator();
 
         int mode = static_cast<int>(s_EditMode);
@@ -893,11 +1050,11 @@ namespace
     bool s_QuickMenuOpenRequest  = false;
     bool s_QuickMenuCloseRequest = false;
 
-    // Whether a folder has any macro in it, at any depth (empty folders aren't listed).
-    bool HasMacros(const Node& aFolder)
+    // Whether a folder has any macro active here, at any depth (folders without one aren't listed).
+    bool HasActiveMacros(const Node& aFolder, const Here& aHere)
     {
         for (const auto& c : aFolder.Children)
-            if (c->IsMacro() || HasMacros(*c)) return true;
+            if (c->IsMacro() ? IsActiveHere(*c, aHere) : HasActiveMacros(*c, aHere)) return true;
         return false;
     }
 
@@ -915,7 +1072,7 @@ namespace
         ImGui::EndTooltip();
     }
 
-    void DrawQuickMenuItems(const Node& aFolder)
+    void DrawQuickMenuItems(const Node& aFolder, const Here& aHere)
     {
         const bool busy = Sender::IsBusy();
         for (const auto& child : aFolder.Children)
@@ -925,19 +1082,19 @@ namespace
             ImGui::PushID(static_cast<int>(n.Id ^ (n.Id >> 32)));
             if (n.IsFolder())
             {
-                if (HasMacros(n))
+                if (HasActiveMacros(n, aHere))
                 {
                     ImGui::PushStyleColor(ImGuiCol_Text, kFolderColor);
                     const bool open = ImGui::BeginMenu(n.Name.c_str());
                     ImGui::PopStyleColor();
                     if (open)
                     {
-                        DrawQuickMenuItems(n);
+                        DrawQuickMenuItems(n, aHere);
                         ImGui::EndMenu();
                     }
                 }
             }
-            else
+            else if (IsActiveHere(n, aHere))
             {
                 const EChannel first = n.Lines.empty() ? EChannel::Current : n.Lines.front().Channel;
                 const std::string keys = Hotkey::ToString(n.Hotkey);
@@ -953,11 +1110,13 @@ namespace
 
     void DrawQuickMenu()
     {
-        if (!HasMacros(s_Tree.Root())) ImGui::TextDisabled("No macros yet.");
+        const Here here = WhereAmI();
+        if (!HasActiveMacros(s_Tree.Root(), here))
+            ImGui::TextDisabled(s_Tree.Root().Children.empty() ? "No macros yet." : "No macros for this map.");
         else
         {
             if (Sender::IsBusy()) ImGui::TextColored(kWarnColor, "Sending...");
-            DrawQuickMenuItems(s_Tree.Root());
+            DrawQuickMenuItems(s_Tree.Root(), here);
         }
         ImGui::Separator();
         if (ImGui::MenuItem(s_ShowMainWindow ? "Hide macro library" : "Open macro library"))
@@ -1064,6 +1223,7 @@ namespace
 
 void Ui::Init()
 {
+    s_Mumble = static_cast<Mumble::Data*>(g_Api->DataLink_Get(DL_MUMBLE_LINK));
     s_LoadMessages.clear();
     Storage::LoadMacros(s_Tree, s_LoadMessages);
     for (const std::string& m : s_LoadMessages) LogF(LOGL_WARNING, "%s", m.c_str());
