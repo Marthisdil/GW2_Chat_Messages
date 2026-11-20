@@ -110,8 +110,15 @@ Rules this addon follows:
   that needs no Tab. If Tab is needed, it is only sent while the whisper box is verified as
   focused, and focus is verified as released afterwards.
 - **One macro at a time** runs on a dedicated sender thread. Triggers that arrive while a macro
-  is sending are ignored. A 20 ms gap is left between lines (the same as bhm). Unload waits for
-  the thread to finish.
+  is sending are ignored. A 50 ms gap is left between lines (bhm uses 20 ms; to be tuned in game).
+  Unload waits for the thread to finish.
+- **Keys reach the game on its own window thread.** The sender thread posts a private message
+  (`RegisterWindowMessageW`) to the game window. Our WndProc hook runs the queued step there,
+  calls `WndProc_SendToGameOnly`, and consumes the message; every other message passes through
+  untouched. Key presses are sent as `WM_KEYDOWN`, `WM_CHAR`, `WM_KEYUP`. At most one Escape is
+  sent per macro, because Mumble lags a frame and a second Escape would open the game menu.
+- The step sequence is built by `src/SendPlan.cpp` (no Nexus code, unit tested) and executed by
+  `src/Sender.cpp`. In-game checks: `docs/in-game-tests.md`.
 - **Hotkeys use Nexus InputBinds.** Macros are registered **with no default key**
   (`"(null)"`), so the addon never takes a key the user has not chosen. Keys and mouse buttons
   are assigned in Nexus's own keybind settings.
@@ -128,7 +135,8 @@ policy and mention the behaviour when registering with Raidcore.
 1. Scaffolding: submodules, VS project, CI, an addon that loads and shows an empty window. *(done)*
 2. Data model, JSON storage, tree editor (create, rename, delete, drag-drop, depth limit). *(done)*
 3. Macro editor: fancy and raw modes, parser and serializer, character count. *(done)*
-4. Sender: the safe input pipeline (focus, `WM_CHAR`, verification), test button.
+4. Sender: the safe input pipeline (focus, `WM_CHAR`, verification), test button. *(done; not yet
+   tested in game)*
 5. Per-macro hotkeys, Quick Access and pop-up nested menus, game-mode and map filters.
 6. Placeholders (plus the GW2 API map, waypoint and point-of-interest cache).
 7. Import/export with preview, `.txt` import/export and link-file sync.

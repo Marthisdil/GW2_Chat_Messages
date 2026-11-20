@@ -14,8 +14,8 @@ New-Item -ItemType Directory -Force -Path $out | Out-Null
 
 # Every test file, plus the Nexus-free sources under test. Add new ones here.
 $sources = @(
-    "tests\TestMain.cpp", "tests\MacroTreeTests.cpp", "tests\ChatLineTests.cpp",
-    "src\MacroTree.cpp", "src\ChatLine.cpp"
+    "tests\TestMain.cpp", "tests\MacroTreeTests.cpp", "tests\ChatLineTests.cpp", "tests\SendPlanTests.cpp",
+    "src\MacroTree.cpp", "src\ChatLine.cpp", "src\SendPlan.cpp"
 ) | ForEach-Object { "`"$(Join-Path $root $_)`"" }
 $includes = "/I `"$root\src`" /I `"$root\tests`" /I `"$root\vendor\json\single_include`""
 # /Z7 keeps debug info in the .obj files (compile-time PDBs fail inside Dropbox folders).
