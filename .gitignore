@@ -1,0 +1,47 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+[Bb]uild/
+[Oo]ut/
+x64/
+[Dd]ebug/
+[Rr]elease/
+*.exe
+*.dll
+*.lib
+*.exp
+*.pdb
+*.ilk
+*.obj
+*.o
+*.idb
+*.ipch
+*.pch
+*.tlog
+*.lastbuildstate
+*.log
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.sdf
+*.opensdf
+*.VC.db
+*.VC.opendb
+*.aps
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake-build-*/
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+.DS_Store
+
+# Claude Code local settings
+.claude/settings.local.json

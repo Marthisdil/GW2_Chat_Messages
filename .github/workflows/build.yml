@@ -1,0 +1,36 @@
+name: Build
+
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-2022
+    strategy:
+      matrix:
+        configuration: [Debug, Release]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: microsoft/setup-msbuild@v2
+
+      - name: Build
+        run: msbuild GW2_Chat_Messages.sln /m /p:Configuration=${{ matrix.configuration }} /p:Platform=x64
+
+      - name: Check GetAddonDef export
+        shell: pwsh
+        run: |
+          $dumpbin = Get-ChildItem "${env:ProgramFiles}\Microsoft Visual Studio\2022\*\VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe" | Select-Object -First 1
+          $exports = & $dumpbin.FullName /exports "build\${{ matrix.configuration }}\GW2_Chat_Messages.dll"
+          $exports
+          if (-not ($exports -match '\bGetAddonDef\b')) { throw "GetAddonDef is not exported" }
+
+      - uses: actions/upload-artifact@v4
+        if: matrix.configuration == 'Release'
+        with:
+          name: GW2_Chat_Messages
+          path: build/Release/GW2_Chat_Messages.dll

@@ -1,0 +1,5 @@
+#include "resource.h"
+
+// Quick Access (Nexus bar) icons. Regenerate with tools\draw_chat_icon.ps1.
+IDB_ICON        PNG "..\\resources\\icons\\icon.png"
+IDB_ICON_HOVER  PNG "..\\resources\\icons\\icon_hover.png"
