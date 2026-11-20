@@ -64,10 +64,26 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
   macros are coloured by channel, show their hotkey, and preview their lines on hover. The pop-up
   is opened by a Nexus InputBind, "Open Chat Messages quick menu", registered with `"(null)"`. Menu
   sends report failures as alerts. Until filters exist, every macro is listed.)*
-- **Placeholders**: `{wp}`, `{poi}`, `{map}`, `{area}`, `{time}`, `{hour}`, `{min}`, `{today}`,
-  `{random [min] max}`, `{txt file [line]}`, `{json path url}`. bhm's `{blish}` becomes
-  `{nexus}` (the addon version). Map, waypoint and point-of-interest data come from the GW2 API.
-  It is fetched once per map and cached.
+- **Placeholders** (decided 2026-11-20: **no `{wp}`, `{poi}` or `{area}`**; GW2 API map data is
+  only used as a cache, for map names):
+  - Built (`src/Placeholders.*`, unit tested in `tests/PlaceholderTests.cpp`): `{time}` (21:05),
+    `{hour}`, `{min}`, `{today}` ("Friday, 20.11.2026", weekday in the Windows language),
+    `{random}` (0-100), `{random max}` (0-max), `{random min max}` (inclusive, swapped if
+    reversed), `{txt file}` (a random non-blank line), `{txt file line}` (1-based), and `{nexus}`
+    (bhm's `{blish}`: "Chat Messages v0.1.0").
+  - Next PR: `{map}` (current map name, from a cached GW2 API `/v2/maps` lookup, which also gives
+    the filter editor map names) and `{json path url}`.
+  - Syntax: `{name arg arg}`, case-insensitive, `"quotes"` for arguments with spaces.
+  - Differences from bhm, on purpose: an unknown `{word}` is sent as typed (bhm drops the whole
+    line), and a known placeholder that fails stops the whole macro with a message (bhm silently
+    drops that line).
+  - `{txt}` files must be inside `<GW2>\addons\Chat Messages\` (relative path, no `..`, no
+    drive), at most 1 MB, UTF-8. This keeps an imported macro from typing out other files.
+  - Filled in on the render thread in `Sender::Start`, before the plan is built, so the 199-unit
+    check uses the real text and nothing is typed if a placeholder fails. Text from a file isn't
+    expanded again. The editor shows "~" on lengths of lines with placeholders.
+  - Waypoint and other chat links (`[&BDAEAAA=]`) need no feature: they're typed as text and the
+    game turns them into links.
 - **`.txt` link file**: optional two-way sync of one macro with a text file in raw format.
 
 ## Import / export
@@ -166,5 +182,6 @@ policy and mention the behaviour when registering with Raidcore.
    tested in game)*
 5. Per-macro hotkeys, Quick Access and pop-up nested menus, game-mode and map filters. *(done;
    not yet tested in game)*
-6. Placeholders (plus the GW2 API map, waypoint and point-of-interest cache).
+6. Placeholders: local ones *(done; not yet tested in game)*, then `{map}` with a cached GW2 API
+   map-name lookup and `{json}`.
 7. Import/export with preview, `.txt` import/export and link-file sync.

@@ -7,6 +7,7 @@ void RunChatLineTests();
 void RunSendPlanTests();
 void RunHotkeyTests();
 void RunFilterTests();
+void RunPlaceholderTests();
 
 int main()
 {
@@ -15,6 +16,7 @@ int main()
     RunSendPlanTests();
     RunHotkeyTests();
     RunFilterTests();
+    RunPlaceholderTests();
     std::printf("%d checks, %d failures\n", g_TestChecks, g_TestFailures);
     return g_TestFailures == 0 ? 0 : 1;
 }

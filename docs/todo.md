@@ -115,6 +115,30 @@ Look at letting mouse buttons send a macro only together with Ctrl, Alt or Shift
 - Depends on in-game test 26: whether mouse buttons reach our hook at all while the pointer is
   over the addon window.
 
+### Map ids from the game, with a wiki fallback (added 2026-11-20)
+
+Look at ways for the addon to fill in map ids (and names) itself, so nobody has to look ids up
+by hand for the map filter.
+
+- **What the game gives us:** MumbleLink only reports the *current* map id and map type. That's
+  what "Add this map" uses today (PR #7). The game has no API for listing all maps.
+- Options to look at:
+  - **Remember visited maps:** keep a small list of every map id seen in MumbleLink, so the filter
+    can offer "maps you've been to" in a picker.
+  - **Names from the official GW2 API:** `/v2/maps?ids=...` (no API key needed) for the names of
+    known ids, cached on disk. Phase 6 plans a map-name cache for `{map}` (no waypoint or POI
+    data: decided 2026-11-20).
+  - **The full list to search:** `/v2/maps` lists every map id. Fetched once and cached, it would
+    allow a "search by name" picker (e.g. type "Lion's Arch").
+  - **Wiki fallback:** when the API is down or a map is missing from it, look it up on the GW2
+    wiki (its MediaWiki API, or its map id tables). The wiki also knows old and removed maps.
+- Points to settle:
+  - Network use: one request per new map, a one-off full list, or both. Respect the API's rate
+    limits and keep the cache valid across game patches.
+  - Several maps share a name (instances, story versions, festival copies). The picker should show
+    the id and region too.
+  - Works offline: ids still work without names; names just show as "Map 1234".
+
 ## Open questions
 
 - Whisper sending: find a way that needs no Tab key (test in game before building the sender).
