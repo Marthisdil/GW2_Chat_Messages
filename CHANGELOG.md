@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Quick menu:** right-click the scroll icon in the Nexus bar to see your library as menus and
+  send any macro with one click.
+  - Folders open as sub-menus. Folders with no macros inside are hidden.
+  - Macros are coloured by channel and show their hotkey. Hovering one shows the lines it sends.
+  - The same menu can pop up at the mouse pointer with its own key: set "Open Chat Messages quick
+    menu" in Nexus > Options > Keybinds (no key is set by default). Press it again to close it.
+  - If a macro sent from the menu fails, an on-screen alert says why.
+  - The menu also has an item to open or hide the macro library.
 - **Hotkeys:** give any macro its own hotkey in the macro editor: click **Set...** and press the
   key, with Ctrl, Alt or Shift if you like. Mouse 3 (middle), Mouse 4 and Mouse 5 work too.
   - The hotkey shows next to the macro's name in the tree. **Clear** removes it.

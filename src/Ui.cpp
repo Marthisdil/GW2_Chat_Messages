@@ -102,7 +102,10 @@ namespace
     bool           s_SendNoteError = false;
     double         s_SendNoteUntil = 0.0;
 
-    bool s_SendViaHotkey = false; // the current/last send came from a hotkey: report failures as alerts
+    // Where a send was started. Hotkey and menu sends report failures as on-screen alerts, because
+    // the library window (and its status line) may not be visible.
+    enum class ESendFrom { Window, Hotkey, Menu };
+    bool s_SendAlertOnFail = false; // for the current/last send
 
     // A short Nexus on-screen alert: the only feedback a hotkey has when the library is closed.
     void Alert(const std::string& aText)
@@ -111,20 +114,21 @@ namespace
         g_Api->GUI_SendAlert(text.c_str());
     }
 
-    void SendMacro(const Node& aMacro, bool aFromHotkey = false)
+    void SendMacro(const Node& aMacro, ESendFrom aFrom = ESendFrom::Window)
     {
-        if (aFromHotkey && Sender::IsBusy()) return; // one macro at a time; extra presses are ignored
+        const bool alert = aFrom != ESendFrom::Window;
+        if (aFrom == ESendFrom::Hotkey && Sender::IsBusy()) return; // one macro at a time; extra presses are ignored
         std::string error;
         if (Sender::Start(aMacro.Id, aMacro.Lines, error))
         {
-            s_SendViaHotkey = aFromHotkey;
+            s_SendAlertOnFail = alert;
             return;
         }
         s_SendNote      = error;
         s_SendNoteError = true;
         s_SendNoteUntil = ImGui::GetTime() + kStatusShowSec;
         s_SendSeen      = Sender::GetStatus().State; // already reported here
-        if (aFromHotkey) Alert(aMacro.Name + ": " + error);
+        if (alert) Alert(aMacro.Name + ": " + error);
     }
 
     void PollSender()
@@ -137,7 +141,7 @@ namespace
             s_SendNote      = st.Message;
             s_SendNoteError = st.State == Sender::EState::Failed;
             s_SendNoteUntil = ImGui::GetTime() + kStatusShowSec;
-            if (s_SendNoteError && s_SendViaHotkey)
+            if (s_SendNoteError && s_SendAlertOnFail)
             {
                 const Node* m = s_Tree.Find(st.MacroId);
                 Alert((m ? m->Name + ": " : std::string()) + st.Message);
@@ -192,7 +196,7 @@ namespace
                       " macros, so nothing was sent. Give each macro its own hotkey.");
                 continue;
             }
-            SendMacro(*macros[0], true);
+            SendMacro(*macros[0], ESendFrom::Hotkey);
         }
     }
 
@@ -880,6 +884,109 @@ namespace
         }
     }
 
+    // --- Quick menu ---------------------------------------------------------------------------
+    // The library as nested menus: in the Quick Access right-click menu and in a pop-up opened by
+    // its own keybind. Clicking a macro sends it. Drawing it never changes the tree.
+
+    constexpr const char* kQuickMenuPopup = "##chatmsg_quickmenu";
+    constexpr size_t      kPreviewLines   = 8;
+    bool s_QuickMenuOpenRequest  = false;
+    bool s_QuickMenuCloseRequest = false;
+
+    // Whether a folder has any macro in it, at any depth (empty folders aren't listed).
+    bool HasMacros(const Node& aFolder)
+    {
+        for (const auto& c : aFolder.Children)
+            if (c->IsMacro() || HasMacros(*c)) return true;
+        return false;
+    }
+
+    void MacroPreviewTooltip(const Node& aMacro)
+    {
+        ImGui::BeginTooltip();
+        if (aMacro.Lines.empty()) ImGui::TextDisabled("No lines yet.");
+        for (size_t i = 0; i < aMacro.Lines.size() && i < kPreviewLines; i++)
+        {
+            const Line& l = aMacro.Lines[i];
+            ImGui::TextColored(ChannelColorVec(l.Channel), "%s", ChatLine::TypedText(l).c_str());
+        }
+        if (aMacro.Lines.size() > kPreviewLines)
+            ImGui::TextDisabled("...and %zu more line(s)", aMacro.Lines.size() - kPreviewLines);
+        ImGui::EndTooltip();
+    }
+
+    void DrawQuickMenuItems(const Node& aFolder)
+    {
+        const bool busy = Sender::IsBusy();
+        for (const auto& child : aFolder.Children)
+        {
+            const Node& n = *child;
+            // Folder and macro siblings may share a name: give every entry its own ID.
+            ImGui::PushID(static_cast<int>(n.Id ^ (n.Id >> 32)));
+            if (n.IsFolder())
+            {
+                if (HasMacros(n))
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Text, kFolderColor);
+                    const bool open = ImGui::BeginMenu(n.Name.c_str());
+                    ImGui::PopStyleColor();
+                    if (open)
+                    {
+                        DrawQuickMenuItems(n);
+                        ImGui::EndMenu();
+                    }
+                }
+            }
+            else
+            {
+                const EChannel first = n.Lines.empty() ? EChannel::Current : n.Lines.front().Channel;
+                const std::string keys = Hotkey::ToString(n.Hotkey);
+                ImGui::PushStyleColor(ImGuiCol_Text, ChannelColorVec(first));
+                const bool clicked = ImGui::MenuItem(n.Name.c_str(), keys.empty() ? nullptr : keys.c_str(), false, !busy);
+                ImGui::PopStyleColor();
+                if (ImGui::IsItemHovered()) MacroPreviewTooltip(n);
+                if (clicked) SendMacro(n, ESendFrom::Menu); // sending doesn't change the tree
+            }
+            ImGui::PopID();
+        }
+    }
+
+    void DrawQuickMenu()
+    {
+        if (!HasMacros(s_Tree.Root())) ImGui::TextDisabled("No macros yet.");
+        else
+        {
+            if (Sender::IsBusy()) ImGui::TextColored(kWarnColor, "Sending...");
+            DrawQuickMenuItems(s_Tree.Root());
+        }
+        ImGui::Separator();
+        if (ImGui::MenuItem(s_ShowMainWindow ? "Hide macro library" : "Open macro library"))
+            s_ShowMainWindow = !s_ShowMainWindow;
+    }
+
+    void DrawQuickMenuPopup()
+    {
+        if (s_QuickMenuOpenRequest)
+        {
+            s_QuickMenuOpenRequest = false;
+            ImGui::OpenPopup(kQuickMenuPopup); // opens at the mouse pointer
+        }
+        if (!ImGui::BeginPopup(kQuickMenuPopup))
+        {
+            s_QuickMenuCloseRequest = false;
+            return;
+        }
+        if (s_QuickMenuCloseRequest)
+        {
+            s_QuickMenuCloseRequest = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::TextDisabled("%s", kAddonName);
+        ImGui::Separator();
+        DrawQuickMenu();
+        ImGui::EndPopup();
+    }
+
     void DrawToolbar()
     {
         Node& into = InsertFolder();
@@ -977,6 +1084,7 @@ void Ui::Render()
     PollSender();
     HandleHotkeys();
     if (s_ShowMainWindow) DrawMainWindow();
+    DrawQuickMenuPopup();
     if (s_Dirty && ImGui::GetTime() >= s_SaveAt) SaveNow();
 }
 
@@ -985,7 +1093,19 @@ void Ui::RenderOptions()
     ImGui::Text("Chat Messages %s", kVersionText);
     ImGui::TextDisabled("Your macros are saved in <GW2>\\addons\\Chat Messages\\macros.json.");
     if (ImGui::Button("Open macro library")) s_ShowMainWindow = true;
+    ImGui::Spacing();
+    ImGui::TextWrapped("Quick menu: right-click the scroll icon in the Nexus bar, or set a key for "
+                       "\"Open Chat Messages quick menu\" in Nexus > Options > Keybinds.");
 }
 
 void Ui::ToggleMainWindow() { s_ShowMainWindow = !s_ShowMainWindow; }
+
+void Ui::RenderQuickAccessMenu() { DrawQuickMenu(); }
+
+void Ui::ToggleQuickMenu()
+{
+    // ImGui::IsPopupOpen only sees popups at the current ID level, which is ours here (root).
+    if (ImGui::IsPopupOpen(kQuickMenuPopup)) s_QuickMenuCloseRequest = true;
+    else s_QuickMenuOpenRequest = true;
+}
 bool* Ui::MainWindowOpenFlag() { return &s_ShowMainWindow; }
