@@ -1,0 +1,237 @@
+#include "Placeholders.h"
+
+#include <cctype>
+#include <cstdio>
+
+namespace
+{
+    std::string Lower(std::string s)
+    {
+        for (char& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        return s;
+    }
+
+    std::string Two(int v)
+    {
+        char buf[8];
+        std::snprintf(buf, sizeof(buf), "%02d", v);
+        return buf;
+    }
+
+    // Splits "random 1 10" / "txt \"my file.txt\" 2" into words. False if a quote isn't closed.
+    bool Split(const std::string& aInner, std::vector<std::string>& aOut)
+    {
+        std::string cur;
+        bool inQuote = false, have = false;
+        for (char c : aInner)
+        {
+            if (c == '"') { inQuote = !inQuote; have = true; continue; }
+            if (c == ' ' && !inQuote)
+            {
+                if (have) aOut.push_back(cur);
+                cur.clear();
+                have = false;
+                continue;
+            }
+            cur += c;
+            have = true;
+        }
+        if (inQuote) return false;
+        if (have) aOut.push_back(cur);
+        return true;
+    }
+
+    // Whole string must be an integer within +-10^15 (enough for any chat use, no overflow).
+    bool ParseInt(const std::string& s, long long& aOut)
+    {
+        size_t i = 0;
+        bool neg = false;
+        if (i < s.size() && (s[i] == '-' || s[i] == '+')) neg = s[i++] == '-';
+        if (i == s.size() || s.size() - i > 15) return false;
+        long long v = 0;
+        for (; i < s.size(); i++)
+        {
+            if (s[i] < '0' || s[i] > '9') return false;
+            v = v * 10 + (s[i] - '0');
+        }
+        aOut = neg ? -v : v;
+        return true;
+    }
+
+    const char* const kNames[] = {"time", "hour", "min", "today", "random", "txt", "nexus"};
+
+    bool IsKnown(const std::string& aLowerName)
+    {
+        for (const char* n : kNames)
+            if (aLowerName == n) return true;
+        return false;
+    }
+
+    // The name of the placeholder starting at aText[aOpen] == '{', or "" if there isn't one.
+    // aClose gets the index of the matching '}'.
+    std::string NameAt(const std::string& aText, size_t aOpen, size_t& aClose)
+    {
+        aClose = aText.find('}', aOpen + 1);
+        if (aClose == std::string::npos) return {};
+        const size_t nextOpen = aText.find('{', aOpen + 1);
+        if (nextOpen != std::string::npos && nextOpen < aClose) return {}; // "{ {time}": the inner one counts
+        const std::string inner = aText.substr(aOpen + 1, aClose - aOpen - 1);
+        const size_t end = inner.find(' ');
+        return Lower(inner.substr(0, end));
+    }
+
+    // Fills in one known placeholder. False with aError set if it can't.
+    bool Resolve(const std::string& aName, const std::vector<std::string>& aArgs, const Placeholders::Context& c,
+                 std::string& aOut, std::string& aError)
+    {
+        const std::string tag = "{" + aName + "}: ";
+        if (aName == "time") { aOut = Two(c.Hour) + ":" + Two(c.Minute); return true; }
+        if (aName == "hour") { aOut = Two(c.Hour); return true; }
+        if (aName == "min")  { aOut = Two(c.Minute); return true; }
+        if (aName == "today")
+        {
+            aOut = c.Weekday + ", " + std::to_string(c.Day) + "." + std::to_string(c.Month) + "." + std::to_string(c.Year);
+            return true;
+        }
+        if (aName == "nexus") { aOut = c.AddonVersion; return true; }
+        if (aName == "random")
+        {
+            long long lo = 0, hi = 100;
+            if (aArgs.size() == 1)
+            {
+                if (!ParseInt(aArgs[0], hi)) { aError = tag + "\"" + aArgs[0] + "\" isn't a whole number."; return false; }
+            }
+            else if (aArgs.size() == 2)
+            {
+                if (!ParseInt(aArgs[0], lo)) { aError = tag + "\"" + aArgs[0] + "\" isn't a whole number."; return false; }
+                if (!ParseInt(aArgs[1], hi)) { aError = tag + "\"" + aArgs[1] + "\" isn't a whole number."; return false; }
+            }
+            else if (aArgs.size() > 2) { aError = tag + "use {random}, {random max} or {random min max}."; return false; }
+            if (lo > hi) std::swap(lo, hi);
+            if (!c.Random) { aError = tag + "random numbers aren't available."; return false; }
+            aOut = std::to_string(c.Random(lo, hi));
+            return true;
+        }
+        if (aName == "txt")
+        {
+            if (aArgs.empty() || aArgs.size() > 2) { aError = tag + "use {txt file} or {txt file line}."; return false; }
+            if (!Placeholders::IsSafeRelativePath(aArgs[0]))
+            {
+                aError = tag + "\"" + aArgs[0] + "\" must be a file inside the addon folder (like notes.txt or lists\\names.txt).";
+                return false;
+            }
+            long long line = 0;
+            if (aArgs.size() == 2 && (!ParseInt(aArgs[1], line) || line < 1))
+            {
+                aError = tag + "the line number must be 1 or more.";
+                return false;
+            }
+            std::vector<std::string> lines;
+            std::string why;
+            if (!c.ReadLines || !c.ReadLines(aArgs[0], lines, why)) { aError = tag + (why.empty() ? "couldn't read the file." : why); return false; }
+            // Blank lines don't count: a random pick should never send an empty message.
+            std::vector<std::string> used;
+            for (const std::string& l : lines)
+                if (l.find_first_not_of(" \t") != std::string::npos) used.push_back(l);
+            if (used.empty()) { aError = tag + "\"" + aArgs[0] + "\" has no text in it."; return false; }
+            if (line > static_cast<long long>(used.size()))
+            {
+                aError = tag + "\"" + aArgs[0] + "\" has only " + std::to_string(used.size()) + " line(s).";
+                return false;
+            }
+            if (line == 0)
+            {
+                if (!c.Random) { aError = tag + "random numbers aren't available."; return false; }
+                line = c.Random(1, static_cast<long long>(used.size()));
+            }
+            aOut = used[static_cast<size_t>(line - 1)];
+            return true;
+        }
+        aError = tag + "unknown placeholder.";
+        return false;
+    }
+}
+
+Placeholders::Result Placeholders::Expand(const std::string& aText, const Context& aContext)
+{
+    Result r;
+    size_t i = 0;
+    while (i < aText.size())
+    {
+        const size_t open = aText.find('{', i);
+        if (open == std::string::npos)
+        {
+            r.Text += aText.substr(i);
+            break;
+        }
+        r.Text += aText.substr(i, open - i);
+        size_t close = 0;
+        const std::string name = NameAt(aText, open, close);
+        if (name.empty() || !IsKnown(name))
+        {
+            r.Text += '{'; // not ours: keep it as typed
+            i = open + 1;
+            continue;
+        }
+        std::vector<std::string> words;
+        if (!Split(aText.substr(open + 1, close - open - 1), words))
+        {
+            r.Error = "{" + name + "}: a quote isn't closed.";
+            r.Text.clear();
+            return r;
+        }
+        std::string value;
+        if (!Resolve(name, std::vector<std::string>(words.begin() + 1, words.end()), aContext, value, r.Error))
+        {
+            r.Text.clear();
+            return r;
+        }
+        r.Text += value; // never re-scanned: a file line containing "{time}" stays as written
+        i = close + 1;
+    }
+    return r;
+}
+
+bool Placeholders::HasPlaceholders(const std::string& aText)
+{
+    for (size_t open = aText.find('{'); open != std::string::npos; open = aText.find('{', open + 1))
+    {
+        size_t close = 0;
+        const std::string name = NameAt(aText, open, close);
+        if (!name.empty() && IsKnown(name)) return true;
+    }
+    return false;
+}
+
+bool Placeholders::IsSafeRelativePath(const std::string& aPath)
+{
+    if (aPath.empty() || aPath[0] == '/' || aPath[0] == '\\') return false;
+    if (aPath.find(':') != std::string::npos) return false; // drive letters, alternate streams
+    size_t start = 0;
+    while (start <= aPath.size())
+    {
+        size_t end = aPath.find_first_of("/\\", start);
+        if (end == std::string::npos) end = aPath.size();
+        const std::string part = aPath.substr(start, end - start);
+        if (part.empty() || part == "." || part == "..") return false;
+        start = end + 1;
+    }
+    return true;
+}
+
+const std::vector<Placeholders::Info>& Placeholders::List()
+{
+    static const std::vector<Info> kList = {
+        {"{time}",                 "the time now, like 21:05"},
+        {"{hour}",                 "the hour, like 21"},
+        {"{min}",                  "the minutes, like 05"},
+        {"{today}",                "the date, like Friday, 20.11.2026"},
+        {"{random}",               "a random number from 0 to 100"},
+        {"{random max}",           "a random number from 0 to max"},
+        {"{random min max}",       "a random number from min to max"},
+        {"{txt file}",             "a random line from a text file in the addon folder"},
+        {"{txt file line}",        "that line of the file (1 = first)"},
+        {"{nexus}",                "this addon's name and version"},
+    };
+    return kList;
+}

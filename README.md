@@ -13,7 +13,7 @@ Chat macros for Guild Wars 2, as a [Nexus](https://raidcore.gg/Nexus) addon.
   squad (including squad broadcast when you're commander), team, guild 1–6, whisper, emote, reply
   or whichever channel is open.
 - An optional hotkey for each macro. Modifiers (CTRL, ALT, SHIFT) and mouse buttons work.
-- Placeholders such as the nearest waypoint, the map name or the time.
+- Placeholders such as the time, the date, a random number or a random line from a text file.
 - Raw text editing, `.txt` import and export, and import/export of whole folder trees, with a
   preview before anything is imported.
 - Built so it never interferes with normal game controls.

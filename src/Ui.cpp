@@ -14,6 +14,7 @@
 #include "Hotkeys.h"
 #include "MacroTree.h"
 #include "Mumble.h"
+#include "Placeholders.h"
 #include "Sender.h"
 #include "Storage.h"
 
@@ -832,14 +833,19 @@ namespace
     // "12/199" after a message, red when too long. Returns the length.
     void LengthLabel(const Line& aLine)
     {
-        const size_t len = ChatLine::Utf16Length(ChatLine::TypedText(aLine));
-        if (len > ChatLine::kMaxChatLength)
+        const std::string typed = ChatLine::TypedText(aLine);
+        const size_t len = ChatLine::Utf16Length(typed);
+        const bool placeholders = Placeholders::HasPlaceholders(typed);
+        // With placeholders the final length is only known when sending: show it as approximate.
+        if (len > ChatLine::kMaxChatLength && !placeholders)
             ImGui::TextColored(kErrorColor, "%zu/%zu", len, ChatLine::kMaxChatLength);
         else
-            ImGui::TextDisabled("%zu/%zu", len, ChatLine::kMaxChatLength);
+            ImGui::TextDisabled("%s%zu/%zu", placeholders ? "~" : "", len, ChatLine::kMaxChatLength);
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Characters typed into chat, including the channel command.\n"
-                              "Chat allows at most %zu. Longer lines won't be sent.", ChatLine::kMaxChatLength);
+                              "Chat allows at most %zu. Longer lines won't be sent.%s", ChatLine::kMaxChatLength,
+                              placeholders ? "\nThis line has placeholders: they're filled in when it's sent,\n"
+                                             "and the real length is checked then." : "");
     }
 
     void LineWarnings(const Line& aLine)
@@ -989,6 +995,25 @@ namespace
         s_EditMode = static_cast<EEditMode>(mode);
         ImGui::SameLine();
         ImGui::TextDisabled("%zu line(s)", aMacro.Lines.size());
+        ImGui::SameLine();
+        ImGui::TextDisabled("Placeholders (?)");
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::BeginTooltip();
+            ImGui::TextUnformatted("Type these in a message; they're filled in when it's sent:");
+            ImGui::Separator();
+            for (const Placeholders::Info& p : Placeholders::List())
+            {
+                ImGui::TextUnformatted(p.Syntax);
+                ImGui::SameLine(150.0f);
+                ImGui::TextDisabled("%s", p.Description);
+            }
+            ImGui::Separator();
+            ImGui::TextDisabled("Text files go in <GW2>\\addons\\Chat Messages\\ (or a folder inside it).\n"
+                                "Use \"quotes\" for names with spaces: {txt \"my lines.txt\"}.\n"
+                                "Anything else in { } is sent as typed. Chat links like [&BDAEAAA=] work as is.");
+            ImGui::EndTooltip();
+        }
         ImGui::Spacing();
 
         if (s_EditMode == EEditMode::Lines) DrawLinesEditor(aMacro);

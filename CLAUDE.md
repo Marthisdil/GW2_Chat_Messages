@@ -75,6 +75,9 @@ to the todo list", add it there (don't start building it). Move agreed items int
   which keys are refused. No Nexus or ImGui dependency. Tested by `tests/HotkeyTests.cpp`.
 - `src/Hotkeys.*`: the WndProc hook that reads presses and captures a new hotkey. It only queues
   presses; the render thread (`Ui.cpp`) matches them to macros and starts the sender.
+- `src/Placeholders.*`: fills in `{time}`, `{random}`, `{txt}` and the other placeholders. The clock,
+  random numbers and file reads come in through a `Context`. No Nexus or ImGui dependency. Tested
+  by `tests/PlaceholderTests.cpp`. `{txt}` may only read files inside the addon folder.
 - `src/SendPlan.*`: turns a macro's lines into the exact send steps (open chat, wait, type, Tab
   for whispers, Enter, wait) and validates them. No Nexus or ImGui dependency. Tested by
   `tests/SendPlanTests.cpp`.

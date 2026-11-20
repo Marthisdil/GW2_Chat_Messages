@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Placeholders:** type these in a message and they're filled in when it's sent:
+  - `{time}` (like 21:05), `{hour}`, `{min}` and `{today}` (like Friday, 20.11.2026).
+  - `{random}` (0 to 100), `{random max}` and `{random min max}`.
+  - `{txt file}` sends a random line from a text file, and `{txt file 3}` sends its third line.
+    Text files go in `<GW2>\addons\Chat Messages\` (or a folder inside it). Use quotes for
+    names with spaces: `{txt "my lines.txt"}`.
+  - `{nexus}` is this addon's name and version.
+  - Anything else in `{ }` is sent exactly as typed.
+  - If a placeholder can't be filled in (for example the file is missing), nothing is sent and
+    you're told why.
+  - Hover **Placeholders (?)** in the macro editor for the list. Lines with placeholders show
+    their length as approximate ("~"), and the real length is checked when sending.
 - **Filters:** choose where each macro is active, under "Where it's active" in the macro editor.
   - Tick the game modes it's for: PvE, WvW (including Armistice Bastion and Edge of the Mists)
     and PvP.

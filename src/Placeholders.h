@@ -1,0 +1,54 @@
+#pragma once
+
+// Placeholders in macro text, filled in at send time (docs/design.md, "Placeholders").
+// No Nexus, ImGui or windows.h dependency: everything from the outside world (clock, random
+// numbers, files) comes in through Context, so it can be unit-tested (tests/PlaceholderTests.cpp).
+//
+// Syntax: {name} or {name arg arg ...}. Arguments are separated by spaces; "double quotes" keep
+// spaces inside one argument. Names are case-insensitive.
+//  - A name we don't know (e.g. {smile}) is left exactly as typed.
+//  - A known placeholder that can't be filled in (bad number, missing file) is an error: the
+//    macro isn't sent at all, rather than sending a half-filled line.
+
+#include <functional>
+#include <string>
+#include <vector>
+
+namespace Placeholders
+{
+    struct Context
+    {
+        // Local date and time.
+        int         Year = 2000, Month = 1, Day = 1, Hour = 0, Minute = 0;
+        std::string Weekday = "Monday"; // in the user's language
+        std::string AddonVersion;       // e.g. "Chat Messages v0.1.0"
+
+        // A random integer in [aMin, aMax] (both inclusive, aMin <= aMax).
+        std::function<long long(long long aMin, long long aMax)> Random;
+        // Reads a text file relative to the addon folder (already checked by IsSafeRelativePath).
+        // Returns false with aError set if it can't.
+        std::function<bool(const std::string& aRelPath, std::vector<std::string>& aLines, std::string& aError)> ReadLines;
+    };
+
+    struct Result
+    {
+        std::string Text;
+        std::string Error; // empty on success
+    };
+
+    Result Expand(const std::string& aText, const Context& aContext);
+
+    // Whether aText has at least one known placeholder (for "filled in when sent" hints).
+    bool HasPlaceholders(const std::string& aText);
+
+    // Files for {txt} must stay inside the addon folder: no drive letters, no leading slash,
+    // no ".." parts, nothing empty.
+    bool IsSafeRelativePath(const std::string& aPath);
+
+    struct Info
+    {
+        const char* Syntax;
+        const char* Description;
+    };
+    const std::vector<Info>& List(); // for the help tooltip, in display order
+}

@@ -10,9 +10,16 @@
 #include <optional>
 #include <thread>
 
+#include <filesystem>
+#include <fstream>
+#include <iterator>
+#include <random>
+
 #include "Globals.h"
 #include "Mumble.h"
+#include "Placeholders.h"
 #include "SendPlan.h"
+#include "Storage.h"
 
 namespace
 {
@@ -272,6 +279,74 @@ namespace
         return {};
     }
 
+    // --- Placeholders: the outside world for Placeholders::Expand -------------------------------
+
+    constexpr uintmax_t kMaxTextFileBytes = 1024 * 1024; // {txt} files: plenty for chat lines
+
+    std::string Utf8(const wchar_t* aText, int aLen)
+    {
+        const int n = WideCharToMultiByte(CP_UTF8, 0, aText, aLen, nullptr, 0, nullptr, nullptr);
+        if (n <= 0) return {};
+        std::string s(static_cast<size_t>(n), '\0');
+        WideCharToMultiByte(CP_UTF8, 0, aText, aLen, s.data(), n, nullptr, nullptr);
+        return s;
+    }
+
+    bool ReadAddonTextFile(const std::string& aRelPath, std::vector<std::string>& aLines, std::string& aError)
+    {
+        const std::filesystem::path dir = Storage::AddonDir();
+        if (dir.empty()) { aError = "the addon folder isn't available."; return false; }
+        const std::filesystem::path file = dir / std::filesystem::u8path(aRelPath);
+        std::error_code ec;
+        if (!std::filesystem::is_regular_file(file, ec))
+        {
+            aError = "\"" + aRelPath + "\" wasn't found in <GW2>\\addons\\Chat Messages\\.";
+            return false;
+        }
+        if (std::filesystem::file_size(file, ec) > kMaxTextFileBytes || ec)
+        {
+            aError = "\"" + aRelPath + "\" is too big (over 1 MB).";
+            return false;
+        }
+        std::ifstream in(file, std::ios::binary);
+        std::string data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+        if (!in && !in.eof()) { aError = "\"" + aRelPath + "\" couldn't be read."; return false; }
+        if (data.size() >= 3 && data.compare(0, 3, "\xEF\xBB\xBF") == 0) data.erase(0, 3); // UTF-8 BOM
+        size_t start = 0;
+        while (start <= data.size())
+        {
+            size_t end = data.find('\n', start);
+            if (end == std::string::npos) end = data.size();
+            std::string line = data.substr(start, end - start);
+            if (!line.empty() && line.back() == '\r') line.pop_back();
+            aLines.push_back(std::move(line));
+            start = end + 1;
+        }
+        return true;
+    }
+
+    Placeholders::Context PlaceholderContext()
+    {
+        SYSTEMTIME st{};
+        GetLocalTime(&st);
+        Placeholders::Context c;
+        c.Year = st.wYear;
+        c.Month = st.wMonth;
+        c.Day = st.wDay;
+        c.Hour = st.wHour;
+        c.Minute = st.wMinute;
+        wchar_t day[64] = {};
+        const int n = GetDateFormatEx(LOCALE_NAME_USER_DEFAULT, 0, &st, L"dddd", day, 64, nullptr);
+        c.Weekday = n > 1 ? Utf8(day, n - 1) : std::string("Today");
+        c.AddonVersion = std::string(kAddonName) + " " + kVersionText;
+        c.Random = [](long long aMin, long long aMax) {
+            static std::mt19937_64 rng{std::random_device{}()};
+            return std::uniform_int_distribution<long long>(aMin, aMax)(rng);
+        };
+        c.ReadLines = ReadAddonTextFile;
+        return c;
+    }
+
     void WorkerMain()
     {
         for (;;)
@@ -341,7 +416,26 @@ bool Sender::Start(uint64_t aMacroId, const std::vector<MacroTree::Line>& aLines
         aError = "Already sending a macro.";
         return false;
     }
-    SendPlan::Plan plan = SendPlan::Build(aLines, IsCommander());
+    // Placeholders are filled in first, so the length check and the plan use the real text.
+    std::vector<MacroTree::Line> lines = aLines;
+    const Placeholders::Context ctx = PlaceholderContext();
+    for (size_t i = 0; i < lines.size(); i++)
+    {
+        for (std::string* field : {&lines[i].Message, &lines[i].WhisperTo})
+        {
+            Placeholders::Result r = Placeholders::Expand(*field, ctx);
+            if (!r.Error.empty())
+            {
+                s_Busy = false;
+                aError = "Line " + std::to_string(i + 1) + ": " + r.Error;
+                SetStatus(EState::Failed, 0, 0, aError, aMacroId);
+                return false;
+            }
+            *field = std::move(r.Text);
+        }
+    }
+
+    SendPlan::Plan plan = SendPlan::Build(lines, IsCommander());
     if (!plan.Error.empty())
     {
         s_Busy = false;

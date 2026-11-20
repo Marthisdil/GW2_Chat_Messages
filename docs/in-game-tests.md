@@ -117,3 +117,18 @@ the Nexus log for `Chat Messages` warnings.
 51. Same hotkey on two macros that are both active in PvE: warning in the editor; pressing it in
     PvE shows the "set on 2 macros" alert and sends nothing.
 52. On a map with no active macros the quick menu says "No macros for this map."
+
+## Phase 6: placeholders
+
+53. `/s It's {time} on {today}`: sends the real time and date. Is the weekday in your Windows
+    language? (bhm uses the date format "Friday, 20.11.2026".)
+54. `{random 1 6}` many times: results 1-6, both ends included.
+55. Put `names.txt` with a few lines in `<GW2>\addons\Chat Messages\`: `{txt names.txt}` sends a
+    random line; `{txt names.txt 2}` sends the second non-blank line. Accented letters arrive
+    correctly (save the file as UTF-8).
+56. `{txt missing.txt}`: nothing is sent; the status says the file wasn't found.
+57. `{smile} hello`: sent exactly as typed.
+58. A waypoint chat link in a message (e.g. `/s meet at [&BDAEAAA=]`): arrives as a clickable
+    waypoint link.
+59. A line that's under 199 characters as typed but over 199 once filled in (e.g. a long
+    `{txt}` line): refused with the "too long" message, nothing sent.
