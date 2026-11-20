@@ -55,6 +55,16 @@ to the todo list", add it there (don't start building it). Move agreed items int
   The addon `Signature` is `0x523CBA0E`. Never change it.
 - `src/Globals.h`: `g_Api`, the addon name, the version constants (bump them for every release),
   and `LogF`.
+- `src/MacroTree.*`: the library data model (`Tree`, `Node` folder/macro, `Line`, channels) with the
+  rules (6-folder depth, unique sibling names, move checks) and JSON (de)serialization. No Nexus or
+  ImGui dependency. Tested by `tests/MacroTreeTests.cpp`; run `tools/run_tests.ps1` (CI runs it too).
+  Every tree rule change needs a test.
+- `src/Storage.*`: the addon folder, atomic JSON writes (temp + rename, `.bak` of the previous
+  file), and `LoadMacros`/`SaveMacros`. An unreadable `macros.json` is renamed aside, never
+  overwritten. Don't name functions `LoadLibrary` etc.: `windows.h` macros clash.
+- `src/Ui.*`: the library window (tree + details pane), popups, and debounced saving. The tree is
+  only touched on the render thread. Never change the tree while drawing it: queue an `Action`
+  and apply it after. Open popups at the main window's ID level, not from inside a child window.
 - `src/resource.h` + `src/GW2_Chat_Messages.rc`: Quick Access icons embedded as resource type
   `PNG`. The icon is a scroll; regenerate it with `tools/draw_chat_icon.ps1 -OutDir resources\icons`.
   The other icon concepts that were considered are in `docs/icon-suggestions/` (README + SVGs).
