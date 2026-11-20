@@ -89,3 +89,14 @@ the Nexus log for `Chat Messages` warnings.
 37. **Game input check:** after using hotkeys a lot, every key still works in game, including the
     hotkey's own key doing its normal in-game action, Tab targeting, and Shift/Ctrl/Alt combos.
 38. Mouse 4/5 hotkeys while moving the camera or fighting: no stuck buttons, no lost clicks.
+
+### Quick menu
+39. Right-click the scroll icon: the menu lists the library as nested folders; empty folders
+    are hidden. Hovering a macro shows its lines. Clicking it sends it, and the menu closes.
+40. Set "Open Chat Messages quick menu" in Nexus Keybinds. Press it: the menu opens at the mouse
+    pointer. Press it again: it closes. Click outside: it closes.
+41. Open the pop-up while in action camera / with the mouse hidden: where does it appear, and can
+    you still use it? (May need a "centre of screen" option.)
+42. Send from the menu with the chat key unbound: an alert explains why.
+43. A folder and a macro with the same name in one folder both work in the menu.
+44. Game input check: after using the menu, left/right click, camera turning and Tab still work.

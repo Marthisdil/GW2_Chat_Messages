@@ -48,7 +48,10 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
 - **Filters**: game mode (PvE/WvW/PvP) and an optional list of map ids. A macro is *active* when
   it matches the current map. Inactive macros never fire from a hotkey.
 - **Quick menu**: the Quick Access right-click menu and a hotkey-opened pop-up show the tree as
-  nested menus, with only the active macros listed.
+  nested menus, with only the active macros listed. *(Built: folders without macros are hidden;
+  macros are coloured by channel, show their hotkey, and preview their lines on hover. The pop-up
+  is opened by a Nexus InputBind, "Open Chat Messages quick menu", registered with `"(null)"`. Menu
+  sends report failures as alerts. Until filters exist, every macro is listed.)*
 - **Placeholders**: `{wp}`, `{poi}`, `{map}`, `{area}`, `{time}`, `{hour}`, `{min}`, `{today}`,
   `{random [min] max}`, `{txt file [line]}`, `{json path url}`. bhm's `{blish}` becomes
   `{nexus}` (the addon version). Map, waypoint and point-of-interest data come from the GW2 API.
@@ -132,7 +135,8 @@ Rules this addon follows:
   - The window thread only queues the press. The render thread matches it against the tree and
     starts the sender. A hotkey set on more than one macro sends nothing and shows an alert.
   - A hotkey send that fails shows a Nexus alert, since the library window may be closed.
-  - Only the Nexus toggle keybind for the library window stays a Nexus InputBind (`"(null)"`).
+  - Only the addon's own window keybinds (show/hide the library, open the quick menu) stay Nexus
+    InputBinds (`"(null)"`).
 
 ## Policy note
 
@@ -148,7 +152,7 @@ policy and mention the behaviour when registering with Raidcore.
 3. Macro editor: fancy and raw modes, parser and serializer, character count. *(done)*
 4. Sender: the safe input pipeline (focus, `WM_CHAR`, verification), test button. *(done; not yet
    tested in game)*
-5. Per-macro hotkeys *(done; not yet tested in game)*, Quick Access and pop-up nested menus,
-   game-mode and map filters.
+5. Per-macro hotkeys *(done)*, Quick Access and pop-up nested menus *(done)*, game-mode and map
+   filters. *(Not yet tested in game.)*
 6. Placeholders (plus the GW2 API map, waypoint and point-of-interest cache).
 7. Import/export with preview, `.txt` import/export and link-file sync.

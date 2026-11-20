@@ -21,21 +21,26 @@ AddonAPI_t* g_Api = nullptr;
 namespace
 {
     constexpr const char* kToggleKeybind   = "KB_CHATMSG_TOGGLE";
+    constexpr const char* kMenuKeybind     = "KB_CHATMSG_QUICKMENU";
     constexpr const char* kShortcutId      = "SC_CHATMSG";
+    constexpr const char* kShortcutMenuId  = "QAM_CHATMSG";
     constexpr const char* kIconId          = "ICON_CHATMSG";
     constexpr const char* kIconHoverId     = "ICON_CHATMSG_HOVER";
-    constexpr const char* kShortcutTooltip = "Chat Messages\nLeft-click: show/hide the macro library";
+    constexpr const char* kShortcutTooltip = "Chat Messages\nLeft-click: show/hide the macro library\n"
+                                             "Right-click: send a macro from the menu";
 
     HMODULE           s_Module = nullptr;
     AddonDefinition_t s_AddonDef{};
 
     // Set by the keybind handler (its own thread), consumed on the render thread.
     std::atomic<bool> s_ToggleRequested{false};
+    std::atomic<bool> s_MenuRequested{false};
 
     void AddonLoad(AddonAPI_t* aApi);
     void AddonUnload();
     void AddonRender();
     void AddonOptions();
+    void AddonQuickAccessMenu();
     void OnToggleKeybind(const char* aIdentifier, bool aIsRelease);
 }
 
@@ -85,8 +90,11 @@ namespace
         // No default key: the addon never claims a key the user didn't choose (docs/design.md).
         g_Api->InputBinds_RegisterWithString(kToggleKeybind, OnToggleKeybind, "(null)");
         g_Api->Localization_Set(kToggleKeybind, "en", "Show/hide Chat Messages library");
+        g_Api->InputBinds_RegisterWithString(kMenuKeybind, OnToggleKeybind, "(null)");
+        g_Api->Localization_Set(kMenuKeybind, "en", "Open Chat Messages quick menu");
 
         g_Api->QuickAccess_Add(kShortcutId, kIconId, kIconHoverId, kToggleKeybind, kShortcutTooltip);
+        g_Api->QuickAccess_AddContextMenu(kShortcutMenuId, kShortcutId, AddonQuickAccessMenu);
 
         g_Api->GUI_Register(RT_Render, AddonRender);
         g_Api->GUI_Register(RT_OptionsRender, AddonOptions);
@@ -100,7 +108,9 @@ namespace
         g_Api->GUI_DeregisterCloseOnEscape(Ui::kMainWindowName);
         g_Api->GUI_Deregister(AddonOptions);
         g_Api->GUI_Deregister(AddonRender);
+        g_Api->QuickAccess_RemoveContextMenu(kShortcutMenuId);
         g_Api->QuickAccess_Remove(kShortcutId);
+        g_Api->InputBinds_Deregister(kMenuKeybind);
         g_Api->InputBinds_Deregister(kToggleKeybind);
 
         Hotkeys::Shutdown(); // no new presses from here on
@@ -114,6 +124,7 @@ namespace
     void AddonRender()
     {
         if (s_ToggleRequested.exchange(false)) Ui::ToggleMainWindow();
+        if (s_MenuRequested.exchange(false)) Ui::ToggleQuickMenu();
         Ui::Render();
     }
 
@@ -122,11 +133,15 @@ namespace
         Ui::RenderOptions();
     }
 
+    void AddonQuickAccessMenu()
+    {
+        Ui::RenderQuickAccessMenu();
+    }
+
     void OnToggleKeybind(const char* aIdentifier, bool aIsRelease)
     {
-        if (!aIsRelease && std::strcmp(aIdentifier, kToggleKeybind) == 0)
-        {
-            s_ToggleRequested = true;
-        }
+        if (aIsRelease) return;
+        if (std::strcmp(aIdentifier, kToggleKeybind) == 0) s_ToggleRequested = true;
+        else if (std::strcmp(aIdentifier, kMenuKeybind) == 0) s_MenuRequested = true;
     }
 }

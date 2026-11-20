@@ -13,6 +13,9 @@ namespace Ui
     void  Render();        // RT_Render
     void  RenderOptions(); // RT_OptionsRender (Nexus' addon options page)
 
+    void  RenderQuickAccessMenu(); // QuickAccess_AddContextMenu callback: the library as nested menus
+    void  ToggleQuickMenu();       // opens (at the mouse) or closes the same menu as a pop-up
+
     void  ToggleMainWindow();
     bool* MainWindowOpenFlag(); // for GUI_RegisterCloseOnEscape
 }

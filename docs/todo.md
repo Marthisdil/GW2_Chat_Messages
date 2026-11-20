@@ -76,6 +76,45 @@ Show a counter directly under each message input box: characters typed / maximum
     cursor is on.
   - Colours: normal, a warning near the limit (for example 180+), red over the limit.
 
+### Warn when a hotkey is also a game keybind (added 2026-11-20)
+
+Look into ways to read the game's current keybinds, so the hotkey editor can warn "Ctrl+F1 is
+also bound in game to …" (hotkeys never block a key, so a shared key does both things).
+
+Options to research:
+- **Nexus GameBinds:** Nexus keeps its own table of the game's binds (set in Nexus > Options >
+  Game Keybinds). API v6 only exposes `GameBinds_IsBound` and press/release, not which key a bind
+  uses. Check whether a newer API version adds a getter, or whether we could ask Raidcore for one.
+- **The game's keybind files:** GW2 can save keybind profiles as XML (Options > Control Options
+  > Save, into `Documents\Guild Wars 2\InputBinds\`). We could read the newest one, or one the user
+  picks. A saved profile can be out of date compared with the live settings.
+- **Live settings:** the game keeps its live binds in `Local.dat`, which is binary and
+  undocumented. Probably not worth reading.
+- **Fallback:** a short built-in list of GW2's default keys (1-0, F1-F4, WASD, Tab, T, ...) to warn
+  about common clashes, clearly labelled as "default keys, yours may differ".
+
+Points to settle:
+- Whether the warning shows while picking the key, in the tree, or both.
+- What to do with the game's secondary binds (each action has two).
+- Mouse buttons in the game's binds (Mouse 4/5 are often bound to dodge or skills).
+
+### Mouse buttons as hotkeys, with a required modifier (added 2026-11-20)
+
+Look at letting mouse buttons send a macro only together with Ctrl, Alt or Shift.
+
+- Today (PR #5): Mouse 3 (middle), Mouse 4 and Mouse 5 can be hotkeys, with or without a
+  modifier. Left and right click are always refused.
+- Ideas to look at:
+  - Require a modifier for every mouse-button hotkey, so a plain Mouse 4/5 (often dodge or a
+    skill) can't send a macro by accident.
+  - Whether Ctrl/Alt/Shift + left or right click could be allowed safely. In GW2, Shift+click and
+    Ctrl+click already do things (chat links, targeting, ground-target skills), and clicks over
+    addon windows go to ImGui, so this needs careful in-game testing first.
+  - Extra mouse buttons beyond 5 (gaming mice usually send them as keyboard keys, which already
+    work).
+- Depends on in-game test 26: whether mouse buttons reach our hook at all while the pointer is
+  over the addon window.
+
 ## Open questions
 
 - Whisper sending: find a way that needs no Tab key (test in game before building the sender).

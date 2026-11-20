@@ -24,8 +24,8 @@ to the todo list", add it there (don't start building it). Move agreed items int
 - Avoid Tab. If whispers need it, only while the whisper box is verified focused.
 - One macro at a time on a sender thread; ignore triggers while busy; join on unload.
 - Macro hotkeys are built in (`src/Hotkeys.*`): read in a WndProc hook, **never blocked or
-  consumed**, ignored while any text box is focused. Only the library toggle is a Nexus InputBind,
-  registered with `"(null)"` (no default key).
+  consumed**, ignored while any text box is focused. Only the library toggle and the quick-menu
+  pop-up are Nexus InputBinds, registered with `"(null)"` (no default key).
 
 ## Nexus references
 
