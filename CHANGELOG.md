@@ -6,6 +6,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Hotkeys:** give any macro its own hotkey in the macro editor: click **Set...** and press the
+  key, with Ctrl, Alt or Shift if you like. Mouse 3 (middle), Mouse 4 and Mouse 5 work too.
+  - The hotkey shows next to the macro's name in the tree. **Clear** removes it.
+  - Hotkeys never block a key: the key still does its normal job in game, so pick one you don't
+    use there. Plain letters and numbers get a warning; Escape, left/right click, and plain Tab,
+    Enter, Space and Backspace can't be used.
+  - Hotkeys don't fire while you're typing in chat or in any addon text box, outside gameplay, or
+    while a macro is already sending.
+  - If two macros share a hotkey, the editor warns you and pressing it sends nothing.
+  - When a macro sent by hotkey fails, an on-screen alert says why.
+  - Hotkeys are saved with your macros in `macros.json`.
 - **Send now:** a button in the macro editor (and "Send now" in a macro's right-click menu) types
   each line into its chat channel and sends it, one line after another.
   - Chat is opened with your own Chat key from Nexus > Options > Game Keybinds. If it isn't set

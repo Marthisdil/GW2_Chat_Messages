@@ -23,7 +23,9 @@ to the todo list", add it there (don't start building it). Move agreed items int
   focused) and abort.
 - Avoid Tab. If whispers need it, only while the whisper box is verified focused.
 - One macro at a time on a sender thread; ignore triggers while busy; join on unload.
-- Macro hotkeys are Nexus InputBinds registered with `"(null)"` (no default key).
+- Macro hotkeys are built in (`src/Hotkeys.*`): read in a WndProc hook, **never blocked or
+  consumed**, ignored while any text box is focused. Only the library toggle is a Nexus InputBind,
+  registered with `"(null)"` (no default key).
 
 ## Nexus references
 
@@ -67,6 +69,10 @@ to the todo list", add it there (don't start building it). Move agreed items int
 - `src/Storage.*`: the addon folder, atomic JSON writes (temp + rename, `.bak` of the previous
   file), and `LoadMacros`/`SaveMacros`. An unreadable `macros.json` is renamed aside, never
   overwritten. Don't name functions `LoadLibrary` etc.: `windows.h` macros clash.
+- `src/Hotkey.*`: the hotkey combo (key + Ctrl/Alt/Shift), its text form for `macros.json`, and
+  which keys are refused. No Nexus or ImGui dependency. Tested by `tests/HotkeyTests.cpp`.
+- `src/Hotkeys.*`: the WndProc hook that reads presses and captures a new hotkey. It only queues
+  presses; the render thread (`Ui.cpp`) matches them to macros and starts the sender.
 - `src/SendPlan.*`: turns a macro's lines into the exact send steps (open chat, wait, type, Tab
   for whispers, Enter, wait) and validates them. No Nexus or ImGui dependency. Tested by
   `tests/SendPlanTests.cpp`.

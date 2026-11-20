@@ -11,6 +11,8 @@
 
 #include <nlohmann/json_fwd.hpp>
 
+#include "Hotkey.h"
+
 namespace MacroTree
 {
     // Folders may nest this deep (root -> level 1 -> ... -> level 6). Macros can live in any folder.
@@ -54,6 +56,7 @@ namespace MacroTree
         uint8_t           GameModes = GM_All;
         std::vector<int>  MapIds;
         std::string       LinkFile;
+        Hotkey::Combo     Hotkey;   // empty = none
 
         bool IsFolder() const { return Type == ENodeType::Folder; }
         bool IsMacro() const  { return Type == ENodeType::Macro; }
@@ -106,6 +109,8 @@ namespace MacroTree
         bool   Shift(Node& aNode, int aDelta);
         // Sorts a folder's children: folders first, then macros, each A-Z (case-insensitive).
         void   SortChildren(Node& aFolder, bool aRecursive);
+        // Every macro using this hotkey, in tree order (more than one = a conflict). Empty combo -> none.
+        std::vector<Node*> MacrosWithHotkey(const Hotkey::Combo& aCombo) const;
 
         nlohmann::json ToJson() const;
         // Replaces the tree. Bad nodes are skipped, missing or duplicate ids are regenerated.

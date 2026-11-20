@@ -63,3 +63,29 @@ the Nexus log for `Chat Messages` warnings.
 ### Commander
 22. As commander, a Squad line with **Broadcast** goes out as a squad broadcast.
 23. Not commander: the same line is sent as normal squad chat.
+
+## Phase 5: hotkeys
+
+### Setting a hotkey
+24. Select a macro, click **Set...**, press Ctrl+F1: the editor and the tree show "Ctrl+F1".
+25. **Set...** then Escape: the capture is cancelled and the old hotkey stays.
+26. **Set...** with the mouse over the addon window, press Mouse 4 (and Mouse 3, Mouse 5): are
+    the mouse buttons recorded? (Nexus may keep mouse clicks over its windows for ImGui.)
+27. Try Escape-with-Ctrl, plain Tab, plain Enter: refused with a message.
+28. Give two macros the same hotkey: both show "Also set on"; pressing it shows an alert and
+    sends nothing.
+29. Close the window while capturing: the capture is cancelled.
+30. Reload the addon: hotkeys are still there (saved in `macros.json` as text).
+
+### Using a hotkey
+31. With the library closed, press the hotkey: the macro sends. Release Ctrl quickly; holding it
+    over half a second makes the send stop with the modifier message (by design).
+32. Hold the hotkey down: it sends once (auto-repeat is ignored).
+33. Open chat and type text containing the hotkey's key (e.g. a plain F-key or Ctrl+key): nothing
+    is sent while chat is open.
+34. Type in an addon text box (our message box, or another addon's): hotkeys don't fire.
+35. Press the hotkey twice quickly: the second press is ignored while the first is sending.
+36. Make a hotkey fail on purpose (e.g. a whisper macro with chat key unbound): an alert appears.
+37. **Game input check:** after using hotkeys a lot, every key still works in game, including the
+    hotkey's own key doing its normal in-game action, Tab targeting, and Shift/Ctrl/Alt combos.
+38. Mouse 4/5 hotkeys while moving the camera or fighting: no stuck buttons, no lost clicks.

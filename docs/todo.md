@@ -62,6 +62,20 @@ by design.
     later.
   - Fonts: German, French and Spanish accented letters need to be in the font's glyph ranges.
 
+### Character counter under the message box (added 2026-11-20)
+
+Show a counter directly under each message input box: characters typed / maximum (for example
+`23/199`).
+
+- Today the lines editor shows the count as a small label to the right of the message box, and
+  raw mode shows no count per row.
+- Points to settle:
+  - Whether the count includes the channel command (`/s `, `/w Name`) the way the game counts it,
+    or only the message (and the maximum shrinks by the command's length).
+  - Raw mode: a counter per row in the "Will send" list, or one under the box for the row the
+    cursor is on.
+  - Colours: normal, a warning near the limit (for example 180+), red over the limit.
+
 ## Open questions
 
 - Whisper sending: find a way that needs no Tab key (test in game before building the sender).

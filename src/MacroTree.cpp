@@ -122,6 +122,7 @@ namespace MacroTree
                 j["game_modes"] = std::move(modes);
                 j["map_ids"]    = n.MapIds;
                 if (!n.LinkFile.empty()) j["link_file"] = n.LinkFile;
+                if (!n.Hotkey.Empty()) j["hotkey"] = Hotkey::ToString(n.Hotkey);
             }
             return j;
         }
@@ -227,6 +228,13 @@ namespace MacroTree
                     for (const json& jm : *maps)
                         if (jm.is_number_integer()) n.MapIds.push_back(jm.get<int>());
                 n.LinkFile = StringField(j, "link_file");
+                const std::string hk = StringField(j, "hotkey");
+                if (!hk.empty())
+                {
+                    const Hotkey::Combo c = Hotkey::FromString(hk);
+                    if (!c.Empty() && Hotkey::Refusal(c).empty()) n.Hotkey = c;
+                    else Warn("Macro \"" + n.Name + "\": hotkey \"" + hk + "\" isn't valid and was removed.");
+                }
             }
 
             // Two siblings of the same type with the same name: rename the later one "Name (2)" etc.
@@ -513,4 +521,23 @@ namespace MacroTree
         }
         return true;
     }
+}
+
+namespace
+{
+    void CollectHotkey(MacroTree::Node& aNode, const Hotkey::Combo& aCombo, std::vector<MacroTree::Node*>& aOut)
+    {
+        for (const auto& c : aNode.Children)
+        {
+            if (c->IsMacro() && c->Hotkey == aCombo) aOut.push_back(c.get());
+            else if (c->IsFolder()) CollectHotkey(*c, aCombo, aOut);
+        }
+    }
+}
+
+std::vector<MacroTree::Node*> MacroTree::Tree::MacrosWithHotkey(const Hotkey::Combo& aCombo) const
+{
+    std::vector<Node*> out;
+    if (!aCombo.Empty()) CollectHotkey(*m_Root, aCombo, out);
+    return out;
 }
