@@ -139,6 +139,41 @@ by hand for the map filter.
     the id and region too.
   - Works offline: ids still work without names; names just show as "Map 1234".
 
+### Refresh map info
+
+- On the first launch (and maybe after a game build change), check the API/wiki for new or
+  updated map info, instead of only looking up maps as you visit them (PR #9's cache).
+- A button in the settings window to force that check now.
+- To discuss: how to handle a map's name or id changing (renames, maps that are removed or
+  replaced with a new id). Filters store ids, so a rename only changes the label, but a new id
+  would silently stop a filter from matching. Options: keep old names alongside new ones, flag
+  filters that use ids the API no longer knows, or offer to swap to the new id.
+
+### Publish the wiki (reminder: do this once the repo is public)
+
+The usage docs are written in `docs/wiki/`. A private repo on GitHub's free plan can't have a
+wiki, so they wait here.
+
+Before making the repo public: the whole commit history becomes public too, including commit
+author names and email addresses. Check you're happy with that.
+
+Your steps (on github.com, in the repo):
+1. **Settings > General**, at the bottom under **Danger Zone**: **Change visibility** >
+   **Make public**, and confirm.
+2. **Settings > General > Features**: tick **Wikis**. Optionally also tick **Restrict editing to
+   collaborators only**, so only you can edit it.
+3. Open the new **Wiki** tab and click **Create the first page**. Leave the title as "Home",
+   type anything in the body, and click **Save page**. (GitHub only creates the wiki's git repo
+   after this first page exists. It will be replaced.)
+4. Tell Claude "the wiki is ready".
+
+Claude's steps:
+1. Clone `https://github.com/Marthisdil/GW2_Chat_Messages.wiki.git` into a temporary folder.
+2. Copy every page from `docs/wiki/` into it (replacing the blank Home page), commit and push.
+3. Check that each page and the sidebar show up and that the links between pages work.
+4. Update the README's Documentation section to link to the wiki, and decide with you whether
+   `docs/wiki/` stays as the source (and gets pushed again after each change) or is removed.
+
 ## Open questions
 
 - Whisper sending: find a way that needs no Tab key (test in game before building the sender).

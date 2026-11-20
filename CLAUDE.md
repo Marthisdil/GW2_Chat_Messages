@@ -6,6 +6,10 @@ root). Modelled on the Blish HUD module https://github.com/agaertner/bhm-chat-ma
 its `main` branch). **Read `docs/design.md` before feature work**: it holds the decisions, data
 model, import/export rules and the phase plan.
 
+`docs/wiki/` holds the user documentation for the GitHub wiki (flat pages, links written as
+`[text](Page-Name)` without `.md`, `_Sidebar.md`). Update it with every user-visible change. The
+repo is private and its wiki is off, so the pages are pushed to the wiki repo later.
+
 `docs/todo.md` collects ideas and brainstorming for later discussion. When the user says "add X
 to the todo list", add it there (don't start building it). Move agreed items into
 `docs/design.md`.
