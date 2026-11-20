@@ -9,6 +9,7 @@
 
 #include "imgui.h"
 
+#include "ChatLine.h"
 #include "Globals.h"
 #include "MacroTree.h"
 #include "Storage.h"
@@ -26,6 +27,8 @@ namespace
     const ImVec4 kWarnColor  {1.00f, 0.80f, 0.35f, 1.0f};
     const ImVec4 kErrorColor {1.00f, 0.45f, 0.40f, 1.0f};
     const ImVec4 kFolderColor{0.88f, 0.86f, 0.70f, 1.0f};
+
+    ImVec4 ChannelColorVec(EChannel aChannel); // defined with the macro editor
 
     Tree s_Tree;
     bool s_ShowMainWindow = false;
@@ -251,7 +254,11 @@ namespace
         else
         {
             flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_Bullet;
+            // Macros take their first line's channel colour, like in bhm-chat-macros.
+            const EChannel first = aNode.Lines.empty() ? EChannel::Current : aNode.Lines.front().Channel;
+            ImGui::PushStyleColor(ImGuiCol_Text, ChannelColorVec(first));
             ImGui::TreeNodeEx("##node", flags, "%s", aNode.Name.c_str());
+            ImGui::PopStyleColor();
         }
 
         if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) s_SelectedId = aNode.Id;
@@ -431,6 +438,217 @@ namespace
         ImGui::EndPopup();
     }
 
+    // --- Macro editor -------------------------------------------------------------------------
+
+    constexpr size_t kMaxLinesPerMacro = 50;
+
+    ImVec4 ChannelColorVec(EChannel aChannel)
+    {
+        const uint32_t c = ChatLine::ChannelColor(aChannel);
+        return ImVec4(((c >> 16) & 0xFF) / 255.0f, ((c >> 8) & 0xFF) / 255.0f, (c & 0xFF) / 255.0f, 1.0f);
+    }
+
+    // ImGui 1.80 has no std::string overload; grow the string as ImGui asks.
+    int StringResizeCallback(ImGuiInputTextCallbackData* aData)
+    {
+        if (aData->EventFlag == ImGuiInputTextFlags_CallbackResize)
+        {
+            auto* str = static_cast<std::string*>(aData->UserData);
+            str->resize(static_cast<size_t>(aData->BufTextLen));
+            aData->Buf = str->data();
+        }
+        return 0;
+    }
+
+    bool InputString(const char* aLabel, const char* aHint, std::string& aStr, ImGuiInputTextFlags aFlags = 0)
+    {
+        aFlags |= ImGuiInputTextFlags_CallbackResize;
+        const bool changed = ImGui::InputTextWithHint(aLabel, aHint, aStr.data(), aStr.capacity() + 1, aFlags,
+                                                      StringResizeCallback, &aStr);
+        if (changed) // a pasted newline would split the message; chat messages are one line
+            for (char& c : aStr)
+                if (c == '\n' || c == '\r' || c == '\t') c = ' ';
+        return changed;
+    }
+
+    bool InputStringMultiline(const char* aLabel, std::string& aStr, const ImVec2& aSize)
+    {
+        return ImGui::InputTextMultiline(aLabel, aStr.data(), aStr.capacity() + 1, aSize,
+                                         ImGuiInputTextFlags_CallbackResize, StringResizeCallback, &aStr);
+    }
+
+    bool ChannelCombo(const char* aLabel, EChannel& aChannel)
+    {
+        bool changed = false;
+        ImGui::PushStyleColor(ImGuiCol_Text, ChannelColorVec(aChannel));
+        const bool open = ImGui::BeginCombo(aLabel, ChannelLabel(aChannel));
+        ImGui::PopStyleColor();
+        if (!open) return false;
+        for (int i = 0; i < static_cast<int>(EChannel::Count); i++)
+        {
+            const EChannel c = static_cast<EChannel>(i);
+            ImGui::PushStyleColor(ImGuiCol_Text, ChannelColorVec(c));
+            if (ImGui::Selectable(ChannelLabel(c), c == aChannel)) { aChannel = c; changed = true; }
+            ImGui::PopStyleColor();
+            if (c == aChannel) ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+        return changed;
+    }
+
+    // "12/199" after a message, red when too long. Returns the length.
+    void LengthLabel(const Line& aLine)
+    {
+        const size_t len = ChatLine::Utf16Length(ChatLine::TypedText(aLine));
+        if (len > ChatLine::kMaxChatLength)
+            ImGui::TextColored(kErrorColor, "%zu/%zu", len, ChatLine::kMaxChatLength);
+        else
+            ImGui::TextDisabled("%zu/%zu", len, ChatLine::kMaxChatLength);
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Characters typed into chat, including the channel command.\n"
+                              "Chat allows at most %zu. Longer lines won't be sent.", ChatLine::kMaxChatLength);
+    }
+
+    void LineWarnings(const Line& aLine)
+    {
+        if (aLine.Channel == EChannel::Whisper && aLine.WhisperTo.empty())
+            ImGui::TextColored(kWarnColor, "Whisper needs a recipient.");
+        if (aLine.Message.empty())
+            ImGui::TextColored(kWarnColor, "Empty message.");
+    }
+
+    enum class EEditMode { Lines, Raw };
+    EEditMode   s_EditMode   = EEditMode::Lines;
+    std::string s_RawText;
+    uint64_t    s_RawForId   = 0; // which macro s_RawText was built from (0 = rebuild)
+
+    void DrawLinesEditor(Node& aMacro)
+    {
+        auto& lines = aMacro.Lines;
+        int moveFrom = -1, moveTo = -1, removeAt = -1;
+
+        for (int i = 0; i < static_cast<int>(lines.size()); i++)
+        {
+            Line& l = lines[static_cast<size_t>(i)];
+            ImGui::PushID(i);
+
+            if (ImGui::ArrowButton("##up", ImGuiDir_Up) && i > 0) { moveFrom = i; moveTo = i - 1; }
+            ImGui::SameLine(0.0f, 2.0f);
+            if (ImGui::ArrowButton("##down", ImGuiDir_Down) && i + 1 < static_cast<int>(lines.size())) { moveFrom = i; moveTo = i + 1; }
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(110.0f);
+            if (ChannelCombo("##channel", l.Channel)) MarkDirty();
+            if (l.Channel == EChannel::Whisper)
+            {
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(150.0f);
+                if (InputString("##to", "Recipient", l.WhisperTo)) MarkDirty();
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("Character or account name to whisper.");
+            }
+            else if (l.Channel == EChannel::Squad)
+            {
+                ImGui::SameLine();
+                if (ImGui::Checkbox("Broadcast", &l.SquadBroadcast)) MarkDirty();
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("Send as a squad broadcast. Only works while you're the commander;\n"
+                                      "otherwise it's sent as a normal squad message.");
+            }
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Remove")) removeAt = i;
+
+            ImGui::SetNextItemWidth(-70.0f);
+            if (InputString("##msg", "Message", l.Message)) MarkDirty();
+            ImGui::SameLine();
+            LengthLabel(l);
+            LineWarnings(l);
+
+            ImGui::PopID();
+            ImGui::Separator();
+        }
+
+        // Apply after the loop so the vector isn't changed while it's being drawn.
+        if (removeAt >= 0) { lines.erase(lines.begin() + removeAt); MarkDirty(); }
+        else if (moveFrom >= 0) { std::swap(lines[static_cast<size_t>(moveFrom)], lines[static_cast<size_t>(moveTo)]); MarkDirty(); }
+
+        if (lines.size() < kMaxLinesPerMacro)
+        {
+            if (ImGui::Button("Add line"))
+            {
+                Line l;
+                if (!lines.empty()) { l.Channel = lines.back().Channel; l.WhisperTo = lines.back().WhisperTo; }
+                lines.push_back(std::move(l));
+                MarkDirty();
+            }
+        }
+        else
+        {
+            ImGui::TextDisabled("A macro can have at most %zu lines.", kMaxLinesPerMacro);
+        }
+    }
+
+    void DrawRawEditor(Node& aMacro)
+    {
+        if (s_RawForId != aMacro.Id)
+        {
+            s_RawText  = ChatLine::SerializeRaw(aMacro.Lines);
+            s_RawForId = aMacro.Id;
+        }
+
+        ImGui::TextDisabled("One message per row, typed as in game:");
+        ImGui::TextDisabled("/s hello   /w [Name] hi   /d ! broadcast   /g3 guild 3");
+        const float height = ImGui::GetTextLineHeightWithSpacing() * 8.0f;
+        if (InputStringMultiline("##raw", s_RawText, ImVec2(-1.0f, height)))
+        {
+            // Lines follow the text as you type; the text itself is left exactly as typed.
+            aMacro.Lines = ChatLine::ParseRaw(s_RawText);
+            if (aMacro.Lines.size() > kMaxLinesPerMacro) aMacro.Lines.resize(kMaxLinesPerMacro);
+            MarkDirty();
+        }
+
+        ImGui::Spacing();
+        ImGui::TextDisabled("Will send:");
+        if (aMacro.Lines.empty()) ImGui::TextDisabled("(nothing)");
+        for (size_t i = 0; i < aMacro.Lines.size(); i++)
+        {
+            const Line& l = aMacro.Lines[i];
+            ImGui::PushID(static_cast<int>(i));
+            ImGui::TextColored(ChannelColorVec(l.Channel), "[%s]", ChannelLabel(l.Channel));
+            ImGui::SameLine();
+            if (l.Channel == EChannel::Whisper && !l.WhisperTo.empty())
+            {
+                ImGui::TextColored(ChannelColorVec(l.Channel), "to %s:", l.WhisperTo.c_str());
+                ImGui::SameLine();
+            }
+            if (l.Channel == EChannel::Squad && l.SquadBroadcast)
+            {
+                ImGui::TextColored(ChannelColorVec(l.Channel), "(broadcast)");
+                ImGui::SameLine();
+            }
+            LengthLabel(l);
+            ImGui::SameLine();
+            ImGui::TextWrapped("%s", l.Message.c_str());
+            LineWarnings(l);
+            ImGui::PopID();
+        }
+        if (aMacro.Lines.size() >= kMaxLinesPerMacro)
+            ImGui::TextColored(kWarnColor, "Only the first %zu lines are kept.", kMaxLinesPerMacro);
+    }
+
+    void DrawMacroEditor(Node& aMacro)
+    {
+        int mode = static_cast<int>(s_EditMode);
+        if (ImGui::RadioButton("Lines", &mode, static_cast<int>(EEditMode::Lines))) s_RawForId = 0;
+        ImGui::SameLine();
+        if (ImGui::RadioButton("Raw text", &mode, static_cast<int>(EEditMode::Raw))) s_RawForId = 0;
+        s_EditMode = static_cast<EEditMode>(mode);
+        ImGui::SameLine();
+        ImGui::TextDisabled("%zu line(s)", aMacro.Lines.size());
+        ImGui::Spacing();
+
+        if (s_EditMode == EEditMode::Lines) DrawLinesEditor(aMacro);
+        else DrawRawEditor(aMacro);
+    }
+
     // --- Details pane -------------------------------------------------------------------------
 
     void DrawDetails()
@@ -448,6 +666,10 @@ namespace
         ImGui::TextDisabled("%s", node->IsFolder() ? "Folder" : "Macro");
         ImGui::TextWrapped("%s", node->Name.c_str());
         ImGui::TextDisabled("In: %s", PathOf(*node).c_str());
+        // Popups must be opened at the main window's ID level, so these buttons queue an action.
+        if (ImGui::SmallButton("Rename")) s_Pending = {EAction::OpenName, 0, node->Id, EDrop::Into, 0, ENameMode::Rename};
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Delete...")) s_Pending = {EAction::OpenDelete, node->Id};
         ImGui::Separator();
 
         if (node->IsFolder())
@@ -458,7 +680,6 @@ namespace
             ImGui::Text("Folder level %d of %d", level, kMaxFolderDepth);
             ImGui::Text("Contains %zu folder(s) and %zu macro(s)", folders, macros);
             ImGui::Spacing();
-            // Popups must be opened at the main window's ID level, so these queue an action.
             if (level < kMaxFolderDepth)
             {
                 if (ImGui::Button("New folder inside"))
@@ -470,17 +691,8 @@ namespace
         }
         else
         {
-            ImGui::Text("%zu line(s)", node->Lines.size());
-            for (const Line& l : node->Lines)
-                ImGui::TextWrapped("[%s] %s", ChannelLabel(l.Channel), l.Message.c_str());
-            ImGui::Spacing();
-            ImGui::TextDisabled("Editing the lines comes in the next update.");
+            DrawMacroEditor(*node);
         }
-
-        ImGui::Spacing();
-        if (ImGui::Button("Rename")) s_Pending = {EAction::OpenName, 0, node->Id, EDrop::Into, 0, ENameMode::Rename};
-        ImGui::SameLine();
-        if (ImGui::Button("Delete...")) s_Pending = {EAction::OpenDelete, node->Id};
     }
 
     void DrawToolbar()
@@ -524,8 +736,8 @@ namespace
 
     void DrawMainWindow()
     {
-        ImGui::SetNextWindowSize(ImVec2(640.0f, 420.0f), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSizeConstraints(ImVec2(420.0f, 260.0f), ImVec2(FLT_MAX, FLT_MAX));
+        ImGui::SetNextWindowSize(ImVec2(820.0f, 500.0f), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSizeConstraints(ImVec2(560.0f, 300.0f), ImVec2(FLT_MAX, FLT_MAX));
         if (!ImGui::Begin(Ui::kMainWindowName, &s_ShowMainWindow, ImGuiWindowFlags_NoCollapse))
         {
             ImGui::End();
@@ -536,7 +748,7 @@ namespace
         DrawToolbar();
         ImGui::Separator();
 
-        const float treeWidth = ImGui::GetContentRegionAvail().x * 0.5f;
+        const float treeWidth = ImGui::GetContentRegionAvail().x * 0.38f;
         ImGui::BeginChild("##tree", ImVec2(treeWidth, 0.0f), true);
         if (s_Tree.Root().Children.empty())
         {

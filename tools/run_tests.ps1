@@ -12,13 +12,18 @@ $vcvars = Join-Path $vs "VC\Auxiliary\Build\vcvars64.bat"
 $out = Join-Path $root "build\tests"
 New-Item -ItemType Directory -Force -Path $out | Out-Null
 
-$sources = @("tests\MacroTreeTests.cpp", "src\MacroTree.cpp") | ForEach-Object { "`"$(Join-Path $root $_)`"" }
-$includes = "/I `"$root\src`" /I `"$root\vendor\json\single_include`""
+# Every test file, plus the Nexus-free sources under test. Add new ones here.
+$sources = @(
+    "tests\TestMain.cpp", "tests\MacroTreeTests.cpp", "tests\ChatLineTests.cpp",
+    "src\MacroTree.cpp", "src\ChatLine.cpp"
+) | ForEach-Object { "`"$(Join-Path $root $_)`"" }
+$includes = "/I `"$root\src`" /I `"$root\tests`" /I `"$root\vendor\json\single_include`""
 # /Z7 keeps debug info in the .obj files (compile-time PDBs fail inside Dropbox folders).
-$cl = "cl /nologo /std:c++17 /EHsc /W3 /Z7 /MTd $includes $($sources -join ' ') /Fo`"$out\\`" /Fe`"$out\MacroTreeTests.exe`""
+# /utf-8: test sources contain UTF-8 string literals.
+$cl = "cl /nologo /std:c++17 /utf-8 /EHsc /W3 /Z7 /MTd $includes $($sources -join ' ') /Fo`"$out\\`" /Fe`"$out\UnitTests.exe`""
 
 cmd /c "`"$vcvars`" >nul && $cl"
 if ($LASTEXITCODE -ne 0) { throw "Test build failed" }
 
-& "$out\MacroTreeTests.exe"
+& "$out\UnitTests.exe"
 exit $LASTEXITCODE

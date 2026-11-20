@@ -59,6 +59,11 @@ to the todo list", add it there (don't start building it). Move agreed items int
   rules (6-folder depth, unique sibling names, move checks) and JSON (de)serialization. No Nexus or
   ImGui dependency. Tested by `tests/MacroTreeTests.cpp`; run `tools/run_tests.ps1` (CI runs it too).
   Every tree rule change needs a test.
+- `src/ChatLine.*`: the raw text format (parse and serialize, with English, German, French and
+  Spanish commands), the text typed into chat, channel colours, and the 199-unit length (UTF-16
+  units, as the game counts). No Nexus or ImGui dependency. Tested by `tests/ChatLineTests.cpp`.
+- `tests/`: `TestMain.cpp` runs every `Run*Tests()`, and `TestCheck.h` has `CHECK`. Add new test
+  files and their sources to `tools/run_tests.ps1`.
 - `src/Storage.*`: the addon folder, atomic JSON writes (temp + rename, `.bak` of the previous
   file), and `LoadMacros`/`SaveMacros`. An unreadable `macros.json` is renamed aside, never
   overwritten. Don't name functions `LoadLibrary` etc.: `windows.h` macros clash.
@@ -112,3 +117,6 @@ to the todo list", add it there (don't start building it). Move agreed items int
 - Update `CHANGELOG.md` for every user-visible change.
 - Do not commit build output (`.dll`, `.pdb`, `.obj`, `.exe`, ...).
 - README keeps an "AI Disclosure" section as its last section; prose is first person singular ("I").
+- After each merge and cleanup, ask the user whether to build or update the restore package
+  (`C:\Dropbox\~ Github\GW2_Chat_Messages_restore_v<version>_<sha>.zip`). If they say yes, build it
+  and test-restore it before doing anything else.
