@@ -13,7 +13,14 @@ link images as `../images/name.png`; when publishing, rewrite those to
 `https://raw.githubusercontent.com/Marthisdil/GW2_Chat_Messages/main/docs/images/name.png`.
 
 **Security reviews and `claude-security` scans:** read `docs/security-review.md` first (scope,
-untrusted inputs, patch rules; `vendor/` is out of scope).
+untrusted inputs, patch rules; `vendor/` is out of scope). How to run them (clang-tidy/clangd via
+`tools\run_audit.ps1`, claude-security, `/security-review`) is in `docs/security-audit.md`.
+**When:** before a **major release** (first release, any Beta/Rel, a channel change, or a Dev
+release that changes an untrusted input or the input path: see that doc's table) run the full
+audit without asking, and hold the release until findings are fixed or accepted by the user.
+Before a **minor release** (any other tagged release), ask: full audit, quick audit since the
+last tag, or skip. When opening a PR that changes code (not docs-only), ask: quick audit of
+this PR, or skip.
 
 `docs/todo.md` collects ideas and brainstorming for later discussion. When the user says "add X
 to the todo list", add it there (don't start building it). Move agreed items into

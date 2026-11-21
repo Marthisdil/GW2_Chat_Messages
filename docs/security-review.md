@@ -11,9 +11,10 @@ to scan, where untrusted data comes in, which bug classes matter here, and how p
   v1.80, nlohmann json; never edited in place, and ImGui is never bumped), `build/`, `docs/`.
   Do report it when *our* code misuses a vendor API.
 - **Tools:** clangd and `clang-tidy` (`C:\Program Files\LLVM\bin`) read
-  `build\compile_commands.json` (written by `tools\compile_commands.ps1`). Prefer targeted
-  `clang-tidy` runs on the files below over full rebuilds. The unit tests are
-  `tools\run_tests.ps1`.
+  `build\compile_commands.json` (written by `tools\compile_commands.ps1`) and `.clang-tidy`.
+  `tools\run_audit.ps1` runs both (`-Changed` for a branch's files); its findings are in
+  `build\audit\findings.txt`. Prefer targeted runs on the files below over full rebuilds. The
+  unit tests are `tools\run_tests.ps1`. How and when audits run: `docs/security-audit.md`.
 - **Build:** C++17 (no C++20: no `std::span`, no `<format>`), x64, MSVC v143 in CI (VS 2022) and
   v145 locally. A patch must build on both.
 
