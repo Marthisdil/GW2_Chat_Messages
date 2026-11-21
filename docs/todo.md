@@ -190,6 +190,41 @@ provides, so there are usually just 2-4 sizes. If that's not enough:
   12-28 px, or a slider.
 - Whether to follow the game's own interface size (MumbleLink's identity `uisz`) as the default.
 
+### Emote list, and which emotes the player has (added 2026-11-21)
+
+Investigate pulling the list of emotes (from the wiki, or from the game/API directly), so a line
+can pick an emote instead of typing `/wave` by hand. Also find out whether we can see which
+emotes the player has: many have to be earned or unlocked. Then decide what to do about the ones
+they don't have.
+
+To look into (none of this is checked yet):
+- **Where the list could come from:**
+  - The GW2 API's `/v2/emotes` (no key needed, as far as I know) may list each emote's commands
+    and the items that unlock it. It could be cached like `maps.json`.
+  - The wiki's emote page as a fallback. Scraping a wiki page is fragile, so it's only for
+    whatever the API lacks.
+  - A built-in list, updated with addon releases.
+  - Whether the game client itself exposes the list. Probably not, since MumbleLink has no emote
+    data.
+- **Emotes in the player's language:** the commands differ per language (`/wave`, `/winken` ...).
+  Check whether the API gives every language's command.
+- **Which emotes the player has:** the GW2 API's `/v2/account/emotes` may list the unlocked
+  ones. It needs the player's API key with the `unlocks` permission. Nexus has no shared API key
+  (as of API v6), so the addon would need a key field of its own, or
+  another addon's shared key if one exists. The key must be stored safely, and never sent
+  anywhere but the official API.
+  - Without a key: the list is shown as "unknown" with no warnings, or only the default emotes
+    are marked as known.
+- **What to do about emotes they don't have (to decide):**
+  - Show them greyed out with "Not unlocked" (and how to get it, from the API's unlock items).
+  - Or hide them, or allow them with a warning. In game, a locked emote shows an error message
+    in chat and does nothing.
+  - Warn in the editor when a macro line uses a locked emote, the same way as the line-length
+    warning.
+  - Refresh the unlocked list now and then (unlocks change), like "Refresh map info".
+- **UI idea:** an "Emote..." picker next to the line's message box (search box + list), which
+  fills in `/command`. It could share the pop-up idea of the special character picker.
+
 ### Publish the wiki (reminder: do this once the repo is public)
 
 The usage docs are written in `docs/wiki/`. A private repo on GitHub's free plan can't have a
