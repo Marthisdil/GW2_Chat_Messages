@@ -35,7 +35,8 @@ describe what you saw even if nothing went wrong. A copy-paste template is at th
 
 ## A. Loading and the library
 
-**A1. Loading.** Start the game. In the Nexus log: `Loaded v0.1.0.` and no warnings.
+**A1. Loading.** Start the game. In the Nexus log: `Loaded 2026.MM.DD.HHMM.Dev.` (the build's version) and no warnings. Right-click
+the DLL > Properties > Details: File version and Product version show the same text.
 The scroll icon is in the Nexus bar. Clicking it opens and closes the library; so does your
 library key. Nexus > Options > Addons > Chat Messages shows the version and an **Open macro
 library** button that works.

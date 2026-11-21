@@ -4,22 +4,24 @@
 #include <cstdio>
 
 #include "Nexus.h"
+#include "Version.h"
 
 // Shared addon state. Set in AddonLoad and cleared in AddonUnload.
 extern AddonAPI_t* g_Api;
 
 constexpr const char* kAddonName  = "Chat Messages";
 constexpr const char* kLogChannel = "Chat Messages";
-// The data folder under <GW2>ddons\: named like the DLL (GW2_Chat_Messages.dll).
+// The data folder under <GW2>\addons\: named like the DLL (GW2_Chat_Messages.dll).
 constexpr const char* kDataFolder = "GW2_Chat_Messages";
 
-// Addon version: bump all of these together for every release (GetAddonDef uses the numbers,
-// the main window shows the text).
-constexpr signed short kVersionMajor    = 0;
-constexpr signed short kVersionMinor    = 1;
-constexpr signed short kVersionBuild    = 0;
-constexpr signed short kVersionRevision = 0;
-constexpr const char*  kVersionText     = "v0.1.0";
+// Addon version, from src/Version.h (tools/set_version.ps1 writes it: run it for every release).
+// GetAddonDef uses the numbers (Nexus compares them with the GitHub release tag); the log, the
+// main window and error reports show the text, e.g. "2026.11.21.1430.Dev".
+constexpr uint16_t    kVersionMajor    = CHATMSG_VER_YEAR;
+constexpr uint16_t    kVersionMinor    = CHATMSG_VER_MONTH;
+constexpr uint16_t    kVersionBuild    = CHATMSG_VER_DAY;
+constexpr uint16_t    kVersionRevision = CHATMSG_VER_TIME;
+constexpr const char* kVersionText     = CHATMSG_VER_TEXT;
 constexpr const char*  kRepositoryUrl   = "https://github.com/Marthisdil/GW2_Chat_Messages";
 
 // printf-style wrapper around the Nexus logger. Safe to call from any thread

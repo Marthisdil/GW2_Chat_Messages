@@ -139,6 +139,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 - The data folder is now `<GW2>\addons\GW2_Chat_Messages\`, named like the DLL (it was
   `Chat Messages`). If you ran an earlier build, move that folder's files across.
+- **Version numbers** are now the build date and time (GMT) plus the kind of build, like
+  `2026.11.21.1412.Dev` (`Dev` until the first full release, then `Beta` or `Rel`). The DLL's
+  Properties > Details tab shows it as File version and Product version.
 
 ### Fixed
 - When a send was refused because you were typing in chat, the addon could press Escape and close
