@@ -93,6 +93,9 @@ to the todo list", add it there (don't start building it). Move agreed items int
 - `src/LinkSync.*`: link files (a macro kept in step with a `.txt` file both ways): path rules
   and the sync decision. No Nexus or ImGui dependency. Tested by `tests/LinkSyncTests.cpp`. The
   UI (`Ui.cpp`) polls once a second and does the reads and writes.
+- `src/ErrorReport.*`: the error window's queue and its clipboard text. No Nexus or ImGui
+  dependency. Tested by `tests/ErrorReportTests.cpp`. Errors in `Ui.cpp` go through `ShowError`
+  (what the user did + the error); never show an error inline instead.
 - `src/TextSize.*`: the text size rules (which Nexus fonts the dropdown lists, the scale, window
   rescaling). No Nexus or ImGui dependency. Tested by `tests/TextSizeTests.cpp`.
   `src/UiFont.*`: the ImGui side: `Push`/`Pop` the chosen font around our windows, `Px()` for

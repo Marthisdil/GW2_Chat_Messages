@@ -15,6 +15,21 @@ is built so that can't happen:
   closes chat with one Escape **only if it opened chat itself**, and sends nothing more.
 - Hotkeys only listen: your key presses always reach the game as normal.
 
+## The error window
+
+When something goes wrong, a small **Chat Messages: error** window opens with the error, what
+you did to get it, and two buttons:
+
+- **OK** closes it. If more errors are waiting it says "Error 1 of 3", and OK shows the next.
+- **Copy to clipboard** copies the error for a bug report: the addon version, the time, what you
+  did, the error, and where you were in game.
+
+Errors from a hotkey or the quick menu also show a Nexus alert, and their window opens without
+taking focus, so you can keep playing and read it later.
+
+<!-- screenshot: error-window.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the error window.*
+
 ## Messages you may see
 
 | Message | What to do |
@@ -46,4 +61,5 @@ is built so that can't happen:
 ## Getting help
 
 Open an issue on the project's GitHub page, with what you did, what happened, and the lines from
-the Nexus log that mention Chat Messages.
+the Nexus log that mention Chat Messages. If the error window was shown, click **Copy to
+clipboard** and paste that in too.

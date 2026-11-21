@@ -6,6 +6,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Error window:** every error now opens a small window with the message, what you did to get
+  it, an **OK** button and **Copy to clipboard**. The copy includes the addon version, the time,
+  what you did, the error and where you were in game, ready for a bug report. Several errors
+  queue up ("Error 1 of 3"). Errors from a hotkey or the quick menu still show a Nexus alert too,
+  and their window doesn't take focus, so the game keeps working.
 - **Text size:** a "Text size" dropdown in the library's toolbar (and on the addon's Nexus options
   page) picks the size of the text in the addon's windows, from the fonts Nexus provides. Windows
   grow or shrink with it, long text wraps at the window's edge, buttons that don't fit move to
