@@ -8,7 +8,9 @@ model, import/export rules and the phase plan.
 
 `docs/wiki/` holds the user documentation for the GitHub wiki (flat pages, links written as
 `[text](Page-Name)` without `.md`, `_Sidebar.md`). Update it with every user-visible change. The
-repo is private and its wiki is off, so the pages are pushed to the wiki repo later.
+repo is private and its wiki is off, so the pages are pushed to the wiki repo later. Wiki pages
+link images as `../images/name.png`; when publishing, rewrite those to
+`https://raw.githubusercontent.com/Marthisdil/GW2_Chat_Messages/main/docs/images/name.png`.
 
 `docs/todo.md` collects ideas and brainstorming for later discussion. When the user says "add X
 to the todo list", add it there (don't start building it). Move agreed items into
@@ -130,6 +132,13 @@ to the todo list", add it there (don't start building it). Move agreed items int
 
 ## Building (local notes)
 
+- **Screenshots, at every build:** before building, run
+  `powershell -NoProfile -ExecutionPolicy Bypass -File tools\update_screenshots.ps1`. It puts any
+  new PNG from `docs\images\` into its placeholders in README.md and `docs/wiki/` and marks its
+  row in `docs/screenshots.md` "Captured". Tell the user what was captured, and ask about any file
+  it lists as "Not in the list". Captured images go into the current branch's PR. When a new
+  screen or page needs a picture, add a row to `docs/screenshots.md` and a placeholder
+  (`<!-- screenshot: name.png (docs/screenshots.md) -->` plus a "Screenshot to come" line).
 - The repo is in Dropbox. Compile-time PDB writes (`/Zi`) fail under `C:\Dropbox` with
   `C1090 PDB API call failed`. Use `DebugInformationFormat=OldStyle` (`/Z7`) for Debug.
 - Locally only the VS 2026 v145 toolset is installed; CI (windows-2022) uses v143. Build locally with

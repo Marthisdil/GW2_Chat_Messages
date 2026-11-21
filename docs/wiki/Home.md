@@ -6,6 +6,9 @@ chat macros in folders and types them into chat for you.
 > **Early development:** everything described here is built, but nothing has been tested in game
 > yet.
 
+<!-- screenshot: library-window.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the macro library window.*
+
 ## Pages
 
 - [Installation](Installation): install the addon and set the keys it needs.

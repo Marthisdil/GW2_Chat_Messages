@@ -9,6 +9,9 @@ It always works, even where the macro's [filters](Filters) say it isn't active.
 
 The editor shows the progress ("Preparing...", "Sending line 2 of 3...") and the result.
 
+<!-- screenshot: send-status.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the status line after Send now.*
+
 ## Hotkeys
 
 Each macro can have its own hotkey. In the macro editor, next to **Hotkey:**, click **Set...**
@@ -31,6 +34,9 @@ Each macro can have its own hotkey. In the macro editor, next to **Hotkey:**, cl
   editor warns you about this ("Also set on: ...").
 - If a hotkey send fails, a Nexus alert says why, since the library may be closed.
 
+<!-- screenshot: hotkey-set.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: a macro's hotkey row.*
+
 ## Quick menu
 
 The quick menu shows your library as nested menus, so you can pick a macro with the mouse.
@@ -42,6 +48,9 @@ The quick menu shows your library as nested menus, so you can pick a macro with 
 It lists only the macros that are active where you are, and hides folders with none. Macros are
 coloured by channel, show their hotkey, and preview their lines when you hover over them. The
 bottom item opens or hides the library.
+
+<!-- screenshot: quick-menu.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the quick menu with a macro's line preview.*
 
 ## One at a time
 

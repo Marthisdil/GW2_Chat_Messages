@@ -12,6 +12,9 @@
 3. Start the game. Nexus loads the addon, and a scroll icon appears in the Nexus bar
    (Quick Access).
 
+<!-- screenshot: nexus-quick-access.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the scroll icon in the Nexus bar.*
+
 There is no public release yet. Until there is, build the DLL from source as described in the
 README.
 
@@ -22,6 +25,9 @@ in **Nexus > Options > Game Keybinds**, and make them match your game settings:
 
 - **Chat** (needed for every macro).
 - **Squad Broadcast** chat (only needed for squad broadcast lines, as commander).
+
+<!-- screenshot: nexus-game-keybinds.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the Chat key in Nexus > Options > Game Keybinds.*
 
 If a key isn't set, the macro isn't sent and you get a message telling you which key is missing.
 

@@ -33,6 +33,9 @@ is built so that can't happen:
 | ... is set on 2 macros | Two active macros share this hotkey. Change one, or set filters that don't overlap. |
 | Your macros couldn't be saved | See the Nexus log. The addon keeps retrying. |
 
+<!-- screenshot: send-alert.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: a Nexus alert from a hotkey that couldn't send.*
+
 ## A hotkey does nothing
 
 - Is the macro active here? Check **Where it's active** (see [Filters](Filters)).

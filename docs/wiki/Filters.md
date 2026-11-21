@@ -5,6 +5,9 @@ Open them in the macro editor under **Where it's active**. The header shows a su
 "Everywhere", "PvE, PvP" or "PvE on 2 maps", and "(not here)" when the macro isn't active where
 you are.
 
+<!-- screenshot: filters.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the "Where it's active" section.*
+
 ## What filters change
 
 - **Hotkeys** only send macros that are active here.

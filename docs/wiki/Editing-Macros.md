@@ -17,6 +17,9 @@ There are two ways to edit lines. Switching between them loses nothing.
 Each line has a channel dropdown and a message box, with arrow buttons to change its order and a **Remove** button.
 **Add line** adds one at the end.
 
+<!-- screenshot: macro-editor-lines.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the Lines tab.*
+
 | Channel | Command | Notes |
 |---|---|---|
 | Current | (none) | Whichever channel chat opens on. Game commands like `/wave` go here. |
@@ -47,6 +50,9 @@ Type one message per row, the way you'd type it in game:
 /g2 Guild missions in 5 minutes
 Just a line in the current channel
 ```
+
+<!-- screenshot: macro-editor-raw.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the Raw text tab and its "Will send" list.*
 
 - `/w [Name] message` whispers to Name.
 - `/d ! message` is a squad broadcast.

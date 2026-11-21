@@ -7,6 +7,9 @@ Messages library" keybind.
 The window has two parts: the **tree** on the left, and the **details** of the selected item on
 the right.
 
+<!-- screenshot: library-window.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the library window, with the tree and the editor.*
+
 ## Folders and macros
 
 - Folders can be nested up to **6 levels** deep, for example *Raids › Wing 3 › Escort*. Macros can
@@ -30,6 +33,9 @@ Right-click any item in the tree for:
 - **Sort contents A-Z**, **Expand all inside**, **Collapse all inside** (folders)
 - **Delete...**: asks first. Deleting a folder deletes everything inside it, and the dialog says
   how many folders and macros that is. This can't be undone.
+
+<!-- screenshot: tree-context-menu.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the right-click menu of a folder.*
 
 ## Drag and drop
 

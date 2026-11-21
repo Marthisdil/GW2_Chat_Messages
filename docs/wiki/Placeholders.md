@@ -20,6 +20,9 @@ and in whisper recipients.
 | `{json path url}` | One value from a JSON web page (see below). |
 | `{nexus}` | This addon's name and version, like `Chat Messages v0.1.0`. |
 
+<!-- screenshot: placeholders-tooltip.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the Placeholders (?) tooltip in the editor.*
+
 ## How they're written
 
 - Names are not case-sensitive: `{Time}` works.
