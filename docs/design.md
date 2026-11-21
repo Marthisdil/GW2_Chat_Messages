@@ -92,6 +92,19 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
   - Waypoint and other chat links (`[&BDAEAAA=]`) need no feature: they're typed as text and the
     game turns them into links.
 - **`.txt` link file**: optional two-way sync of one macro with a text file in raw format.
+  *(Built in phase 7 part 2; `src/LinkSync.*`, unit tested in `tests/LinkSyncTests.cpp`.)*
+  - Set in the macro editor ("Text file link"). A path without a drive is relative to
+    `<addon>\links\`; it must end in `.txt`. Two macros can't link the same file.
+  - Linking: a file that already has lines replaces the macro's lines; a missing or empty file is
+    created from the macro.
+  - The render thread checks linked files once a second (a stat each; a file is only read when
+    its last-write time changed). A file changed since the last sync wins over the macro (it's
+    the newer edit); otherwise a macro edited in the addon is written to the file (CRLF, atomic
+    temp + rename). Formatting-only differences never cause a write. At load, the file wins.
+  - A deleted file is never recreated behind the user's back: the editor says so and offers
+    "Recreate the file". A file that can't be read is never overwritten. Over 50 lines: the first
+    50 are used and the file's extra lines are kept until the macro is edited.
+  - The sync state is in memory only. Unload does a last sync.
 
 ## Import / export
 
@@ -199,5 +212,5 @@ policy and mention the behaviour when registering with Raidcore.
 5. Per-macro hotkeys, Quick Access and pop-up nested menus, game-mode and map filters. *(done;
    not yet tested in game)*
 6. Placeholders, with a cached GW2 API map-name lookup. *(done; not yet tested in game)*
-7. Import/export with preview and `.txt` import/export *(done; not yet tested in game)*, then
-   link-file sync.
+7. Import/export with preview, `.txt` import/export and link-file sync. *(done; not yet tested
+   in game)*

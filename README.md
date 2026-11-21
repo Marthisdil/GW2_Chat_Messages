@@ -38,7 +38,8 @@ chat for you, from a hotkey, a menu or a button.
 - **Import and export:** share or back up the whole library, a folder or one macro, as `.json`
   or `.txt` files or through the clipboard. Imports show a preview first (new, merged, renamed,
   replaced), and the last import can be undone.
-- **Coming next:** keeping a macro in sync with a text file.
+- **Text file links:** keep a macro in step with a `.txt` file, both ways: edit it in Notepad
+  and the macro follows, edit the macro and the file follows.
 
 <!-- screenshot: chat-result.png (docs/screenshots.md) -->
 > 📷 *Screenshot to come: a multi-line macro sent to several chat channels.*

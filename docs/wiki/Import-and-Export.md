@@ -19,7 +19,8 @@ second export of the same name is saved as `Name (2).json`.
     friend's Import window.
   - **Copy the lines as text** (macros only): the raw text, like the .txt file.
 
-Link files (a planned feature) are never exported, because they're paths on your own PC.
+[Text file links](Editing-Macros) are never exported or imported, because they're paths on your
+own PC.
 
 <!-- screenshot: export-menu.png (docs/screenshots.md) -->
 > 📷 *Screenshot to come: the Export submenu.*

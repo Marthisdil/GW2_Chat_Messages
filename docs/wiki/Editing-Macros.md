@@ -72,6 +72,36 @@ placeholders, the count is shown with "~", because the real length is only known
 Waypoint, item and other chat links (like `[&BDAEAAA=]`) work as they are: paste them into the
 message, and the game turns them into links when it's sent.
 
+## Text file links
+
+A macro can be kept in step with a `.txt` file, so you can edit it in Notepad (or any text
+editor) while the game runs. The file uses the same format as the Raw text tab: one chat line per
+row.
+
+Open **Text file link** in the macro editor, type a file name and click **Link**:
+
+- A name alone, like `callouts.txt`, goes in `<GW2>\addons\Chat Messages\links\`. A full path,
+  like `C:\Users\Me\Documents\raid.txt`, works too. The name must end in `.txt`.
+- If the file already has lines, they **replace** the macro's lines. If it doesn't exist (or is
+  empty), it's created from the macro's lines.
+
+From then on, changes go both ways and show up within a second:
+
+- Save the file in your editor: the macro gets its lines.
+- Edit the macro in the addon: the file is rewritten.
+- If both changed at once, the file wins.
+- While the game is closed you can edit the file; the macro picks it up when the addon loads.
+
+**Open file** opens it in your text editor, **Open folder** shows it in Explorer, and **Unlink**
+stops the syncing (neither the macro nor the file is deleted). If the file is deleted or moved,
+the editor says so; the macro keeps its lines, and **Recreate the file** writes it again. A file
+can hold up to 50 lines for one macro, and at most 256 KB.
+
+Two macros can't be linked to the same file. Links aren't included in exports.
+
+<!-- screenshot: link-file.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the Text file link section of a linked macro.*
+
 ## Placeholders
 
 Words in `{ }` like `{time}` or `{map}` are filled in when the message is sent. Hover over
