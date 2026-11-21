@@ -52,6 +52,23 @@ item with the same name. The window tells you why.
 - **Expand all** / **Collapse all**
 - **Sort A-Z**: sorts every folder, folders first and then macros, each alphabetically.
 - **Import...** and **Export all** (see [Import and export](Import-and-Export)).
+- **Text size**: see below.
+
+## Text size
+
+The **Text size** dropdown (at the end of the toolbar, and on the addon's page in Nexus options)
+sets how big the text is in all of this addon's windows: the library, the Import window, the
+quick menu and their tooltips. Nexus' own options page isn't changed.
+
+- The sizes are the fonts Nexus provides, shown with their size in pixels, for example
+  "Default (13 px)" and "Nexus large font (24 px)". How many there are depends on Nexus.
+- Open windows grow or shrink to match, and stay on screen.
+- Long text wraps at the edge of the window. Buttons that don't fit move to the next line. If a
+  name is too long for the tree, scroll it sideways.
+- Your choice is saved in `settings.json` and used again next time.
+
+<!-- screenshot: text-size.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the library at a large text size, with the Text size dropdown open.*
 
 ## Dimmed macros
 

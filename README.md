@@ -40,6 +40,8 @@ chat for you, from a hotkey, a menu or a button.
   replaced), and the last import can be undone.
 - **Text file links:** keep a macro in step with a `.txt` file, both ways: edit it in Notepad
   and the macro follows, edit the macro and the file follows.
+- **Text size:** make the addon's text bigger (or smaller) with the fonts Nexus provides; the
+  windows resize to match.
 
 <!-- screenshot: chat-result.png (docs/screenshots.md) -->
 > 📷 *Screenshot to come: a multi-line macro sent to several chat channels.*

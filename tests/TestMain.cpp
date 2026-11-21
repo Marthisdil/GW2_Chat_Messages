@@ -10,6 +10,7 @@ void RunFilterTests();
 void RunPlaceholderTests();
 void RunExchangeTests();
 void RunLinkSyncTests();
+void RunTextSizeTests();
 
 int main()
 {
@@ -21,6 +22,7 @@ int main()
     RunPlaceholderTests();
     RunExchangeTests();
     RunLinkSyncTests();
+    RunTextSizeTests();
     std::printf("%d checks, %d failures\n", g_TestChecks, g_TestFailures);
     return g_TestFailures == 0 ? 0 : 1;
 }

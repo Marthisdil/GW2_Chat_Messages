@@ -106,6 +106,32 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
     50 are used and the file's extra lines are kept until the macro is edited.
   - The sync state is in memory only. Unload does a last sync.
 
+## Text size
+
+*(Built 2026-11-21; `src/TextSize.*` (rules, unit tested in `tests/TextSizeTests.cpp`) and
+`src/UiFont.*` (ImGui side).)*
+
+- A **Text size** dropdown in the library toolbar and on the addon's Nexus options page lists the
+  fonts Nexus gives addons: the default ImGui font as Nexus set it up, and NexusLink's `Font`,
+  `FontUI` and `FontBig`. Each entry shows its size in pixels, smallest first; one font offered
+  under two names is listed once. The choice is saved as `text_size` in `settings.json`.
+- The chosen font is pushed around our own windows, popups, menus and tooltips (the library, the
+  Import window, the quick menu pop-up and our part of the Quick Access menu). Nexus' options page
+  keeps Nexus' font. Fonts are read from NexusLink every time and never kept; while Nexus rebuilds
+  its fonts (null pointers) the default font is drawn and the last scale is kept.
+- **Scale** = chosen size / default size. Fixed widths and window sizes were laid out for the
+  default font and are multiplied by it (`UiFont::Px`); widths next to text (the length label,
+  the Link/Load buttons) are measured from the text instead.
+- **Window sizes follow:** when the scale changes, an open window's size is multiplied by the
+  new scale over the old one, from its top-left corner, kept within the screen and moved back on
+  screen if needed. Minimum sizes scale too. A window that was closed is resized when it's next
+  shown.
+- **Nothing runs off a window:** text wraps at the window's (or pane's) edge; tooltips wrap at
+  about 35 characters' width; rows of buttons continue on the next line when the next button
+  doesn't fit (`UiFont::Row`); the tree, the details pane, the Import window and its lists scroll
+  sideways for names and rows that can't wrap.
+- Later (see `docs/todo.md`): more sizes than Nexus offers, from a font of our own.
+
 ## Import / export
 
 *(Built in phase 7 part 1; `src/Exchange.*`, unit tested in `tests/ExchangeTests.cpp`.
@@ -214,3 +240,4 @@ policy and mention the behaviour when registering with Raidcore.
 6. Placeholders, with a cached GW2 API map-name lookup. *(done; not yet tested in game)*
 7. Import/export with preview, `.txt` import/export and link-file sync. *(done; not yet tested
    in game)*
+8. Text size setting for the addon's windows (Nexus' fonts). *(done; not yet tested in game)*

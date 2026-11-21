@@ -30,8 +30,10 @@
 #include "Placeholders.h"
 #include "Sender.h"
 #include "Storage.h"
+#include "UiFont.h"
 
 using namespace MacroTree;
+using UiFont::Px;
 
 namespace
 {
@@ -290,21 +292,25 @@ namespace
 
     void DrawHotkeyRow(Node& aMacro)
     {
+        UiFont::Row row;
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted("Hotkey:");
-        ImGui::SameLine();
         if (s_CaptureFor == aMacro.Id && Hotkeys::IsCapturing())
         {
-            ImGui::TextColored(kWarnColor, "Press a key or mouse button (Escape cancels)...");
             ImGui::SameLine();
+            ImGui::TextColored(kWarnColor, "Press a key or mouse button (Escape cancels)...");
+            row.Next(UiFont::ButtonWidth("Cancel"));
             if (ImGui::SmallButton("Cancel")) CancelCapture();
             return;
         }
 
+        const std::string keys = aMacro.Hotkey.Empty() ? std::string("None") : Hotkey::ToString(aMacro.Hotkey);
+        row.Next(UiFont::TextWidth(keys.c_str()));
         if (aMacro.Hotkey.Empty()) ImGui::TextDisabled("None");
-        else ImGui::TextUnformatted(Hotkey::ToString(aMacro.Hotkey).c_str());
-        ImGui::SameLine();
-        if (ImGui::SmallButton(aMacro.Hotkey.Empty() ? "Set..." : "Change..."))
+        else ImGui::TextUnformatted(keys.c_str());
+        const char* setLabel = aMacro.Hotkey.Empty() ? "Set..." : "Change...";
+        row.Next(UiFont::ButtonWidth(setLabel));
+        if (ImGui::SmallButton(setLabel))
         {
             s_CaptureFor = aMacro.Id;
             Hotkeys::StartCapture();
@@ -316,7 +322,7 @@ namespace
                               "Hotkeys don't fire while you're typing in chat or in a text box.");
         if (!aMacro.Hotkey.Empty())
         {
-            ImGui::SameLine();
+            row.Next(UiFont::ButtonWidth("Clear##hotkey"));
             if (ImGui::SmallButton("Clear##hotkey"))
             {
                 aMacro.Hotkey = {};
@@ -357,12 +363,13 @@ namespace
 
         // Game modes. At least one stays ticked: "none" would mean the macro can never be used.
         if (aMacro.GameModes == GM_None) aMacro.GameModes = GM_All;
+        UiFont::Row modesRow;
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted("Game modes:");
         const uint8_t bits[] = {GM_PvE, GM_WvW, GM_PvP};
         for (uint8_t b : bits)
         {
-            ImGui::SameLine();
+            modesRow.Next(UiFont::CheckboxWidth(ModeName(b)));
             bool on = (aMacro.GameModes & b) != 0;
             if (ImGui::Checkbox(ModeName(b), &on))
             {
@@ -383,18 +390,22 @@ namespace
             }
         }
 
-        // Maps.
+        // Maps: one button per map, flowing onto more rows when there are many.
+        UiFont::Row mapsRow;
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted("Maps:");
-        ImGui::SameLine();
-        if (aMacro.MapIds.empty()) ImGui::TextDisabled("Any map");
+        if (aMacro.MapIds.empty())
+        {
+            ImGui::SameLine();
+            ImGui::TextDisabled("Any map");
+        }
         int removeAt = -1;
         for (size_t i = 0; i < aMacro.MapIds.size(); i++)
         {
-            ImGui::SameLine();
             ImGui::PushID(static_cast<int>(i));
             const std::string name = MapNames::Label(static_cast<uint32_t>(aMacro.MapIds[i]));
             const std::string label = name + " x";
+            mapsRow.Next(UiFont::ButtonWidth(label.c_str()));
             if (ImGui::SmallButton(label.c_str())) removeAt = static_cast<int>(i);
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("Remove %s", name.c_str());
             ImGui::PopID();
@@ -426,12 +437,13 @@ namespace
         const bool canAddCurrent = current > 0 && !hasMap(current);
         if (!canAddCurrent) ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
         const std::string addCurrent = current > 0 ? "Add this map: " + MapNames::Label(here.MapId) : "Add this map";
+        UiFont::Row addRow;
         if (ImGui::SmallButton(addCurrent.c_str()) && canAddCurrent) addMap(current);
         if (!canAddCurrent) ImGui::PopStyleVar();
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(90.0f);
+        addRow.Next(Px(90.0f));
+        ImGui::SetNextItemWidth(Px(90.0f));
         ImGui::InputInt("##mapid", &s_MapIdInput, 0, 0);
-        ImGui::SameLine();
+        addRow.Next(UiFont::ButtonWidth("Add id"));
         if (ImGui::SmallButton("Add id")) addMap(s_MapIdInput);
         ImGui::TextDisabled("Map names come from the GW2 API. Ids are also listed on the GW2 wiki.");
 
@@ -517,6 +529,10 @@ namespace
     // The Import window (defined further down).
     bool     s_ShowImport   = false;
     uint64_t s_ImportTarget = 0; // folder to import into (0 = top level)
+
+    // Window sizes that follow the text size (UiFont).
+    UiFont::WindowFit s_MainFit;
+    UiFont::WindowFit s_ImportFit;
 
     void OpenNamePopup(ENameMode aMode, uint64_t aTargetId)
     {
@@ -691,8 +707,10 @@ namespace
         if (ImGui::BeginDragDropSource())
         {
             ImGui::SetDragDropPayload(kDragPayload, &aNode.Id, sizeof(aNode.Id));
+            UiFont::PushTooltipWrap();
             ImGui::Text("%s %s", aNode.IsFolder() ? "Folder:" : "Macro:", aNode.Name.c_str());
             if (!s_DragError.empty()) ImGui::TextColored(kErrorColor, "%s", s_DragError.c_str());
+            ImGui::PopTextWrapPos();
             ImGui::EndDragDropSource();
         }
         HandleDropTarget(aNode);
@@ -715,7 +733,7 @@ namespace
         // The empty space below the tree: drop here to move to the end of the top level,
         // click here to clear the selection.
         ImVec2 avail = ImGui::GetContentRegionAvail();
-        if (avail.y < 24.0f) avail.y = 24.0f;
+        if (avail.y < Px(24.0f)) avail.y = Px(24.0f);
         ImGui::InvisibleButton("##tree_end", ImVec2(avail.x > 1.0f ? avail.x : 1.0f, avail.y));
         if (ImGui::IsItemClicked()) s_SelectedId = 0;
         if (ImGui::BeginDragDropTarget())
@@ -785,8 +803,9 @@ namespace
 
     void DrawNamePopup()
     {
-        ImGui::SetNextWindowSize(ImVec2(360.0f, 0.0f), ImGuiCond_Appearing);
+        ImGui::SetNextWindowSize(ImVec2(Px(360.0f), 0.0f), ImGuiCond_Always);
         if (!ImGui::BeginPopupModal(kNamePopup, nullptr, ImGuiWindowFlags_NoResize)) return;
+        ImGui::PushTextWrapPos(0.0f);
 
         const char* title = s_NameMode == ENameMode::NewFolder ? "New folder name:"
                           : s_NameMode == ENameMode::NewMacro  ? "New macro title:"
@@ -798,9 +817,9 @@ namespace
                                             ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll);
         if (!s_NameError.empty()) ImGui::TextColored(kErrorColor, "%s", s_NameError.c_str());
 
-        const bool ok = ImGui::Button(s_NameMode == ENameMode::Rename ? "Rename" : "Create", ImVec2(100.0f, 0.0f)) || enter;
+        const bool ok = ImGui::Button(s_NameMode == ENameMode::Rename ? "Rename" : "Create", Px(100.0f, 0.0f)) || enter;
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(100.0f, 0.0f))) ImGui::CloseCurrentPopup();
+        if (ImGui::Button("Cancel", Px(100.0f, 0.0f))) ImGui::CloseCurrentPopup();
 
         if (ok)
         {
@@ -821,12 +840,13 @@ namespace
                 s_NameFocus = true;
             }
         }
+        ImGui::PopTextWrapPos();
         ImGui::EndPopup();
     }
 
     void DrawDeletePopup()
     {
-        ImGui::SetNextWindowSize(ImVec2(380.0f, 0.0f), ImGuiCond_Appearing);
+        ImGui::SetNextWindowSize(ImVec2(Px(380.0f), 0.0f), ImGuiCond_Always);
         if (!ImGui::BeginPopupModal(kDeletePopup, nullptr, ImGuiWindowFlags_NoResize)) return;
 
         Node* node = s_Tree.Find(s_DeleteId);
@@ -836,6 +856,7 @@ namespace
             ImGui::EndPopup();
             return;
         }
+        ImGui::PushTextWrapPos(0.0f);
         if (node->IsFolder())
         {
             size_t folders = 0, macros = 0;
@@ -850,7 +871,7 @@ namespace
         }
         ImGui::TextDisabled("This can't be undone.");
 
-        if (ImGui::Button("Delete", ImVec2(100.0f, 0.0f)))
+        if (ImGui::Button("Delete", Px(100.0f, 0.0f)))
         {
             if (s_SelectedId == node->Id || (s_Tree.Find(s_SelectedId) && Tree::IsAncestorOf(*node, *s_Tree.Find(s_SelectedId))))
                 s_SelectedId = 0;
@@ -859,7 +880,8 @@ namespace
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(100.0f, 0.0f))) ImGui::CloseCurrentPopup();
+        if (ImGui::Button("Cancel", Px(100.0f, 0.0f))) ImGui::CloseCurrentPopup();
+        ImGui::PopTextWrapPos();
         ImGui::EndPopup();
     }
 
@@ -921,6 +943,12 @@ namespace
         return changed;
     }
 
+    // Room to leave on the right of a message box for its LengthLabel.
+    float LengthLabelWidth()
+    {
+        return UiFont::TextWidth("~199/199") + ImGui::GetStyle().ItemSpacing.x * 2.0f;
+    }
+
     // "12/199" after a message, red when too long. Returns the length.
     void LengthLabel(const Line& aLine)
     {
@@ -962,31 +990,32 @@ namespace
             Line& l = lines[static_cast<size_t>(i)];
             ImGui::PushID(i);
 
+            UiFont::Row row;
             if (ImGui::ArrowButton("##up", ImGuiDir_Up) && i > 0) { moveFrom = i; moveTo = i - 1; }
             ImGui::SameLine(0.0f, 2.0f);
             if (ImGui::ArrowButton("##down", ImGuiDir_Down) && i + 1 < static_cast<int>(lines.size())) { moveFrom = i; moveTo = i + 1; }
-            ImGui::SameLine();
-            ImGui::SetNextItemWidth(110.0f);
+            row.Next(Px(110.0f));
+            ImGui::SetNextItemWidth(Px(110.0f));
             if (ChannelCombo("##channel", l.Channel)) MarkDirty();
             if (l.Channel == EChannel::Whisper)
             {
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(150.0f);
+                row.Next(Px(150.0f));
+                ImGui::SetNextItemWidth(Px(150.0f));
                 if (InputString("##to", "Recipient", l.WhisperTo)) MarkDirty();
                 if (ImGui::IsItemHovered()) ImGui::SetTooltip("Character or account name to whisper.");
             }
             else if (l.Channel == EChannel::Squad)
             {
-                ImGui::SameLine();
+                row.Next(UiFont::CheckboxWidth("Broadcast"));
                 if (ImGui::Checkbox("Broadcast", &l.SquadBroadcast)) MarkDirty();
                 if (ImGui::IsItemHovered())
                     ImGui::SetTooltip("Send as a squad broadcast. Only works while you're the commander;\n"
                                       "otherwise it's sent as a normal squad message.");
             }
-            ImGui::SameLine();
+            row.Next(UiFont::ButtonWidth("Remove"));
             if (ImGui::SmallButton("Remove")) removeAt = i;
 
-            ImGui::SetNextItemWidth(-70.0f);
+            ImGui::SetNextItemWidth(-LengthLabelWidth());
             if (InputString("##msg", "Message", l.Message)) MarkDirty();
             ImGui::SameLine();
             LengthLabel(l);
@@ -1255,7 +1284,7 @@ namespace
                                "file follows.");
             ImGui::TextDisabled("A name alone goes in <GW2>\\addons\\GW2_Chat_Messages\\links\\. A file that already "
                                 "has lines replaces the macro's lines; otherwise it's created from them.");
-            ImGui::SetNextItemWidth(-70.0f);
+            ImGui::SetNextItemWidth(-(UiFont::ButtonWidth("Link") + ImGui::GetStyle().ItemSpacing.x));
             const bool enter = InputString("##linkpath", "callouts.txt, or a full path", s_LinkPath, ImGuiInputTextFlags_EnterReturnsTrue);
             ImGui::SameLine();
             if (ImGui::Button("Link") || enter)
@@ -1274,17 +1303,21 @@ namespace
             const bool missing = problem != s_LinkProblems.end() && problem->second.rfind("The file isn't there", 0) == 0;
             if (problem != s_LinkProblems.end()) ImGui::TextColored(kWarnColor, "%s", problem->second.c_str());
             else ImGui::TextDisabled("In step. Changes on either side show up within a second.");
+            UiFont::Row row;
             if (ImGui::SmallButton("Open file")) Storage::OpenFolder(file);
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("Opens it in your text editor (Notepad, unless you chose another).");
-            ImGui::SameLine();
+            row.Next(UiFont::ButtonWidth("Open folder"));
             if (ImGui::SmallButton("Open folder")) Storage::OpenFolder(file.parent_path());
-            ImGui::SameLine();
-            if (missing && ImGui::SmallButton("Recreate the file"))
+            if (missing)
             {
-                if (WriteLinkFile(aMacro, file, s_LinkStates[aMacro.Id])) s_LinkProblems.erase(aMacro.Id);
-                else SetStatus("The file couldn't be created. Check the Nexus log.");
+                row.Next(UiFont::ButtonWidth("Recreate the file"));
+                if (ImGui::SmallButton("Recreate the file"))
+                {
+                    if (WriteLinkFile(aMacro, file, s_LinkStates[aMacro.Id])) s_LinkProblems.erase(aMacro.Id);
+                    else SetStatus("The file couldn't be created. Check the Nexus log.");
+                }
             }
-            if (missing) ImGui::SameLine();
+            row.Next(UiFont::ButtonWidth("Unlink"));
             if (ImGui::SmallButton("Unlink"))
             {
                 aMacro.LinkFile.clear();
@@ -1314,30 +1347,37 @@ namespace
         DrawLinkFile(aMacro);
         ImGui::Separator();
 
+        UiFont::Row modeRow;
         int mode = static_cast<int>(s_EditMode);
         if (ImGui::RadioButton("Lines", &mode, static_cast<int>(EEditMode::Lines))) s_RawForId = 0;
-        ImGui::SameLine();
+        modeRow.Next(UiFont::CheckboxWidth("Raw text"));
         if (ImGui::RadioButton("Raw text", &mode, static_cast<int>(EEditMode::Raw))) s_RawForId = 0;
         s_EditMode = static_cast<EEditMode>(mode);
-        ImGui::SameLine();
-        ImGui::TextDisabled("%zu line(s)", aMacro.Lines.size());
-        ImGui::SameLine();
+        const std::string count = std::to_string(aMacro.Lines.size()) + " line(s)";
+        modeRow.Next(UiFont::TextWidth(count.c_str()));
+        ImGui::TextDisabled("%s", count.c_str());
+        modeRow.Next(UiFont::TextWidth("Placeholders (?)"));
         ImGui::TextDisabled("Placeholders (?)");
         if (ImGui::IsItemHovered())
         {
             ImGui::BeginTooltip();
+            UiFont::PushTooltipWrap();
             ImGui::TextUnformatted("Type these in a message; they're filled in when it's sent:");
             ImGui::Separator();
+            float syntaxWidth = 0.0f;
+            for (const Placeholders::Info& p : Placeholders::List())
+                syntaxWidth = std::max(syntaxWidth, UiFont::TextWidth(p.Syntax));
             for (const Placeholders::Info& p : Placeholders::List())
             {
                 ImGui::TextUnformatted(p.Syntax);
-                ImGui::SameLine(150.0f);
+                ImGui::SameLine(syntaxWidth + ImGui::GetStyle().ItemSpacing.x * 3.0f);
                 ImGui::TextDisabled("%s", p.Description);
             }
             ImGui::Separator();
-            ImGui::TextDisabled("Text files go in <GW2>\\addons\\GW2_Chat_Messages\\ (or a folder inside it).\n"
-                                "Use \"quotes\" for names with spaces: {txt \"my lines.txt\"}.\n"
+            ImGui::TextDisabled("Text files go in <GW2>\\addons\\GW2_Chat_Messages\\ (or a folder inside it). "
+                                "Use \"quotes\" for names with spaces: {txt \"my lines.txt\"}. "
                                 "Anything else in { } is sent as typed. Chat links like [&BDAEAAA=] work as is.");
+            ImGui::PopTextWrapPos();
             ImGui::EndTooltip();
         }
         ImGui::Spacing();
@@ -1364,8 +1404,9 @@ namespace
         ImGui::TextWrapped("%s", node->Name.c_str());
         ImGui::TextDisabled("In: %s", PathOf(*node).c_str());
         // Popups must be opened at the main window's ID level, so these buttons queue an action.
+        UiFont::Row nameRow;
         if (ImGui::SmallButton("Rename")) s_Pending = {EAction::OpenName, 0, node->Id, EDrop::Into, 0, ENameMode::Rename};
-        ImGui::SameLine();
+        nameRow.Next(UiFont::ButtonWidth("Delete..."));
         if (ImGui::SmallButton("Delete...")) s_Pending = {EAction::OpenDelete, node->Id};
         ImGui::Separator();
 
@@ -1377,11 +1418,12 @@ namespace
             ImGui::Text("Folder level %d of %d", level, kMaxFolderDepth);
             ImGui::Text("Contains %zu folder(s) and %zu macro(s)", folders, macros);
             ImGui::Spacing();
+            UiFont::Row newRow;
             if (level < kMaxFolderDepth)
             {
                 if (ImGui::Button("New folder inside"))
                     s_Pending = {EAction::OpenName, 0, node->Id, EDrop::Into, 0, ENameMode::NewFolder};
-                ImGui::SameLine();
+                newRow.Next(UiFont::ButtonWidth("New macro inside"));
             }
             if (ImGui::Button("New macro inside"))
                 s_Pending = {EAction::OpenName, 0, node->Id, EDrop::Into, 0, ENameMode::NewMacro};
@@ -1412,6 +1454,7 @@ namespace
     void MacroPreviewTooltip(const Node& aMacro)
     {
         ImGui::BeginTooltip();
+        UiFont::PushTooltipWrap(); // a chat line can be 199 characters long
         if (aMacro.Lines.empty()) ImGui::TextDisabled("No lines yet.");
         for (size_t i = 0; i < aMacro.Lines.size() && i < kPreviewLines; i++)
         {
@@ -1420,6 +1463,7 @@ namespace
         }
         if (aMacro.Lines.size() > kPreviewLines)
             ImGui::TextDisabled("...and %zu more line(s)", aMacro.Lines.size() - kPreviewLines);
+        ImGui::PopTextWrapPos();
         ImGui::EndTooltip();
     }
 
@@ -1609,7 +1653,7 @@ namespace
             if (item.Conflict)
             {
                 ImGui::SameLine();
-                ImGui::SetNextItemWidth(170.0f);
+                ImGui::SetNextItemWidth(Px(170.0f));
                 Exchange::EChoice choice = item.Choice;
                 if (ChoiceCombo("##choice", choice, src.IsFolder())) s_ImportOpt.PerItem[&src] = choice;
                 if (ImGui::IsItemHovered())
@@ -1630,7 +1674,9 @@ namespace
         ImGui::TextDisabled("A .json export, a .txt file (one macro), or a folder of .txt files.");
         if (s_ImportListStale) RefreshImportList();
 
-        ImGui::BeginChild("##imports", ImVec2(0.0f, 96.0f), true);
+        ImGui::BeginChild("##imports", ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 5.0f), true,
+                          ImGuiWindowFlags_HorizontalScrollbar);
+        ImGui::PushTextWrapPos(0.0f);
         if (s_ImportList.empty())
             ImGui::TextDisabled("Put files in <GW2>\\addons\\GW2_Chat_Messages\\imports\\ to see them here.");
         for (const std::filesystem::path& p : s_ImportList)
@@ -1640,11 +1686,13 @@ namespace
             const std::string label = p.filename().u8string() + (dir ? "\\" : "");
             if (ImGui::Selectable(label.c_str())) LoadImport(Exchange::FromPath(p));
         }
+        ImGui::PopTextWrapPos();
         ImGui::EndChild();
+        UiFont::Row row;
         if (ImGui::SmallButton("Open imports folder")) Storage::OpenFolder(Storage::ImportsDir());
-        ImGui::SameLine();
+        row.Next(UiFont::ButtonWidth("Refresh"));
         if (ImGui::SmallButton("Refresh")) s_ImportListStale = true;
-        ImGui::SameLine();
+        row.Next(UiFont::ButtonWidth("Paste from clipboard"));
         if (ImGui::SmallButton("Paste from clipboard"))
         {
             const char* text = ImGui::GetClipboardText();
@@ -1657,7 +1705,7 @@ namespace
             }
         }
 
-        ImGui::SetNextItemWidth(-80.0f);
+        ImGui::SetNextItemWidth(-(UiFont::ButtonWidth("Load") + ImGui::GetStyle().ItemSpacing.x));
         const bool enter = InputString("##path", "Or a full path to a file or folder", s_ImportPath, ImGuiInputTextFlags_EnterReturnsTrue);
         ImGui::SameLine();
         if ((ImGui::Button("Load") || enter) && !s_ImportPath.empty())
@@ -1685,17 +1733,21 @@ namespace
             if (s_ImportPkg) CloseImport();
             return;
         }
-        ImGui::SetNextWindowSize(ImVec2(640.0f, 600.0f), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSizeConstraints(ImVec2(460.0f, 360.0f), ImVec2(FLT_MAX, FLT_MAX));
-        if (!ImGui::Begin("Import macros##chatmsg", &s_ShowImport, ImGuiWindowFlags_NoCollapse))
+        UiFont::BeforeBegin(s_ImportFit, ImVec2(640.0f, 600.0f), ImVec2(460.0f, 360.0f));
+        const bool shown = ImGui::Begin("Import macros##chatmsg", &s_ShowImport,
+                                        ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_HorizontalScrollbar);
+        UiFont::AfterBegin(s_ImportFit);
+        if (!shown)
         {
             ImGui::End();
             return;
         }
+        ImGui::PushTextWrapPos(0.0f); // long text wraps at the window's edge (popped before End)
 
         DrawImportSource();
         if (!s_ImportPkg)
         {
+            ImGui::PopTextWrapPos();
             ImGui::End();
             return;
         }
@@ -1704,7 +1756,7 @@ namespace
         ImGui::Text("2. Choose where it goes (from %s)", s_ImportPkg->Source.c_str());
         Node* target = NodeOrRoot(s_ImportTarget);
         if (!target || !target->IsFolder()) { s_ImportTarget = 0; target = &s_Tree.Root(); }
-        ImGui::SetNextItemWidth(-140.0f);
+        ImGui::SetNextItemWidth(-(UiFont::TextWidth("Import into") + ImGui::GetStyle().ItemInnerSpacing.x * 2.0f));
         if (ImGui::BeginCombo("Import into", FolderPath(*target).c_str()))
         {
             if (ImGui::Selectable("Top level", target == &s_Tree.Root())) s_ImportTarget = 0;
@@ -1721,9 +1773,9 @@ namespace
         target = NodeOrRoot(s_ImportTarget);
         if (!target) target = &s_Tree.Root();
 
-        ImGui::SetNextItemWidth(170.0f);
+        ImGui::SetNextItemWidth(Px(170.0f));
         ChoiceCombo("When a macro's name is taken", s_ImportOpt.MacroConflict, false);
-        ImGui::SetNextItemWidth(170.0f);
+        ImGui::SetNextItemWidth(Px(170.0f));
         ChoiceCombo("When a folder's name is taken", s_ImportOpt.FolderConflict, true);
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Merge: the folder's contents go into the existing folder.\nReplace: the existing folder's contents are deleted first.");
@@ -1749,8 +1801,8 @@ namespace
         if (plan.Conflicts) ImGui::TextDisabled("%zu name(s) are already taken: choose for each one below.", plan.Conflicts);
 
         const float footer = ImGui::GetFrameHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y;
-        ImGui::BeginChild("##preview", ImVec2(0.0f, -footer), true);
-        DrawPlanItems(plan.Items);
+        ImGui::BeginChild("##preview", ImVec2(0.0f, -footer), true, ImGuiWindowFlags_HorizontalScrollbar);
+        DrawPlanItems(plan.Items); // one row per item; long rows scroll sideways
         ImGui::EndChild();
 
         const bool canImport = plan.Changes() > 0;
@@ -1770,6 +1822,7 @@ namespace
         ImGui::SameLine();
         if (ImGui::Button("Cancel")) CloseImport();
 
+        ImGui::PopTextWrapPos();
         ImGui::End();
     }
 
@@ -1778,6 +1831,7 @@ namespace
     {
         if (!s_UndoImport) return;
         ImGui::TextWrapped("%s", s_UndoText.c_str());
+        UiFont::Row row;
         if (ImGui::SmallButton("Undo import"))
         {
             std::vector<std::string> ignored;
@@ -1792,7 +1846,7 @@ namespace
         }
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Puts your library back as it was before the import.\nChanges you made since then are undone too.");
-        ImGui::SameLine();
+        row.Next(UiFont::ButtonWidth("Dismiss##undo"));
         if (ImGui::SmallButton("Dismiss##undo")) s_UndoImport.reset();
         ImGui::Separator();
     }
@@ -1801,31 +1855,32 @@ namespace
     {
         Node& into = InsertFolder();
         const bool canNest = into.Parent == nullptr || Tree::FolderLevel(into) < kMaxFolderDepth;
+        UiFont::Row row; // buttons that don't fit continue on the next line
         if (ImGui::Button("New folder"))
         {
             if (canNest) OpenNamePopup(ENameMode::NewFolder, into.Id);
             else SetStatus("Folders can be nested at most " + std::to_string(kMaxFolderDepth) + " levels deep.");
         }
-        ImGui::SameLine();
+        row.Next(UiFont::ButtonWidth("New macro"));
         if (ImGui::Button("New macro")) OpenNamePopup(ENameMode::NewMacro, into.Id);
-        ImGui::SameLine();
+        row.Next(UiFont::ButtonWidth("Expand all"));
         if (ImGui::Button("Expand all"))   s_Pending = {EAction::ExpandAll, 0, 0, EDrop::Into, 0, ENameMode::NewFolder, true};
-        ImGui::SameLine();
+        row.Next(UiFont::ButtonWidth("Collapse all"));
         if (ImGui::Button("Collapse all")) s_Pending = {EAction::ExpandAll, 0, 0, EDrop::Into, 0, ENameMode::NewFolder, false};
-        ImGui::SameLine();
+        row.Next(UiFont::ButtonWidth("Sort A-Z"));
         if (ImGui::Button("Sort A-Z"))
         {
             s_Tree.SortChildren(s_Tree.Root(), true);
             MarkDirty();
         }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Sorts every folder: folders first, then macros, each A-Z.");
-        ImGui::SameLine();
+        row.Next(UiFont::ButtonWidth("Import..."));
         if (ImGui::Button("Import..."))
         {
             s_ImportTarget = InsertFolder().Parent ? InsertFolder().Id : 0;
             s_ShowImport   = true;
         }
-        ImGui::SameLine();
+        row.Next(UiFont::ButtonWidth("Export all"));
         if (ImGui::Button("Export all"))
         {
             if (s_Tree.Root().Children.empty()) SetStatus("There's nothing to export yet.");
@@ -1833,6 +1888,10 @@ namespace
         }
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Saves your whole library to the exports folder.\nRight-click a folder or macro to export just that.");
+        row.Next(UiFont::ComboWidth("Text size"));
+        UiFont::DrawCombo("Text size");
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("The size of the text in this addon's windows.\nThe sizes are the fonts Nexus provides.");
         ImGui::TextDisabled("New items go into: %s", into.Parent ? into.Name.c_str() : "Top level");
     }
 
@@ -1856,42 +1915,51 @@ namespace
 
     void DrawMainWindow()
     {
-        ImGui::SetNextWindowSize(ImVec2(820.0f, 500.0f), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSizeConstraints(ImVec2(560.0f, 300.0f), ImVec2(FLT_MAX, FLT_MAX));
-        if (!ImGui::Begin(Ui::kMainWindowName, &s_ShowMainWindow, ImGuiWindowFlags_NoCollapse))
+        UiFont::BeforeBegin(s_MainFit, ImVec2(820.0f, 500.0f), ImVec2(560.0f, 300.0f));
+        const bool shown = ImGui::Begin(Ui::kMainWindowName, &s_ShowMainWindow, ImGuiWindowFlags_NoCollapse);
+        UiFont::AfterBegin(s_MainFit);
+        if (!shown)
         {
             ImGui::End();
             return;
         }
+        ImGui::PushTextWrapPos(0.0f); // long text wraps at the window's edge
 
         DrawMessages();
         DrawToolbar();
         ImGui::Separator();
 
+        // Both panes scroll sideways too, for long names and rows that can't wrap.
         const float treeWidth = ImGui::GetContentRegionAvail().x * 0.38f;
-        ImGui::BeginChild("##tree", ImVec2(treeWidth, 0.0f), true);
+        ImGui::BeginChild("##tree", ImVec2(treeWidth, 0.0f), true, ImGuiWindowFlags_HorizontalScrollbar);
+        ImGui::PushTextWrapPos(0.0f);
         if (s_Tree.Root().Children.empty())
         {
             ImGui::TextWrapped("Your library is empty. Create a folder or a macro to get started.");
         }
         DrawTree();
+        ImGui::PopTextWrapPos();
         ImGui::EndChild();
 
         ImGui::SameLine();
-        ImGui::BeginChild("##details", ImVec2(0.0f, 0.0f), true);
+        ImGui::BeginChild("##details", ImVec2(0.0f, 0.0f), true, ImGuiWindowFlags_HorizontalScrollbar);
+        ImGui::PushTextWrapPos(0.0f);
         DrawDetails();
+        ImGui::PopTextWrapPos();
         ImGui::EndChild();
 
         ApplyPending();
         DrawNamePopup();
         DrawDeletePopup();
 
+        ImGui::PopTextWrapPos();
         ImGui::End();
     }
 }
 
 void Ui::Init()
 {
+    UiFont::Init();
     s_Mumble = static_cast<Mumble::Data*>(g_Api->DataLink_Get(DL_MUMBLE_LINK));
     s_LoadMessages.clear();
     Storage::LoadMacros(s_Tree, s_LoadMessages);
@@ -1919,9 +1987,12 @@ void Ui::Render()
     WatchMap();
     SyncLinks(false);
     HandleHotkeys();
+    UiFont::NewFrame();
+    UiFont::Push(); // the chosen text size, for our windows only
     if (s_ShowMainWindow) DrawMainWindow();
     DrawImportWindow();
     DrawQuickMenuPopup();
+    UiFont::Pop();
     if (s_Dirty && ImGui::GetTime() >= s_SaveAt) SaveNow();
 }
 
@@ -1931,13 +2002,21 @@ void Ui::RenderOptions()
     ImGui::TextDisabled("Your macros are saved in <GW2>\\addons\\GW2_Chat_Messages\\macros.json.");
     if (ImGui::Button("Open macro library")) s_ShowMainWindow = true;
     ImGui::Spacing();
+    UiFont::DrawCombo("Text size");
+    ImGui::TextDisabled("The size of the text in this addon's windows (not this page).");
+    ImGui::Spacing();
     ImGui::TextWrapped("Quick menu: right-click the scroll icon in the Nexus bar, or set a key for "
                        "\"Open Chat Messages quick menu\" in Nexus > Options > Keybinds.");
 }
 
 void Ui::ToggleMainWindow() { s_ShowMainWindow = !s_ShowMainWindow; }
 
-void Ui::RenderQuickAccessMenu() { DrawQuickMenu(); }
+void Ui::RenderQuickAccessMenu()
+{
+    UiFont::Push();
+    DrawQuickMenu();
+    UiFont::Pop();
+}
 
 void Ui::ToggleQuickMenu()
 {

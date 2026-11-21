@@ -11,6 +11,7 @@ namespace MacroTree { class Tree; }
 // On-disk locations for everything this addon stores.
 //   <GW2>\addons\GW2_Chat_Messages\macros.json        the macro library
 //   <GW2>\addons\GW2_Chat_Messages\macros.json.bak    the version before the last save
+//   <GW2>\addons\GW2_Chat_Messages\settings.json      addon settings (the text size)
 //   <GW2>\addons\GW2_Chat_Messages\exports\           files written by Export
 //   <GW2>\addons\GW2_Chat_Messages\imports\           files listed in the Import window
 // The folder comes from Nexus' Paths_GetAddonDirectory(). Nexus does not create it, so we do.
@@ -38,4 +39,8 @@ namespace Storage
 
     // Returns false if the file couldn't be written (the reason is logged).
     bool SaveMacros(const MacroTree::Tree& aTree);
+
+    // settings.json as an object; an empty object if it's missing or can't be read (logged).
+    nlohmann::json LoadSettings();
+    bool SaveSettings(const nlohmann::json& aSettings);
 }
