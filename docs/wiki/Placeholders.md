@@ -29,7 +29,7 @@ and in whisper recipients.
 - Arguments are separated by spaces. Use quotes for one with spaces: `{txt "my lines.txt"}`.
 - Anything else in `{ }` is sent exactly as typed, so `{hello}` stays `{hello}`.
 - If a placeholder can't be filled in (a missing file, no internet for `{map}`), **the whole
-  macro is not sent**, and a message says why. Nothing half-finished goes to chat.
+  macro is not sent**, and the error window says why. Nothing half-finished goes to chat.
 
 ## Text files
 

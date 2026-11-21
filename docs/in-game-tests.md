@@ -9,12 +9,29 @@ ones before. A whole pass takes about an hour. If the text is hard to read, do M
 pick a bigger size. Session B is the one that matters most: if it
 fails, most of the later sessions can't be run, so report it first.
 
+## Progress
+
+Results so far (keep your notes in `docs\testing results.txt`; it isn't committed):
+
+| Session | State | Notes |
+|---|---|---|
+| A1 | Passed (PR #15 build) | Re-check only the version line with a new build (it's now date-based). |
+| A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text now wraps (PR #17) and errors open the error window (PR #18). Re-check those two points only, then go on to A3. |
+| A3 to N | Not run yet | |
+
+**Errors since PR #18:** every refusal and error the checks below expect ("refused", "says
+why", "a message") now opens the **error window** instead of a red line under the editor. Click
+**OK** to close it before the next step. Where a check asks for the exact message, use **Copy to
+clipboard** and paste it into your notes. Errors from a hotkey or the quick menu also show the
+Nexus alert, as before.
+
 ## How to report
 
 For every check, write **pass**, **fail** or **skipped**, and for a fail (or anything odd):
 
 - what you did and what happened, in your own words;
-- the **exact status text** shown under the macro editor, or in the alert;
+- the **exact error text**: click **Copy to clipboard** in the error window and paste it (for
+  a hotkey error, the Nexus alert's text too);
 - the Nexus log lines mentioning `Chat Messages` (Nexus > Log; filter by "Chat Messages");
 - for anything visual, a screenshot (save it anywhere, not in `docs\images\`, which is for the
   README and wiki pictures).
@@ -46,12 +63,13 @@ library** button that works.
   "levels deep" message: "New folder inside" isn't offered there, so select the deepest folder
   and click **New folder** in the toolbar. A macro inside the deepest folder is allowed.
 - A second folder or macro called `test` (any case) in the same folder is refused ("There is
-  already a ...") in the error window (session N).
+  already a ...") in the error window (session N). *Re-check: the error isn't cut off.*
 - Rename (right-click > Rename), Move up / Move down, **Sort contents A-Z**, Expand all / Collapse
   all: each does what it says.
 - Drag a macro into another folder, and drag a folder into a folder: both move. Dragging a folder
   into its own sub-folder, or so that it would end up more than 6 deep, is refused.
 - Delete a folder with macros in it: it asks first, then removes the folder and its contents.
+  *Re-check: the pop-up's text about what's inside wraps and can be read in full.*
 
 **A3. The test macros.** In `Test`, create these (you'll use them in later sessions):
 
@@ -77,7 +95,8 @@ the whole tree, every line, expanded folders and selection are as you left them.
 
 **A6. A broken file.** Close the game. Open `macros.json` in Notepad, delete the first `{` and
 save. Start the game: the Nexus log says the file couldn't be read and the macros were restored
-from the backup; the library shows your macros (maybe missing the very last change); a
+from the backup, and the error window shows the same (What you did: "Started the game"); the
+library shows your macros (maybe missing the very last change); a
 `macros.json.unreadable-<date>` file is in the folder. Nothing is lost.
 
 ## B. Sending: does the game take our keys? (most important)
@@ -85,10 +104,11 @@ from the backup; the library shows your macros (maybe missing the very last chan
 Use **Send now** in the editor for these. If B1 fails, stop and report it: the rest depends on it.
 
 **B1. `Say`.** Click **Send now** with the mouse over the addon window. `test 1` appears in Say
-chat and chat closes again; the status says "Sent 1 line." If it fails, say which part:
-- chat didn't open at all (status: "chat didn't open"), or
+chat and chat closes again; the status says "Sent 1 line." If it fails, the error window says why;
+copy it, and say which part:
+- chat didn't open at all ("chat didn't open"), or
 - chat opened but stayed empty (the game ignores our typed text: we'd need the clipboard way), or
-- the text was typed but not sent (status: "the game didn't take the message").
+- the text was typed but not sent ("the game didn't take the message").
 
 **B2. More lines and kinds.** `Two`: both lines arrive, in order, in the right channels.
 `Emote`: your character waves. `Long`: arrives in full. `Accents`: every character arrives exactly
@@ -112,7 +132,8 @@ it if you know one, e.g. `/w Some Name test`. If the first works, the addon can 
 
 ## D. Refusals and recovery
 
-Nothing should happen in game for D1-D4: no chat opens, nothing is typed.
+Nothing should happen in game for D1-D4: no chat opens, nothing is typed. Each refusal opens
+the error window with the message below; click OK before the next check.
 
 **D1. You're typing.** Open chat and type something. Move the mouse to the addon window and click
 **Send now** on `Say` (the click takes focus from chat; if chat closes, say so). Expected: refused,
@@ -128,7 +149,7 @@ the "Shift, Ctrl, Alt or Windows key is held down" message. Repeat with Ctrl.
 sending a macro.") and `Two` arrives once.
 
 **D5. Interrupting.** Send `Two` and, while the first line is going out, press Escape yourself
-(or click into the game). The send stops with a message. The game menu must **not** open (we send
+(or click into the game). The send stops and the error window says why. The game menu must **not** open (we send
 at most one Escape). Report what you see in chat.
 
 **D6. Not in game.** Log out to character select, open the library from the Nexus bar and send
@@ -143,7 +164,7 @@ when you're not commander, the same macro is sent as normal squad chat.
 
 **F1. Setting one.** On `Say`, click **Set...** and press Ctrl+F1: the editor and the tree show
 `Ctrl+F1`. **Set...** then Escape: cancelled, `Ctrl+F1` stays. **Set...** then plain Tab, plain
-Enter or Ctrl+Escape: refused with a message. Closing the window while it waits for a key also
+Enter or Ctrl+Escape: refused, with the reason in the error window. Closing the window while it waits for a key also
 cancels it.
 
 **F2. Mouse buttons (question).** On `Emote`, **Set...** with the mouse over the addon window and
@@ -160,8 +181,9 @@ Open chat and press F2: nothing is sent. Click into another addon's text box (or
 box) and press F2: nothing is sent. Set `Say` back to Ctrl+F1.
 
 **F5. Clashes.** Give `Two` the same hotkey as `Say`: both show "Also set on ...". Pressing it
-shows an alert and sends nothing. Clear `Two`'s hotkey. Then clear the Chat game keybind and
-press Ctrl+F1: an alert explains why nothing was sent. Set the key back.
+shows an alert and the error window (without taking focus), and sends nothing. Clear `Two`'s
+hotkey. Then clear the Chat game keybind and press Ctrl+F1: the alert and the error window
+explain why nothing was sent. Set the key back.
 
 **F6. Saved.** Reload the addon (Nexus > Addons, or restart): the hotkeys are still set and work.
 
@@ -181,12 +203,12 @@ Where does it appear, and can you use it? We may need a "centre of the screen" o
 
 **H1. Game modes.** On `Emote`, open **Where it's active**: by default it's everywhere. Untick
 PvE. In the open world: `Emote` is dimmed in the library, missing from the quick menu, and its
-mouse hotkey does nothing; **Send now** still sends it. Unticking the last game mode is refused.
+mouse hotkey does nothing; **Send now** still sends it. Unticking the last game mode is refused (error window).
 
 **H2. Maps.** **Add this map** adds the map you're on, shown by name (and `maps.json` appears in
 the addon folder). The macro is then active only on this map: check on another map, then remove it
 with its **x**. While the current map is in the list, **Add this map** is greyed out, and
-**Add id** with the same number says it's already in the list.
+**Add id** with the same number opens the error window: it's already in the list.
 
 **H3. Same hotkey, different modes.** Give `Say` a WvW-only filter and `Two` a PvE-only filter, both
 with the same hotkey: no warning in the editor, and the hotkey sends the right one in each mode.
@@ -211,26 +233,26 @@ in your Windows language, and is the format what you'd want?).
 **I2. Text files.** Put `names.txt` with three lines (one with an accent) in
 `<GW2>\addons\GW2_Chat_Messages\`, saved as UTF-8. `{txt names.txt}` sends a random line;
 `{txt names.txt 2}` the second one; accents arrive right. `{txt missing.txt}`: nothing is sent and
-the status says it wasn't found.
+the error window says it wasn't found.
 
 **I3. Left alone.** `/s {smile} meet at [&BDAEAAA=]`: `{smile}` arrives as typed, and the code
 arrives as a clickable waypoint link.
 
 **I4. Too long once filled in.** Make line 1 of `names.txt` 190 characters long, and send
-`/s {txt names.txt 1} and more`: refused with a "too long" message, nothing sent.
+`/s {txt names.txt 1} and more`: refused, the error window says it's too long, nothing sent.
 
 **I5. Map name and {json}.** `/s Hello from {map}`: sends the map name, also right after you
 arrive on a map you haven't visited this session. `{json id https://api.guildwars2.com/v2/build}`:
 sends the game build number. `{json nope https://api.guildwars2.com/v2/build}`: nothing is sent;
-the status says the path wasn't found.
+the error window says the path wasn't found.
 
 **I6. Offline.** Close the game, delete `maps.json`, disconnect from the internet, start the game
-(Nexus may complain about updates; that's fine) and enter a map. `{map}` fails with a "couldn't be
-reached" message and nothing is sent. The game doesn't stutter while it tries. Reconnect.
+(Nexus may complain about updates; that's fine) and enter a map. `{map}` fails, the error window says the API
+"couldn't be reached", and nothing is sent. The game doesn't stutter while it tries. Reconnect.
 
 **I7. Typing while it prepares.** Send the `{json ...build}` macro and, while the status says
-"Preparing...", open chat and start typing. The send stops ("A text box is open") and **your chat
-box stays open with your text**.
+"Preparing...", open chat and start typing. The send stops (error window: "A text box is open") and
+**your chat box stays open with your text**. The error window doesn't take your typing away.
 
 ## J. Import and export
 
@@ -270,7 +292,7 @@ reload when you switch to it). Keep Notepad open on the file while you type in t
 message box: no stutter, nothing lost, hotkeys still work.
 
 **K3. Existing file and duplicates.** Make `links\other.txt` with one line, link `Say` to it:
-`Say` now has that line. Link `Emote` to `TEST.txt`: refused, "already linked".
+`Say` now has that line. Link `Emote` to `TEST.txt`: refused, the error window says it's "already linked".
 
 **K4. Gone and back.** Delete `test.txt`: the editor says the file isn't there. Edit `Two`: the
 file is **not** recreated. Click **Recreate the file**: it's back with `Two`'s lines.
@@ -303,7 +325,7 @@ menu, the Placeholders (?) label). All use the big text. Nexus' own options page
 
 **M3. Nothing cut off.** At the biggest size, make the library window narrow:
 - toolbar buttons that don't fit move to a second row;
-- status messages and long hints wrap instead of running off the edge;
+- status messages, long hints and the error window's text wrap instead of running off the edge;
 - a macro with 6+ maps in its filter shows the map buttons over several rows;
 - a long macro name deep in the tree can be reached with the tree's sideways scrollbar.
 Report anything that's still cut off, with a screenshot.
@@ -315,6 +337,9 @@ Report anything that's still cut off, with a screenshot.
 open: no crash, and the library keeps working (it may show the default size for a moment).
 
 ## N. The error window
+
+These look at the error window itself. The other sessions have already opened it many times:
+note anything odd you saw there too.
 
 **N1. Looks and buttons.** In the library, make a second folder called `test` next to `Test`:
 an error pop-up opens over the name box with the error (wrapped, not cut off), "What you did:

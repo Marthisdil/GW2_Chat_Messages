@@ -14,6 +14,9 @@ C:\Dropbox\~ Github\GW2_Chat_Messages\docs\images\
 At each build, Claude checks that folder. Each new file replaces its placeholders with the
 image, and its row below is marked **Captured**. Nothing in the folder is overwritten.
 
+The list is kept up to date with every change: new screens get a row, and a row whose screen has
+changed gets a new description (and goes back to **Needed** if its picture is out of date).
+
 ## Tips
 
 - **Crop to the addon's window** (or the menu or dialog), with a little of the game around it.
@@ -21,8 +24,8 @@ image, and its row below is marked **Captured**. Nothing in the folder is overwr
 - **Hide names:** blur or crop out character names, account names and guild tags you don't want
   shown, especially in chat screenshots.
 - Use made-up example macros (like the ones suggested below), not private ones.
-- Keep the game's default UI size and the Nexus default font, so the pictures match what most
-  players see.
+- Keep the game's default UI size, the Nexus default font and the addon's **Text size** on
+  Default (except for `text-size.png`), so the pictures match what most players see.
 - PNG, ideally under 1 MB each.
 
 ## The list
@@ -37,13 +40,13 @@ image, and its row below is marked **Captured**. Nothing in the folder is overwr
 | 6 | `tree-context-menu.png` | Right-click menu on a folder in the library tree (shows Export, Import into this folder, Sort...). | The macro library | Needed |
 | 7 | `macro-editor-lines.png` | The macro editor's **Lines** tab with 3-4 lines: a say line, a whisper with a recipient, a squad line with **Broadcast** ticked, and the character counts. | Editing macros | Needed |
 | 8 | `macro-editor-raw.png` | The **Raw text** tab of the same macro, with the **Will send:** list under it. | Editing macros | Needed |
-| 9 | `send-status.png` | The editor after **Send now**, with the status line ("Sent 3 lines." or "Sending line 2 of 3..."). | Sending macros | Needed |
+| 9 | `send-status.png` | The editor after **Send now**, with the status line ("Sent 3 lines." or "Sending line 2 of 3..."). A successful send: errors now show in the error window instead. | Sending macros | Needed |
 | 10 | `hotkey-set.png` | The **Hotkey:** row of a macro with a hotkey set (e.g. Ctrl+F1), ideally showing the "Also set on" or plain-key warning. | Sending macros | Needed |
 | 11 | `filters.png` | **Where it's active** opened: game modes ticked, two or three maps listed by name, and the "Active here" line. | Filters | Needed |
 | 12 | `placeholders-tooltip.png` | The tooltip from hovering **Placeholders (?)** in the editor. | Placeholders | Needed |
 | 13 | `export-menu.png` | Right-click a macro > **Export** submenu open. | Import and export | Needed |
 | 14 | `import-window.png` | The Import window with something loaded: the target folder, the options, and the preview with at least one taken name and its choice box. | Import and export | Needed |
-| 15 | `send-alert.png` | A Nexus alert on screen from a hotkey that couldn't send. Easiest: give two macros that are both active here the same hotkey, then press it. | Safety and troubleshooting | Needed |
+| 15 | `send-alert.png` | A Nexus alert on screen from a hotkey that couldn't send, with the error window it also opens. Easiest: give two macros that are both active here the same hotkey, then press it with the library closed. | Safety and troubleshooting | Needed |
 | 16 | `link-file.png` | A macro's **Text file link** section opened, with a file linked ("In step") and the Open file / Open folder / Unlink buttons. | Editing macros | Needed |
 | 17 | `text-size.png` | The library window at the biggest text size, with the **Text size** dropdown (end of the toolbar) open. | The macro library | Needed |
-| 18 | `error-window.png` | The error window: in the library, make a folder, then try to make a second one with the same name in the same place. | Safety and troubleshooting | Needed |
+| 18 | `error-window.png` | The error window with "What you did" and the OK / Copy to clipboard buttons. Easiest: toolbar **Export all** with an empty library, or select a folder 6 levels deep and click **New folder**. (A duplicate name shows it as a pop-up over the name box, which works too.) | Safety and troubleshooting | Needed |
