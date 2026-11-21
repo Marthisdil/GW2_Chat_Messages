@@ -90,6 +90,9 @@ to the todo list", add it there (don't start building it). Move agreed items int
   package, the import preview (`BuildPlan`) and `Apply`. No Nexus or ImGui dependency. Tested by
   `tests/ExchangeTests.cpp`. Exports go to `<addon>\exports\`; the Import window lists
   `<addon>\imports\`.
+- `src/LinkSync.*`: link files (a macro kept in step with a `.txt` file both ways): path rules
+  and the sync decision. No Nexus or ImGui dependency. Tested by `tests/LinkSyncTests.cpp`. The
+  UI (`Ui.cpp`) polls once a second and does the reads and writes.
 - `src/SendPlan.*`: turns a macro's lines into the exact send steps (open chat, wait, type, Tab
   for whispers, Enter, wait) and validates them. No Nexus or ImGui dependency. Tested by
   `tests/SendPlanTests.cpp`.

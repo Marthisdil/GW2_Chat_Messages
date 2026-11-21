@@ -9,6 +9,7 @@ void RunHotkeyTests();
 void RunFilterTests();
 void RunPlaceholderTests();
 void RunExchangeTests();
+void RunLinkSyncTests();
 
 int main()
 {
@@ -19,6 +20,7 @@ int main()
     RunFilterTests();
     RunPlaceholderTests();
     RunExchangeTests();
+    RunLinkSyncTests();
     std::printf("%d checks, %d failures\n", g_TestChecks, g_TestFailures);
     return g_TestFailures == 0 ? 0 : 1;
 }

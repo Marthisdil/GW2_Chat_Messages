@@ -11,6 +11,7 @@ when it loads.
 | your `.txt` files | Text files for the `{txt}` placeholder. |
 | `exports\` | Files saved by Export. |
 | `imports\` | Put files here to see them in the Import window. |
+| `links\` | Text files linked to macros (when you give just a file name). |
 
 ## Saving
 

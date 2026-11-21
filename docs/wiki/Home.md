@@ -13,7 +13,8 @@ chat macros in folders and types them into chat for you.
 
 - [Installation](Installation): install the addon and set the keys it needs.
 - [The macro library](The-Macro-Library): folders, macros, drag and drop.
-- [Editing macros](Editing-Macros): lines, channels, whispers, squad broadcasts, raw text.
+- [Editing macros](Editing-Macros): lines, channels, whispers, squad broadcasts, raw text, text
+  file links.
 - [Sending macros](Sending-Macros): Send now, hotkeys and the quick menu.
 - [Filters](Filters): limit a macro to game modes and maps.
 - [Placeholders](Placeholders): `{time}`, `{random}`, `{map}`, text files, JSON and more.

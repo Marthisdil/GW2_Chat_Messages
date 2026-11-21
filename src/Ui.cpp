@@ -7,7 +7,10 @@
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <memory>
+#include <unordered_map>
 #include <optional>
 #include <string>
 #include <vector>
@@ -20,6 +23,7 @@
 #include "Exchange.h"
 #include "Globals.h"
 #include "Hotkeys.h"
+#include "LinkSync.h"
 #include "MapNames.h"
 #include "MacroTree.h"
 #include "Mumble.h"
@@ -1060,6 +1064,240 @@ namespace
             ImGui::TextColored(kWarnColor, "Only the first %zu lines are kept.", kMaxLinesPerMacro);
     }
 
+    // --- Link files ---------------------------------------------------------------------------
+    // A macro can be kept in step with a .txt file (src/LinkSync.*). The files are checked once a
+    // second on the render thread, outside the tree drawing; only a changed file is read.
+
+    constexpr double kLinkSyncEverySec = 1.0;
+
+    std::unordered_map<uint64_t, LinkSync::State> s_LinkStates;
+    std::unordered_map<uint64_t, std::string>     s_LinkProblems; // what's wrong with a link, for the editor
+    double      s_NextLinkSync = 0.0;
+    std::string s_LinkPath;          // the path being typed in the editor
+    uint64_t    s_LinkPathFor = 0;   // which macro s_LinkPath belongs to
+    std::string s_LinkError;         // why the typed path can't be linked
+
+    int64_t FileMtime(const std::filesystem::path& aFile, bool& aExists)
+    {
+        std::error_code ec;
+        aExists = std::filesystem::is_regular_file(aFile, ec);
+        if (!aExists) return 0;
+        const auto t = std::filesystem::last_write_time(aFile, ec);
+        return ec ? 0 : static_cast<int64_t>(t.time_since_epoch().count());
+    }
+
+    bool ReadLinkFile(const std::filesystem::path& aFile, std::string& aText, std::string& aError)
+    {
+        std::error_code ec;
+        const auto size = std::filesystem::file_size(aFile, ec);
+        if (ec) { aError = "the file couldn't be read."; return false; }
+        if (size > LinkSync::kMaxFileBytes) { aError = "the file is too big (over 256 KB)."; return false; }
+        std::ifstream in(aFile, std::ios::binary);
+        if (!in) { aError = "the file couldn't be opened (is another program locking it?)."; return false; }
+        aText.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+        if (aText.size() >= 3 && aText.compare(0, 3, "\xEF\xBB\xBF") == 0) aText.erase(0, 3); // UTF-8 BOM
+        return true;
+    }
+
+    // Writes the macro's lines to its file and records the result as the agreed state.
+    bool WriteLinkFile(const Node& aMacro, const std::filesystem::path& aFile, LinkSync::State& aState)
+    {
+        std::error_code ec;
+        std::filesystem::create_directories(aFile.parent_path(), ec);
+        if (!Storage::WriteText(aFile, LinkSync::FileText(aMacro.Lines))) return false;
+        bool exists = false;
+        aState.Known = true;
+        aState.Mtime = FileMtime(aFile, exists);
+        aState.Text  = ChatLine::SerializeRaw(aMacro.Lines);
+        return true;
+    }
+
+    void CollectLinked(Node& aFolder, std::vector<Node*>& aOut)
+    {
+        for (auto& c : aFolder.Children)
+        {
+            if (c->IsFolder()) CollectLinked(*c, aOut);
+            else if (!c->LinkFile.empty()) aOut.push_back(c.get());
+        }
+    }
+
+    void SyncLinks(bool aNow)
+    {
+        if (!aNow && ImGui::GetTime() < s_NextLinkSync) return;
+        s_NextLinkSync = ImGui::GetTime() + kLinkSyncEverySec;
+
+        std::vector<Node*> linked;
+        CollectLinked(s_Tree.Root(), linked);
+        // Forget macros that were unlinked or deleted.
+        for (auto it = s_LinkStates.begin(); it != s_LinkStates.end();)
+        {
+            bool still = false;
+            for (const Node* n : linked) still = still || n->Id == it->first;
+            it = still ? std::next(it) : s_LinkStates.erase(it);
+        }
+        if (linked.empty()) return;
+        const std::filesystem::path dir = Storage::AddonDir();
+        if (dir.empty()) return;
+
+        for (Node* m : linked)
+        {
+            const std::filesystem::path file = LinkSync::Resolve(dir, m->LinkFile);
+            LinkSync::State& st = s_LinkStates[m->Id];
+            const LinkSync::State before = st;
+            LinkSync::File view;
+            view.Mtime = FileMtime(file, view.Exists);
+            view.Read  = [&file](std::string& aText, std::string& aError) { return ReadLinkFile(file, aText, aError); };
+
+            const LinkSync::Outcome o = LinkSync::Sync(st, m->Lines, view);
+            std::string problem;
+            if (o.Missing) problem = "The file isn't there. Changes aren't saved to it until it's back or recreated.";
+            else if (!o.Error.empty()) problem = "The file can't be read: " + o.Error;
+            else if (o.LoadMacro)
+            {
+                m->Lines = o.Lines;
+                if (s_RawForId == m->Id) s_RawForId = 0;
+                MarkDirty();
+            }
+            else if (o.WriteFile)
+            {
+                if (WriteLinkFile(*m, file, st)) {}
+                else
+                {
+                    st = before; // try again next time
+                    problem = "The file couldn't be written. Check the Nexus log.";
+                }
+            }
+            if (problem.empty() && !o.Warning.empty()) problem = o.Warning;
+            if (problem.empty()) s_LinkProblems.erase(m->Id);
+            else s_LinkProblems[m->Id] = problem;
+        }
+    }
+
+    // Is this file already linked to another macro? (Two macros writing one file would fight.)
+    const Node* LinkedElsewhere(const Node& aFolder, const Node& aMacro, const std::filesystem::path& aDir, const std::filesystem::path& aFile)
+    {
+        for (const auto& c : aFolder.Children)
+        {
+            if (c->IsFolder())
+            {
+                if (const Node* n = LinkedElsewhere(*c, aMacro, aDir, aFile)) return n;
+            }
+            else if (c.get() != &aMacro && !c->LinkFile.empty() && LinkSync::SamePath(LinkSync::Resolve(aDir, c->LinkFile), aFile))
+                return c.get();
+        }
+        return nullptr;
+    }
+
+    void LinkMacro(Node& aMacro, const std::string& aPath)
+    {
+        s_LinkError = LinkSync::CheckPath(aPath);
+        if (!s_LinkError.empty()) return;
+        const std::filesystem::path dir = Storage::AddonDir();
+        if (dir.empty()) { s_LinkError = "The addon folder isn't available."; return; }
+        const std::filesystem::path file = LinkSync::Resolve(dir, aPath);
+        if (const Node* other = LinkedElsewhere(s_Tree.Root(), aMacro, dir, file))
+        {
+            s_LinkError = "\"" + other->Name + "\" is already linked to that file.";
+            return;
+        }
+
+        LinkSync::State st;
+        bool exists = false;
+        FileMtime(file, exists);
+        std::string text, error;
+        if (exists && !ReadLinkFile(file, text, error))
+        {
+            s_LinkError = "That file can't be used: " + error; // never overwrite a file we couldn't read
+            return;
+        }
+        const bool hasLines = exists && !ChatLine::ParseRaw(text).empty();
+        if (!hasLines)
+        {
+            // No file yet (or an empty one): it's made from the macro.
+            if (!WriteLinkFile(aMacro, file, st))
+            {
+                s_LinkError = "The file couldn't be created. Check the path and the Nexus log.";
+                return;
+            }
+            SetInfo("Linked. The file was created from the macro's lines.");
+        }
+        else SetInfo("Linked. The macro now has the file's lines.");
+        // An existing file with lines wins: the first sync (State not known yet) loads it.
+
+        const size_t first = aPath.find_first_not_of(" \t");
+        aMacro.LinkFile = aPath.substr(first, aPath.find_last_not_of(" \t") - first + 1);
+        s_LinkStates[aMacro.Id] = st;
+        s_LinkProblems.erase(aMacro.Id);
+        s_LinkPath.clear();
+        MarkDirty();
+        SyncLinks(true);
+    }
+
+    void DrawLinkFile(Node& aMacro)
+    {
+        if (s_LinkPathFor != aMacro.Id)
+        {
+            s_LinkPathFor = aMacro.Id;
+            s_LinkPath.clear();
+            s_LinkError.clear();
+        }
+        const auto problem = s_LinkProblems.find(aMacro.Id);
+        const std::string header = aMacro.LinkFile.empty()
+            ? std::string("Text file link: none###linkfile")
+            : "Text file link: " + aMacro.LinkFile + (problem != s_LinkProblems.end() ? " (needs attention)" : "") + "###linkfile";
+        if (!ImGui::CollapsingHeader(header.c_str())) return;
+        ImGui::Indent();
+
+        if (aMacro.LinkFile.empty())
+        {
+            ImGui::TextWrapped("Keep this macro in step with a .txt file, one chat line per row (like the Raw text "
+                               "tab). Edit the file in Notepad and the macro follows; edit the macro here and the "
+                               "file follows.");
+            ImGui::TextDisabled("A name alone goes in <GW2>\\addons\\Chat Messages\\links\\. A file that already "
+                                "has lines replaces the macro's lines; otherwise it's created from them.");
+            ImGui::SetNextItemWidth(-70.0f);
+            const bool enter = InputString("##linkpath", "callouts.txt, or a full path", s_LinkPath, ImGuiInputTextFlags_EnterReturnsTrue);
+            ImGui::SameLine();
+            if (ImGui::Button("Link") || enter)
+            {
+                std::string path = s_LinkPath;
+                if (path.size() >= 2 && path.front() == '"' && path.back() == '"') path = path.substr(1, path.size() - 2);
+                LinkMacro(aMacro, path);
+            }
+            if (!s_LinkError.empty()) ImGui::TextColored(kErrorColor, "%s", s_LinkError.c_str());
+        }
+        else
+        {
+            const std::filesystem::path dir  = Storage::AddonDir();
+            const std::filesystem::path file = LinkSync::Resolve(dir, aMacro.LinkFile);
+            ImGui::TextWrapped("File: %s", file.u8string().c_str());
+            const bool missing = problem != s_LinkProblems.end() && problem->second.rfind("The file isn't there", 0) == 0;
+            if (problem != s_LinkProblems.end()) ImGui::TextColored(kWarnColor, "%s", problem->second.c_str());
+            else ImGui::TextDisabled("In step. Changes on either side show up within a second.");
+            if (ImGui::SmallButton("Open file")) Storage::OpenFolder(file);
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Opens it in your text editor (Notepad, unless you chose another).");
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Open folder")) Storage::OpenFolder(file.parent_path());
+            ImGui::SameLine();
+            if (missing && ImGui::SmallButton("Recreate the file"))
+            {
+                if (WriteLinkFile(aMacro, file, s_LinkStates[aMacro.Id])) s_LinkProblems.erase(aMacro.Id);
+                else SetStatus("The file couldn't be created. Check the Nexus log.");
+            }
+            if (missing) ImGui::SameLine();
+            if (ImGui::SmallButton("Unlink"))
+            {
+                aMacro.LinkFile.clear();
+                s_LinkStates.erase(aMacro.Id);
+                s_LinkProblems.erase(aMacro.Id);
+                MarkDirty();
+                SetInfo("Unlinked. The file was left as it is.");
+            }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Stops keeping the macro and the file in step. Neither is deleted.");
+        }
+        ImGui::Unindent();
+    }
+
     void DrawMacroEditor(Node& aMacro)
     {
         const bool busy = Sender::IsBusy();
@@ -1073,6 +1311,7 @@ namespace
         DrawSendStatus();
         DrawHotkeyRow(aMacro);
         DrawFilters(aMacro);
+        DrawLinkFile(aMacro);
         ImGui::Separator();
 
         int mode = static_cast<int>(s_EditMode);
@@ -1662,6 +1901,7 @@ void Ui::Init()
 
 void Ui::Shutdown()
 {
+    SyncLinks(true); // last edits to linked macros reach their files
     if (s_Dirty && !Storage::SaveMacros(s_Tree))
         LogF(LOGL_WARNING, "Unsaved macro changes could not be written on unload.");
     s_Dirty = false;
@@ -1669,12 +1909,15 @@ void Ui::Shutdown()
     s_SelectedId = 0;
     CloseImport();
     s_UndoImport.reset();
+    s_LinkStates.clear();
+    s_LinkProblems.clear();
 }
 
 void Ui::Render()
 {
     PollSender();
     WatchMap();
+    SyncLinks(false);
     HandleHotkeys();
     if (s_ShowMainWindow) DrawMainWindow();
     DrawImportWindow();

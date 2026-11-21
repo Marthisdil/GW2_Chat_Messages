@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Text file links:** in the macro editor, "Text file link" keeps a macro in step with a `.txt`
+  file (one chat line per row), both ways. Edit the file in Notepad and the macro follows within
+  a second; edit the macro and the file is rewritten. A name alone goes in
+  `<GW2>\addons\Chat Messages\links\`. Open file, Open folder, Unlink and Recreate the file
+  buttons. A deleted file is never recreated without asking, and a file that can't be read is
+  never overwritten.
 - **Export:** "Export all" in the toolbar saves your whole library, and right-click > Export saves
   one folder or macro. Save as a `.json` file, a macro as a `.txt` file of raw lines, or copy
   either to the clipboard. Files go to `<GW2>\addons\Chat Messages\exports\` and are never

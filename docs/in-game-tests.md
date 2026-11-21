@@ -162,3 +162,16 @@ the Nexus log for `Chat Messages` warnings.
 75. Open imports folder: Explorer opens; returning to the game, keys and Tab still work.
 76. While the Import window is open, hotkeys still work and typing in its path box doesn't
     trigger them.
+
+## Phase 7: link files
+77. Link a macro to `test.txt` (new): `links\test.txt` appears with the macro's lines.
+78. Open file, add a line in Notepad and save: within a second the macro shows it (Lines and Raw
+    text tabs).
+79. Edit the macro in the addon: within a second the file changes (Notepad asks to reload).
+80. Link a second macro to `TEST.txt`: refused, "already linked".
+81. Close the game, edit the file, start the game: the macro has the new lines.
+82. Delete the file: the editor says it isn't there; edit the macro: the file isn't recreated;
+    Recreate the file: it's back with the macro's lines.
+83. Link to an existing file with lines: the macro's lines are replaced by the file's.
+84. Keep Notepad open on the file while typing in the addon's message box: no stutter, nothing
+    lost, hotkeys still work.
