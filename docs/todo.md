@@ -143,7 +143,7 @@ Look at letting mouse buttons send a macro only together with Ctrl, Alt or Shift
     addon windows go to ImGui, so this needs careful in-game testing first.
   - Extra mouse buttons beyond 5 (gaming mice usually send them as keyboard keys, which already
     work).
-- Depends on in-game test 26: whether mouse buttons reach our hook at all while the pointer is
+- Depends on in-game check F2: whether mouse buttons reach our hook at all while the pointer is
   over the addon window.
 
 ### Map ids from the game, with a wiki fallback (added 2026-11-20)
