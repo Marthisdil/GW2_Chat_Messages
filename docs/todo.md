@@ -180,28 +180,15 @@ by hand for the map filter.
   would silently stop a filter from matching. Options: keep old names alongside new ones, flag
   filters that use ids the API no longer knows, or offer to swap to the new id.
 
-### Text size setting for all windows (added 2026-11-21)
+### More text sizes from a font of our own (added 2026-11-21)
 
-A text size choice (slider or dropdown) in the addon's settings, offering the font sizes Nexus
-addons can use in game. Every window (the library and macro editor, the Import window, the quick
-menu, the settings page, alerts) picks it up and resizes itself to fit the chosen size.
+The Text size dropdown (built, see `docs/design.md`, "Text size") offers only the fonts Nexus
+provides, so there are usually just 2-4 sizes. If that's not enough:
 
-- What Nexus gives us (API v6): `NexusLinkData_t` (`DataLink_Get(DL_NEXUS_LINK)`) has three
-  ready-made fonts, `Font`, `FontBig` and `FontUI`, whose sizes follow Nexus' own font settings.
-  `Fonts_AddFromFile`/`FromResource`/`FromMemory` add a font of our own at any size, and
-  `Fonts_Resize` changes it later; the new font arrives through a callback.
-- Points to settle:
-  - Which sizes to offer: Nexus' fonts only (small choice, always matches other addons), our own
-    font at a few fixed sizes (for example 12-24 px), or a free slider.
-  - Whether to also follow the game's own interface size (MumbleLink's identity `uisz`: small,
-    normal, large, larger) as the default.
-  - Layout: widths and heights that are fixed in pixels today (the tree pane, input boxes,
-    buttons, the map id box) would need to scale with the font, for example from
-    `ImGui::GetFontSize()` or `GetFrameHeight()`. Window sizes saved by ImGui may need a nudge
-    after a size change.
-- Rules to keep: never store an `ImFont*` (Nexus sends nullptr before atlas rebuilds; fall back
-  to the default font for that frame), and push/pop the font around our own windows only, so
-  other addons aren't affected.
+- Add a font of our own with `Fonts_AddFromFile`/`FromMemory` and change its size with
+  `Fonts_Resize` (it arrives through a callback; never keep the `ImFont*`), offering for example
+  12-28 px, or a slider.
+- Whether to follow the game's own interface size (MumbleLink's identity `uisz`) as the default.
 
 ### Publish the wiki (reminder: do this once the repo is public)
 

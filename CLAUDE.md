@@ -93,6 +93,11 @@ to the todo list", add it there (don't start building it). Move agreed items int
 - `src/LinkSync.*`: link files (a macro kept in step with a `.txt` file both ways): path rules
   and the sync decision. No Nexus or ImGui dependency. Tested by `tests/LinkSyncTests.cpp`. The
   UI (`Ui.cpp`) polls once a second and does the reads and writes.
+- `src/TextSize.*`: the text size rules (which Nexus fonts the dropdown lists, the scale, window
+  rescaling). No Nexus or ImGui dependency. Tested by `tests/TextSizeTests.cpp`.
+  `src/UiFont.*`: the ImGui side: `Push`/`Pop` the chosen font around our windows, `Px()` for
+  fixed sizes, `WindowFit` for window sizes, `Row` for button rows that wrap. Never hard-code a
+  pixel size in `Ui.cpp`: use `Px()` or measure the text. Our windows push `TextWrapPos(0)`.
 - `src/SendPlan.*`: turns a macro's lines into the exact send steps (open chat, wait, type, Tab
   for whispers, Enter, wait) and validates them. No Nexus or ImGui dependency. Tested by
   `tests/SendPlanTests.cpp`.

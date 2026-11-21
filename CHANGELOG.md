@@ -6,6 +6,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Text size:** a "Text size" dropdown in the library's toolbar (and on the addon's Nexus options
+  page) picks the size of the text in the addon's windows, from the fonts Nexus provides. Windows
+  grow or shrink with it, long text wraps at the window's edge, buttons that don't fit move to
+  the next line, and the tree and Import preview scroll sideways for long names. Saved in
+  `settings.json`.
 - **Text file links:** in the macro editor, "Text file link" keeps a macro in step with a `.txt`
   file (one chat line per row), both ways. Edit the file in Notepad and the macro follows within
   a second; edit the macro and the file is rewritten. A name alone goes in

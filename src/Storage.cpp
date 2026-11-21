@@ -17,7 +17,8 @@ namespace fs = std::filesystem;
 
 namespace
 {
-    constexpr const char* kLibraryFile = "macros.json";
+    constexpr const char* kLibraryFile  = "macros.json";
+    constexpr const char* kSettingsFile = "settings.json";
 
     fs::path LibraryFile()
     {
@@ -213,4 +214,32 @@ void Storage::LoadMacros(MacroTree::Tree& aTree, std::vector<std::string>& aMess
 bool Storage::SaveMacros(const MacroTree::Tree& aTree)
 {
     return WriteJson(LibraryFile(), aTree.ToJson(), true);
+}
+
+nlohmann::json Storage::LoadSettings()
+{
+    const fs::path dir = AddonDir();
+    if (dir.empty()) return nlohmann::json::object();
+    const fs::path file = dir / kSettingsFile;
+    std::error_code ec;
+    if (!fs::exists(file, ec)) return nlohmann::json::object();
+    try
+    {
+        std::ifstream in(file, std::ios::binary);
+        nlohmann::json j = nlohmann::json::parse(in);
+        if (j.is_object()) return j;
+        LogF(LOGL_WARNING, "%s isn't a settings file; using the default settings.", file.u8string().c_str());
+    }
+    catch (const std::exception& e)
+    {
+        LogF(LOGL_WARNING, "Could not read %s: %s. Using the default settings.", file.u8string().c_str(), e.what());
+    }
+    return nlohmann::json::object();
+}
+
+bool Storage::SaveSettings(const nlohmann::json& aSettings)
+{
+    const fs::path dir = AddonDir();
+    if (dir.empty()) return false;
+    return WriteJson(dir / kSettingsFile, aSettings, false);
 }

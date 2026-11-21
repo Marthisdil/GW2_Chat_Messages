@@ -45,3 +45,4 @@ image, and its row below is marked **Captured**. Nothing in the folder is overwr
 | 14 | `import-window.png` | The Import window with something loaded: the target folder, the options, and the preview with at least one taken name and its choice box. | Import and export | Needed |
 | 15 | `send-alert.png` | A Nexus alert on screen from a hotkey that couldn't send. Easiest: give two macros that are both active here the same hotkey, then press it. | Safety and troubleshooting | Needed |
 | 16 | `link-file.png` | A macro's **Text file link** section opened, with a file linked ("In step") and the Open file / Open folder / Unlink buttons. | Editing macros | Needed |
+| 17 | `text-size.png` | The library window at the biggest text size, with the **Text size** dropdown (end of the toolbar) open. | The macro library | Needed |

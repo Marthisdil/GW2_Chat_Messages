@@ -4,8 +4,9 @@ The unit tests cover the rules (tree, raw text, send plan, hotkeys, filters, pla
 import, link sync). These checks cover what only the game can tell us: whether GW2 takes our keys
 and text, and whether normal game input is ever disturbed.
 
-The checks are grouped into sessions (A to L) in the order to run them: each one builds on the
-ones before. A whole pass takes about an hour. Session B is the one that matters most: if it
+The checks are grouped into sessions (A to M) in the order to run them: each one builds on the
+ones before. A whole pass takes about an hour. If the text is hard to read, do M1 first and
+pick a bigger size. Session B is the one that matters most: if it
 fails, most of the later sessions can't be run, so report it first.
 
 ## How to report
@@ -286,6 +287,32 @@ and the chat key all work normally. No key feels stuck.
 game doesn't freeze and the unload finishes within about a second. Do the same right after sending
 the `{json ...build}` macro: done within a few seconds. Load the addon again: everything's there.
 
+## M. Text size
+
+**M1. The choices.** Open the **Text size** dropdown at the end of the library's toolbar. Note
+every entry and its size (question: which fonts and sizes does your Nexus offer?). Pick the
+biggest: within a frame the library's text, buttons, title bar and window all get bigger, and the
+window stays on screen. Pick the smallest, then the biggest again: the window shrinks and grows
+back to about the same size.
+
+**M2. Everything follows.** At the biggest size, check: the tree, the macro editor (lines, Raw
+text, Where it's active, Text file link), the Rename and Delete pop-ups, the Import window, the
+quick menu pop-up, the Quick Access right-click menu, and tooltips (hover a macro in the quick
+menu, the Placeholders (?) label). All use the big text. Nexus' own options page doesn't.
+
+**M3. Nothing cut off.** At the biggest size, make the library window narrow:
+- toolbar buttons that don't fit move to a second row;
+- status messages and long hints wrap instead of running off the edge;
+- a macro with 6+ maps in its filter shows the map buttons over several rows;
+- a long macro name deep in the tree can be reached with the tree's sideways scrollbar.
+Report anything that's still cut off, with a screenshot.
+
+**M4. Saved.** Restart the game: the same size is used. `settings.json` in the addon folder has
+`"text_size"`. Change the size from the addon's page in Nexus options: the library follows.
+
+**M5. Font reload.** Change Nexus' own font or UI settings (if it has any) while the library is
+open: no crash, and the library keeps working (it may show the default size for a moment).
+
 ## Report template
 
 ```
@@ -302,5 +329,6 @@ I1 (date format sent):  I2  I3  I4  I5  I6  I7
 J1  J2  J3  J4  J5
 K1  K2  K3  K4  K5
 L1  L2
+M1 (entries and sizes):  M2  M3  M4  M5
 Nexus log warnings:
 ```
