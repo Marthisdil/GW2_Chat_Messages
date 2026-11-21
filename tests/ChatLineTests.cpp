@@ -135,6 +135,17 @@ static void TestTypedAndLength()
     CHECK(Utf16Length("\xF0\x9F\x98\x80") == 2);    // emoji: surrogate pair
 }
 
+static void TestLengthLevels()
+{
+    CHECK(LengthLevel(0) == ELengthLevel::Normal);
+    CHECK(LengthLevel(149) == ELengthLevel::Normal);
+    CHECK(LengthLevel(150) == ELengthLevel::Near);
+    CHECK(LengthLevel(179) == ELengthLevel::Near);
+    CHECK(LengthLevel(180) == ELengthLevel::Close);
+    CHECK(LengthLevel(199) == ELengthLevel::Close);
+    CHECK(LengthLevel(200) == ELengthLevel::Over);
+}
+
 static void TestColors()
 {
     CHECK(ChannelColor(EChannel::Current) == 0xFFFFFF);
@@ -150,4 +161,5 @@ void RunChatLineTests()
     TestRoundTrip();
     TestTypedAndLength();
     TestColors();
+    TestLengthLevels();
 }

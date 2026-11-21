@@ -31,11 +31,32 @@ Right-click any item in the tree for:
   [Import and export](Import-and-Export))
 - **Import into this folder...** (folders)
 - **Sort contents A-Z**, **Expand all inside**, **Collapse all inside** (folders)
-- **Delete...**: asks first. Deleting a folder deletes everything inside it, and the dialog says
-  how many folders and macros that is. This can't be undone.
+- **Delete (to trash bin)**: moves it, and everything inside a folder, to the
+  [trash bin](#trash-bin). If you turned the trash bin off, this is **Delete...**: it asks first,
+  says how many folders and macros are inside, and can't be undone.
 
 <!-- screenshot: tree-context-menu.png (docs/screenshots.md) -->
 > 📷 *Screenshot to come: the right-click menu of a folder.*
+
+## Trash bin
+
+Deleted folders and macros go to the **Trash bin** at the bottom of the library tree, so a
+mistake can be undone. You can also drag an item onto the bin.
+
+- Click an item in the bin to see what it is, when it was deleted and where from. Items in the
+  bin can't be sent, edited or used by a hotkey, and don't show in the quick menu.
+- **Restore** (button, or right-click the item): it goes back where it was. If its folder has
+  been deleted since, you choose: **Recreate the folders** or **Put it at the top level**. If an
+  item with the same name is already there, the restored one gets " (2)" added.
+- **Delete permanently...** removes one item for good. Right-click the bin > **Empty trash
+  bin...** removes everything in it. Both ask first and can't be undone.
+- Items stay in the bin until you restore them or empty it.
+- To turn the bin off: Nexus > Options > Addons > Chat Messages, untick **Use a trash bin for
+  deleted folders and macros**. Delete then asks first and removes items for good. Anything
+  already in the bin stays there until you empty it.
+
+<!-- screenshot: trash-bin.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the trash bin opened, with an item selected.*
 
 ## Drag and drop
 

@@ -62,7 +62,7 @@ namespace
     void Save()
     {
         s_Settings[kSettingKey] = TextSize::Key(s_Choice);
-        if (!Storage::SaveSettings(s_Settings)) LogF(LOGL_WARNING, "The text size couldn't be saved.");
+        if (!Storage::SaveSetting(kSettingKey, s_Settings[kSettingKey])) LogF(LOGL_WARNING, "The text size couldn't be saved.");
     }
 }
 

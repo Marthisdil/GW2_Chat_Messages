@@ -237,6 +237,13 @@ nlohmann::json Storage::LoadSettings()
     return nlohmann::json::object();
 }
 
+bool Storage::SaveSetting(const char* aKey, const nlohmann::json& aValue)
+{
+    nlohmann::json s = LoadSettings(); // re-read so one setting never overwrites another
+    s[aKey] = aValue;
+    return SaveSettings(s);
+}
+
 bool Storage::SaveSettings(const nlohmann::json& aSettings)
 {
     const fs::path dir = AddonDir();

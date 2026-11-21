@@ -40,6 +40,8 @@ chat for you, from a hotkey, a menu or a button.
   replaced), and the last import can be undone.
 - **Text file links:** keep a macro in step with a `.txt` file, both ways: edit it in Notepad
   and the macro follows, edit the macro and the file follows.
+- **Trash bin:** deleted folders and macros can be restored, until you empty the bin (can be
+  turned off).
 - **Text size:** make the addon's text bigger (or smaller) with the fonts Nexus provides; the
   windows resize to match.
 

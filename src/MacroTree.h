@@ -69,6 +69,7 @@ namespace MacroTree
         bool        Ok = true;
         std::string Error;
         MacroTree::Node* Target = nullptr; // the created or moved node, when there is one
+        std::string      Note;             // something the user should know on success, e.g. a rename
 
         static Result Fail(std::string aError) { Result r; r.Ok = false; r.Error = std::move(aError); return r; }
     };
@@ -95,6 +96,25 @@ namespace MacroTree
 
     // One folder (with everything inside) or macro, in the macros.json format. Used by export.
     nlohmann::json NodeToJson(const Node& aNode);
+
+    // --- Trash bin (docs/design.md, "Trash bin") ---
+    // A deleted folder or macro, kept until it's restored or deleted for good. Items in the bin
+    // aren't in the tree, so they can't be sent, edited or triggered by a hotkey.
+    struct TrashItem
+    {
+        std::unique_ptr<Node>    Item;      // Parent is nullptr while in the bin
+        std::vector<uint64_t>    FromIds;   // the folders it was in, top level first (empty = top level)
+        std::vector<std::string> FromNames; // their names, same order (to recreate them)
+        size_t                   FromIndex = 0; // its place in that folder
+        std::string              DeletedAt; // local time, "2026-11-21 14:03"
+    };
+
+    enum class ERestoreTo : uint8_t
+    {
+        Original,        // back into the folder it came from (fails if that folder is gone)
+        RecreateFolders, // recreate the missing folders (by name) and put it there
+        TopLevel,        // at the top level
+    };
 
     class Tree
     {
@@ -126,6 +146,22 @@ namespace MacroTree
         bool   Shift(Node& aNode, int aDelta);
         // Sorts a folder's children: folders first, then macros, each A-Z (case-insensitive).
         void   SortChildren(Node& aFolder, bool aRecursive);
+        // --- Trash bin ---
+        // Takes aNode out of the tree into the bin (newest first). aWhen is shown in the bin.
+        Result MoveToTrash(Node& aNode, const std::string& aWhen);
+        const std::vector<TrashItem>& Trash() const { return m_Trash; }
+        // Index of the bin item whose top node has this id, or -1.
+        int    TrashIndexOf(uint64_t aId) const;
+        // Whether the folder a bin item came from is still there (always true for the top level).
+        bool   OriginalFolderExists(size_t aIndex) const;
+        // "Raids > Wing 3", or "the top level".
+        static std::string FromPathText(const TrashItem& aItem);
+        // Puts a bin item back. A name already taken there gets " (2)" etc. (said in Result::Note).
+        // Fails, leaving it in the bin, if the folder is gone (Original) or it would nest too deep.
+        Result Restore(size_t aIndex, ERestoreTo aTo);
+        Result DeleteFromTrash(size_t aIndex);
+        void   EmptyTrash() { m_Trash.clear(); }
+
         // Every macro using this hotkey, in tree order (more than one = a conflict). Empty combo -> none.
         std::vector<Node*> MacrosWithHotkey(const Hotkey::Combo& aCombo) const;
 
@@ -138,8 +174,11 @@ namespace MacroTree
 
     private:
         std::unique_ptr<Node> m_Root;
+        std::vector<TrashItem> m_Trash;
 
         uint64_t NewId() const;
+        bool     IdInUse(uint64_t aId) const; // in the tree or the bin
+        std::string FreeName(const Node& aFolder, ENodeType aType, const std::string& aName) const;
         Result   CheckName(const Node& aParent, ENodeType aType, const std::string& aName, const Node* aIgnore) const;
         Result   Add(Node* aParent, ENodeType aType, const std::string& aName);
     };

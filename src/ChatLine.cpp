@@ -203,6 +203,14 @@ namespace ChatLine
         return cmd.empty() ? aLine.Message : cmd + " " + aLine.Message;
     }
 
+    ELengthLevel LengthLevel(size_t aLength)
+    {
+        if (aLength > kMaxChatLength) return ELengthLevel::Over;
+        if (aLength >= kLengthAlertAt) return ELengthLevel::Close;
+        if (aLength >= kLengthWarnAt) return ELengthLevel::Near;
+        return ELengthLevel::Normal;
+    }
+
     size_t Utf16Length(const std::string& s)
     {
         size_t units = 0;

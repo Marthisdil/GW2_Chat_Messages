@@ -359,7 +359,25 @@ namespace MacroTree
         for (;;)
         {
             const uint64_t id = rng();
-            if (id != 0 && !Find(id)) return id;
+            if (id != 0 && !IdInUse(id)) return id;
+        }
+    }
+
+    bool Tree::IdInUse(uint64_t aId) const
+    {
+        if (Find(aId)) return true;
+        for (const TrashItem& t : m_Trash)
+            if (t.Item->Id == aId || FindIn(*t.Item, aId)) return true;
+        return false;
+    }
+
+    std::string Tree::FreeName(const Node& aFolder, ENodeType aType, const std::string& aName) const
+    {
+        if (CheckName(aFolder, aType, aName, nullptr).Ok) return aName;
+        for (int n = 2;; n++)
+        {
+            const std::string candidate = CleanName(aName + " (" + std::to_string(n) + ")");
+            if (CheckName(aFolder, aType, candidate, nullptr).Ok) return candidate;
         }
     }
 
@@ -490,13 +508,147 @@ namespace MacroTree
                 if (c->IsFolder()) SortChildren(*c, true);
     }
 
+    // --- Trash bin ---------------------------------------------------------------------------
+
+    Result Tree::MoveToTrash(Node& aNode, const std::string& aWhen)
+    {
+        if (!aNode.Parent) return Result::Fail("The top level can't be deleted.");
+        TrashItem t;
+        for (const Node* n = aNode.Parent; n && n->Parent; n = n->Parent)
+        {
+            t.FromIds.insert(t.FromIds.begin(), n->Id);
+            t.FromNames.insert(t.FromNames.begin(), n->Name);
+        }
+        t.FromIndex = IndexInParent(aNode);
+        t.DeletedAt = aWhen;
+        auto& siblings = aNode.Parent->Children;
+        t.Item = std::move(siblings[t.FromIndex]);
+        siblings.erase(siblings.begin() + static_cast<std::ptrdiff_t>(t.FromIndex));
+        t.Item->Parent = nullptr;
+        m_Trash.insert(m_Trash.begin(), std::move(t));
+        return {};
+    }
+
+    int Tree::TrashIndexOf(uint64_t aId) const
+    {
+        for (size_t i = 0; i < m_Trash.size(); i++)
+            if (aId != 0 && m_Trash[i].Item->Id == aId) return static_cast<int>(i);
+        return -1;
+    }
+
+    bool Tree::OriginalFolderExists(size_t aIndex) const
+    {
+        if (aIndex >= m_Trash.size()) return false;
+        const TrashItem& t = m_Trash[aIndex];
+        if (t.FromIds.empty()) return true;
+        const Node* f = Find(t.FromIds.back());
+        return f && f->IsFolder();
+    }
+
+    std::string Tree::FromPathText(const TrashItem& aItem)
+    {
+        if (aItem.FromNames.empty()) return "the top level";
+        std::string s;
+        for (const std::string& n : aItem.FromNames) s += (s.empty() ? "" : " > ") + n;
+        return s;
+    }
+
+    Result Tree::Restore(size_t aIndex, ERestoreTo aTo)
+    {
+        if (aIndex >= m_Trash.size()) return Result::Fail("That item is no longer in the trash bin.");
+        TrashItem& t = m_Trash[aIndex];
+        Node& item = *t.Item;
+        Node* dest = m_Root.get();
+        bool atOriginalPlace = false;
+        if (aTo == ERestoreTo::Original)
+        {
+            if (!t.FromIds.empty())
+            {
+                dest = Find(t.FromIds.back());
+                if (!dest || !dest->IsFolder())
+                    return Result::Fail("The folder it came from (" + FromPathText(t) + ") no longer exists.");
+            }
+            atOriginalPlace = true;
+        }
+        else if (aTo == ERestoreTo::RecreateFolders)
+        {
+            // The old path's folders keep their old levels, so the item fits as it did. Walk down it:
+            // reuse a folder with the same id, or else the same name, or else recreate it.
+            if (item.IsFolder() && static_cast<int>(t.FromIds.size()) + FolderHeight(item) > kMaxFolderDepth)
+                return Result::Fail("Restored there, folders would be nested more than " + std::to_string(kMaxFolderDepth) +
+                                    " levels deep. Restore it to the top level instead.");
+            for (size_t i = 0; i < t.FromIds.size(); i++)
+            {
+                const std::string want = CleanName(t.FromNames[i]).empty() ? std::string("Restored folder") : CleanName(t.FromNames[i]);
+                Node* next = nullptr;
+                for (const auto& c : dest->Children)
+                    if (c->IsFolder() && c->Id == t.FromIds[i]) next = c.get();
+                if (!next)
+                    for (const auto& c : dest->Children)
+                        if (c->IsFolder() && Lower(c->Name) == Lower(want)) next = c.get();
+                if (!next)
+                {
+                    auto folder = std::make_unique<Node>();
+                    folder->Id       = t.FromIds[i] == 0 || IdInUse(t.FromIds[i]) ? NewId() : t.FromIds[i];
+                    folder->Type     = ENodeType::Folder;
+                    folder->Name     = want;
+                    folder->Parent   = dest;
+                    folder->Expanded = true;
+                    next = folder.get();
+                    dest->Children.push_back(std::move(folder));
+                }
+                dest = next;
+            }
+        }
+
+        if (item.IsFolder() && FolderLevel(*dest) + FolderHeight(item) > kMaxFolderDepth)
+            return Result::Fail("Restored there, folders would be nested more than " + std::to_string(kMaxFolderDepth) +
+                                " levels deep. Restore it to the top level instead.");
+
+        Result r;
+        const std::string name = FreeName(*dest, item.Type, item.Name);
+        if (name != item.Name)
+        {
+            r.Note = std::string("There was already a ") + TypeWord(item.Type) + " called \"" + item.Name +
+                     "\" there, so it was restored as \"" + name + "\".";
+            item.Name = name;
+        }
+        const size_t at = atOriginalPlace ? std::min(t.FromIndex, dest->Children.size()) : dest->Children.size();
+        item.Parent = dest;
+        r.Target = &item;
+        dest->Children.insert(dest->Children.begin() + static_cast<std::ptrdiff_t>(at), std::move(t.Item));
+        for (Node* f = dest; f; f = f->Parent) f->Expanded = true;
+        m_Trash.erase(m_Trash.begin() + static_cast<std::ptrdiff_t>(aIndex));
+        return r;
+    }
+
+    Result Tree::DeleteFromTrash(size_t aIndex)
+    {
+        if (aIndex >= m_Trash.size()) return Result::Fail("That item is no longer in the trash bin.");
+        m_Trash.erase(m_Trash.begin() + static_cast<std::ptrdiff_t>(aIndex));
+        return {};
+    }
+
     json Tree::ToJson() const
     {
         json root = json::object();
         json children = json::array();
         for (const auto& c : m_Root->Children) children.push_back(NodeJson(*c));
         root["children"] = std::move(children);
-        return json{{"format", kFormatVersion}, {"root", std::move(root)}};
+        json out{{"format", kFormatVersion}, {"root", std::move(root)}};
+        if (!m_Trash.empty())
+        {
+            json trash = json::array();
+            for (const TrashItem& t : m_Trash)
+            {
+                json ids = json::array();
+                for (uint64_t id : t.FromIds) ids.push_back(IdToString(id));
+                trash.push_back({{"item", NodeJson(*t.Item)}, {"from_ids", std::move(ids)}, {"from_names", t.FromNames},
+                                 {"from_index", t.FromIndex}, {"deleted_at", t.DeletedAt}});
+            }
+            out["trash"] = std::move(trash);
+        }
+        return out;
     }
 
     bool Tree::FromJson(const json& aJson, std::vector<std::string>* aWarnings)
@@ -515,7 +667,44 @@ namespace MacroTree
         p.Warnings = aWarnings;
         p.ParseChildren(*root, *fresh, 0);
 
-        m_Root = std::move(fresh);
+        // The trash bin, parsed with the same parser so an id can't be both in the tree and the bin.
+        std::vector<TrashItem> trash;
+        auto jt = aJson.find("trash");
+        if (jt != aJson.end() && jt->is_array())
+        {
+            for (const json& je : *jt)
+            {
+                if (!je.is_object()) continue;
+                auto item = je.find("item");
+                if (item == je.end() || !item->is_object()) continue;
+                TrashItem t;
+                auto ids   = je.find("from_ids");
+                auto names = je.find("from_names");
+                if (ids != je.end() && ids->is_array() && names != je.end() && names->is_array() && ids->size() == names->size())
+                {
+                    for (size_t i = 0; i < ids->size(); i++)
+                    {
+                        const json& ji = (*ids)[i];
+                        const json& jn = (*names)[i];
+                        t.FromIds.push_back(ji.is_string() ? IdFromString(ji.get<std::string>()) : 0);
+                        t.FromNames.push_back(jn.is_string() ? jn.get<std::string>() : std::string());
+                    }
+                }
+                auto idx = je.find("from_index");
+                if (idx != je.end() && idx->is_number_unsigned()) t.FromIndex = idx->get<size_t>();
+                t.DeletedAt = StringField(je, "deleted_at");
+                Node holder;
+                holder.Type = ENodeType::Folder;
+                p.ParseChildren(json{{"children", json::array({*item})}}, holder, static_cast<int>(t.FromIds.size()));
+                if (holder.Children.empty()) continue;
+                t.Item = std::move(holder.Children.front());
+                t.Item->Parent = nullptr;
+                trash.push_back(std::move(t));
+            }
+        }
+
+        m_Root  = std::move(fresh);
+        m_Trash = std::move(trash);
         if (!p.NeedIdNodes.empty())
         {
             for (Node* n : p.NeedIdNodes) n->Id = NewId();
