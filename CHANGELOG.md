@@ -127,3 +127,4 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Documentation
 - The README describes what the addon does, with a quick start.
 - Full usage documentation, written for the project wiki, is in `docs/wiki/`.
+- `docs/screenshots.md` lists the screenshots the README and wiki still need.

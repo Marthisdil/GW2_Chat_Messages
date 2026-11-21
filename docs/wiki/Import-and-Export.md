@@ -21,6 +21,9 @@ second export of the same name is saved as `Name (2).json`.
 
 Link files (a planned feature) are never exported, because they're paths on your own PC.
 
+<!-- screenshot: export-menu.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the Export submenu.*
+
 ## Import
 
 Click **Import...** in the toolbar, or right-click a folder and choose **Import into this
@@ -71,6 +74,9 @@ Each item whose name is already taken has its own choice box, so you can decide 
 example replace one macro and keep both of another.
 
 Click **Import** to do it, or **Cancel**. Nothing has changed until you click **Import**.
+
+<!-- screenshot: import-window.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the Import window with its preview.*
 
 ## Undo
 

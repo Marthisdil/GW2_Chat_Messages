@@ -200,7 +200,8 @@ Your steps (on github.com, in the repo):
 
 Claude's steps:
 1. Clone `https://github.com/Marthisdil/GW2_Chat_Messages.wiki.git` into a temporary folder.
-2. Copy every page from `docs/wiki/` into it (replacing the blank Home page), commit and push.
+2. Copy every page from `docs/wiki/` into it (replacing the blank Home page), point the image
+   links (`../images/...`) at the images in the main repo, commit and push.
 3. Check that each page and the sidebar show up and that the links between pages work.
 4. Update the README's Documentation section to link to the wiki, and decide with you whether
    `docs/wiki/` stays as the source (and gets pushed again after each change) or is removed.
