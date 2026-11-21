@@ -6,7 +6,7 @@
 IDB_ICON        PNG "..\\resources\\icons\\icon.png"
 IDB_ICON_HOVER  PNG "..\\resources\\icons\\icon_hover.png"
 
-// Shown in the DLL's Properties > Details. The numbers are YYYY, MM, DD, HHMM (GMT).
+// Shown in the DLL's Properties > Details. The numbers are YYYY, MM, DD, HHMM, all UTC.
 VS_VERSION_INFO VERSIONINFO
  FILEVERSION    CHATMSG_VER_YEAR, CHATMSG_VER_MONTH, CHATMSG_VER_DAY, CHATMSG_VER_TIME
  PRODUCTVERSION CHATMSG_VER_YEAR, CHATMSG_VER_MONTH, CHATMSG_VER_DAY, CHATMSG_VER_TIME

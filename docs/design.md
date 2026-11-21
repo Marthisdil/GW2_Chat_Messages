@@ -306,7 +306,8 @@ policy and mention the behaviour when registering with Raidcore.
 
 *(Decided 2026-11-21.)*
 
-- Format: **`YYYY.MM.DD.HHMM.Channel`**, the date and time (GMT, 24-hour) the version was set,
+- Format: **`YYYY.MM.DD.HHMM.Channel`**, the date and time the version was set, **both in UTC** (24-hour; the date is the UTC date too,
+  so late-evening US releases carry the next day's date),
   then `Dev`, `Beta` or `Rel` (normal release). Example: `2026.11.21.1412.Dev`. Every release is
   `Dev` until initial development is finished.
 - `tools\set_version.ps1 [-Channel Dev|Beta|Rel]` sets it to now and writes `src/Version.h`
