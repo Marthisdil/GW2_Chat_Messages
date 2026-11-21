@@ -225,6 +225,27 @@ To look into (none of this is checked yet):
 - **UI idea:** an "Emote..." picker next to the line's message box (search box + list), which
   fills in `/command`. It could share the pop-up idea of the special character picker.
 
+### Search box above the folder list (added 2026-11-21)
+
+A search box at the top left of the library window, above the folder tree, to find macros and
+folders quickly in a big library.
+
+To decide when we discuss it:
+- **What it searches:** macro and folder names only, or also the text of each macro's lines
+  (and hotkeys, e.g. typing `Ctrl+F1`)? Case-insensitive, and ignoring accents?
+- **How results show:**
+  - Filter the tree: only matches stay, along with the folders above them, which open
+    automatically. Matched text is highlighted.
+  - Or a flat list of results that shows each one's folder path, e.g. `Raids › Wing 3 › Gorseval`.
+- **While searching:** dragging and Move up/down could be turned off, because the tree isn't
+  complete. Clearing the box (an **x** button or Escape) brings back the full tree, with the
+  folders that were open before. The selected macro stays selected if it still matches.
+- **Keys:** Ctrl+F while the library is focused puts the cursor in the box. The box is a text box,
+  so macro hotkeys are ignored while typing in it, as in every other text box.
+- **Maybe also:** a filter for "active here only" (the current game mode and map), and a search
+  in the quick menu.
+- Must follow the Text size setting and fit in narrow windows (see `UiFont`).
+
 ### Publish the wiki (reminder: do this once the repo is public)
 
 The usage docs are written in `docs/wiki/`. A private repo on GitHub's free plan can't have a
