@@ -86,6 +86,7 @@
     <ClCompile Include="src\ChatLine.cpp" />
     <ClCompile Include="src\entry.cpp" />
     <ClCompile Include="src\Hotkey.cpp" />
+    <ClCompile Include="src\Exchange.cpp" />
     <ClCompile Include="src\Hotkeys.cpp" />
     <ClCompile Include="src\Http.cpp" />
     <ClCompile Include="src\MacroTree.cpp" />
@@ -100,6 +101,7 @@
     <ClInclude Include="src\ChatLine.h" />
     <ClInclude Include="src\Globals.h" />
     <ClInclude Include="src\Hotkey.h" />
+    <ClInclude Include="src\Exchange.h" />
     <ClInclude Include="src\Hotkeys.h" />
     <ClInclude Include="src\Http.h" />
     <ClInclude Include="src\MacroTree.h" />

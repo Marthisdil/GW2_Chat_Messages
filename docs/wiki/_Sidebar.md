@@ -7,5 +7,6 @@
 - [Sending macros](Sending-Macros)
 - [Filters](Filters)
 - [Placeholders](Placeholders)
+- [Import and export](Import-and-Export)
 - [Files and data](Files-and-Data)
 - [Safety and troubleshooting](Safety-and-Troubleshooting)

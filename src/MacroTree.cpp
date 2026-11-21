@@ -91,7 +91,7 @@ namespace MacroTree
             return siblings.size();
         }
 
-        json NodeToJson(const Node& n)
+        json NodeJson(const Node& n)
         {
             json j;
             j["type"] = TypeWord(n.Type);
@@ -101,7 +101,7 @@ namespace MacroTree
             {
                 j["expanded"] = n.Expanded;
                 json children = json::array();
-                for (const auto& c : n.Children) children.push_back(NodeToJson(*c));
+                for (const auto& c : n.Children) children.push_back(NodeJson(*c));
                 j["children"] = std::move(children);
             }
             else
@@ -282,6 +282,8 @@ namespace MacroTree
             if (aKey == kChannels[i].Key) return static_cast<EChannel>(i);
         return EChannel::Current;
     }
+
+    json NodeToJson(const Node& aNode) { return NodeJson(aNode); }
 
     Tree::Tree() : m_Root(std::make_unique<Node>())
     {
@@ -492,7 +494,7 @@ namespace MacroTree
     {
         json root = json::object();
         json children = json::array();
-        for (const auto& c : m_Root->Children) children.push_back(NodeToJson(*c));
+        for (const auto& c : m_Root->Children) children.push_back(NodeJson(*c));
         root["children"] = std::move(children);
         return json{{"format", kFormatVersion}, {"root", std::move(root)}};
     }

@@ -3,7 +3,7 @@
 Chat macros for Guild Wars 2, as a [Nexus](https://raidcore.gg/Nexus) addon.
 
 > **Status:** early development. All the features below are built, but **none of them has been
-> tested in game yet**, and there is no release to download. Import and export are still to come.
+> tested in game yet**, and there is no release to download.
 > See [docs/design.md](docs/design.md) for the plan.
 
 ## What it does
@@ -32,8 +32,10 @@ chat for you, from a hotkey, a menu or a button.
 - **Safe input:** it never interferes with normal game controls. Keys go only to the game window,
   chat opens with your own Chat key, your Tab, Shift and Ctrl are never pressed or released for
   you, and a macro won't fire while you're typing.
-- **Coming next:** import and export of whole folder trees with a preview, `.txt` import and
-  export, and syncing a macro with a text file.
+- **Import and export:** share or back up the whole library, a folder or one macro, as `.json`
+  or `.txt` files or through the clipboard. Imports show a preview first (new, merged, renamed,
+  replaced), and the last import can be undone.
+- **Coming next:** keeping a macro in sync with a text file.
 
 ## Quick start
 

@@ -19,6 +19,7 @@ namespace MacroTree
     constexpr int kMaxFolderDepth = 6;
     constexpr size_t kMaxNameLength = 100; // bytes of UTF-8, same as bhm-chat-macros' title limit
     constexpr int kFormatVersion = 1;
+    constexpr size_t kMaxLines = 50; // lines in one macro
 
     enum class ENodeType : uint8_t { Folder, Macro };
 
@@ -91,6 +92,9 @@ namespace MacroTree
     const char* ChannelKey(EChannel aChannel);   // stable JSON key, e.g. "say", "guild3"
     const char* ChannelLabel(EChannel aChannel); // display name, e.g. "Say", "Guild 3"
     EChannel    ChannelFromKey(const std::string& aKey); // unknown keys -> Current
+
+    // One folder (with everything inside) or macro, in the macros.json format. Used by export.
+    nlohmann::json NodeToJson(const Node& aNode);
 
     class Tree
     {

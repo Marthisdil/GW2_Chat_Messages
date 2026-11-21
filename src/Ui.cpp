@@ -1,15 +1,23 @@
 #include "Ui.h"
 
+#include <algorithm>
+#include <cctype>
 #include <cfloat>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
+#include <memory>
+#include <optional>
 #include <string>
 #include <vector>
+
+#include <nlohmann/json.hpp>
 
 #include "imgui.h"
 
 #include "ChatLine.h"
+#include "Exchange.h"
 #include "Globals.h"
 #include "Hotkeys.h"
 #include "MapNames.h"
@@ -47,6 +55,7 @@ namespace
     std::vector<std::string> s_LoadMessages;
     // Short-lived status line (e.g. why a move was refused).
     std::string s_Status;
+    bool        s_StatusIsInfo = false;
     double      s_StatusUntil = 0.0;
 
     uint64_t s_SelectedId = 0;
@@ -94,7 +103,15 @@ namespace
     void SetStatus(const std::string& aText)
     {
         s_Status      = aText;
+        s_StatusIsInfo = false;
         s_StatusUntil = ImGui::GetTime() + kStatusShowSec;
+    }
+
+    // Like SetStatus, for good news ("Exported to ...").
+    void SetInfo(const std::string& aText)
+    {
+        SetStatus(aText);
+        s_StatusIsInfo = true;
     }
 
     // --- Where the player is (for filters) ------------------------------------------------------
@@ -459,6 +476,44 @@ namespace
         return path;
     }
 
+    // --- Export -----------------------------------------------------------------------------------
+    // Writes to <addon>\exports\ (never overwriting a file) or copies to the clipboard. Doesn't
+    // change the tree, so it's safe from the tree's context menu.
+
+    void ExportToFile(const std::vector<const Node*>& aNodes, const std::string& aName, bool aAsText)
+    {
+        const std::filesystem::path dir = Storage::ExportsDir();
+        if (dir.empty() || aNodes.empty() || !aNodes.front())
+        {
+            SetStatus("The exports folder isn't available.");
+            return;
+        }
+        const std::string text = aAsText ? Exchange::ExportText(*aNodes.front()) : Exchange::ExportJsonText(aNodes);
+        const std::filesystem::path file = Storage::FreeFile(dir, Exchange::FileNameFor(aName, aAsText ? ".txt" : ".json"));
+        if (Storage::WriteText(file, text))
+            SetInfo("Exported to <GW2>\\addons\\Chat Messages\\exports\\" + file.filename().u8string());
+        else SetStatus("The export couldn't be written. Check the Nexus log.");
+    }
+
+    void ExportToClipboard(const std::vector<const Node*>& aNodes, bool aAsText)
+    {
+        if (aNodes.empty() || !aNodes.front()) return;
+        const std::string text = aAsText ? Exchange::ExportText(*aNodes.front()) : Exchange::ExportJsonText(aNodes);
+        ImGui::SetClipboardText(text.c_str());
+        SetInfo(aAsText ? "Copied the macro's lines to the clipboard." : "Copied to the clipboard. Paste it into the Import window to import it.");
+    }
+
+    std::vector<const Node*> TopLevelNodes()
+    {
+        std::vector<const Node*> nodes;
+        for (const auto& c : s_Tree.Root().Children) nodes.push_back(c.get());
+        return nodes;
+    }
+
+    // The Import window (defined further down).
+    bool     s_ShowImport   = false;
+    uint64_t s_ImportTarget = 0; // folder to import into (0 = top level)
+
     void OpenNamePopup(ENameMode aMode, uint64_t aTargetId)
     {
         s_NameMode     = aMode;
@@ -566,6 +621,20 @@ namespace
             s_Pending = {EAction::OpenName, 0, aNode.Id, EDrop::Into, 0, ENameMode::Rename};
         if (ImGui::MenuItem("Move up"))   s_Pending = {EAction::Shift, aNode.Id, 0, EDrop::Into, -1};
         if (ImGui::MenuItem("Move down")) s_Pending = {EAction::Shift, aNode.Id, 0, EDrop::Into, +1};
+        if (ImGui::BeginMenu("Export"))
+        {
+            const std::vector<const Node*> one{&aNode};
+            if (ImGui::MenuItem("Save as a .json file")) ExportToFile(one, aNode.Name, false);
+            if (aNode.IsMacro() && ImGui::MenuItem("Save as a .txt file")) ExportToFile(one, aNode.Name, true);
+            if (ImGui::MenuItem("Copy to the clipboard")) ExportToClipboard(one, false);
+            if (aNode.IsMacro() && ImGui::MenuItem("Copy the lines as text")) ExportToClipboard(one, true);
+            ImGui::EndMenu();
+        }
+        if (aNode.IsFolder() && ImGui::MenuItem("Import into this folder..."))
+        {
+            s_ImportTarget = aNode.Id;
+            s_ShowImport   = true;
+        }
         if (aNode.IsFolder())
         {
             if (ImGui::MenuItem("Sort contents A-Z")) s_Pending = {EAction::Sort, aNode.Id};
@@ -792,7 +861,7 @@ namespace
 
     // --- Macro editor -------------------------------------------------------------------------
 
-    constexpr size_t kMaxLinesPerMacro = 50;
+    constexpr size_t kMaxLinesPerMacro = kMaxLines; // MacroTree.h
 
     ImVec4 ChannelColorVec(EChannel aChannel)
     {
@@ -1189,6 +1258,306 @@ namespace
         ImGui::EndPopup();
     }
 
+    // --- Import ----------------------------------------------------------------------------------
+    // A source is read into a package, the preview shows what would happen, and only the Import
+    // button changes the library. The library as it was before is kept so the import can be undone.
+
+    std::unique_ptr<Exchange::Package> s_ImportPkg;
+    Exchange::Options                  s_ImportOpt;
+    std::string                        s_ImportPath;
+    std::string                        s_ImportError;
+    std::vector<std::filesystem::path> s_ImportList;
+    bool                               s_ImportListStale = true;
+
+    std::optional<nlohmann::json> s_UndoImport; // the library before the last import
+    std::string                   s_UndoText;
+
+    void LoadImport(Exchange::Package aPkg)
+    {
+        s_ImportOpt.PerItem.clear(); // keyed by the old package's nodes
+        if (!aPkg.Ok())
+        {
+            s_ImportError = (aPkg.Source.empty() ? std::string("It") : "\"" + aPkg.Source + "\"") + " can't be imported. " + aPkg.Error;
+            s_ImportPkg.reset();
+            return;
+        }
+        s_ImportError.clear();
+        s_ImportPkg = std::make_unique<Exchange::Package>(std::move(aPkg));
+    }
+
+    void RefreshImportList()
+    {
+        s_ImportList.clear();
+        s_ImportListStale = false;
+        const std::filesystem::path dir = Storage::ImportsDir();
+        if (dir.empty()) return;
+        std::error_code ec;
+        for (std::filesystem::directory_iterator it(dir, ec), end; !ec && it != end; it.increment(ec))
+        {
+            std::error_code ec2;
+            std::string ext = it->path().extension().u8string();
+            for (char& c : ext) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+            if (it->is_directory(ec2) || ext == ".json" || ext == ".txt") s_ImportList.push_back(it->path());
+            if (s_ImportList.size() >= 200) break;
+        }
+        std::sort(s_ImportList.begin(), s_ImportList.end());
+    }
+
+    void FolderTargets(const Node& aFolder, std::vector<const Node*>& aOut)
+    {
+        for (const auto& c : aFolder.Children)
+            if (c->IsFolder())
+            {
+                aOut.push_back(c.get());
+                FolderTargets(*c, aOut);
+            }
+    }
+
+    std::string FolderPath(const Node& aFolder)
+    {
+        return aFolder.Parent ? PathOf(aFolder) + " > " + aFolder.Name : "Top level";
+    }
+
+    bool ChoiceCombo(const char* aLabel, Exchange::EChoice& aChoice, bool aFolder)
+    {
+        using Exchange::EChoice;
+        bool changed = false;
+        if (ImGui::BeginCombo(aLabel, Exchange::ChoiceLabel(aChoice)))
+        {
+            const EChoice folderChoices[] = {EChoice::Merge, EChoice::Rename, EChoice::Skip, EChoice::Replace};
+            const EChoice macroChoices[]  = {EChoice::Rename, EChoice::Skip, EChoice::Replace};
+            const EChoice* list = aFolder ? folderChoices : macroChoices;
+            const size_t count  = aFolder ? 4 : 3;
+            for (size_t i = 0; i < count; i++)
+                if (ImGui::Selectable(Exchange::ChoiceLabel(list[i]), list[i] == aChoice))
+                {
+                    aChoice = list[i];
+                    changed = true;
+                }
+            ImGui::EndCombo();
+        }
+        return changed;
+    }
+
+    void DrawPlanItems(const std::vector<Exchange::PlanItem>& aItems)
+    {
+        using Exchange::EOutcome;
+        const ImVec4 newColor{0.55f, 0.90f, 0.55f, 1.0f};
+        for (const Exchange::PlanItem& item : aItems)
+        {
+            const Node& src = *item.Src;
+            ImGui::PushID(&src);
+            std::string tag;
+            ImVec4 color = ImGui::GetStyleColorVec4(ImGuiCol_Text);
+            switch (item.Outcome)
+            {
+            case EOutcome::New:       tag = "new"; color = newColor; break;
+            case EOutcome::Renamed:   tag = "new, as \"" + item.Name + "\""; color = newColor; break;
+            case EOutcome::Merged:    tag = "goes into the existing folder"; break;
+            case EOutcome::Replaced:  tag = "replaces the existing one"; color = kWarnColor; break;
+            case EOutcome::Skipped:   tag = "skipped"; color = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled); break;
+            case EOutcome::TooDeep:   tag = "left out: folders would be nested more than 6 deep"; color = kErrorColor; break;
+            case EOutcome::Flattened: tag = "folder left out (too deep); its contents move up a level"; color = kWarnColor; break;
+            }
+            const bool showChildren = src.IsFolder() && !item.Children.empty();
+            ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth;
+            if (!showChildren) flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen | (src.IsMacro() ? ImGuiTreeNodeFlags_Bullet : 0);
+            ImGui::PushStyleColor(ImGuiCol_Text, src.IsFolder() ? kFolderColor : ImGui::GetStyleColorVec4(ImGuiCol_Text));
+            const bool open = ImGui::TreeNodeEx("##item", flags, "%s", src.Name.c_str());
+            ImGui::PopStyleColor();
+            ImGui::SameLine();
+            ImGui::TextColored(color, "(%s)", tag.c_str());
+            if (item.Conflict)
+            {
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(170.0f);
+                Exchange::EChoice choice = item.Choice;
+                if (ChoiceCombo("##choice", choice, src.IsFolder())) s_ImportOpt.PerItem[&src] = choice;
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("There's already a %s called \"%s\" there.", src.IsFolder() ? "folder" : "macro", src.Name.c_str());
+            }
+            if (showChildren && open)
+            {
+                DrawPlanItems(item.Children);
+                ImGui::TreePop();
+            }
+            ImGui::PopID();
+        }
+    }
+
+    void DrawImportSource()
+    {
+        ImGui::TextUnformatted("1. Choose what to import");
+        ImGui::TextDisabled("A .json export, a .txt file (one macro), or a folder of .txt files.");
+        if (s_ImportListStale) RefreshImportList();
+
+        ImGui::BeginChild("##imports", ImVec2(0.0f, 96.0f), true);
+        if (s_ImportList.empty())
+            ImGui::TextDisabled("Put files in <GW2>\\addons\\Chat Messages\\imports\\ to see them here.");
+        for (const std::filesystem::path& p : s_ImportList)
+        {
+            std::error_code ec;
+            const bool dir = std::filesystem::is_directory(p, ec);
+            const std::string label = p.filename().u8string() + (dir ? "\\" : "");
+            if (ImGui::Selectable(label.c_str())) LoadImport(Exchange::FromPath(p));
+        }
+        ImGui::EndChild();
+        if (ImGui::SmallButton("Open imports folder")) Storage::OpenFolder(Storage::ImportsDir());
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Refresh")) s_ImportListStale = true;
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Paste from clipboard"))
+        {
+            const char* text = ImGui::GetClipboardText();
+            if (!text || !*text) s_ImportError = "The clipboard has no text.";
+            else
+            {
+                Exchange::Package pkg = Exchange::FromText("Pasted macro", text);
+                pkg.Source = "Pasted text";
+                LoadImport(std::move(pkg));
+            }
+        }
+
+        ImGui::SetNextItemWidth(-80.0f);
+        const bool enter = InputString("##path", "Or a full path to a file or folder", s_ImportPath, ImGuiInputTextFlags_EnterReturnsTrue);
+        ImGui::SameLine();
+        if ((ImGui::Button("Load") || enter) && !s_ImportPath.empty())
+        {
+            std::string path = s_ImportPath;
+            if (path.size() >= 2 && path.front() == '"' && path.back() == '"') path = path.substr(1, path.size() - 2); // "Copy as path"
+            LoadImport(Exchange::FromPath(std::filesystem::u8path(path)));
+        }
+        if (!s_ImportError.empty()) ImGui::TextColored(kErrorColor, "%s", s_ImportError.c_str());
+    }
+
+    void CloseImport()
+    {
+        s_ShowImport = false;
+        s_ImportPkg.reset();
+        s_ImportOpt.PerItem.clear();
+        s_ImportError.clear();
+        s_ImportListStale = true;
+    }
+
+    void DrawImportWindow()
+    {
+        if (!s_ShowImport)
+        {
+            if (s_ImportPkg) CloseImport();
+            return;
+        }
+        ImGui::SetNextWindowSize(ImVec2(640.0f, 600.0f), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSizeConstraints(ImVec2(460.0f, 360.0f), ImVec2(FLT_MAX, FLT_MAX));
+        if (!ImGui::Begin("Import macros##chatmsg", &s_ShowImport, ImGuiWindowFlags_NoCollapse))
+        {
+            ImGui::End();
+            return;
+        }
+
+        DrawImportSource();
+        if (!s_ImportPkg)
+        {
+            ImGui::End();
+            return;
+        }
+
+        ImGui::Separator();
+        ImGui::Text("2. Choose where it goes (from %s)", s_ImportPkg->Source.c_str());
+        Node* target = NodeOrRoot(s_ImportTarget);
+        if (!target || !target->IsFolder()) { s_ImportTarget = 0; target = &s_Tree.Root(); }
+        ImGui::SetNextItemWidth(-140.0f);
+        if (ImGui::BeginCombo("Import into", FolderPath(*target).c_str()))
+        {
+            if (ImGui::Selectable("Top level", target == &s_Tree.Root())) s_ImportTarget = 0;
+            std::vector<const Node*> folders;
+            FolderTargets(s_Tree.Root(), folders);
+            for (const Node* f : folders)
+            {
+                ImGui::PushID(f);
+                if (ImGui::Selectable(FolderPath(*f).c_str(), f == target)) s_ImportTarget = f->Id;
+                ImGui::PopID();
+            }
+            ImGui::EndCombo();
+        }
+        target = NodeOrRoot(s_ImportTarget);
+        if (!target) target = &s_Tree.Root();
+
+        ImGui::SetNextItemWidth(170.0f);
+        ChoiceCombo("When a macro's name is taken", s_ImportOpt.MacroConflict, false);
+        ImGui::SetNextItemWidth(170.0f);
+        ChoiceCombo("When a folder's name is taken", s_ImportOpt.FolderConflict, true);
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Merge: the folder's contents go into the existing folder.\nReplace: the existing folder's contents are deleted first.");
+        ImGui::Checkbox("Move the contents of too-deep folders up a level", &s_ImportOpt.Flatten);
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Folders can be nested at most %d deep. Unticked, folders that would go deeper are left out.", kMaxFolderDepth);
+        ImGui::Checkbox("Keep hotkeys", &s_ImportOpt.KeepHotkeys);
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Untick this for macros from someone else, so their keys don't clash with yours.");
+        for (const std::string& w : s_ImportPkg->Warnings) ImGui::TextColored(kWarnColor, "%s", w.c_str());
+
+        // Built every frame against the live library, so the preview is always what Import does.
+        const Exchange::Plan plan = Exchange::BuildPlan(s_Tree, *target, s_ImportPkg->Items, s_ImportOpt);
+
+        ImGui::Separator();
+        ImGui::TextUnformatted("3. Check the preview");
+        std::string summary = std::to_string(plan.NewMacros) + " new macro(s), " + std::to_string(plan.NewFolders) + " new folder(s)";
+        if (plan.Merged)   summary += ", " + std::to_string(plan.Merged) + " merged";
+        if (plan.Replaced) summary += ", " + std::to_string(plan.Replaced) + " replaced";
+        if (plan.Skipped)  summary += ", " + std::to_string(plan.Skipped) + " skipped";
+        if (plan.TooDeep)  summary += ", " + std::to_string(plan.TooDeep) + " left out (too deep)";
+        ImGui::TextWrapped("%s.", summary.c_str());
+        if (plan.Conflicts) ImGui::TextDisabled("%zu name(s) are already taken: choose for each one below.", plan.Conflicts);
+
+        const float footer = ImGui::GetFrameHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y;
+        ImGui::BeginChild("##preview", ImVec2(0.0f, -footer), true);
+        DrawPlanItems(plan.Items);
+        ImGui::EndChild();
+
+        const bool canImport = plan.Changes() > 0;
+        if (!canImport) ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+        if (ImGui::Button("Import") && canImport)
+        {
+            s_UndoImport = s_Tree.ToJson();
+            const size_t n = Exchange::Apply(s_Tree, *target, plan, s_ImportOpt);
+            s_UndoText = "Imported " + std::to_string(n) + " item(s) from " + s_ImportPkg->Source + " into " + FolderPath(*target) + ".";
+            s_RawForId = 0; // a replaced macro's raw text is stale
+            CancelCapture();
+            MarkDirty();
+            s_ShowMainWindow = true;
+            CloseImport();
+        }
+        if (!canImport) ImGui::PopStyleVar();
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel")) CloseImport();
+
+        ImGui::End();
+    }
+
+    // Shown in the library window after an import, until dismissed.
+    void DrawUndoImport()
+    {
+        if (!s_UndoImport) return;
+        ImGui::TextWrapped("%s", s_UndoText.c_str());
+        if (ImGui::SmallButton("Undo import"))
+        {
+            std::vector<std::string> ignored;
+            s_Tree.FromJson(*s_UndoImport, &ignored);
+            s_UndoImport.reset();
+            s_SelectedId = 0;
+            s_RawForId   = 0;
+            CancelCapture();
+            MarkDirty();
+            SetInfo("The import was undone.");
+            return;
+        }
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Puts your library back as it was before the import.\nChanges you made since then are undone too.");
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Dismiss##undo")) s_UndoImport.reset();
+        ImGui::Separator();
+    }
+
     void DrawToolbar()
     {
         Node& into = InsertFolder();
@@ -1211,6 +1580,20 @@ namespace
             MarkDirty();
         }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Sorts every folder: folders first, then macros, each A-Z.");
+        ImGui::SameLine();
+        if (ImGui::Button("Import..."))
+        {
+            s_ImportTarget = InsertFolder().Parent ? InsertFolder().Id : 0;
+            s_ShowImport   = true;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Export all"))
+        {
+            if (s_Tree.Root().Children.empty()) SetStatus("There's nothing to export yet.");
+            else ExportToFile(TopLevelNodes(), "Chat Messages library", false);
+        }
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Saves your whole library to the exports folder.\nRight-click a folder or macro to export just that.");
         ImGui::TextDisabled("New items go into: %s", into.Parent ? into.Name.c_str() : "Top level");
     }
 
@@ -1225,7 +1608,11 @@ namespace
         if (s_SaveFailed)
             ImGui::TextColored(kErrorColor, "Your macros couldn't be saved. Check the Nexus log. Retrying...");
         if (!s_Status.empty() && ImGui::GetTime() < s_StatusUntil)
-            ImGui::TextColored(kErrorColor, "%s", s_Status.c_str());
+        {
+            if (s_StatusIsInfo) ImGui::TextWrapped("%s", s_Status.c_str());
+            else ImGui::TextColored(kErrorColor, "%s", s_Status.c_str());
+        }
+        DrawUndoImport();
     }
 
     void DrawMainWindow()
@@ -1280,6 +1667,8 @@ void Ui::Shutdown()
     s_Dirty = false;
     s_Tree  = Tree();
     s_SelectedId = 0;
+    CloseImport();
+    s_UndoImport.reset();
 }
 
 void Ui::Render()
@@ -1288,6 +1677,7 @@ void Ui::Render()
     WatchMap();
     HandleHotkeys();
     if (s_ShowMainWindow) DrawMainWindow();
+    DrawImportWindow();
     DrawQuickMenuPopup();
     if (s_Dirty && ImGui::GetTime() >= s_SaveAt) SaveNow();
 }

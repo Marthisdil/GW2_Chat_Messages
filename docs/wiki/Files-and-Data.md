@@ -9,6 +9,8 @@ when it loads.
 | `macros.json.bak` | The previous version of `macros.json`, kept on every save. |
 | `maps.json` | Map names from the GW2 API, so they're only looked up once. Safe to delete. |
 | your `.txt` files | Text files for the `{txt}` placeholder. |
+| `exports\` | Files saved by Export. |
+| `imports\` | Put files here to see them in the Import window. |
 
 ## Saving
 
@@ -25,8 +27,8 @@ it) and starts with an empty library. Your `macros.json.bak` may hold the previo
 
 ## Backups and moving to another PC
 
-Copy the whole `Chat Messages` folder. Import and export of folders and macros (with a preview
-before anything is changed) is planned.
+Copy the whole `Chat Messages` folder, or use **Export all** and import the file on the other PC
+(see [Import and export](Import-and-Export)).
 
 ## Internet use
 
