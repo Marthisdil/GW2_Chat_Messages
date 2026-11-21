@@ -486,6 +486,90 @@ namespace
         const nlohmann::json ex = ExportJson({src.Root().Children[0].get()});
         CHECK(!ex.contains("trash"));
     }
+
+    // Importing someone's whole library (their macros.json): it goes into one new folder.
+    void TestLibraryImport()
+    {
+        CHECK(LibraryFolderName("Alex.json") == "From Alex");
+        CHECK(LibraryFolderName("macros.json") == kLibraryFolderFallback);
+        CHECK(LibraryFolderName("MACROS.json.bak") == kLibraryFolderFallback);
+        CHECK(LibraryFolderName("Alex macros.json.bak") == "From Alex macros");
+        CHECK(LibraryFolderName("") == kLibraryFolderFallback);
+        CHECK(IsLibraryFileName("macros.json") && IsLibraryFileName("macros.json.BAK"));
+        CHECK(!IsLibraryFileName("one.txt"));
+
+        Tree src;
+        MakeLibrary(src); // "Raids" (folder) and "Hello" (macro) at the top
+        src.MoveToTrash(*src.Root().Children[1], "t");
+        src.AddMacro(nullptr, "Hello").Target->Hotkey.Key = 0x70; // F1, a hotkey of theirs
+        src.Root().Children[0]->Children[0]->LinkFile = "theirs.txt";
+
+        const fs::path dir = fs::temp_directory_path() / "chatmsg_library_tests";
+        std::error_code ec;
+        fs::remove_all(dir, ec);
+        const std::string text = src.ToJson().dump();
+        WriteFile(dir / "macros.json", text);
+        WriteFile(dir / "macros.json.bak", text);
+        WriteFile(dir / "notes.txt", "/s hi");
+        WriteFile(dir / "broken.json", "{oops");
+        WriteFile(dir / "export.json", R"({"format":1})");
+        fs::create_directories(dir / "Folder", ec);
+
+        Package p = FromLibraryFile(dir / "macros.json");
+        CHECK(p.Ok() && p.Source == "macros.json");
+        CHECK(p.Items.Trash().empty()); // their bin is left out, with a warning
+        CHECK(!p.Warnings.empty());
+        CHECK(FromLibraryFile(dir / "macros.json.bak").Ok());
+        CHECK(!FromLibraryFile(dir / "notes.txt").Ok());
+        CHECK(!FromLibraryFile(dir / "broken.json").Ok());
+        CHECK(FromLibraryFile(dir / "export.json").Error.find("library") != std::string::npos);
+        CHECK(!FromLibraryFile(dir / "Folder").Ok());
+        CHECK(!FromLibraryFile(dir / "missing.json").Ok());
+        fs::remove_all(dir, ec);
+
+        // Wrapped: one folder at the top, with their whole top level inside, in order.
+        Node* folder = WrapInFolder(p, "  From Alex  ");
+        CHECK(folder && folder->Name == "From Alex" && folder->Parent == &p.Items.Root());
+        CHECK(p.Items.Root().Children.size() == 1);
+        CHECK(folder->Children.size() == 2 && folder->Children[0]->Name == "Raids" && folder->Children[1]->Name == "Hello");
+        CHECK(folder->Children[0]->Parent == folder);
+        CHECK(folder->Children[0]->Children[0]->LinkFile.empty()); // link files are never taken
+
+        // A folder named like one of theirs is fine (it's a level above them).
+        Package q = FromJsonText(text);
+        Node* same = WrapInFolder(q, "Raids");
+        CHECK(same && same->Name == "Raids" && Child(*same, "Raids", ENodeType::Folder));
+        Package empty;
+        CHECK(WrapInFolder(empty, "x") == nullptr);
+        Package blank = FromJsonText(text);
+        CHECK(WrapInFolder(blank, "   ")->Name == kLibraryFolderFallback);
+
+        // Into my library: only the new folder at my top level; a taken name gets "(2)"; their
+        // hotkeys are dropped when Keep hotkeys is off.
+        Tree mine;
+        mine.AddFolder(nullptr, "Raids");
+        mine.AddFolder(nullptr, "From Alex");
+        Options o;
+        o.FolderConflict = EChoice::Rename;
+        o.KeepHotkeys    = false;
+        Plan plan = BuildPlan(mine, mine.Root(), p.Items, o);
+        CHECK(plan.Items.size() == 1 && plan.Conflicts == 1 && plan.Items[0].Outcome == EOutcome::Renamed);
+        CHECK(Apply(mine, mine.Root(), plan, o) > 0);
+        Node* added = Child(mine.Root(), "From Alex (2)", ENodeType::Folder);
+        CHECK(added && Child(*added, "Raids", ENodeType::Folder) && Child(*added, "Hello", ENodeType::Macro));
+        CHECK(added && Child(*added, "Hello", ENodeType::Macro)->Hotkey.Empty());
+        CHECK(mine.Root().Children.size() == 3);
+
+        // Their deepest folders would be one level deeper: flagged as too deep, as usual.
+        Tree deep;
+        Node* cur = nullptr;
+        for (int i = 1; i <= MacroTree::kMaxFolderDepth; i++) cur = deep.AddFolder(cur, "D" + std::to_string(i)).Target;
+        Package d = FromJsonText(deep.ToJson().dump());
+        WrapInFolder(d, "From Deep");
+        Tree mine2;
+        Plan dp = BuildPlan(mine2, mine2.Root(), d.Items, Options{});
+        CHECK(dp.TooDeep == 1);
+    }
 }
 
 void RunExchangeTests()
@@ -500,4 +584,5 @@ void RunExchangeTests()
     TestFromPath();
     TestSelection();
     TestTrashNotImported();
+    TestLibraryImport();
 }

@@ -570,6 +570,78 @@ namespace Exchange
         return read;
     }
 
+    bool IsLibraryFileName(const fs::path& aPath)
+    {
+        const std::string ext = Lower(Utf8Name(aPath.extension()));
+        return ext == ".json" || ext == ".bak";
+    }
+
+    Package FromLibraryFile(const fs::path& aPath)
+    {
+        Package p;
+        p.Source = Utf8Name(aPath.filename());
+        std::error_code ec;
+        if (!fs::is_regular_file(aPath, ec))
+        {
+            p.Error = fs::is_directory(aPath, ec) ? "It's a folder. A library is one file: macros.json (or macros.json.bak)."
+                                                  : "It wasn't found.";
+            return p;
+        }
+        if (!IsLibraryFileName(aPath))
+        {
+            p.Error = "A library file is a macros.json (or its backup, macros.json.bak).";
+            return p;
+        }
+        std::string text, error;
+        if (!ReadFile(aPath, kMaxJsonBytes, text, error))
+        {
+            p.Error = error;
+            return p;
+        }
+        Package read = FromJsonText(text);
+        if (!read.Ok() && read.Error == "It isn't a Chat Messages export.")
+            read.Error = "It isn't a Chat Messages library (macros.json).";
+        read.Source = p.Source;
+        return read;
+    }
+
+    std::string LibraryFolderName(const std::string& aSource)
+    {
+        std::string stem = aSource;
+        for (const char* ext : {".bak", ".json"})
+        {
+            const std::string e = ext;
+            if (stem.size() >= e.size() && Lower(stem.substr(stem.size() - e.size())) == e) stem.erase(stem.size() - e.size());
+        }
+        stem = Tree::CleanName(stem);
+        if (stem.empty() || Lower(stem) == "macros") return kLibraryFolderFallback;
+        return Tree::CleanName("From " + stem);
+    }
+
+    Node* WrapInFolder(Package& aPkg, const std::string& aName)
+    {
+        Node& root = aPkg.Items.Root();
+        if (root.Children.empty()) return nullptr;
+        std::string name = Tree::CleanName(aName);
+        if (name.empty()) name = kLibraryFolderFallback;
+        // Take the top level out first, so the new folder's name can't clash with one of them.
+        std::vector<std::unique_ptr<Node>> items = std::move(root.Children);
+        root.Children.clear();
+        Result r = aPkg.Items.AddFolder(nullptr, name);
+        Node* folder = r.Ok ? r.Target : nullptr;
+        if (!folder) // can't happen with an empty top level; put everything back
+        {
+            root.Children = std::move(items);
+            return nullptr;
+        }
+        for (auto& item : items)
+        {
+            item->Parent = folder;
+            folder->Children.push_back(std::move(item));
+        }
+        return folder;
+    }
+
     const char* ChoiceLabel(EChoice aChoice)
     {
         switch (aChoice)

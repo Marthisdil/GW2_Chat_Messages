@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Search box:** a **Search (Ctrl+F)** box above the library tree finds folders and macros by
+  name, by the text of their lines, a whisper's recipient, or their hotkey (`ctrl+f1`), ignoring
+  case and accents. The tree shows only the matches (with their folders opened and the match
+  highlighted) until you clear it with **x** or Escape; then it's back as it was. Dragging and
+  Move up/down are off while searching.
+- **Import a whole library:** in the Import window, choose **A whole library** to import a copy
+  of someone else's `macros.json` (or `macros.json.bak`). It goes into one new folder at the top
+  level, named after the file (e.g. `From Alex`) and renamable, with their hotkeys off by default.
 - **Build stamp:** every build shows the commit it was built from and its build time (UTC), e.g.
   `build db84a1e, 2026-11-21 19:20 UTC`, in the Nexus log, under the version on the options page,
   in copied error reports and in the DLL's Properties > Details (Comments).
@@ -157,6 +165,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Design notes in `docs/design.md`.
 
 ### Changed
+- **Mouse hotkeys need Ctrl, Alt or Shift:** Mouse 3, 4 and 5 can only be hotkeys together with
+  a modifier (e.g. Ctrl+Mouse 4), so a plain dodge or skill button can't send a macro by accident.
+  A plain mouse hotkey you set earlier is kept but doesn't fire; the tree and the editor mark it
+  so you can change it.
 - The data folder is now `<GW2>\addons\GW2_Chat_Messages\`, named like the DLL (it was
   `Chat Messages`). If you ran an earlier build, move that folder's files across.
 - **Version numbers** are now the date and time the version was set (both UTC) plus the kind of build, like

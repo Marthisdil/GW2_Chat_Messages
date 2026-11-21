@@ -16,6 +16,7 @@ chat for you, from a hotkey, a menu or a button.
 
 - **Folders:** keep macros in folders nested up to 6 levels deep (for example
   expansion › map › event), or at the top level. Drag and drop to rearrange, or sort A–Z.
+  A search box finds macros by name, line text or hotkey.
 - **Multi-line macros:** each macro sends one or more lines, and each line goes to its own
   channel: say, map, party, squad (with squad broadcast when you're commander), team, guild 1–6,
   whisper, emote, reply, or whichever channel is open. Edit them line by line, or as raw text
@@ -23,7 +24,7 @@ chat for you, from a hotkey, a menu or a button.
   commands work too.
 - **Three ways to send:**
   - **Hotkeys:** give any macro a key, with Ctrl, Alt or Shift if you like. Mouse 3, 4 and 5
-    work too.
+    work too, with Ctrl, Alt or Shift.
   - **Quick menu:** right-click the scroll icon in the Nexus bar, or press a key you choose, to
     pick a macro from nested menus.
   - **Send now** in the library.
@@ -37,7 +38,8 @@ chat for you, from a hotkey, a menu or a button.
   you, and a macro won't fire while you're typing.
 - **Import and export:** share or back up the whole library, a folder or one macro, as `.json`
   or `.txt` files or through the clipboard. Imports show a preview first (new, merged, renamed,
-  replaced), and the last import can be undone.
+  replaced), and the last import can be undone. A friend's whole library (their `macros.json`)
+  can be imported into a folder of its own.
 - **Text file links:** keep a macro in step with a `.txt` file, both ways: edit it in Notepad
   and the macro follows, edit the macro and the file follows.
 - **Trash bin:** deleted folders and macros can be restored, until you empty the bin (can be

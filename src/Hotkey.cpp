@@ -143,6 +143,11 @@ bool Hotkey::IsModifierKey(uint16_t aKey)
     return aKey == 0x10 || aKey == 0x11 || aKey == 0x12 || (aKey >= 0xA0 && aKey <= 0xA5) || aKey == 0x5B || aKey == 0x5C;
 }
 
+bool Hotkey::IsMouseKey(uint16_t aKey)
+{
+    return aKey == kVkMButton || aKey == kVkXButton1 || aKey == kVkXButton2;
+}
+
 std::string Hotkey::Refusal(const Combo& aCombo)
 {
     if (aCombo.Empty()) return "No key.";
@@ -151,5 +156,23 @@ std::string Hotkey::Refusal(const Combo& aCombo)
     if (IsModifierKey(aCombo.Key)) return "Shift, Ctrl, Alt and Windows can only be used together with another key.";
     if (!aCombo.HasModifier() && (aCombo.Key == 0x09 || aCombo.Key == 0x0D || aCombo.Key == 0x20 || aCombo.Key == 0x08))
         return KeyName(aCombo.Key) + " needs Ctrl, Alt or Shift: on its own it's used all the time in game.";
+    if (!aCombo.HasModifier() && IsMouseKey(aCombo.Key))
+        return KeyName(aCombo.Key) + " needs Ctrl, Alt or Shift: mouse buttons are often dodge or a skill, "
+               "so on their own they'd send the macro by accident.";
     return {};
+}
+
+bool Hotkey::NeedsModifier(const Combo& aCombo)
+{
+    return !aCombo.Empty() && !aCombo.HasModifier() && IsMouseKey(aCombo.Key);
+}
+
+bool Hotkey::KeepOnLoad(const Combo& aCombo)
+{
+    return !aCombo.Empty() && (Refusal(aCombo).empty() || NeedsModifier(aCombo));
+}
+
+bool Hotkey::Fires(const Combo& aCombo)
+{
+    return !aCombo.Empty() && Refusal(aCombo).empty();
 }

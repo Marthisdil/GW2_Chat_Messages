@@ -32,7 +32,7 @@ changed gets a new description (and goes back to **Needed** if its picture is ou
 
 | # | File name | What to capture | Used in | Status |
 |---|---|---|---|---|
-| 1 | `library-window.png` | The whole library window: a few folders (e.g. *Raids › Wing 3*, *WvW*, *Guild*) with one expanded, and a macro selected so the editor shows on the right. | README, wiki Home, The macro library | Needed |
+| 1 | `library-window.png` | The whole library window: a few folders (e.g. *Raids › Wing 3*, *WvW*, *Guild*) with one expanded, and a macro selected so the editor shows on the right. The empty **Search (Ctrl+F)** box shows above the tree. | README, wiki Home, The macro library | Needed |
 | 2 | `chat-result.png` | The game's chat box right after sending a multi-line macro, showing two or three lines in different channels (e.g. squad, party, map). | README | Needed |
 | 3 | `quick-menu.png` | The quick menu open from right-clicking the scroll icon: nested folders, with the mouse over a macro so its line preview shows. | README, Sending macros | Needed |
 | 4 | `nexus-quick-access.png` | The Nexus Quick Access bar with the scroll icon, mouse over it so the tooltip shows. A small crop is fine. | Installation | Needed |
@@ -51,3 +51,5 @@ changed gets a new description (and goes back to **Needed** if its picture is ou
 | 17 | `text-size.png` | The library window at the biggest text size, with the **Text size** dropdown (end of the toolbar) open. | The macro library | Needed |
 | 18 | `error-window.png` | The error window with "What you did" and the OK / Copy to clipboard buttons. Easiest: toolbar **Export all** with an empty library, or select a folder 6 levels deep and click **New folder**. (A duplicate name shows it as a pop-up over the name box, which works too.) | Safety and troubleshooting | Needed |
 | 19 | `trash-bin.png` | The library with the **Trash bin (F/M)** opened at the bottom of the tree (two or three items, one a folder), one item selected so the details pane shows **Restore** / **Delete permanently...**. | The macro library | Needed |
+| 20 | `search.png` | The library tree while searching: a word typed in the **Search** box (e.g. `stack`), the "Found: ..." line, an opened folder path with a highlighted match, and one macro marked "(found in its lines)". Crop to the tree pane. | The macro library | Needed |
+| 21 | `import-library.png` | The Import window with **A whole library** chosen and a file like `Alex.json` loaded: step 2's folder name (`From Alex`), **Keep hotkeys** unticked, and the preview with the new folder holding their folders and macros. | Import and export | Needed |

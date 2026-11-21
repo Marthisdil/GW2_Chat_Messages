@@ -4,7 +4,7 @@ The unit tests cover the rules (tree, raw text, send plan, hotkeys, filters, pla
 import, link sync). These checks cover what only the game can tell us: whether GW2 takes our keys
 and text, and whether normal game input is ever disturbed.
 
-The checks are grouped into sessions (A to O) in the order to run them: each one builds on the
+The checks are grouped into sessions (A to P) in the order to run them: each one builds on the
 ones before. A whole pass takes about an hour. If the text is hard to read, do M1 first and
 pick a bigger size. Session B is the one that matters most: if it
 fails, most of the later sessions can't be run, so report it first.
@@ -17,7 +17,7 @@ Results so far (keep your notes in `docs\testing results.txt`; it isn't committe
 |---|---|---|
 | A1 | Passed (PR #15 build) | Re-check only the version and build stamp lines with a new build. |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text now wraps (PR #17) and errors open the error window (PR #18). Re-check those two points only, then go on to A3. |
-| A3 to O | Not run yet | New since the last build: O (trash bin), the counter in A4, J3b/J6 (import checkboxes, trash bin not exported or imported). |
+| A3 to P | Not run yet | New since the last build: O (trash bin), the counter in A4, J3b/J6 (import checkboxes, trash bin not exported or imported). Newer still: P (search box), J7 (a whole library), and F2/F3/F7 (mouse buttons now need Ctrl, Alt or Shift). |
 
 **Errors since PR #18:** every refusal and error the checks below expect ("refused", "says
 why", "a message") now opens the **error window** instead of a red line under the editor. Click
@@ -175,14 +175,17 @@ when you're not commander, the same macro is sent as normal squad chat.
 Enter or Ctrl+Escape: refused, with the reason in the error window. Closing the window while it waits for a key also
 cancels it.
 
-**F2. Mouse buttons (question).** On `Emote`, **Set...** with the mouse over the addon window and
-press Mouse 4. Is it recorded? Try Mouse 5 and Mouse 3 (wheel click) too. Then try with the mouse
-over the game instead of the window. Report which work where.
+**F2. Mouse buttons (question).** Mouse buttons need Ctrl, Alt or Shift. On `Emote`, **Set...**
+with the mouse over the addon window and press plain Mouse 4: refused, the error window says it
+needs Ctrl, Alt or Shift. **Set...** again and press **Ctrl+Mouse 4**. Is it recorded? Try
+Shift+Mouse 5 and Alt+Mouse 3 (wheel click) too. Then try with the mouse over the game instead of
+the window. Report which work where. Leave `Emote` on Ctrl+Mouse 4.
 
 **F3. Using it.** Close the library and press Ctrl+F1, releasing Ctrl quickly: `Say` is sent. Hold
 Ctrl+F1 down for a few seconds: sent once only. Press it twice quickly: sent once. Press the mouse
-hotkey from F2 while moving the camera: `Emote` is sent and the camera isn't affected afterwards
-(no stuck button).
+hotkey from F2 (Ctrl+Mouse 4) while moving the camera: `Emote` is sent and the camera isn't
+affected afterwards (no stuck button). Plain Mouse 4 (without Ctrl) does its normal game action
+(e.g. dodge) and sends nothing.
 
 **F4. Not while typing.** Give `Say` the plain key `F2` (or any key you never use) for this check.
 Open chat and press F2: nothing is sent. Click into another addon's text box (or our own message
@@ -194,6 +197,14 @@ hotkey. Then clear the Chat game keybind and press Ctrl+F1: the alert and the er
 explain why nothing was sent. Set the key back.
 
 **F6. Saved.** Reload the addon (Nexus > Addons, or restart): the hotkeys are still set and work.
+
+**F7. An old plain mouse hotkey.** Builds before this one allowed plain Mouse 3/4/5. Close the
+game, open `macros.json` in Notepad, find `Emote`'s `"hotkey"` and change it to `"Mouse 4"`, save,
+and start the game. Nothing in the log or error window complains. The tree shows `Emote  [Mouse
+4: off, needs Ctrl/Alt/Shift]`; its editor shows `Mouse 4` in red with "This hotkey doesn't work
+any more: mouse buttons need Ctrl, Alt or Shift". Pressing Mouse 4 sends nothing (and does its
+game action); the quick menu lists `Emote` without a key. **Change...** to Ctrl+Mouse 4: the
+warning goes and it works again.
 
 ## G. Quick menu
 
@@ -298,6 +309,23 @@ the menu says items in the trash bin aren't exported; **Export all**'s tooltip a
 after exporting say the same. Then copy `macros.json` from the addon folder into `imports\` and
 open it in the Import window: a warning says its trash bin isn't imported, and the preview shows
 only the library. Cancel.
+
+**J7. A whole library.** Copy `macros.json` from the addon folder into `imports\` and rename the
+copy `Alex.json` (pretend a friend sent it; give one of its macros a hotkey first). Also copy
+`macros.json.bak` into `imports\`. Open **Import...** and pick **A whole library**: the list shows
+only `.json` and `.bak` files (no folders or `.txt`). Click `Alex.json`:
+- step 2 asks for the new folder's name, filled in as `From Alex`; the "Import into" box and the
+  "name is taken" choices aren't shown;
+- the preview has one new folder, `From Alex`, with your whole library inside it, in order;
+- **Keep hotkeys** is unticked; a warning says its trash bin isn't imported (if yours has items).
+Rename it `Friend`, click **Import selected**: a top-level `Friend` folder holds the copy, with no
+hotkeys and no text file links. Import `Alex.json` again with the name `Friend`: the preview
+marks it NAME TAKEN, "new, as "Friend (2)"". Click `macros.json.bak`: it loads, named
+`Imported library`. Pick a `.txt` file's path in the path box: refused ("A library file is a
+macros.json..."). If your library is 6 folders deep, the deepest folder is shown as too deep (it
+would be 7 deep inside the new folder). Switch back to **Macros**: the list shows `.txt` files and
+folders again. **Undo import** removes the copies. Close and reopen the Import window: it's on
+**Macros**.
 
 ## K. Text file links
 
@@ -405,6 +433,35 @@ Right-click the bin > **Empty trash bin...**: it asks, then the bin is empty.
 **O5. Turned off.** Untick the setting: Delete asks first and removes for good; items already in
 the bin stay, and the bin still shows until emptied. Tick it again. Delete `Bin test` when done.
 
+## P. Search box
+
+Use the `Test` folder from A3 (with `Say` on Ctrl+F1 from F1, and the `Accents` macro).
+
+**P1. Finding by name.** Type `say` in the **Search (Ctrl+F)** box above the tree: only `Say`
+shows, with `Test` (and any folders above it) opened, and "say" highlighted in its name. The line
+above the tree says "Found: 0 folder(s), 1 macro(s)". Type `SAY`: the same (case doesn't matter).
+Type `test`: the `Test` folder matches and shows everything inside it. Type `zzz`: "Nothing
+matches "zzz"."
+
+**P2. Lines, recipients, hotkeys, accents.** `test map` finds `Two` with "(found in its lines)";
+your own character name finds `Whisper` (its recipient); `ctrl+f1` finds `Say` with "(found in its
+hotkey)"; `hello` finds `Accents` (its line says `héllo`: accents don't matter).
+
+**P3. While searching.** With a search typed: dragging an item does nothing; right-click > **Move
+up** and **Move down** are greyed out; the trash bin isn't shown. Folders that were closed before
+the search open to show matches. Select `Say`, then change the search so `Say` no longer shows: it
+isn't selected any more. Rename a match or edit its lines: the tree updates.
+
+**P4. Clearing and keys.** Click the **x** next to the box: the whole tree is back, with the same
+folders open and closed as before the search, and the trash bin shows again. Click into the
+library window (not the box) and press **Ctrl+F**: the cursor goes into the box. Type something
+and press **Escape**: the box is cleared and the full tree is back. **(question)** Does Ctrl+F or
+that Escape also do anything in the game (Escape opening the game menu, for example)? While typing
+in the box, macro hotkeys don't fire (try Ctrl+F1).
+
+**P5. Text size and narrow windows.** At the biggest text size, make the library narrow: the box
+and its **x** stay inside the tree pane, the box gets narrower, and nothing is cut off.
+
 ## Report template
 
 ```
@@ -414,15 +471,16 @@ B1  B2  B3  B4 (what arrived):
 C1  C2 (did /w Name work without Tab?):
 D1  D2  D3  D4  D5  D6
 E1
-F1  F2 (which mouse buttons, where):  F3  F4  F5  F6
+F1  F2 (which mouse buttons, where):  F3  F4  F5  F6  F7
 G1  G2  G3 (where did it appear?):
 H1  H2  H3  H4 (map: mode, map id):
 I1 (date format sent):  I2  I3  I4  I5  I6  I7
-J1  J2  J3  J3b  J4  J5  J6
+J1  J2  J3  J3b  J4  J5  J6  J7
 K1  K2  K3  K4  K5
 L1  L2
 M1 (entries and sizes):  M2  M3  M4  M5
 N1 (pasted text):  N2  N3
 O1  O2  O3  O4  O5   A4 colours easy to see?
+P1  P2  P3  P4 (did Ctrl+F / Escape reach the game?):  P5
 Nexus log warnings:
 ```

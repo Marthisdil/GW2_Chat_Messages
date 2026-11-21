@@ -102,6 +102,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)tools\compile_
     <ClCompile Include="src\Http.cpp" />
     <ClCompile Include="src\LinkSync.cpp" />
     <ClCompile Include="src\ErrorReport.cpp" />
+    <ClCompile Include="src\Search.cpp" />
     <ClCompile Include="src\TextSize.cpp" />
     <ClCompile Include="src\UiFont.cpp" />
     <ClCompile Include="src\MacroTree.cpp" />
@@ -122,6 +123,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)tools\compile_
     <ClInclude Include="src\Http.h" />
     <ClInclude Include="src\LinkSync.h" />
     <ClInclude Include="src\ErrorReport.h" />
+    <ClInclude Include="src\Search.h" />
     <ClInclude Include="src\TextSize.h" />
     <ClInclude Include="src\UiFont.h" />
     <ClInclude Include="src\MacroTree.h" />

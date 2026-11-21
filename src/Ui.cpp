@@ -31,6 +31,7 @@
 #include "MacroTree.h"
 #include "Mumble.h"
 #include "Placeholders.h"
+#include "Search.h"
 #include "Sender.h"
 #include "Storage.h"
 #include "UiFont.h"
@@ -73,6 +74,14 @@ namespace
     double      s_StatusUntil = 0.0;
 
     uint64_t s_SelectedId = 0;
+
+    // Search box above the tree (docs/design.md, "Search"). s_Search is worked out every frame
+    // before the tree is drawn; while it's active, only matches (and their folders) are shown,
+    // and dragging and Move up/down are off.
+    char           s_SearchBuf[128] = {};
+    bool           s_SearchFocus    = false; // Ctrl+F: put the cursor in the box next frame
+    Search::Result s_Search;
+    const ImU32    kSearchHighlight = IM_COL32(255, 215, 0, 80);
 
     // Name popup (new folder, new macro, rename).
     enum class ENameMode { NewFolder, NewMacro, Rename };
@@ -407,6 +416,8 @@ namespace
         while (Hotkeys::PopPress(combo))
         {
             if (s_CaptureFor) continue;
+            // An old plain Mouse 3/4/5 hotkey never fires (mouse buttons need Ctrl, Alt or Shift).
+            if (!Hotkey::Fires(combo)) continue;
             // Only macros active here count: the same hotkey can be used for, say, a WvW macro and a PvE one.
             const Here here = WhereAmI();
             std::vector<Node*> macros;
@@ -442,6 +453,7 @@ namespace
         const std::string keys = aMacro.Hotkey.Empty() ? std::string("None") : Hotkey::ToString(aMacro.Hotkey);
         row.Next(UiFont::TextWidth(keys.c_str()));
         if (aMacro.Hotkey.Empty()) ImGui::TextDisabled("None");
+        else if (Hotkey::NeedsModifier(aMacro.Hotkey)) ImGui::TextColored(kErrorColor, "%s", keys.c_str());
         else ImGui::TextUnformatted(keys.c_str());
         const char* setLabel = aMacro.Hotkey.Empty() ? "Set..." : "Change...";
         row.Next(UiFont::ButtonWidth(setLabel));
@@ -452,7 +464,7 @@ namespace
         }
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Then press the key you want, with Ctrl, Alt or Shift if you like.\n"
-                              "Mouse 3 (middle), Mouse 4 and Mouse 5 work too.\n"
+                              "Mouse 3 (middle), Mouse 4 and Mouse 5 work too, together with Ctrl, Alt or Shift.\n"
                               "The key still does its normal job in game, so pick one you don't use there.\n"
                               "Hotkeys don't fire while you're typing in chat or in a text box.");
         if (!aMacro.Hotkey.Empty())
@@ -462,6 +474,12 @@ namespace
             {
                 aMacro.Hotkey = {};
                 MarkDirty();
+            }
+            if (Hotkey::NeedsModifier(aMacro.Hotkey))
+            {
+                ImGui::TextColored(kErrorColor, "This hotkey doesn't work any more: mouse buttons need Ctrl, Alt or "
+                                                "Shift. Click Change... to set a new one.");
+                return;
             }
             // A shared hotkey is only a conflict where both macros can be active at once.
             std::string names;
@@ -786,8 +804,9 @@ namespace
         }
         if (ImGui::MenuItem("Rename"))
             s_Pending = {EAction::OpenName, 0, aNode.Id, EDrop::Into, 0, ENameMode::Rename};
-        if (ImGui::MenuItem("Move up"))   s_Pending = {EAction::Shift, aNode.Id, 0, EDrop::Into, -1};
-        if (ImGui::MenuItem("Move down")) s_Pending = {EAction::Shift, aNode.Id, 0, EDrop::Into, +1};
+        // Off while searching: the neighbours it would move past may be hidden.
+        if (ImGui::MenuItem("Move up", nullptr, false, !s_Search.Active))   s_Pending = {EAction::Shift, aNode.Id, 0, EDrop::Into, -1};
+        if (ImGui::MenuItem("Move down", nullptr, false, !s_Search.Active)) s_Pending = {EAction::Shift, aNode.Id, 0, EDrop::Into, +1};
         if (ImGui::BeginMenu("Export"))
         {
             const std::vector<const Node*> one{&aNode};
@@ -819,24 +838,54 @@ namespace
         ImGui::EndPopup();
     }
 
+    // While searching: marks where the search text is in a matching node's name, or, for a
+    // macro found by its lines or hotkey, says so after the name.
+    std::string SearchSuffix(const Node& aNode)
+    {
+        if (!s_Search.Active || !s_Search.Matches.count(aNode.Id)) return {};
+        size_t at = 0, len = 0;
+        if (Search::FindRange(aNode.Name, s_SearchBuf, at, len)) return {};
+        if (!aNode.Hotkey.Empty() && Search::FindRange(Hotkey::ToString(aNode.Hotkey), s_SearchBuf, at, len))
+            return "  (found in its hotkey)";
+        return "  (found in its lines)";
+    }
+
+    void HighlightSearch(const Node& aNode)
+    {
+        if (!s_Search.Active || !s_Search.Matches.count(aNode.Id)) return;
+        size_t at = 0, len = 0;
+        if (!Search::FindRange(aNode.Name, s_SearchBuf, at, len)) return;
+        const ImVec2 min = ImGui::GetItemRectMin();
+        const ImVec2 max = ImGui::GetItemRectMax();
+        const char* name = aNode.Name.c_str();
+        const float x0 = min.x + ImGui::GetTreeNodeToLabelSpacing() + ImGui::CalcTextSize(name, name + at).x;
+        const float x1 = x0 + ImGui::CalcTextSize(name + at, name + at + len).x;
+        ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(x0, min.y), ImVec2(x1, max.y), kSearchHighlight, 2.0f);
+    }
+
     void DrawNode(Node& aNode)
     {
+        if (!s_Search.Shows(aNode.Id)) return;
         ImGui::PushID(static_cast<int>(aNode.Id ^ (aNode.Id >> 32)));
         ImGui::PushID(static_cast<int>(aNode.Id & 0xFFFFFFFF));
 
         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAvailWidth;
         if (aNode.Id == s_SelectedId) flags |= ImGuiTreeNodeFlags_Selected;
+        const std::string suffix = SearchSuffix(aNode);
 
         bool open = false;
         if (aNode.IsFolder())
         {
             flags |= ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
             if (aNode.Children.empty()) flags |= ImGuiTreeNodeFlags_Leaf;
-            ImGui::SetNextItemOpen(aNode.Expanded, ImGuiCond_Always);
+            // A folder with a match inside is held open while searching; its own open state isn't
+            // changed, so clearing the search brings the tree back as it was.
+            const bool forced = s_Search.ForcedOpen(aNode.Id);
+            ImGui::SetNextItemOpen(forced || aNode.Expanded, ImGuiCond_Always);
             ImGui::PushStyleColor(ImGuiCol_Text, kFolderColor);
-            open = ImGui::TreeNodeEx("##node", flags, "%s", aNode.Name.c_str());
+            open = ImGui::TreeNodeEx("##node", flags, "%s%s", aNode.Name.c_str(), suffix.c_str());
             ImGui::PopStyleColor();
-            if (open != aNode.Expanded && !aNode.Children.empty())
+            if (!forced && open != aNode.Expanded && !aNode.Children.empty())
             {
                 aNode.Expanded = open;
                 MarkDirty();
@@ -850,14 +899,19 @@ namespace
             ImVec4 color = ChannelColorVec(first);
             if (!IsActiveHere(aNode, WhereAmI())) color.w *= 0.45f; // filtered out here: dimmed
             ImGui::PushStyleColor(ImGuiCol_Text, color);
-            if (aNode.Hotkey.Empty()) ImGui::TreeNodeEx("##node", flags, "%s", aNode.Name.c_str());
-            else ImGui::TreeNodeEx("##node", flags, "%s  [%s]", aNode.Name.c_str(), Hotkey::ToString(aNode.Hotkey).c_str());
+            if (aNode.Hotkey.Empty()) ImGui::TreeNodeEx("##node", flags, "%s%s", aNode.Name.c_str(), suffix.c_str());
+            else if (Hotkey::NeedsModifier(aNode.Hotkey))
+                ImGui::TreeNodeEx("##node", flags, "%s  [%s: off, needs Ctrl/Alt/Shift]%s", aNode.Name.c_str(),
+                                  Hotkey::ToString(aNode.Hotkey).c_str(), suffix.c_str());
+            else ImGui::TreeNodeEx("##node", flags, "%s  [%s]%s", aNode.Name.c_str(), Hotkey::ToString(aNode.Hotkey).c_str(), suffix.c_str());
             ImGui::PopStyleColor();
         }
+        HighlightSearch(aNode);
 
         if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) s_SelectedId = aNode.Id;
 
-        if (ImGui::BeginDragDropSource())
+        // While searching the tree isn't complete, so nothing can be dragged or dropped.
+        if (!s_Search.Active && ImGui::BeginDragDropSource())
         {
             ImGui::SetDragDropPayload(kDragPayload, &aNode.Id, sizeof(aNode.Id));
             UiFont::PushTooltipWrap();
@@ -866,7 +920,7 @@ namespace
             ImGui::PopTextWrapPos();
             ImGui::EndDragDropSource();
         }
-        HandleDropTarget(aNode);
+        if (!s_Search.Active) HandleDropTarget(aNode);
         DrawContextMenu(aNode);
 
         if (aNode.IsFolder() && open)
@@ -1118,8 +1172,9 @@ namespace
     void DrawTree()
     {
         s_DragError.clear();
+        if (s_Search.Active && s_Search.Matches.empty() && !s_Tree.Root().Children.empty()) ImGui::TextDisabled("Nothing matches \"%s\".", Search::Trim(s_SearchBuf).c_str());
         for (auto& child : s_Tree.Root().Children) DrawNode(*child);
-        DrawTrashBin();
+        if (!s_Search.Active) DrawTrashBin(); // the bin isn't searched: its items can't be used
 
         // The empty space below the tree: drop here to move to the end of the top level,
         // click here to clear the selection.
@@ -1127,7 +1182,7 @@ namespace
         if (avail.y < Px(24.0f)) avail.y = Px(24.0f);
         ImGui::InvisibleButton("##tree_end", ImVec2(avail.x > 1.0f ? avail.x : 1.0f, avail.y));
         if (ImGui::IsItemClicked()) { s_SelectedId = 0; s_TrashSelId = 0; }
-        if (ImGui::BeginDragDropTarget())
+        if (!s_Search.Active && ImGui::BeginDragDropTarget())
         {
             const ImGuiPayload* peek = ImGui::GetDragDropPayload();
             if (peek && peek->IsDataType(kDragPayload) && peek->DataSize == sizeof(uint64_t))
@@ -1925,7 +1980,7 @@ namespace
             else if (IsActiveHere(n, aHere))
             {
                 const EChannel first = n.Lines.empty() ? EChannel::Current : n.Lines.front().Channel;
-                const std::string keys = Hotkey::ToString(n.Hotkey);
+                const std::string keys = Hotkey::Fires(n.Hotkey) ? Hotkey::ToString(n.Hotkey) : std::string(); // an off hotkey isn't shown
                 ImGui::PushStyleColor(ImGuiCol_Text, ChannelColorVec(first));
                 const bool clicked = ImGui::MenuItem(n.Name.c_str(), keys.empty() ? nullptr : keys.c_str(), false, !busy);
                 ImGui::PopStyleColor();
@@ -1983,11 +2038,15 @@ namespace
     std::string                        s_ImportPath;
     std::vector<std::filesystem::path> s_ImportList;
     bool                               s_ImportListStale = true;
+    // "A whole library" (docs/design.md, "Import / export"): someone's macros.json, put into one
+    // new top-level folder (the package's only top-level node), named s_LibraryName.
+    bool                               s_ImportLibrary = false;
+    std::string                        s_LibraryName;
 
     std::optional<nlohmann::json> s_UndoImport; // the library before the last import
     std::string                   s_UndoText;
 
-    void LoadImport(Exchange::Package aPkg)
+    void LoadImport(Exchange::Package aPkg, bool aPasted = false)
     {
         s_ImportOpt.PerItem.clear(); // keyed by the old package's nodes
         s_ImportOpt.Unselected.clear();
@@ -1998,7 +2057,37 @@ namespace
             s_ImportPkg.reset();
             return;
         }
+        if (s_ImportLibrary)
+        {
+            s_LibraryName = aPasted ? std::string(Exchange::kLibraryFolderFallback) : Exchange::LibraryFolderName(aPkg.Source);
+            Exchange::WrapInFolder(aPkg, s_LibraryName);
+        }
         s_ImportPkg = std::make_unique<Exchange::Package>(std::move(aPkg));
+    }
+
+    // Switches between importing macros and importing a whole library. Each starts with its own
+    // defaults: a library's hotkeys are off (they'd clash with yours) and a taken folder name is
+    // renamed, never merged.
+    void SetImportLibrary(bool aOn)
+    {
+        if (aOn == s_ImportLibrary) return;
+        s_ImportLibrary = aOn;
+        s_ImportPkg.reset();
+        s_ImportOpt = Exchange::Options{};
+        if (aOn)
+        {
+            s_ImportOpt.KeepHotkeys    = false;
+            s_ImportOpt.FolderConflict = Exchange::EChoice::Rename;
+        }
+        s_ImportListStale = true;
+    }
+
+    // The new folder a library goes into (the package's only top-level node).
+    Node* LibraryFolder()
+    {
+        if (!s_ImportLibrary || !s_ImportPkg) return nullptr;
+        auto& top = s_ImportPkg->Items.Root().Children;
+        return top.size() == 1 && top[0]->IsFolder() ? top[0].get() : nullptr;
     }
 
     void RefreshImportList()
@@ -2013,7 +2102,10 @@ namespace
             std::error_code ec2;
             std::string ext = it->path().extension().u8string();
             for (char& c : ext) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-            if (it->is_directory(ec2) || ext == ".json" || ext == ".txt") s_ImportList.push_back(it->path());
+            const bool dir = it->is_directory(ec2);
+            const bool fits = s_ImportLibrary ? !dir && Exchange::IsLibraryFileName(it->path())
+                                              : dir || ext == ".json" || ext == ".txt";
+            if (fits) s_ImportList.push_back(it->path());
             if (s_ImportList.size() >= 200) break;
         }
         std::sort(s_ImportList.begin(), s_ImportList.end());
@@ -2122,7 +2214,17 @@ namespace
     void DrawImportSource()
     {
         ImGui::TextUnformatted("1. Choose what to import");
-        ImGui::TextDisabled("A .json export, a .txt file (one macro), or a folder of .txt files.");
+        if (ImGui::RadioButton("Macros", !s_ImportLibrary)) SetImportLibrary(false);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("A .json export, a .txt file (one macro), or a folder of .txt files.");
+        ImGui::SameLine();
+        if (ImGui::RadioButton("A whole library", s_ImportLibrary)) SetImportLibrary(true);
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Someone else's macros.json (or macros.json.bak), as they sent it to you.\n"
+                              "It goes into a new folder of its own, so it never mixes with your folders.");
+        if (s_ImportLibrary)
+            ImGui::TextDisabled("Someone's macros.json or macros.json.bak. Rename it (e.g. Alex.json) so it's easy to tell apart. "
+                                "It goes into a new folder at the top level. Their trash bin and text file links aren't taken.");
+        else ImGui::TextDisabled("A .json export, a .txt file (one macro), or a folder of .txt files.");
         if (s_ImportListStale) RefreshImportList();
 
         ImGui::BeginChild("##imports", ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 5.0f), true,
@@ -2135,7 +2237,7 @@ namespace
             std::error_code ec;
             const bool dir = std::filesystem::is_directory(p, ec);
             const std::string label = p.filename().u8string() + (dir ? "\\" : "");
-            if (ImGui::Selectable(label.c_str())) LoadImport(Exchange::FromPath(p));
+            if (ImGui::Selectable(label.c_str())) LoadImport(s_ImportLibrary ? Exchange::FromLibraryFile(p) : Exchange::FromPath(p));
         }
         ImGui::PopTextWrapPos();
         ImGui::EndChild();
@@ -2150,20 +2252,22 @@ namespace
             if (!text || !*text) ShowError("Clicked Paste from clipboard in the Import window", "The clipboard has no text.");
             else
             {
-                Exchange::Package pkg = Exchange::FromText("Pasted macro", text);
+                Exchange::Package pkg = s_ImportLibrary ? Exchange::FromJsonText(text) : Exchange::FromText("Pasted macro", text);
                 pkg.Source = "Pasted text";
-                LoadImport(std::move(pkg));
+                LoadImport(std::move(pkg), true);
             }
         }
 
         ImGui::SetNextItemWidth(-(UiFont::ButtonWidth("Load") + ImGui::GetStyle().ItemSpacing.x));
-        const bool enter = InputString("##path", "Or a full path to a file or folder", s_ImportPath, ImGuiInputTextFlags_EnterReturnsTrue);
+        const bool enter = InputString("##path", s_ImportLibrary ? "Or a full path to the file" : "Or a full path to a file or folder",
+                                       s_ImportPath, ImGuiInputTextFlags_EnterReturnsTrue);
         ImGui::SameLine();
         if ((ImGui::Button("Load") || enter) && !s_ImportPath.empty())
         {
             std::string path = s_ImportPath;
             if (path.size() >= 2 && path.front() == '"' && path.back() == '"') path = path.substr(1, path.size() - 2); // "Copy as path"
-            LoadImport(Exchange::FromPath(std::filesystem::u8path(path)));
+            const std::filesystem::path p = std::filesystem::u8path(path);
+            LoadImport(s_ImportLibrary ? Exchange::FromLibraryFile(p) : Exchange::FromPath(p));
         }
     }
 
@@ -2173,6 +2277,7 @@ namespace
         s_ImportPkg.reset();
         s_ImportOpt.PerItem.clear();
         s_ImportOpt.Unselected.clear();
+        SetImportLibrary(false); // the window opens on "Macros" next time
         s_ImportListStale = true;
     }
 
@@ -2203,38 +2308,56 @@ namespace
         }
 
         ImGui::Separator();
-        ImGui::Text("2. Choose where it goes (from %s)", s_ImportPkg->Source.c_str());
-        Node* target = NodeOrRoot(s_ImportTarget);
-        if (!target || !target->IsFolder()) { s_ImportTarget = 0; target = &s_Tree.Root(); }
-        ImGui::SetNextItemWidth(-(UiFont::TextWidth("Import into") + ImGui::GetStyle().ItemInnerSpacing.x * 2.0f));
-        if (ImGui::BeginCombo("Import into", FolderPath(*target).c_str()))
+        Node* target = nullptr;
+        if (Node* folder = LibraryFolder())
         {
-            if (ImGui::Selectable("Top level", target == &s_Tree.Root())) s_ImportTarget = 0;
-            std::vector<const Node*> folders;
-            FolderTargets(s_Tree.Root(), folders);
-            for (const Node* f : folders)
+            // A library always goes into its own new folder at the top level.
+            ImGui::Text("2. Name the new folder it goes into (from %s)", s_ImportPkg->Source.c_str());
+            ImGui::SetNextItemWidth(-1.0f);
+            if (InputString("##libname", Exchange::kLibraryFolderFallback, s_LibraryName))
             {
-                ImGui::PushID(f);
-                if (ImGui::Selectable(FolderPath(*f).c_str(), f == target)) s_ImportTarget = f->Id;
-                ImGui::PopID();
+                const std::string clean = Tree::CleanName(s_LibraryName);
+                folder->Name = clean.empty() ? std::string(Exchange::kLibraryFolderFallback) : clean;
             }
-            ImGui::EndCombo();
+            ImGui::TextDisabled("It's added at the top level of your library. If that name is taken, it gets \" (2)\".");
+            target = &s_Tree.Root();
         }
-        target = NodeOrRoot(s_ImportTarget);
-        if (!target) target = &s_Tree.Root();
+        else
+        {
+            ImGui::Text("2. Choose where it goes (from %s)", s_ImportPkg->Source.c_str());
+            target = NodeOrRoot(s_ImportTarget);
+            if (!target || !target->IsFolder()) { s_ImportTarget = 0; target = &s_Tree.Root(); }
+            ImGui::SetNextItemWidth(-(UiFont::TextWidth("Import into") + ImGui::GetStyle().ItemInnerSpacing.x * 2.0f));
+            if (ImGui::BeginCombo("Import into", FolderPath(*target).c_str()))
+            {
+                if (ImGui::Selectable("Top level", target == &s_Tree.Root())) s_ImportTarget = 0;
+                std::vector<const Node*> folders;
+                FolderTargets(s_Tree.Root(), folders);
+                for (const Node* f : folders)
+                {
+                    ImGui::PushID(f);
+                    if (ImGui::Selectable(FolderPath(*f).c_str(), f == target)) s_ImportTarget = f->Id;
+                    ImGui::PopID();
+                }
+                ImGui::EndCombo();
+            }
+            target = NodeOrRoot(s_ImportTarget);
+            if (!target) target = &s_Tree.Root();
 
-        ImGui::SetNextItemWidth(Px(170.0f));
-        ChoiceCombo("When a macro's name is taken", s_ImportOpt.MacroConflict, false);
-        ImGui::SetNextItemWidth(Px(170.0f));
-        ChoiceCombo("When a folder's name is taken", s_ImportOpt.FolderConflict, true);
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Merge: the folder's contents go into the existing folder.\nReplace: the existing folder's contents are deleted first.");
+            ImGui::SetNextItemWidth(Px(170.0f));
+            ChoiceCombo("When a macro's name is taken", s_ImportOpt.MacroConflict, false);
+            ImGui::SetNextItemWidth(Px(170.0f));
+            ChoiceCombo("When a folder's name is taken", s_ImportOpt.FolderConflict, true);
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Merge: the folder's contents go into the existing folder.\nReplace: the existing folder's contents are deleted first.");
+        }
         ImGui::Checkbox("Move the contents of too-deep folders up a level", &s_ImportOpt.Flatten);
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Folders can be nested at most %d deep. Unticked, folders that would go deeper are left out.", kMaxFolderDepth);
         ImGui::Checkbox("Keep hotkeys", &s_ImportOpt.KeepHotkeys);
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Untick this for macros from someone else, so their keys don't clash with yours.");
+            ImGui::SetTooltip(s_ImportLibrary ? "Off by default for someone else's library, so their keys don't clash with yours."
+                                              : "Untick this for macros from someone else, so their keys don't clash with yours.");
         for (const std::string& w : s_ImportPkg->Warnings) ImGui::TextColored(kWarnColor, "%s", w.c_str());
 
         // Built every frame against the live library, so the preview is always what Import does.
@@ -2341,6 +2464,8 @@ namespace
             s_ImportTarget = InsertFolder().Parent ? InsertFolder().Id : 0;
             s_ShowImport   = true;
         }
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Import exported macros or .txt files,\nor a whole library (macros.json) someone sent you.");
         row.Next(UiFont::ButtonWidth("Export all"));
         if (ImGui::Button("Export all"))
         {
@@ -2368,6 +2493,39 @@ namespace
         DrawUndoImport();
     }
 
+    // The search box at the top of the tree pane, aWidth wide (with its x button).
+    void DrawSearchBox(float aWidth)
+    {
+        const bool hasText = s_SearchBuf[0] != '\0';
+        const float clearW = hasText ? UiFont::ButtonWidth("x##search") + ImGui::GetStyle().ItemSpacing.x : 0.0f;
+        if (s_SearchFocus)
+        {
+            ImGui::SetKeyboardFocusHere();
+            s_SearchFocus = false;
+        }
+        ImGui::SetNextItemWidth(std::max(aWidth - clearW, Px(60.0f)));
+        ImGui::InputTextWithHint("##search", "Search (Ctrl+F)", s_SearchBuf, sizeof(s_SearchBuf));
+        // Escape leaves the box; it also clears it.
+        if (ImGui::IsItemDeactivated() && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Escape), false)) s_SearchBuf[0] = '\0';
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Finds folders and macros by name, by the text of their lines, a whisper's\n"
+                              "recipient, or their hotkey (e.g. ctrl+f1). Case and accents don't matter.\n"
+                              "While searching, dragging and Move up/down are off.");
+        if (hasText)
+        {
+            ImGui::SameLine();
+            if (ImGui::Button("x##search")) s_SearchBuf[0] = '\0';
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Clear the search (or press Escape in the box).");
+        }
+    }
+
+    // Works out the search for this frame. A selected item that's no longer shown is unselected.
+    void UpdateSearch()
+    {
+        s_Search = Search::Run(s_Tree.Root(), s_SearchBuf);
+        if (s_Search.Active && s_SelectedId && !s_Search.Shows(s_SelectedId)) s_SelectedId = 0;
+    }
+
     void DrawMainWindow()
     {
         UiFont::BeforeBegin(s_MainFit, ImVec2(820.0f, 500.0f), ImVec2(560.0f, 300.0f));
@@ -2380,21 +2538,36 @@ namespace
         }
         ImGui::PushTextWrapPos(0.0f); // long text wraps at the window's edge
 
+        // Ctrl+F anywhere in the library window puts the cursor in the search box.
+        const ImGuiIO& io = ImGui::GetIO();
+        if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && io.KeyCtrl && !io.KeyAlt &&
+            ImGui::IsKeyPressed('F', false))
+            s_SearchFocus = true;
+
         DrawMessages();
         DrawToolbar();
         ImGui::Separator();
 
         // Both panes scroll sideways too, for long names and rows that can't wrap.
+        // The search box sits above the tree; the group keeps the details pane level with it.
         const float treeWidth = ImGui::GetContentRegionAvail().x * 0.38f;
+        UpdateSearch();
+        ImGui::BeginGroup();
+        DrawSearchBox(treeWidth);
         ImGui::BeginChild("##tree", ImVec2(treeWidth, 0.0f), true, ImGuiWindowFlags_HorizontalScrollbar);
         ImGui::PushTextWrapPos(0.0f);
         if (s_Tree.Root().Children.empty())
         {
             ImGui::TextWrapped("Your library is empty. Create a folder or a macro to get started.");
         }
+        else if (s_Search.Active && !s_Search.Matches.empty())
+        {
+            ImGui::TextDisabled("Found: %zu folder(s), %zu macro(s)", s_Search.FolderMatches, s_Search.MacroMatches);
+        }
         DrawTree();
         ImGui::PopTextWrapPos();
         ImGui::EndChild();
+        ImGui::EndGroup();
 
         ImGui::SameLine();
         ImGui::BeginChild("##details", ImVec2(0.0f, 0.0f), true, ImGuiWindowFlags_HorizontalScrollbar);

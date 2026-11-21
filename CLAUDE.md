@@ -99,7 +99,11 @@ to the todo list", add it there (don't start building it). Move agreed items int
   file), and `LoadMacros`/`SaveMacros`. An unreadable `macros.json` is renamed aside, never
   overwritten. Don't name functions `LoadLibrary` etc.: `windows.h` macros clash.
 - `src/Hotkey.*`: the hotkey combo (key + Ctrl/Alt/Shift), its text form for `macros.json`, and
-  which keys are refused. No Nexus or ImGui dependency. Tested by `tests/HotkeyTests.cpp`.
+  which keys are refused (`Refusal`; plain Mouse 3/4/5 are kept on load but never fire:
+  `KeepOnLoad`, `Fires`). No Nexus or ImGui dependency. Tested by `tests/HotkeyTests.cpp`.
+- `src/Search.*`: the library's search box: what matches (names, line text, whisper recipients,
+  hotkeys; case and accents ignored) and which tree nodes show. No Nexus or ImGui dependency.
+  Tested by `tests/SearchTests.cpp`.
 - `src/Hotkeys.*`: the WndProc hook that reads presses and captures a new hotkey. It only queues
   presses; the render thread (`Ui.cpp`) matches them to macros and starts the sender.
 - `src/Placeholders.*`: fills in `{time}`, `{random}`, `{txt}` and the other placeholders. The clock,
@@ -110,7 +114,8 @@ to the todo list", add it there (don't start building it). Move agreed items int
 - `src/Exchange.*`: import and export: the export format, reading .json/.txt/folders into a
   package, the import preview (`BuildPlan`) and `Apply`. No Nexus or ImGui dependency. Tested by
   `tests/ExchangeTests.cpp`. Exports go to `<addon>\exports\`; the Import window lists
-  `<addon>\imports\`.
+  `<addon>\imports\`. "A whole library" (`FromLibraryFile`, `WrapInFolder`) imports someone's
+  `macros.json` into one new top-level folder.
 - `src/LinkSync.*`: link files (a macro kept in step with a `.txt` file both ways): path rules
   and the sync decision. No Nexus or ImGui dependency. Tested by `tests/LinkSyncTests.cpp`. The
   UI (`Ui.cpp`) polls once a second and does the reads and writes.

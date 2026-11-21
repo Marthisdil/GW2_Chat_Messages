@@ -232,7 +232,7 @@ namespace MacroTree
                 if (!hk.empty())
                 {
                     const Hotkey::Combo c = Hotkey::FromString(hk);
-                    if (!c.Empty() && Hotkey::Refusal(c).empty()) n.Hotkey = c;
+                    if (Hotkey::KeepOnLoad(c)) n.Hotkey = c; // an old plain mouse hotkey is kept, but never fires
                     else Warn("Macro \"" + n.Name + "\": hotkey \"" + hk + "\" isn't valid and was removed.");
                 }
             }
