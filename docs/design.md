@@ -70,7 +70,7 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
     `{hour}`, `{min}`, `{today}` ("Friday, 20.11.2026", weekday in the Windows language),
     `{random}` (0-100), `{random max}` (0-max), `{random min max}` (inclusive, swapped if
     reversed), `{txt file}` (a random non-blank line), `{txt file line}` (1-based), and `{nexus}`
-    (bhm's `{blish}`: "Chat Messages v0.1.0").
+    (bhm's `{blish}`: "Chat Messages 2026.11.21.1412.Dev").
   - Also built: `{map}` (the current map's name) and `{json path url}` (one value from a JSON
     page: dot-separated path, numbers index arrays, like bhm; objects, lists and null are refused;
     http/https only, at most 512 KB, 3 s timeouts).
@@ -227,6 +227,25 @@ Raidcore's guide quotes ArenaNet's macro policy ("one user action may lead to on
 and Raidcore has a "Macro Usage" label. Sending several lines from one key press is how bhm
 works and is what the user wants. Before the first public release, check ArenaNet's current
 policy and mention the behaviour when registering with Raidcore.
+
+## Versioning
+
+*(Decided 2026-11-21.)*
+
+- Format: **`YYYY.MM.DD.HHMM.Channel`**, the date and time (GMT, 24-hour) the version was set,
+  then `Dev`, `Beta` or `Rel` (normal release). Example: `2026.11.21.1412.Dev`. Every release is
+  `Dev` until initial development is finished.
+- `tools\set_version.ps1 [-Channel Dev|Beta|Rel]` sets it to now and writes `src/Version.h`
+  (plain `#define`s), used by `Globals.h` and by the `.rc` file. Run it once per release and
+  commit the header.
+- Nexus gets the four numbers (`AddonVersion_t`: 2026, 11, 21, 1412; each fits 16 bits). The
+  text form is shown in the Nexus log, the library window, `{nexus}` and error reports.
+- The DLL's version resource (Properties > Details): File version and Product version are the
+  text form, the fixed file version is the four numbers.
+- **GitHub release tags** are the numbers only (`2026.11.21.1412`): Nexus' updater ignores tags
+  with a suffix, and the tag must match the DLL's version or Nexus keeps re-downloading it. `Dev`
+  and `Beta` builds are published as GitHub pre-releases (Nexus offers those only to users who
+  allow pre-release updates for the addon); `Rel` builds as normal releases.
 
 ## Implementation phases (one small PR each)
 

@@ -18,7 +18,7 @@ and in whisper recipients.
 | `{txt file line}` | That line of the file (1 = the first), like `{txt rules.txt 3}`. |
 | `{map}` | The name of the map you're on, like `Lion's Arch`. |
 | `{json path url}` | One value from a JSON web page (see below). |
-| `{nexus}` | This addon's name and version, like `Chat Messages v0.1.0`. |
+| `{nexus}` | This addon's name and version, like `Chat Messages 2026.11.21.1412.Dev`. |
 
 <!-- screenshot: placeholders-tooltip.png (docs/screenshots.md) -->
 > 📷 *Screenshot to come: the Placeholders (?) tooltip in the editor.*
