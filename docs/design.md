@@ -132,6 +132,27 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
   sideways for names and rows that can't wrap.
 - Later (see `docs/todo.md`): more sizes than Nexus offers, from a font of our own.
 
+## Error window
+
+*(Built 2026-11-21, from in-game testing; `src/ErrorReport.*` (queue and clipboard text, unit
+tested in `tests/ErrorReportTests.cpp`), window in `Ui.cpp`.)*
+
+- Every error the addon shows opens the **error window**: the error in red, "What you did: ..."
+  (written at the place the error happens, e.g. `Created a folder named "test" in "Raids"`), an
+  **OK** button and **Copy to clipboard**.
+- The copied text has the addon name and version, the local time, what was done, the error and
+  where in game (mode and map), one per line. Unknown parts are left out.
+- Errors queue (oldest first, at most 20; the same action and error twice in a row is kept once).
+  OK removes the one shown; "Error 1 of N" shows when more wait.
+- It's a normal window, not an ImGui pop-up: an open pop-up takes every mouse click, which would
+  block the game after a hotkey error. Errors from our own windows bring it to the front; errors
+  from hotkeys, the quick menu and failed saves don't (they also keep their Nexus alert).
+- Inside the Name pop-up (a modal, which blocks other windows) the error is a pop-up inside it;
+  OK goes back to the name box.
+- Not errors, so they stay where they are: good news (exported, sent), warnings next to what they
+  are about (line length, whisper recipient, hotkey conflicts, link state, import notes), and the
+  "couldn't be saved, retrying" line, which stays until a save works.
+
 ## Import / export
 
 *(Built in phase 7 part 1; `src/Exchange.*`, unit tested in `tests/ExchangeTests.cpp`.
@@ -241,3 +262,5 @@ policy and mention the behaviour when registering with Raidcore.
 7. Import/export with preview, `.txt` import/export and link-file sync. *(done; not yet tested
    in game)*
 8. Text size setting for the addon's windows (Nexus' fonts). *(done; not yet tested in game)*
+9. Error window: every error in its own window with OK and Copy to clipboard. *(done; not yet
+   tested in game)*

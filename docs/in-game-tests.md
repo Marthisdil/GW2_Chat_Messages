@@ -4,7 +4,7 @@ The unit tests cover the rules (tree, raw text, send plan, hotkeys, filters, pla
 import, link sync). These checks cover what only the game can tell us: whether GW2 takes our keys
 and text, and whether normal game input is ever disturbed.
 
-The checks are grouped into sessions (A to M) in the order to run them: each one builds on the
+The checks are grouped into sessions (A to N) in the order to run them: each one builds on the
 ones before. A whole pass takes about an hour. If the text is hard to read, do M1 first and
 pick a bigger size. Session B is the one that matters most: if it
 fails, most of the later sessions can't be run, so report it first.
@@ -43,9 +43,10 @@ library** button that works.
 **A2. Building the tree.** In the library:
 - **New folder** (toolbar) → name `Test`. In it, **New folder inside** five times, one inside the
   next, so the deepest is 6 folders deep. A 7th folder inside the deepest one is refused with a
-  "levels deep" message. A macro inside the deepest folder is allowed.
+  "levels deep" message: "New folder inside" isn't offered there, so select the deepest folder
+  and click **New folder** in the toolbar. A macro inside the deepest folder is allowed.
 - A second folder or macro called `test` (any case) in the same folder is refused ("There is
-  already a ...").
+  already a ...") in the error window (session N).
 - Rename (right-click > Rename), Move up / Move down, **Sort contents A-Z**, Expand all / Collapse
   all: each does what it says.
 - Drag a macro into another folder, and drag a folder into a folder: both move. Dragging a folder
@@ -313,6 +314,24 @@ Report anything that's still cut off, with a screenshot.
 **M5. Font reload.** Change Nexus' own font or UI settings (if it has any) while the library is
 open: no crash, and the library keeps working (it may show the default size for a moment).
 
+## N. The error window
+
+**N1. Looks and buttons.** In the library, make a second folder called `test` next to `Test`:
+an error pop-up opens over the name box with the error (wrapped, not cut off), "What you did:
+Created a folder named "test" in ...", **OK** and **Copy to clipboard**. Click Copy to
+clipboard ("Copied." shows), paste into Notepad: the version, time, what you did, the error and
+"In game: ..." are there (paste it in your report). OK: back in the name box.
+
+**N2. Queue and the game.** Give macros `Say` and `Two` the hotkey Ctrl+F9, and two other macros
+Ctrl+F10 (all active here). Close the library and press Ctrl+F9 twice, then Ctrl+F10: a Nexus
+alert shows each time, and the error window appears without taking focus. While it's open the
+game keeps all its input (move, click to target, turn the camera, skills). It says "Error 1 of
+2" (the repeated Ctrl+F9 is kept once); OK shows the next one, OK again closes it. Put the
+hotkeys back afterwards.
+
+**N3. Text size.** At the biggest text size the error window and its text get bigger and nothing
+is cut off.
+
 ## Report template
 
 ```
@@ -330,5 +349,6 @@ J1  J2  J3  J4  J5
 K1  K2  K3  K4  K5
 L1  L2
 M1 (entries and sizes):  M2  M3  M4  M5
+N1 (pasted text):  N2  N3
 Nexus log warnings:
 ```

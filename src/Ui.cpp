@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -20,6 +21,7 @@
 #include "imgui.h"
 
 #include "ChatLine.h"
+#include "ErrorReport.h"
 #include "Exchange.h"
 #include "Globals.h"
 #include "Hotkeys.h"
@@ -60,8 +62,7 @@ namespace
     // Messages from loading, shown until dismissed.
     std::vector<std::string> s_LoadMessages;
     // Short-lived status line (e.g. why a move was refused).
-    std::string s_Status;
-    bool        s_StatusIsInfo = false;
+    std::string s_Status; // good news only; errors open the error window (ShowError)
     double      s_StatusUntil = 0.0;
 
     uint64_t s_SelectedId = 0;
@@ -71,7 +72,6 @@ namespace
     ENameMode   s_NameMode     = ENameMode::NewFolder;
     uint64_t    s_NameTargetId = 0; // parent folder for New*, the node for Rename (0 = root)
     char        s_NameBuf[256] = {};
-    std::string s_NameError;
     bool        s_NameFocus    = false;
 
     uint64_t s_DeleteId = 0;
@@ -98,26 +98,28 @@ namespace
         s_SaveAt = ImGui::GetTime() + kSaveDelaySec;
     }
 
+    // Opens the error window: aAction is what the user did, in their words ("Clicked Export all").
+    // aFocus brings it to the front; false for errors from hotkeys and the quick menu, which happen
+    // while the user is playing. Defined with the error window below.
+    void ShowError(const std::string& aAction, const std::string& aMessage, bool aFocus = true);
+
     void SaveNow()
     {
         if (!s_Dirty) return;
+        const bool failedBefore = s_SaveFailed;
         s_SaveFailed = !Storage::SaveMacros(s_Tree);
         if (!s_SaveFailed) s_Dirty = false;
         else s_SaveAt = ImGui::GetTime() + 5.0; // retry later, without hammering the disk
+        if (s_SaveFailed && !failedBefore)
+            ShowError("Changed the library (it's saved to macros.json automatically)",
+                      "Your macros couldn't be saved. Check the Nexus log. The addon keeps trying every 5 seconds.", false);
     }
 
-    void SetStatus(const std::string& aText)
-    {
-        s_Status      = aText;
-        s_StatusIsInfo = false;
-        s_StatusUntil = ImGui::GetTime() + kStatusShowSec;
-    }
-
-    // Like SetStatus, for good news ("Exported to ...").
+    // Good news ("Exported to ..."), shown for a few seconds under the toolbar.
     void SetInfo(const std::string& aText)
     {
-        SetStatus(aText);
-        s_StatusIsInfo = true;
+        s_Status      = aText;
+        s_StatusUntil = ImGui::GetTime() + kStatusShowSec;
     }
 
     // --- Where the player is (for filters) ------------------------------------------------------
@@ -168,13 +170,121 @@ namespace
         return modes.empty() ? "On " + maps : modes + " on " + maps;
     }
 
+    // --- Errors -----------------------------------------------------------------------------------
+    // Every error opens the error window: what went wrong, what the user did, OK, and Copy to
+    // clipboard (src/ErrorReport.*). It's a normal window, not an ImGui pop-up: while a pop-up is
+    // open ImGui takes every mouse click, which would block the game after a hotkey error. Only an
+    // error inside our Name pop-up is shown as a pop-up within it (a pop-up blocks other windows).
+
+    constexpr const char* kErrorWindow = "Chat Messages: error##chatmsg_error";
+    constexpr const char* kErrorPopup  = "Chat Messages: error##chatmsg_errorpopup";
+
+    std::vector<ErrorReport::Report> s_Errors; // oldest first; the window shows the first
+    bool   s_ErrorFocus       = false; // bring the window to the front next frame
+    bool   s_ErrorInPopup     = false; // show it inside the Name pop-up instead of the window
+    double s_ErrorCopiedUntil = 0.0;
+
+    std::string NowText()
+    {
+        const std::time_t now = std::time(nullptr);
+        std::tm local{};
+        localtime_s(&local, &now);
+        char buf[32];
+        std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &local);
+        return buf;
+    }
+
+    std::string WhereText()
+    {
+        const Here h = WhereAmI();
+        if (h.Mode == GM_None && h.MapId == 0) return {};
+        return std::string(ModeName(h.Mode)) + ", " + (h.MapId ? MapNames::Label(h.MapId) : std::string("no map"));
+    }
+
+    void ShowError(const std::string& aAction, const std::string& aMessage, bool aFocus)
+    {
+        ErrorReport::Add(s_Errors, {aAction, aMessage, NowText(), WhereText()});
+        if (aFocus) s_ErrorFocus = true;
+    }
+
+    // The first error and its buttons. Returns true when OK was clicked (that error is gone).
+    bool DrawErrorBody()
+    {
+        if (s_Errors.empty()) return true;
+        const ErrorReport::Report& e = s_Errors.front();
+        if (s_Errors.size() > 1) ImGui::TextDisabled("Error 1 of %zu", s_Errors.size());
+        ImGui::PushTextWrapPos(0.0f);
+        ImGui::TextColored(kErrorColor, "%s", e.Message.c_str());
+        ImGui::Spacing();
+        ImGui::TextDisabled("What you did: %s", e.Action.c_str());
+        ImGui::PopTextWrapPos();
+        ImGui::Spacing();
+        const bool ok = ImGui::Button("OK", Px(100.0f, 0.0f));
+        ImGui::SameLine();
+        if (ImGui::Button("Copy to clipboard"))
+        {
+            ImGui::SetClipboardText(ErrorReport::ToText(e, kVersionText).c_str());
+            s_ErrorCopiedUntil = ImGui::GetTime() + 3.0;
+        }
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Copies the error, what you did, the time and where you were in game,\nready to paste into a bug report.");
+        if (ImGui::GetTime() < s_ErrorCopiedUntil)
+        {
+            ImGui::SameLine();
+            ImGui::TextDisabled("Copied.");
+        }
+        if (ok)
+        {
+            s_Errors.erase(s_Errors.begin());
+            s_ErrorCopiedUntil = 0.0;
+        }
+        return ok;
+    }
+
+    void DrawErrorWindow()
+    {
+        if (s_Errors.empty() || s_ErrorInPopup) return;
+        const ImVec2 screen = ImGui::GetIO().DisplaySize;
+        ImGui::SetNextWindowPos(ImVec2(screen.x * 0.5f, screen.y * 0.35f), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowSize(ImVec2(Px(460.0f), 0.0f), ImGuiCond_Always);
+        if (s_ErrorFocus)
+        {
+            ImGui::SetNextWindowFocus();
+            s_ErrorFocus = false;
+        }
+        if (ImGui::Begin(kErrorWindow, nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings))
+            DrawErrorBody();
+        ImGui::End();
+    }
+
+    // Inside one of our pop-ups: the error as a pop-up within it. Returns true when it was closed.
+    bool DrawErrorPopupInside()
+    {
+        if (!s_ErrorInPopup) return false;
+        if (s_Errors.empty()) { s_ErrorInPopup = false; return true; }
+        if (!ImGui::IsPopupOpen(kErrorPopup)) ImGui::OpenPopup(kErrorPopup);
+        ImGui::SetNextWindowSize(ImVec2(Px(420.0f), 0.0f), ImGuiCond_Always);
+        bool closed = false;
+        if (ImGui::BeginPopupModal(kErrorPopup, nullptr, ImGuiWindowFlags_NoResize))
+        {
+            if (DrawErrorBody() && s_Errors.empty())
+            {
+                s_ErrorInPopup = false;
+                closed = true;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+        }
+        return closed;
+    }
+
     // --- Sending ------------------------------------------------------------------------------
     // The sender runs on its own thread; the UI only starts it and shows its status.
 
     uint64_t       s_SendSeenSeq = 0; // Sender::Status::Seq of the last ended send we reported
-    std::string    s_SendNote;                        // "Sent 2 lines." / why it failed
-    bool           s_SendNoteError = false;
+    std::string    s_SendNote;                        // "Sent 2 lines." (failures open the error window)
     double         s_SendNoteUntil = 0.0;
+    std::string    s_SendAction;                      // what started the current/last send, for its error
 
     // Where a send was started. Hotkey and menu sends report failures as on-screen alerts, because
     // the library window (and its status line) may not be visible.
@@ -192,16 +302,19 @@ namespace
     {
         const bool alert = aFrom != ESendFrom::Window;
         if (aFrom == ESendFrom::Hotkey && Sender::IsBusy()) return; // one macro at a time; extra presses are ignored
+        const std::string name = "\"" + aMacro.Name + "\"";
+        const std::string action = aFrom == ESendFrom::Hotkey ? "Pressed the hotkey " + Hotkey::ToString(aMacro.Hotkey) + " to send " + name
+                                 : aFrom == ESendFrom::Menu   ? "Sent " + name + " from the quick menu"
+                                                              : "Sent " + name + " from the library (Send now)";
         std::string error;
         if (Sender::Start(aMacro.Id, aMacro.Lines, error))
         {
             s_SendAlertOnFail = alert;
+            s_SendAction      = action;
             return;
         }
-        s_SendNote      = error;
-        s_SendNoteError = true;
-        s_SendNoteUntil = ImGui::GetTime() + kStatusShowSec;
-        s_SendSeenSeq   = Sender::GetStatus().Seq; // already reported here
+        s_SendSeenSeq = Sender::GetStatus().Seq; // already reported here
+        ShowError(action, error, !alert);
         if (alert) Alert(aMacro.Name + ": " + error);
     }
 
@@ -210,12 +323,16 @@ namespace
         const Sender::Status st = Sender::GetStatus();
         if (st.Seq == s_SendSeenSeq) return;
         s_SendSeenSeq = st.Seq;
-        if (st.State == Sender::EState::Done || st.State == Sender::EState::Failed)
+        if (st.State == Sender::EState::Done)
         {
             s_SendNote      = st.Message;
-            s_SendNoteError = st.State == Sender::EState::Failed;
             s_SendNoteUntil = ImGui::GetTime() + kStatusShowSec;
-            if (s_SendNoteError && s_SendAlertOnFail)
+        }
+        else if (st.State == Sender::EState::Failed)
+        {
+            s_SendNote.clear();
+            ShowError(s_SendAction, st.Message, !s_SendAlertOnFail);
+            if (s_SendAlertOnFail)
             {
                 const Node* m = s_Tree.Find(st.MacroId);
                 Alert((m ? m->Name + ": " : std::string()) + st.Message);
@@ -262,7 +379,7 @@ namespace
             if (!cancelled && m && m->IsMacro())
             {
                 const std::string why = Hotkey::Refusal(combo);
-                if (!why.empty()) SetStatus(why);
+                if (!why.empty()) ShowError("Set a hotkey for \"" + m->Name + "\" and pressed " + Hotkey::ToString(combo), why);
                 else
                 {
                     m->Hotkey = combo;
@@ -282,8 +399,10 @@ namespace
             if (macros.empty()) continue;
             if (macros.size() > 1)
             {
-                Alert(Hotkey::ToString(combo) + " is set on " + std::to_string(macros.size()) +
-                      " macros, so nothing was sent. Give each macro its own hotkey.");
+                const std::string why = Hotkey::ToString(combo) + " is set on " + std::to_string(macros.size()) +
+                                        " macros, so nothing was sent. Give each macro its own hotkey.";
+                ShowError("Pressed the hotkey " + Hotkey::ToString(combo), why, false);
+                Alert(why);
                 continue;
             }
             SendMacro(*macros[0], ESendFrom::Hotkey);
@@ -375,7 +494,9 @@ namespace
             {
                 const uint8_t next = on ? static_cast<uint8_t>(aMacro.GameModes | b)
                                         : static_cast<uint8_t>(aMacro.GameModes & ~b);
-                if (next == GM_None) SetStatus("A macro needs at least one game mode.");
+                if (next == GM_None)
+                    ShowError("Unticked " + std::string(ModeName(b)) + " under \"Where it's active\" for \"" + aMacro.Name + "\"",
+                              "A macro needs at least one game mode.");
                 else
                 {
                     aMacro.GameModes = next;
@@ -422,10 +543,11 @@ namespace
             return false;
         };
         auto addMap = [&](int aId) {
-            if (aId <= 0) SetStatus("Map ids are positive numbers.");
-            else if (hasMap(aId)) SetStatus("That map is already in the list.");
+            const std::string action = "Added map id " + std::to_string(aId) + " to \"" + aMacro.Name + "\"";
+            if (aId <= 0) ShowError(action, "Map ids are positive numbers.");
+            else if (hasMap(aId)) ShowError(action, "That map is already in the list.");
             else if (aMacro.MapIds.size() >= kMaxMapIds)
-                SetStatus("A macro can list at most " + std::to_string(kMaxMapIds) + " maps.");
+                ShowError(action, "A macro can list at most " + std::to_string(kMaxMapIds) + " maps.");
             else
             {
                 aMacro.MapIds.push_back(aId);
@@ -463,8 +585,7 @@ namespace
         }
         else if (!s_SendNote.empty() && ImGui::GetTime() < s_SendNoteUntil)
         {
-            if (s_SendNoteError) ImGui::TextColored(kErrorColor, "%s", s_SendNote.c_str());
-            else ImGui::TextDisabled("%s", s_SendNote.c_str());
+            ImGui::TextDisabled("%s", s_SendNote.c_str());
         }
         else ImGui::NewLine(); // callers put this after SameLine: end the row
     }
@@ -501,14 +622,15 @@ namespace
         const std::filesystem::path dir = Storage::ExportsDir();
         if (dir.empty() || aNodes.empty() || !aNodes.front())
         {
-            SetStatus("The exports folder isn't available.");
+            ShowError("Exported \"" + aName + "\"", "The exports folder isn't available.");
             return;
         }
         const std::string text = aAsText ? Exchange::ExportText(*aNodes.front()) : Exchange::ExportJsonText(aNodes);
         const std::filesystem::path file = Storage::FreeFile(dir, Exchange::FileNameFor(aName, aAsText ? ".txt" : ".json"));
         if (Storage::WriteText(file, text))
             SetInfo("Exported to <GW2>\\addons\\GW2_Chat_Messages\\exports\\" + file.filename().u8string());
-        else SetStatus("The export couldn't be written. Check the Nexus log.");
+        else ShowError("Exported \"" + aName + "\" as a " + (aAsText ? ".txt" : ".json") + " file",
+                       "The export couldn't be written. Check the Nexus log.");
     }
 
     void ExportToClipboard(const std::vector<const Node*>& aNodes, bool aAsText)
@@ -538,7 +660,6 @@ namespace
     {
         s_NameMode     = aMode;
         s_NameTargetId = aTargetId;
-        s_NameError.clear();
         s_NameFocus    = true;
         const Node* target = NodeOrRoot(aTargetId);
         const char* initial = aMode == ENameMode::Rename && target ? target->Name.c_str()
@@ -773,7 +894,7 @@ namespace
             if (!node || !target) break;
             Result r = s_Tree.Move(*node, *target, a.Drop);
             if (r.Ok) { s_SelectedId = a.Id; MarkDirty(); }
-            else SetStatus(r.Error);
+            else ShowError("Moved \"" + node->Name + "\" by dragging it", r.Error);
             break;
         }
         case EAction::Shift:
@@ -804,7 +925,11 @@ namespace
     void DrawNamePopup()
     {
         ImGui::SetNextWindowSize(ImVec2(Px(360.0f), 0.0f), ImGuiCond_Always);
-        if (!ImGui::BeginPopupModal(kNamePopup, nullptr, ImGuiWindowFlags_NoResize)) return;
+        if (!ImGui::BeginPopupModal(kNamePopup, nullptr, ImGuiWindowFlags_NoResize))
+        {
+            s_ErrorInPopup = false; // the pop-up is gone: any error left shows in the error window
+            return;
+        }
         ImGui::PushTextWrapPos(0.0f);
 
         const char* title = s_NameMode == ENameMode::NewFolder ? "New folder name:"
@@ -815,7 +940,6 @@ namespace
         ImGui::SetNextItemWidth(-1.0f);
         const bool enter = ImGui::InputText("##name", s_NameBuf, kMaxNameLength + 1,
                                             ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll);
-        if (!s_NameError.empty()) ImGui::TextColored(kErrorColor, "%s", s_NameError.c_str());
 
         const bool ok = ImGui::Button(s_NameMode == ENameMode::Rename ? "Rename" : "Create", Px(100.0f, 0.0f)) || enter;
         ImGui::SameLine();
@@ -836,10 +960,15 @@ namespace
             }
             else
             {
-                s_NameError = r.Error;
-                s_NameFocus = true;
+                const std::string where = target && target->Parent ? "\"" + target->Name + "\"" : std::string("the top level");
+                const std::string action = s_NameMode == ENameMode::NewFolder ? "Created a folder named \"" + std::string(s_NameBuf) + "\" in " + where
+                                         : s_NameMode == ENameMode::NewMacro  ? "Created a macro named \"" + std::string(s_NameBuf) + "\" in " + where
+                                         : "Renamed " + (target ? "\"" + target->Name + "\"" : std::string("an item")) + " to \"" + std::string(s_NameBuf) + "\"";
+                ShowError(action, r.Error);
+                s_ErrorInPopup = true; // shown inside this pop-up, which blocks other windows
             }
         }
+        if (DrawErrorPopupInside()) s_NameFocus = true; // back to the name box to fix it
         ImGui::PopTextWrapPos();
         ImGui::EndPopup();
     }
@@ -1104,7 +1233,6 @@ namespace
     double      s_NextLinkSync = 0.0;
     std::string s_LinkPath;          // the path being typed in the editor
     uint64_t    s_LinkPathFor = 0;   // which macro s_LinkPath belongs to
-    std::string s_LinkError;         // why the typed path can't be linked
 
     int64_t FileMtime(const std::filesystem::path& aFile, bool& aExists)
     {
@@ -1219,14 +1347,15 @@ namespace
 
     void LinkMacro(Node& aMacro, const std::string& aPath)
     {
-        s_LinkError = LinkSync::CheckPath(aPath);
-        if (!s_LinkError.empty()) return;
+        const std::string action = "Linked \"" + aMacro.Name + "\" to the file \"" + aPath + "\"";
+        const std::string bad = LinkSync::CheckPath(aPath);
+        if (!bad.empty()) { ShowError(action, bad); return; }
         const std::filesystem::path dir = Storage::AddonDir();
-        if (dir.empty()) { s_LinkError = "The addon folder isn't available."; return; }
+        if (dir.empty()) { ShowError(action, "The addon folder isn't available."); return; }
         const std::filesystem::path file = LinkSync::Resolve(dir, aPath);
         if (const Node* other = LinkedElsewhere(s_Tree.Root(), aMacro, dir, file))
         {
-            s_LinkError = "\"" + other->Name + "\" is already linked to that file.";
+            ShowError(action, "\"" + other->Name + "\" is already linked to that file.");
             return;
         }
 
@@ -1236,7 +1365,7 @@ namespace
         std::string text, error;
         if (exists && !ReadLinkFile(file, text, error))
         {
-            s_LinkError = "That file can't be used: " + error; // never overwrite a file we couldn't read
+            ShowError(action, "That file can't be used: " + error); // never overwrite a file we couldn't read
             return;
         }
         const bool hasLines = exists && !ChatLine::ParseRaw(text).empty();
@@ -1245,7 +1374,7 @@ namespace
             // No file yet (or an empty one): it's made from the macro.
             if (!WriteLinkFile(aMacro, file, st))
             {
-                s_LinkError = "The file couldn't be created. Check the path and the Nexus log.";
+                ShowError(action, "The file couldn't be created. Check the path and the Nexus log.");
                 return;
             }
             SetInfo("Linked. The file was created from the macro's lines.");
@@ -1268,7 +1397,6 @@ namespace
         {
             s_LinkPathFor = aMacro.Id;
             s_LinkPath.clear();
-            s_LinkError.clear();
         }
         const auto problem = s_LinkProblems.find(aMacro.Id);
         const std::string header = aMacro.LinkFile.empty()
@@ -1293,7 +1421,6 @@ namespace
                 if (path.size() >= 2 && path.front() == '"' && path.back() == '"') path = path.substr(1, path.size() - 2);
                 LinkMacro(aMacro, path);
             }
-            if (!s_LinkError.empty()) ImGui::TextColored(kErrorColor, "%s", s_LinkError.c_str());
         }
         else
         {
@@ -1314,7 +1441,7 @@ namespace
                 if (ImGui::SmallButton("Recreate the file"))
                 {
                     if (WriteLinkFile(aMacro, file, s_LinkStates[aMacro.Id])) s_LinkProblems.erase(aMacro.Id);
-                    else SetStatus("The file couldn't be created. Check the Nexus log.");
+                    else ShowError("Clicked Recreate the file for \"" + aMacro.Name + "\"", "The file couldn't be created. Check the Nexus log.");
                 }
             }
             row.Next(UiFont::ButtonWidth("Unlink"));
@@ -1548,7 +1675,6 @@ namespace
     std::unique_ptr<Exchange::Package> s_ImportPkg;
     Exchange::Options                  s_ImportOpt;
     std::string                        s_ImportPath;
-    std::string                        s_ImportError;
     std::vector<std::filesystem::path> s_ImportList;
     bool                               s_ImportListStale = true;
 
@@ -1560,11 +1686,11 @@ namespace
         s_ImportOpt.PerItem.clear(); // keyed by the old package's nodes
         if (!aPkg.Ok())
         {
-            s_ImportError = (aPkg.Source.empty() ? std::string("It") : "\"" + aPkg.Source + "\"") + " can't be imported. " + aPkg.Error;
+            const std::string what = aPkg.Source.empty() ? std::string("it") : "\"" + aPkg.Source + "\"";
+            ShowError("Opened " + what + " in the Import window", (aPkg.Source.empty() ? std::string("It") : what) + " can't be imported. " + aPkg.Error);
             s_ImportPkg.reset();
             return;
         }
-        s_ImportError.clear();
         s_ImportPkg = std::make_unique<Exchange::Package>(std::move(aPkg));
     }
 
@@ -1696,7 +1822,7 @@ namespace
         if (ImGui::SmallButton("Paste from clipboard"))
         {
             const char* text = ImGui::GetClipboardText();
-            if (!text || !*text) s_ImportError = "The clipboard has no text.";
+            if (!text || !*text) ShowError("Clicked Paste from clipboard in the Import window", "The clipboard has no text.");
             else
             {
                 Exchange::Package pkg = Exchange::FromText("Pasted macro", text);
@@ -1714,7 +1840,6 @@ namespace
             if (path.size() >= 2 && path.front() == '"' && path.back() == '"') path = path.substr(1, path.size() - 2); // "Copy as path"
             LoadImport(Exchange::FromPath(std::filesystem::u8path(path)));
         }
-        if (!s_ImportError.empty()) ImGui::TextColored(kErrorColor, "%s", s_ImportError.c_str());
     }
 
     void CloseImport()
@@ -1722,7 +1847,6 @@ namespace
         s_ShowImport = false;
         s_ImportPkg.reset();
         s_ImportOpt.PerItem.clear();
-        s_ImportError.clear();
         s_ImportListStale = true;
     }
 
@@ -1859,7 +1983,8 @@ namespace
         if (ImGui::Button("New folder"))
         {
             if (canNest) OpenNamePopup(ENameMode::NewFolder, into.Id);
-            else SetStatus("Folders can be nested at most " + std::to_string(kMaxFolderDepth) + " levels deep.");
+            else ShowError("Clicked New folder with \"" + into.Name + "\" selected",
+                           "Folders can be nested at most " + std::to_string(kMaxFolderDepth) + " levels deep.");
         }
         row.Next(UiFont::ButtonWidth("New macro"));
         if (ImGui::Button("New macro")) OpenNamePopup(ENameMode::NewMacro, into.Id);
@@ -1883,7 +2008,7 @@ namespace
         row.Next(UiFont::ButtonWidth("Export all"));
         if (ImGui::Button("Export all"))
         {
-            if (s_Tree.Root().Children.empty()) SetStatus("There's nothing to export yet.");
+            if (s_Tree.Root().Children.empty()) ShowError("Clicked Export all", "There's nothing to export yet.");
             else ExportToFile(TopLevelNodes(), "Chat Messages library", false);
         }
         if (ImGui::IsItemHovered())
@@ -1897,19 +2022,9 @@ namespace
 
     void DrawMessages()
     {
-        if (!s_LoadMessages.empty())
-        {
-            for (const std::string& m : s_LoadMessages) ImGui::TextColored(kWarnColor, "%s", m.c_str());
-            if (ImGui::SmallButton("Dismiss")) s_LoadMessages.clear();
-            ImGui::Separator();
-        }
-        if (s_SaveFailed)
+        if (s_SaveFailed) // stays until a save works (the error window said why)
             ImGui::TextColored(kErrorColor, "Your macros couldn't be saved. Check the Nexus log. Retrying...");
-        if (!s_Status.empty() && ImGui::GetTime() < s_StatusUntil)
-        {
-            if (s_StatusIsInfo) ImGui::TextWrapped("%s", s_Status.c_str());
-            else ImGui::TextColored(kErrorColor, "%s", s_Status.c_str());
-        }
+        if (!s_Status.empty() && ImGui::GetTime() < s_StatusUntil) ImGui::TextWrapped("%s", s_Status.c_str());
         DrawUndoImport();
     }
 
@@ -1963,7 +2078,12 @@ void Ui::Init()
     s_Mumble = static_cast<Mumble::Data*>(g_Api->DataLink_Get(DL_MUMBLE_LINK));
     s_LoadMessages.clear();
     Storage::LoadMacros(s_Tree, s_LoadMessages);
-    for (const std::string& m : s_LoadMessages) LogF(LOGL_WARNING, "%s", m.c_str());
+    for (const std::string& m : s_LoadMessages)
+    {
+        LogF(LOGL_WARNING, "%s", m.c_str());
+        ShowError("Started the game (the addon loaded macros.json)", m);
+    }
+    s_LoadMessages.clear();
     s_Dirty = false;
 }
 
@@ -1992,6 +2112,7 @@ void Ui::Render()
     if (s_ShowMainWindow) DrawMainWindow();
     DrawImportWindow();
     DrawQuickMenuPopup();
+    DrawErrorWindow();
     UiFont::Pop();
     if (s_Dirty && ImGui::GetTime() >= s_SaveAt) SaveNow();
 }
