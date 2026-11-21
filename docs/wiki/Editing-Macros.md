@@ -80,7 +80,7 @@ row.
 
 Open **Text file link** in the macro editor, type a file name and click **Link**:
 
-- A name alone, like `callouts.txt`, goes in `<GW2>\addons\Chat Messages\links\`. A full path,
+- A name alone, like `callouts.txt`, goes in `<GW2>\addons\GW2_Chat_Messages\links\`. A full path,
   like `C:\Users\Me\Documents\raid.txt`, works too. The name must end in `.txt`.
 - If the file already has lines, they **replace** the macro's lines. If it doesn't exist (or is
   empty), it's created from the macro's lines.

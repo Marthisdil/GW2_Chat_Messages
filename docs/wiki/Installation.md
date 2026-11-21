@@ -45,5 +45,5 @@ Neither has a key by default. Your macro hotkeys are set in the addon itself (se
 
 - To update, replace the DLL. Your macros are kept, because they're stored in a separate folder
   (see [Files and data](Files-and-Data)).
-- To remove the addon, delete the DLL. Delete `<GW2>\addons\Chat Messages\` too if you don't want
+- To remove the addon, delete the DLL. Delete `<GW2>\addons\GW2_Chat_Messages\` too if you don't want
   to keep your macros.

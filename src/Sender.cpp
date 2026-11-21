@@ -307,7 +307,7 @@ namespace
         std::error_code ec;
         if (!std::filesystem::is_regular_file(file, ec))
         {
-            aError = "\"" + aRelPath + "\" wasn't found in <GW2>\\addons\\Chat Messages\\.";
+            aError = "\"" + aRelPath + "\" wasn't found in <GW2>\\addons\\GW2_Chat_Messages\\.";
             return false;
         }
         if (std::filesystem::file_size(file, ec) > kMaxTextFileBytes || ec)

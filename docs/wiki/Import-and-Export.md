@@ -5,7 +5,7 @@ preview first. Your library only changes when you click **Import**, and one impo
 
 ## Export
 
-Exports go to `<GW2>\addons\Chat Messages\exports\`. An existing file is never overwritten: a
+Exports go to `<GW2>\addons\GW2_Chat_Messages\exports\`. An existing file is never overwritten: a
 second export of the same name is saved as `Name (2).json`.
 
 - **Export all** (in the library's toolbar) saves your whole library as
@@ -41,7 +41,7 @@ You can import:
 
 Pick it in one of these ways:
 
-- Put it in `<GW2>\addons\Chat Messages\imports\` and click it in the list. **Open imports
+- Put it in `<GW2>\addons\GW2_Chat_Messages\imports\` and click it in the list. **Open imports
   folder** opens that folder in Windows Explorer; **Refresh** updates the list.
 - Type or paste a full path (Windows' "Copy as path" works, quotes and all) and click **Load**.
 - **Paste from clipboard**: an export someone copied for you, or raw text lines, which become

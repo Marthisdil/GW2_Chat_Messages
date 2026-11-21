@@ -1,6 +1,6 @@
 # Files and data
 
-Everything the addon saves is in `<GW2>\addons\Chat Messages\`. The addon creates this folder
+Everything the addon saves is in `<GW2>\addons\GW2_Chat_Messages\`. The addon creates this folder
 when it loads.
 
 | File | What it is |
@@ -28,7 +28,7 @@ it) and starts with an empty library. Your `macros.json.bak` may hold the previo
 
 ## Backups and moving to another PC
 
-Copy the whole `Chat Messages` folder, or use **Export all** and import the file on the other PC
+Copy the whole `GW2_Chat_Messages` folder, or use **Export all** and import the file on the other PC
 (see [Import and export](Import-and-Export)).
 
 ## Internet use

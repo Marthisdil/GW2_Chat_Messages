@@ -51,9 +51,9 @@ namespace
         CHECK(!CheckPath("bad?.txt").empty());
         CHECK(!CheckPath("a\"b.txt").empty());
 
-        const fs::path addon = fs::u8path("C:\\GW2\\addons\\Chat Messages");
-        CHECK(Resolve(addon, "callouts.txt") == fs::u8path("C:\\GW2\\addons\\Chat Messages\\links\\callouts.txt"));
-        CHECK(Resolve(addon, " raids/x.txt ") == fs::u8path("C:\\GW2\\addons\\Chat Messages\\links\\raids\\x.txt"));
+        const fs::path addon = fs::u8path("C:\\GW2\\addons\\GW2_Chat_Messages");
+        CHECK(Resolve(addon, "callouts.txt") == fs::u8path("C:\\GW2\\addons\\GW2_Chat_Messages\\links\\callouts.txt"));
+        CHECK(Resolve(addon, " raids/x.txt ") == fs::u8path("C:\\GW2\\addons\\GW2_Chat_Messages\\links\\raids\\x.txt"));
         CHECK(Resolve(addon, "D:\\notes\\x.txt") == fs::u8path("D:\\notes\\x.txt"));
         CHECK(SamePath(Resolve(addon, "Callouts.TXT"), Resolve(addon, "callouts.txt")));
         CHECK(!SamePath(Resolve(addon, "a.txt"), Resolve(addon, "b.txt")));

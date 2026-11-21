@@ -111,7 +111,7 @@ to the todo list", add it there (don't start building it). Move agreed items int
   `.vcxproj`.
 - `.github/workflows/build.yml`: CI builds Debug and Release, checks the `GetAddonDef` export,
   and uploads the DLL.
-- Addon data lives in `<GW2>\addons\Chat Messages\`. Nexus does not create this folder.
+- Addon data lives in `<GW2>\addons\GW2_Chat_Messages\`. Nexus does not create this folder.
 
 ## Nexus addon rules
 
