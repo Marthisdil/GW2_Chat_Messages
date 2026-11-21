@@ -15,7 +15,7 @@ Results so far (keep your notes in `docs\testing results.txt`; it isn't committe
 
 | Session | State | Notes |
 |---|---|---|
-| A1 | Passed (PR #15 build) | Re-check only the version line with a new build (it's now date-based). |
+| A1 | Passed (PR #15 build) | Re-check only the version and build stamp lines with a new build. |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text now wraps (PR #17) and errors open the error window (PR #18). Re-check those two points only, then go on to A3. |
 | A3 to O | Not run yet | New since the last build: O (trash bin), the counter in A4, J3b/J6 (import checkboxes, trash bin not exported or imported). |
 
@@ -52,11 +52,13 @@ describe what you saw even if nothing went wrong. A copy-paste template is at th
 
 ## A. Loading and the library
 
-**A1. Loading.** Start the game. In the Nexus log: `Loaded 2026.MM.DD.HHMM.Dev.` (the build's version) and no warnings. Right-click
-the DLL > Properties > Details: File version and Product version show the same text.
+**A1. Loading.** Start the game. In the Nexus log: `Loaded 2026.MM.DD.HHMM.Dev (build abc1234, 2026-MM-DD HH:MM UTC).`
+(the build's version and stamp; `+changes` after the commit if it was built with uncommitted
+edits) and no warnings. Right-click the DLL > Properties > Details: File version and Product
+version show the version, Comments shows the same stamp.
 The scroll icon is in the Nexus bar. Clicking it opens and closes the library; so does your
-library key. Nexus > Options > Addons > Chat Messages shows the version and an **Open macro
-library** button that works.
+library key. Nexus > Options > Addons > Chat Messages shows the version, the build stamp under it
+("Build abc1234, ..."), and an **Open macro library** button that works.
 
 **A2. Building the tree.** In the library:
 - **New folder** (toolbar) → name `Test`. In it, **New folder inside** five times, one inside the
@@ -363,7 +365,7 @@ note anything odd you saw there too.
 **N1. Looks and buttons.** In the library, make a second folder called `test` next to `Test`:
 an error pop-up opens over the name box with the error (wrapped, not cut off), "What you did:
 Created a folder named "test" in ...", **OK** and **Copy to clipboard**. Click Copy to
-clipboard ("Copied." shows), paste into Notepad: the version, time, what you did, the error and
+clipboard ("Copied." shows), paste into Notepad: the version with its build stamp, time, what you did, the error and
 "In game: ..." are there (paste it in your report). OK: back in the name box.
 
 **N2. Queue and the game.** Give macros `Say` and `Two` the hotkey Ctrl+F9, and two other macros
@@ -406,7 +408,7 @@ the bin stay, and the bin still shows until emptied. Tick it again. Delete `Bin 
 ## Report template
 
 ```
-Build: (date or commit)   Nexus version:   Game language:
+Build: (stamp from the log)   Nexus version:   Game language:
 A1  A2  A3  A4  A5  A6
 B1  B2  B3  B4 (what arrived):
 C1  C2 (did /w Name work without Tab?):

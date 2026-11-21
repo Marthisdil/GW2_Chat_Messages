@@ -20,6 +20,7 @@
 
 #include "imgui.h"
 
+#include "BuildStamp.h"
 #include "ChatLine.h"
 #include "ErrorReport.h"
 #include "Exchange.h"
@@ -238,7 +239,7 @@ namespace
         ImGui::SameLine();
         if (ImGui::Button("Copy to clipboard"))
         {
-            ImGui::SetClipboardText(ErrorReport::ToText(e, kVersionText).c_str());
+            ImGui::SetClipboardText(ErrorReport::ToText(e, std::string(kVersionText) + " (build " + BuildStamp::Text() + ")").c_str());
             s_ErrorCopiedUntil = ImGui::GetTime() + 3.0;
         }
         if (ImGui::IsItemHovered())
@@ -2466,6 +2467,7 @@ void Ui::Render()
 void Ui::RenderOptions()
 {
     ImGui::Text("Chat Messages %s", kVersionText);
+    ImGui::TextDisabled("Build %s", BuildStamp::Text());
     ImGui::TextDisabled("Your macros are saved in <GW2>\\addons\\GW2_Chat_Messages\\macros.json.");
     if (ImGui::Button("Open macro library")) s_ShowMainWindow = true;
     ImGui::Spacing();

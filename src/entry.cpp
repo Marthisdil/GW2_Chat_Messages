@@ -10,6 +10,7 @@
 
 #include "imgui.h"
 
+#include "BuildStamp.h"
 #include "Globals.h"
 #include "Hotkeys.h"
 #include "MapNames.h"
@@ -102,7 +103,7 @@ namespace
         g_Api->GUI_Register(RT_OptionsRender, AddonOptions);
         g_Api->GUI_RegisterCloseOnEscape(Ui::kMainWindowName, Ui::MainWindowOpenFlag());
 
-        LogF(LOGL_INFO, "Loaded %s.", kVersionText);
+        LogF(LOGL_INFO, "Loaded %s (build %s).", kVersionText, BuildStamp::Text());
     }
 
     void AddonUnload()

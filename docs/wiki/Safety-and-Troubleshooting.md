@@ -21,8 +21,8 @@ When something goes wrong, a small **Chat Messages: error** window opens with th
 you did to get it, and two buttons:
 
 - **OK** closes it. If more errors are waiting it says "Error 1 of 3", and OK shows the next.
-- **Copy to clipboard** copies the error for a bug report: the addon version, the time, what you
-  did, the error, and where you were in game.
+- **Copy to clipboard** copies the error for a bug report: the addon version and build stamp,
+  the time, what you did, the error, and where you were in game.
 
 Errors from a hotkey or the quick menu also show a Nexus alert, and their window opens without
 taking focus, so you can keep playing and read it later.

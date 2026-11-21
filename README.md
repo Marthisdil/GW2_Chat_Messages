@@ -78,6 +78,21 @@ msbuild GW2_Chat_Messages.sln /p:Configuration=Release /p:Platform=x64
 
 The DLL is written to `build\Release\GW2_Chat_Messages.dll`. Copy it into `<GW2>\addons\`.
 
+## Versioning
+
+Versions look like `2026.11.21.1412.Dev`: the year, month, day and time (24-hour, `HHMM`) the
+version was set, then the kind of build (`Dev` until the first full release, then `Beta` or
+`Rel`). **The date and the time are both UTC**, not local time: `1412` is 14:12 UTC (8:12 in US
+Central time), and an evening release in the Americas can carry the next day's date. The version
+is set once per release, so test builds made in between keep the same number. It's shown in the
+Nexus log and on the DLL's Properties > Details tab.
+
+Each build also carries a **build stamp**: the git commit it was built from (`+changes` if it had
+uncommitted edits) and the build time, also UTC, for example
+`build db84a1e, 2026-11-21 19:20 UTC`. It's in the Nexus log line, under the version on the
+addon's options page, in copied error reports and in the DLL's Properties (Comments), so two
+builds with the same version can be told apart.
+
 ## AI Disclosure
 
 This addon was built with the help of AI. Most of the code, design notes and documentation were

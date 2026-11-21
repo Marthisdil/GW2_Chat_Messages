@@ -61,8 +61,13 @@ to the todo list", add it there (don't start building it). Move agreed items int
 
 - `src/entry.cpp`: `GetAddonDef`, `AddonLoad`/`AddonUnload`, render/options/keybind callbacks.
   The addon `Signature` is `0x523CBA0E`. Never change it.
-- `src/Version.h`: the version (`YYYY.MM.DD.HHMM.Dev|Beta|Rel`, GMT), written by
+- `src/Version.h`: the version (`YYYY.MM.DD.HHMM.Dev|Beta|Rel`, date and time both UTC), written by
   `tools\set_version.ps1`; never edit it by hand. The `.rc` uses it for the DLL's version info.
+- `src/BuildStamp.*`: the build stamp (git short SHA, `+changes` for uncommitted edits, UTC build
+  time), from `BuildStampGen.h`, which `tools\build_stamp.ps1` writes into `build\obj\<config>\gen\`
+  before every build (a pre-build step in the `.vcxproj`; never committed). Shown in the Nexus log,
+  the options page, error reports and the DLL's Properties (Comments). Only `BuildStamp.cpp` and the
+  `.rc` include the generated header.
 - `src/Globals.h`: `g_Api`, the addon name, the version constants (from `Version.h`),
   and `LogF`.
 - `src/MacroTree.*`: the library data model (`Tree`, `Node` folder/macro, `Line`, channels) with the
@@ -142,7 +147,7 @@ to the todo list", add it there (don't start building it). Move agreed items int
 - `Paths_GetAddonDirectory(...)` returns the addon folder path, but Nexus does not create it.
 - Nexus has no "open my options" API and no shared GW2 API key (as of API v6).
 - The GitHub updater ships only the DLL, so assets (icons etc.) must be embedded as resources.
-- Versions are `YYYY.MM.DD.HHMM.Channel` (GMT; Channel `Dev` until initial development is done,
+- Versions are `YYYY.MM.DD.HHMM.Channel` (date and time both UTC; Channel `Dev` until initial development is done,
   then `Beta` or `Rel`). For every release run `tools\set_version.ps1 -Channel Dev` and commit
   `src/Version.h`. The GitHub release tag is the numbers only (`2026.11.21.1412`; Nexus ignores
   suffixed tags); Dev and Beta releases are GitHub pre-releases.
