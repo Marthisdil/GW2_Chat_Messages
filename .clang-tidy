@@ -1,0 +1,30 @@
+# clang-tidy checks for the security audit (docs/security-audit.md). clangd reads this too.
+# Bug-finding checks only; style checks are left out. Noisy checks that don't find bugs here
+# are turned off below, each with the reason.
+#   bugprone-easily-swappable-parameters: flags every function with two string parameters.
+#   bugprone-implicit-widening-of-multiplication-result: our size constants (4 * 1024 * 1024).
+#   clang-analyzer-optin.core.EnumCastOutOfRange: fires inside Microsoft's <filesystem>.
+#   bugprone-signed-bitwise: Win32 and ImGui flags are signed ints combined with |.
+#   bugprone-throwing-static-initialization: file-level containers and colours; their
+#     constructors don't throw in practice, and a DLL load failing on out-of-memory is fine.
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-implicit-widening-of-multiplication-result,
+  -bugprone-signed-bitwise,
+  -bugprone-throwing-static-initialization,
+  clang-analyzer-*,
+  -clang-analyzer-optin.core.EnumCastOutOfRange,
+  concurrency-*,
+  cert-err34-c,
+  cert-err52-cpp,
+  cert-err60-cpp,
+  cert-str34-c,
+  cppcoreguidelines-pro-type-member-init,
+  cppcoreguidelines-slicing,
+  misc-throw-by-value-catch-by-reference,
+  performance-move-const-arg
+# Our code only: src/ and tests/, never vendor/ or the system headers.
+HeaderFilterRegex: '.*[\\/](src|tests)[\\/].*'
+WarningsAsErrors: ''
