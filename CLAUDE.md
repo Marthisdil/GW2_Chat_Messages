@@ -12,6 +12,9 @@ repo is private and its wiki is off, so the pages are pushed to the wiki repo la
 link images as `../images/name.png`; when publishing, rewrite those to
 `https://raw.githubusercontent.com/Marthisdil/GW2_Chat_Messages/main/docs/images/name.png`.
 
+**Security reviews and `claude-security` scans:** read `docs/security-review.md` first (scope,
+untrusted inputs, patch rules; `vendor/` is out of scope).
+
 `docs/todo.md` collects ideas and brainstorming for later discussion. When the user says "add X
 to the todo list", add it there (don't start building it). Move agreed items into
 `docs/design.md`.
