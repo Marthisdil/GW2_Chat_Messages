@@ -9,12 +9,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Text file links:** in the macro editor, "Text file link" keeps a macro in step with a `.txt`
   file (one chat line per row), both ways. Edit the file in Notepad and the macro follows within
   a second; edit the macro and the file is rewritten. A name alone goes in
-  `<GW2>\addons\Chat Messages\links\`. Open file, Open folder, Unlink and Recreate the file
+  `<GW2>\addons\GW2_Chat_Messages\links\`. Open file, Open folder, Unlink and Recreate the file
   buttons. A deleted file is never recreated without asking, and a file that can't be read is
   never overwritten.
 - **Export:** "Export all" in the toolbar saves your whole library, and right-click > Export saves
   one folder or macro. Save as a `.json` file, a macro as a `.txt` file of raw lines, or copy
-  either to the clipboard. Files go to `<GW2>\addons\Chat Messages\exports\` and are never
+  either to the clipboard. Files go to `<GW2>\addons\GW2_Chat_Messages\exports\` and are never
   overwritten.
 - **Import:** a new Import window (toolbar "Import...", or right-click a folder > "Import into
   this folder...") reads a `.json` export, a `.txt` file (one macro), a folder of `.txt` files,
@@ -33,13 +33,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Map names in filters:** the map list in "Where it's active" shows names like
   "Queensdale (15)" instead of bare ids.
   - Names come from the official GW2 API (no API key) and are saved in
-    `<GW2>\addons\Chat Messages\maps.json`, so each map is only looked up once.
+    `<GW2>\addons\GW2_Chat_Messages\maps.json`, so each map is only looked up once.
 - While placeholders are being filled in, the status says "Preparing...".
 - **Placeholders:** type these in a message and they're filled in when it's sent:
   - `{time}` (like 21:05), `{hour}`, `{min}` and `{today}` (like Friday, 20.11.2026).
   - `{random}` (0 to 100), `{random max}` and `{random min max}`.
   - `{txt file}` sends a random line from a text file, and `{txt file 3}` sends its third line.
-    Text files go in `<GW2>\addons\Chat Messages\` (or a folder inside it). Use quotes for
+    Text files go in `<GW2>\addons\GW2_Chat_Messages\` (or a folder inside it). Use quotes for
     names with spaces: `{txt "my lines.txt"}`.
   - `{nexus}` is this addon's name and version.
   - Anything else in `{ }` is sent exactly as typed.
@@ -115,7 +115,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Expand all / collapse all. Open and closed folders are remembered.
   - Names are unique per folder (ignoring case), separately for folders and macros, up to 100
     characters.
-- **Saving:** the library is saved to `<GW2>\addons\Chat Messages\macros.json` shortly after each
+- **Saving:** the library is saved to `<GW2>\addons\GW2_Chat_Messages\macros.json` shortly after each
   change and when the addon unloads. The previous version is kept as `macros.json.bak`. If the file
   can't be read, it's kept under a new name (never overwritten) and the backup is loaded instead.
 - Project scaffolding: a Nexus addon that loads, with a Quick Access icon (a scroll) and an
@@ -125,6 +125,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Dear ImGui v1.80 and nlohmann/json as git submodules.
 - CI build on GitHub Actions. The Release DLL is available as a workflow artifact.
 - Design notes in `docs/design.md`.
+
+### Changed
+- The data folder is now `<GW2>\addons\GW2_Chat_Messages\`, named like the DLL (it was
+  `Chat Messages`). If you ran an earlier build, move that folder's files across.
 
 ### Fixed
 - When a send was refused because you were typing in chat, the addon could press Escape and close

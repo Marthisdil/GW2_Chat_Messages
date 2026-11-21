@@ -24,7 +24,7 @@ describe what you saw even if nothing went wrong. A copy-paste template is at th
 ## Before you start
 
 1. Build Release and copy `build\Release\GW2_Chat_Messages.dll` into `<GW2>\addons\`. If you had
-   an earlier build in game, back up `<GW2>\addons\Chat Messages\` first.
+   an earlier build in game, back up `<GW2>\addons\GW2_Chat_Messages\` first.
 2. In **Nexus > Options > Game Keybinds**, check that **Chat** matches your in-game chat key, and
    (for session E) **Squad Broadcast**. The addon uses these; it never guesses a key.
 3. In **Nexus > Options > Keybinds**, set keys for **Show/hide Chat Messages library** and **Open
@@ -71,7 +71,7 @@ library** button that works.
 
 **A5. Saving.** Close the game normally (or unload the addon in Nexus > Addons), start it again:
 the whole tree, every line, expanded folders and selection are as you left them.
-`<GW2>\addons\Chat Messages\` has `macros.json` and `macros.json.bak`.
+`<GW2>\addons\GW2_Chat_Messages\` has `macros.json` and `macros.json.bak`.
 
 **A6. A broken file.** Close the game. Open `macros.json` in Notepad, delete the first `{` and
 save. Start the game: the Nexus log says the file couldn't be read and the macros were restored
@@ -207,7 +207,7 @@ send it a few times, the roll stays 1-6. Note the date format as sent (question:
 in your Windows language, and is the format what you'd want?).
 
 **I2. Text files.** Put `names.txt` with three lines (one with an accent) in
-`<GW2>\addons\Chat Messages\`, saved as UTF-8. `{txt names.txt}` sends a random line;
+`<GW2>\addons\GW2_Chat_Messages\`, saved as UTF-8. `{txt names.txt}` sends a random line;
 `{txt names.txt 2}` the second one; accents arrive right. `{txt missing.txt}`: nothing is sent and
 the status says it wasn't found.
 
@@ -259,7 +259,7 @@ With the Import window open, hotkeys still work, and typing in its path box does
 Have Notepad ready. "Within a second" means after you save, not after you switch back.
 
 **K1. New file.** On `Two`, open **Text file link**, type `test.txt`, click **Link**:
-`<GW2>\addons\Chat Messages\links\test.txt` appears with `Two`'s lines, and the status says the
+`<GW2>\addons\GW2_Chat_Messages\links\test.txt` appears with `Two`'s lines, and the status says the
 file was created.
 
 **K2. Both ways.** **Open file**, add `/s from notepad` and save: within a second `Two` shows it

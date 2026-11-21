@@ -58,7 +58,7 @@ chat for you, from a hotkey, a menu or a button.
 4. Press **Send now**, set a hotkey in the macro editor, or right-click the scroll icon for the
    quick menu.
 
-Your macros are saved in `<GW2>\addons\Chat Messages\macros.json`.
+Your macros are saved in `<GW2>\addons\GW2_Chat_Messages\macros.json`.
 
 ## Documentation
 

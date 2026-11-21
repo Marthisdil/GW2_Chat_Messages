@@ -67,7 +67,7 @@ namespace
 
 fs::path Storage::AddonDir()
 {
-    const char* dir = g_Api ? g_Api->Paths_GetAddonDirectory(kAddonName) : nullptr;
+    const char* dir = g_Api ? g_Api->Paths_GetAddonDirectory(kDataFolder) : nullptr;
     if (!dir) return {};
     fs::path path = fs::u8path(dir);
     std::error_code ec;

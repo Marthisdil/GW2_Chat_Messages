@@ -495,7 +495,7 @@ namespace
         const std::string text = aAsText ? Exchange::ExportText(*aNodes.front()) : Exchange::ExportJsonText(aNodes);
         const std::filesystem::path file = Storage::FreeFile(dir, Exchange::FileNameFor(aName, aAsText ? ".txt" : ".json"));
         if (Storage::WriteText(file, text))
-            SetInfo("Exported to <GW2>\\addons\\Chat Messages\\exports\\" + file.filename().u8string());
+            SetInfo("Exported to <GW2>\\addons\\GW2_Chat_Messages\\exports\\" + file.filename().u8string());
         else SetStatus("The export couldn't be written. Check the Nexus log.");
     }
 
@@ -1253,7 +1253,7 @@ namespace
             ImGui::TextWrapped("Keep this macro in step with a .txt file, one chat line per row (like the Raw text "
                                "tab). Edit the file in Notepad and the macro follows; edit the macro here and the "
                                "file follows.");
-            ImGui::TextDisabled("A name alone goes in <GW2>\\addons\\Chat Messages\\links\\. A file that already "
+            ImGui::TextDisabled("A name alone goes in <GW2>\\addons\\GW2_Chat_Messages\\links\\. A file that already "
                                 "has lines replaces the macro's lines; otherwise it's created from them.");
             ImGui::SetNextItemWidth(-70.0f);
             const bool enter = InputString("##linkpath", "callouts.txt, or a full path", s_LinkPath, ImGuiInputTextFlags_EnterReturnsTrue);
@@ -1335,7 +1335,7 @@ namespace
                 ImGui::TextDisabled("%s", p.Description);
             }
             ImGui::Separator();
-            ImGui::TextDisabled("Text files go in <GW2>\\addons\\Chat Messages\\ (or a folder inside it).\n"
+            ImGui::TextDisabled("Text files go in <GW2>\\addons\\GW2_Chat_Messages\\ (or a folder inside it).\n"
                                 "Use \"quotes\" for names with spaces: {txt \"my lines.txt\"}.\n"
                                 "Anything else in { } is sent as typed. Chat links like [&BDAEAAA=] work as is.");
             ImGui::EndTooltip();
@@ -1632,7 +1632,7 @@ namespace
 
         ImGui::BeginChild("##imports", ImVec2(0.0f, 96.0f), true);
         if (s_ImportList.empty())
-            ImGui::TextDisabled("Put files in <GW2>\\addons\\Chat Messages\\imports\\ to see them here.");
+            ImGui::TextDisabled("Put files in <GW2>\\addons\\GW2_Chat_Messages\\imports\\ to see them here.");
         for (const std::filesystem::path& p : s_ImportList)
         {
             std::error_code ec;
@@ -1928,7 +1928,7 @@ void Ui::Render()
 void Ui::RenderOptions()
 {
     ImGui::Text("Chat Messages %s", kVersionText);
-    ImGui::TextDisabled("Your macros are saved in <GW2>\\addons\\Chat Messages\\macros.json.");
+    ImGui::TextDisabled("Your macros are saved in <GW2>\\addons\\GW2_Chat_Messages\\macros.json.");
     if (ImGui::Button("Open macro library")) s_ShowMainWindow = true;
     ImGui::Spacing();
     ImGui::TextWrapped("Quick menu: right-click the scroll icon in the Nexus bar, or set a key for "

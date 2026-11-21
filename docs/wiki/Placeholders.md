@@ -33,7 +33,7 @@ and in whisper recipients.
 
 ## Text files
 
-- Put text files in `<GW2>\addons\Chat Messages\`, or a folder inside it:
+- Put text files in `<GW2>\addons\GW2_Chat_Messages\`, or a folder inside it:
   `{txt "raid/callouts.txt"}`.
 - Files elsewhere on your PC can't be used. This keeps a shared macro from typing out your
   other files.

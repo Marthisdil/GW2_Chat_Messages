@@ -30,7 +30,7 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
   sort A–Z).
 - The 6-folder limit is checked on create, move and import. If moving a folder would push any of
   its descendants past level 6, the move is refused and the UI explains why.
-- Storage is `<GW2>\addons\Chat Messages\macros.json`, written via a temp file and then renamed.
+- Storage is `<GW2>\addons\GW2_Chat_Messages\macros.json`, written via a temp file and then renamed.
   A `macros.json.bak` of the previous version is kept.
 - Messages are limited to 199 characters each, after placeholders are filled in. This is the same
   limit bhm uses. The editor shows a live character count.
@@ -75,7 +75,7 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
     page: dot-separated path, numbers index arrays, like bhm; objects, lists and null are refused;
     http/https only, at most 512 KB, 3 s timeouts).
   - Map names: `src/MapNames.*` asks `https://api.guildwars2.com/v2/maps?ids=...&lang=en` (no API
-    key) and caches the names in `<GW2>\addons\Chat Messages\maps.json`. The current map is
+    key) and caches the names in `<GW2>\addons\GW2_Chat_Messages\maps.json`. The current map is
     looked up in the background whenever it changes; ids the API doesn't know aren't asked again
     for 5 minutes. A bad cache file is just rebuilt. The filter editor shows names instead of ids.
     English only until the multi-language UI (docs/todo.md).
@@ -83,7 +83,7 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
   - Differences from bhm, on purpose: an unknown `{word}` is sent as typed (bhm drops the whole
     line), and a known placeholder that fails stops the whole macro with a message (bhm silently
     drops that line).
-  - `{txt}` files must be inside `<GW2>\addons\Chat Messages\` (relative path, no `..`, no
+  - `{txt}` files must be inside `<GW2>\addons\GW2_Chat_Messages\` (relative path, no `..`, no
     drive), at most 1 MB, UTF-8. This keeps an imported macro from typing out other files.
   - Filled in on the sender's worker thread (`{map}` and `{json}` may wait on the network), before
     the plan is built, so the 199-unit check uses the real text and nothing is typed if a

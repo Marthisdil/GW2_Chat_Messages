@@ -10,6 +10,8 @@ extern AddonAPI_t* g_Api;
 
 constexpr const char* kAddonName  = "Chat Messages";
 constexpr const char* kLogChannel = "Chat Messages";
+// The data folder under <GW2>ddons\: named like the DLL (GW2_Chat_Messages.dll).
+constexpr const char* kDataFolder = "GW2_Chat_Messages";
 
 // Addon version: bump all of these together for every release (GetAddonDef uses the numbers,
 // the main window shows the text).
