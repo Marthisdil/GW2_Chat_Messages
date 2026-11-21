@@ -15,6 +15,9 @@ link images as `../images/name.png`; when publishing, rewrite those to
 **Security reviews and `claude-security` scans:** read `docs/security-review.md` first (scope,
 untrusted inputs, patch rules; `vendor/` is out of scope). How to run them (clang-tidy/clangd via
 `tools\run_audit.ps1`, claude-security, `/security-review`) is in `docs/security-audit.md`.
+Record every finding in `docs/security-findings.md` (next `SEC-` id; found date/time UTC, by
+what, severity, decision, status; when fixed, the PR, commit and first build; when released,
+the version). Never delete a finding: close it as Accepted or Not a bug with the reason.
 **When:** before a **major release** (first release, any Beta/Rel, a channel change, or a Dev
 release that changes an untrusted input or the input path: see that doc's table) run the full
 audit without asking, and hold the release until findings are fixed or accepted by the user.

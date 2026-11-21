@@ -40,7 +40,9 @@ The version is a date (`YYYY.MM.DD.HHMM.Channel`), so "major" and "minor" are de
    splits the code into parts, has research agents look for bugs and verifier agents vote on
    each one, and writes a report and a patch file per confirmed finding. It doesn't change your
    files: patches are separate files you choose to apply.
-4. Go through the results together (see "Reading the results").
+4. Go through the results together (see "Reading the results"), and record every finding
+   that isn't noise in [security-findings.md](security-findings.md): when it was found, the
+   decision and, later, the PR and build that fixed it.
 5. Fixes go on a `feature/security-<short-name>` branch, one finding per commit, with a test
    where the code has tests, then a PR as usual. Apply a claude-security patch with
    `git apply <file>.patch`, then build and run `tools\run_tests.ps1`.
@@ -57,7 +59,8 @@ The version is a date (`YYYY.MM.DD.HHMM.Channel`), so "major" and "minor" are de
 2. A security review of the diff: Claude Code's `/security-review` command reviews the
    pending changes on the current branch. Mention `docs/security-review.md` so it uses the
    project's scope and rules.
-3. Fix on the same branch before merging, or note why a finding is accepted.
+3. Fix on the same branch before merging, or note why a finding is accepted. Either way,
+   record it in [security-findings.md](security-findings.md).
 
 ## Reading the results
 
@@ -68,7 +71,8 @@ The version is a date (`YYYY.MM.DD.HHMM.Channel`), so "major" and "minor" are de
   example a check that clang-tidy can't see across functions. Don't silence a check in
   `.clang-tidy` for one case; use `// NOLINT(check-name): reason` on that line.
 - **Turn a check off** in `.clang-tidy` only when it's noise everywhere, with the reason in the
-  comment at the top of that file.
+  comment at the top of that file and a row in the "Tuning decisions" table of
+  [security-findings.md](security-findings.md).
 - clangd lines with `tweak: ... FAIL` are clangd testing its own refactorings, not problems in
   the code; `run_audit.ps1` leaves them out.
 - A claude-security patch is a suggestion: check it against `CLAUDE.md` (input safety rules, no
