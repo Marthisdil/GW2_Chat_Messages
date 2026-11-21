@@ -6,6 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Import, choose what to import:** every item in the Import preview has a checkbox. A folder's
+  checkbox takes everything inside it, a macro's just that macro; **Select all** and **Deselect
+  all** sit above the preview, and **Import selected** imports only what's ticked. Taken names are
+  marked **NAME TAKEN**, next to what will happen and the choice box.
+- **Trash bin counter:** the bin shows `Trash bin (folders/macros)`, e.g. `(1/4)`, counting
+  everything inside deleted folders.
+- **The trash bin isn't exported or imported:** exports never include it (the export message and
+  menus say so while the bin holds anything), and importing a whole `macros.json` leaves its bin
+  out, with a warning.
 - **Trash bin:** deleted folders and macros go to a **Trash bin** at the bottom of the library
   instead of being gone for good. Right-click an item there to restore it (back where it was;
   if its folder is gone, you choose to recreate the folders or put it at the top level) or to

@@ -402,6 +402,90 @@ namespace
 
         fs::remove_all(dir, ec);
     }
+
+    // Package: folder "Pack" > (macro "A", folder "Sub" > macro "B"), and macro "C" at the top.
+    struct SelPkg
+    {
+        Tree  t;
+        Node* pack = nullptr;
+        Node* a = nullptr;
+        Node* sub = nullptr;
+        Node* b = nullptr;
+        Node* c = nullptr;
+        SelPkg()
+        {
+            pack = t.AddFolder(nullptr, "Pack").Target;
+            a    = AddM(t, pack, "A", "a");
+            sub  = t.AddFolder(pack, "Sub").Target;
+            b    = AddM(t, sub, "B", "b");
+            c    = AddM(t, nullptr, "C", "c");
+        }
+    };
+
+    void TestSelection()
+    {
+        SelPkg k;
+        Options o;
+        CHECK(IsSelected(o, *k.pack) && IsSelected(o, *k.b));   // everything ticked at first
+
+        SetSelected(o, *k.pack, false);                          // a folder takes everything inside
+        CHECK(!IsSelected(o, *k.pack) && !IsSelected(o, *k.a) && !IsSelected(o, *k.sub) && !IsSelected(o, *k.b));
+        CHECK(IsSelected(o, *k.c));
+
+        SetSelected(o, *k.b, true);                              // one macro: its folders come too
+        CHECK(IsSelected(o, *k.b) && IsSelected(o, *k.sub) && IsSelected(o, *k.pack));
+        CHECK(!IsSelected(o, *k.a));
+        CHECK(IsPartlySelected(o, *k.pack) && !IsPartlySelected(o, *k.sub));
+
+        Tree lib;
+        Plan plan = BuildPlan(lib, lib.Root(), k.t, o);
+        CHECK(plan.NotSelected == 1);                            // A
+        CHECK(plan.NewFolders == 2 && plan.NewMacros == 2);      // Pack, Sub, B, C
+        CHECK(Apply(lib, lib.Root(), plan, o) == 4);
+        Node* pack = Child(lib.Root(), "Pack", ENodeType::Folder);
+        CHECK(pack && pack->Children.size() == 1 && pack->Children[0]->Name == "Sub");
+        CHECK(Child(lib.Root(), "C", ENodeType::Macro) != nullptr);
+
+        // Unticking the last ticked item inside a folder unticks the folder.
+        SetSelected(o, *k.b, false);
+        CHECK(!IsSelected(o, *k.sub) && !IsSelected(o, *k.pack));
+
+        // Select all / deselect all; nothing ticked = nothing to import.
+        SelectAll(o, k.t, false);
+        CHECK(!IsSelected(o, *k.c) && !IsSelected(o, *k.b));
+        Tree lib2;
+        Plan none = BuildPlan(lib2, lib2.Root(), k.t, o);
+        CHECK(none.Changes() == 0 && none.NotSelected == 5);
+        CHECK(none.Items.size() == 2 && none.Items[0].Children.size() == 2); // still listed, to tick
+        SelectAll(o, k.t, true);
+        CHECK(o.Unselected.empty());
+
+        // A not-selected item with a taken name isn't counted as a conflict.
+        Tree lib3;
+        lib3.AddMacro(nullptr, "C");
+        SetSelected(o, *k.c, false);
+        Plan p3 = BuildPlan(lib3, lib3.Root(), k.t, o);
+        CHECK(p3.Conflicts == 0);
+    }
+
+    void TestTrashNotImported()
+    {
+        Tree src;
+        MakeLibrary(src);
+        src.MoveToTrash(*src.Root().Children[1], "t"); // "Hello" to the bin
+        const std::string text = src.ToJson().dump();
+        Package p = FromJsonText(text);                // a whole macros.json, bin and all
+        CHECK(p.Ok());
+        CHECK(p.Items.Trash().empty());
+        CHECK(p.Items.Root().Children.size() == 1);   // only "Raids"
+        bool warned = false;
+        for (const std::string& w : p.Warnings) warned = warned || w.find("trash bin") != std::string::npos;
+        CHECK(warned);
+
+        // Exports never hold the bin: they're built from tree nodes.
+        const nlohmann::json ex = ExportJson({src.Root().Children[0].get()});
+        CHECK(!ex.contains("trash"));
+    }
 }
 
 void RunExchangeTests()
@@ -414,4 +498,6 @@ void RunExchangeTests()
     TestPlanConflicts();
     TestPlanDepth();
     TestFromPath();
+    TestSelection();
+    TestTrashNotImported();
 }

@@ -211,6 +211,27 @@ To decide when we discuss it:
   in the quick menu.
 - Must follow the Text size setting and fit in narrow windows (see `UiFont`).
 
+### Import a copy of someone's whole library (added 2026-11-21)
+
+Let the user import a copy of another player's addon file (their `macros.json`, as if they just
+sent it over), not only files made with Export.
+
+To look into:
+- Today the Import window already reads a whole `macros.json` as JSON (it has the same format as
+  an export, and its trash bin is left out). Check what's missing for this to be a clear,
+  first-class choice:
+  - an **Import a library file...** entry that says what it's for, and maybe accepts the
+    `.bak` file too;
+  - where the other player's library goes: into a new folder named after them (e.g. "From
+    Name"), the top level, or a folder the user picks; merging into the user's own folders could
+    be messy;
+  - their hotkeys: probably off by default ("Keep hotkeys" unticked), since they'd clash;
+  - link files and the trash bin are never taken (already the case);
+  - files saved by a newer version of the addon: warn and import what can be read (already
+    warned).
+- Whether to also take their `settings.json` (probably not: text size and the trash bin setting
+  are personal).
+
 ### Publish the wiki (reminder: do this once the repo is public)
 
 The usage docs are written in `docs/wiki/`. A private repo on GitHub's free plan can't have a

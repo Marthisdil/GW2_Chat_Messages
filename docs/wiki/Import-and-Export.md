@@ -1,7 +1,7 @@
 # Import and export
 
 Share macros with friends, move them to another PC, or keep a backup. An import always shows a
-preview first. Your library only changes when you click **Import**, and one import can be undone.
+preview first. Your library only changes when you click **Import selected**, and one import can be undone.
 
 ## Export
 
@@ -20,7 +20,8 @@ second export of the same name is saved as `Name (2).json`.
   - **Copy the lines as text** (macros only): the raw text, like the .txt file.
 
 [Text file links](Editing-Macros) are never exported or imported, because they're paths on your
-own PC.
+own PC. The [trash bin](The-Macro-Library) isn't exported either: while it holds anything, the
+export message and the Export menu remind you.
 
 <!-- screenshot: export-menu.png (docs/screenshots.md) -->
 > 📷 *Screenshot to come: the Export submenu.*
@@ -34,7 +35,8 @@ folder...**. The Import window has three steps.
 
 You can import:
 
-- a **.json** file exported by this addon (or a whole `macros.json`),
+- a **.json** file exported by this addon (or a whole `macros.json`; its trash bin isn't
+  imported, and the Import window says so),
 - a **.txt** file, which becomes one macro named after the file,
 - a **folder of .txt files**: the folder becomes a folder, each .txt file a macro, and
   sub-folders become sub-folders. Other files are ignored.
@@ -68,13 +70,22 @@ Pick it in one of these ways:
 ### 3. Check the preview
 
 The preview shows every folder and macro and what will happen to it: **new**, **new, as "Name
-(2)"**, **goes into the existing folder**, **replaces the existing one**, **skipped** or **left
-out**. A summary line counts them.
+(2)"**, **goes into the existing folder**, **replaces the existing one**, **skipped**, **left
+out** or **not selected**. A summary line counts them.
 
-Each item whose name is already taken has its own choice box, so you can decide one by one: for
-example replace one macro and keep both of another.
+Each item whose name is already taken is marked **NAME TAKEN** and has its own choice box, so you
+can decide one by one: for example replace one macro and keep both of another.
 
-Click **Import** to do it, or **Cancel**. Nothing has changed until you click **Import**.
+**Choose what to import:** every item has a checkbox, and everything is ticked at first.
+
+- A folder's checkbox ticks or unticks the folder with everything inside it.
+- A macro's checkbox is just that macro. Ticking a macro inside an unticked folder also ticks the
+  folders above it, so it has somewhere to go; the folder's other contents stay unticked.
+- A folder with only some of its contents ticked shows **[some]**, and brings only those.
+- **Select all** / **Deselect all** above the preview tick or untick everything.
+
+Click **Import selected** to import what's ticked, or **Cancel**. Nothing has changed until you
+click **Import selected**.
 
 <!-- screenshot: import-window.png (docs/screenshots.md) -->
 > 📷 *Screenshot to come: the Import window with its preview.*

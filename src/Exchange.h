@@ -10,6 +10,7 @@
 
 #include <filesystem>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -30,7 +31,7 @@ namespace Exchange
     // --- Export ---------------------------------------------------------------------------------
 
     // The export format: the same as macros.json, with these nodes at the top level. Link files
-    // are left out (they're paths on this PC).
+    // are left out (they're paths on this PC), and so is the trash bin (it isn't in the tree).
     nlohmann::json ExportJson(const std::vector<const Node*>& aNodes);
     std::string    ExportJsonText(const std::vector<const Node*>& aNodes); // pretty-printed
     // A macro as raw text, one line per row ("/s hi").
@@ -50,7 +51,8 @@ namespace Exchange
         bool Ok() const { return Error.empty(); }
     };
 
-    // Our export format or a whole macros.json.
+    // Our export format or a whole macros.json. A trash bin in it is never imported (a warning
+    // says so).
     Package FromJsonText(const std::string& aText);
     // Raw text (one row per chat line) as one macro called aName.
     Package FromRawText(const std::string& aName, const std::string& aText);
@@ -74,6 +76,7 @@ namespace Exchange
         Skipped,   // left out (with everything inside)
         TooDeep,   // a folder that would be nested past level 6: left out
         Flattened, // a folder that would be too deep: left out, its contents go one level up
+        NotSelected, // unticked in the preview: left out (with everything inside)
     };
 
     struct Options
@@ -83,7 +86,19 @@ namespace Exchange
         bool    Flatten        = false; // too-deep folders: flatten (true) or leave out (false)
         bool    KeepHotkeys    = true;
         std::map<const Node*, EChoice> PerItem; // overrides, keyed by the package's node
+        std::set<const Node*> Unselected;       // unticked in the preview, keyed by the package's node
     };
+
+    // --- Choosing what to import (the preview's checkboxes) ---
+    // Everything is ticked at first. Ticking or unticking a folder does the same to everything
+    // inside it. Ticking a macro (or folder) also ticks the folders above it, so it has somewhere
+    // to go; a folder whose contents are all unticked is unticked too (an empty folder keeps its own
+    // tick). A folder that's ticked imports only its ticked contents.
+    bool   IsSelected(const Options& aOptions, const Node& aNode);
+    void   SetSelected(Options& aOptions, const Node& aNode, bool aOn);
+    void   SelectAll(Options& aOptions, const Tree& aPackage, bool aOn);
+    // Whether a folder has both ticked and unticked items inside (shown as "some").
+    bool   IsPartlySelected(const Options& aOptions, const Node& aFolder);
 
     struct PlanItem
     {
@@ -99,6 +114,7 @@ namespace Exchange
     {
         std::vector<PlanItem> Items;
         size_t NewFolders = 0, NewMacros = 0, Merged = 0, Renamed = 0, Replaced = 0, Skipped = 0, TooDeep = 0;
+        size_t NotSelected = 0; // folders and macros unticked in the preview
         size_t Conflicts = 0;
 
         size_t Changes() const { return NewFolders + NewMacros + Replaced; }

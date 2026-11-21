@@ -206,9 +206,25 @@ namespace
                 Exchange::PlanItem item;
                 item.Src  = &src;
                 item.Name = src.Name;
-                if (src.IsFolder()) Folder(src, aDest, item);
+                if (Opt.Unselected.count(&src)) NotSelected(src, item);
+                else if (src.IsFolder()) Folder(src, aDest, item);
                 else Macro(src, aDest, item);
                 aItems.push_back(std::move(item));
+            }
+        }
+
+        // Unticked: left out. Its contents are listed too (also unticked), so one can be ticked.
+        void NotSelected(const Node& aSrc, Exchange::PlanItem& aItem)
+        {
+            aItem.Outcome = Exchange::EOutcome::NotSelected;
+            Out.NotSelected++;
+            for (const auto& c : aSrc.Children)
+            {
+                Exchange::PlanItem child;
+                child.Src  = c.get();
+                child.Name = c->Name;
+                NotSelected(*c, child);
+                aItem.Children.push_back(std::move(child));
             }
         }
 
@@ -355,6 +371,7 @@ namespace
             {
             case EOutcome::Skipped:
             case EOutcome::TooDeep:
+            case EOutcome::NotSelected:
                 continue;
             case EOutcome::Flattened:
                 ApplyItems(aTree, aDest, item.Children, aOpt, aCount);
@@ -476,6 +493,12 @@ namespace Exchange
         }
         for (std::string& w : warnings)
             if (w.find("new ids") == std::string::npos) p.Warnings.push_back(std::move(w)); // ids are always new on import
+        if (!p.Items.Trash().empty())
+        {
+            p.Warnings.push_back("Its trash bin (" + std::to_string(p.Items.Trash().size()) +
+                                 " item(s)) isn't imported: only its library is.");
+            p.Items.EmptyTrash();
+        }
         ClearLinkFiles(p.Items.Root());
         Finish(p);
         return p;
@@ -557,6 +580,55 @@ namespace Exchange
         case EChoice::Merge:   return "Merge";
         }
         return "";
+    }
+
+    bool IsSelected(const Options& aOptions, const Node& aNode) { return !aOptions.Unselected.count(&aNode); }
+
+    namespace
+    {
+        void SetSubtree(Options& aOptions, const Node& aNode, bool aOn)
+        {
+            if (aOn) aOptions.Unselected.erase(&aNode);
+            else aOptions.Unselected.insert(&aNode);
+            for (const auto& c : aNode.Children) SetSubtree(aOptions, *c, aOn);
+        }
+
+        bool AnySelectedInside(const Options& aOptions, const Node& aFolder)
+        {
+            for (const auto& c : aFolder.Children)
+                if (IsSelected(aOptions, *c)) return true;
+            return false;
+        }
+
+        bool AnyUnselectedInside(const Options& aOptions, const Node& aFolder)
+        {
+            for (const auto& c : aFolder.Children)
+                if (!IsSelected(aOptions, *c) || AnyUnselectedInside(aOptions, *c)) return true;
+            return false;
+        }
+    }
+
+    void SetSelected(Options& aOptions, const Node& aNode, bool aOn)
+    {
+        SetSubtree(aOptions, aNode, aOn);
+        // The folders above (the package's root has no parent and is never listed).
+        for (const Node* p = aNode.Parent; p && p->Parent; p = p->Parent)
+        {
+            if (aOn) aOptions.Unselected.erase(p);
+            else if (!AnySelectedInside(aOptions, *p)) aOptions.Unselected.insert(p);
+        }
+    }
+
+    void SelectAll(Options& aOptions, const Tree& aPackage, bool aOn)
+    {
+        aOptions.Unselected.clear();
+        if (!aOn)
+            for (const auto& c : aPackage.Root().Children) SetSubtree(aOptions, *c, false);
+    }
+
+    bool IsPartlySelected(const Options& aOptions, const Node& aFolder)
+    {
+        return aFolder.IsFolder() && IsSelected(aOptions, aFolder) && AnyUnselectedInside(aOptions, aFolder);
     }
 
     Plan BuildPlan(const Tree& aTree, const Node& aTarget, const Tree& aPackage, const Options& aOptions)

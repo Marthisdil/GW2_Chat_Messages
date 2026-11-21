@@ -41,7 +41,9 @@ Right-click any item in the tree for:
 ## Trash bin
 
 Deleted folders and macros go to the **Trash bin** at the bottom of the library tree, so a
-mistake can be undone. You can also drag an item onto the bin.
+mistake can be undone. You can also drag an item onto the bin. Its counter shows folders/macros:
+**Trash bin (1/4)** is 1 folder and 4 macros, counting everything inside deleted folders.
+The trash bin is never exported, and isn't imported from someone else's `macros.json`.
 
 - Click an item in the bin to see what it is, when it was deleted and where from. Items in the
   bin can't be sent, edited or used by a hotkey, and don't show in the quick menu.

@@ -632,6 +632,15 @@ namespace
     // Writes to <addon>\exports\ (never overwriting a file) or copies to the clipboard. Doesn't
     // change the tree, so it's safe from the tree's context menu.
 
+    std::string TrashNotExportedText(); // with the trash bin below
+
+    // " Items in the trash bin ... aren't exported." when the bin holds anything.
+    std::string WithTrashNote(const std::string& aText)
+    {
+        const std::string note = TrashNotExportedText();
+        return note.empty() ? aText : aText + " " + note;
+    }
+
     void ExportToFile(const std::vector<const Node*>& aNodes, const std::string& aName, bool aAsText)
     {
         const std::filesystem::path dir = Storage::ExportsDir();
@@ -643,7 +652,7 @@ namespace
         const std::string text = aAsText ? Exchange::ExportText(*aNodes.front()) : Exchange::ExportJsonText(aNodes);
         const std::filesystem::path file = Storage::FreeFile(dir, Exchange::FileNameFor(aName, aAsText ? ".txt" : ".json"));
         if (Storage::WriteText(file, text))
-            SetInfo("Exported to <GW2>\\addons\\GW2_Chat_Messages\\exports\\" + file.filename().u8string());
+            SetInfo(WithTrashNote("Exported to <GW2>\\addons\\GW2_Chat_Messages\\exports\\" + file.filename().u8string() + "."));
         else ShowError("Exported \"" + aName + "\" as a " + (aAsText ? ".txt" : ".json") + " file",
                        "The export couldn't be written. Check the Nexus log.");
     }
@@ -653,7 +662,8 @@ namespace
         if (aNodes.empty() || !aNodes.front()) return;
         const std::string text = aAsText ? Exchange::ExportText(*aNodes.front()) : Exchange::ExportJsonText(aNodes);
         ImGui::SetClipboardText(text.c_str());
-        SetInfo(aAsText ? "Copied the macro's lines to the clipboard." : "Copied to the clipboard. Paste it into the Import window to import it.");
+        SetInfo(aAsText ? std::string("Copied the macro's lines to the clipboard.")
+                        : WithTrashNote("Copied to the clipboard. Paste it into the Import window to import it."));
     }
 
     std::vector<const Node*> TopLevelNodes()
@@ -784,6 +794,12 @@ namespace
             if (aNode.IsMacro() && ImGui::MenuItem("Save as a .txt file")) ExportToFile(one, aNode.Name, true);
             if (ImGui::MenuItem("Copy to the clipboard")) ExportToClipboard(one, false);
             if (aNode.IsMacro() && ImGui::MenuItem("Copy the lines as text")) ExportToClipboard(one, true);
+            const std::string note = TrashNotExportedText();
+            if (!note.empty())
+            {
+                ImGui::Separator();
+                ImGui::TextColored(kWarnColor, "%s", note.c_str());
+            }
             ImGui::EndMenu();
         }
         if (aNode.IsFolder() && ImGui::MenuItem("Import into this folder..."))
@@ -872,6 +888,27 @@ namespace
         return aItem.Item->Name + " (folder" + (inside ? ", " + std::to_string(inside) + " inside" : std::string()) + ")";
     }
 
+    // Folders and macros in the bin, counting what's inside deleted folders.
+    void TrashCounts(size_t& aFolders, size_t& aMacros)
+    {
+        aFolders = aMacros = 0;
+        for (const TrashItem& t : s_Tree.Trash())
+        {
+            if (t.Item->IsFolder()) aFolders++;
+            else aMacros++;
+            Tree::CountDescendants(*t.Item, &aFolders, &aMacros);
+        }
+    }
+
+    // Added to export messages and menus while the bin holds anything.
+    std::string TrashNotExportedText()
+    {
+        if (s_Tree.Trash().empty()) return {};
+        size_t f = 0, m = 0;
+        TrashCounts(f, m);
+        return "Items in the trash bin (" + std::to_string(f) + "/" + std::to_string(m) + ") aren't exported.";
+    }
+
     void DrawTrashBin()
     {
         const auto& trash = s_Tree.Trash();
@@ -881,11 +918,14 @@ namespace
         if (trash.empty()) flags |= ImGuiTreeNodeFlags_Leaf;
         ImGui::SetNextItemOpen(s_TrashOpen && !trash.empty(), ImGuiCond_Always);
         ImGui::PushStyleColor(ImGuiCol_Text, kTrashColor);
-        const bool open = ImGui::TreeNodeEx("##trashbin", flags, "Trash bin (%zu)", trash.size());
+        size_t binFolders = 0, binMacros = 0;
+        TrashCounts(binFolders, binMacros);
+        const bool open = ImGui::TreeNodeEx("##trashbin", flags, "Trash bin (%zu/%zu)", binFolders, binMacros);
         ImGui::PopStyleColor();
         if (!trash.empty()) s_TrashOpen = open;
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Deleted folders and macros. Right-click an item to restore it,\nor right-click the bin to empty it.");
+            ImGui::SetTooltip("%zu folder(s) / %zu macro(s) in the bin, counting everything inside deleted folders.\n"
+                              "Right-click an item to restore it, or right-click the bin to empty it.", binFolders, binMacros);
         if (s_TrashOn && ImGui::BeginDragDropTarget())
         {
             if (const ImGuiPayload* p = ImGui::AcceptDragDropPayload(kDragPayload))
@@ -1948,6 +1988,7 @@ namespace
     void LoadImport(Exchange::Package aPkg)
     {
         s_ImportOpt.PerItem.clear(); // keyed by the old package's nodes
+        s_ImportOpt.Unselected.clear();
         if (!aPkg.Ok())
         {
             const std::string what = aPkg.Source.empty() ? std::string("it") : "\"" + aPkg.Source + "\"";
@@ -2031,16 +2072,34 @@ namespace
             case EOutcome::Skipped:   tag = "skipped"; color = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled); break;
             case EOutcome::TooDeep:   tag = "left out: folders would be nested more than 6 deep"; color = kErrorColor; break;
             case EOutcome::Flattened: tag = "folder left out (too deep); its contents move up a level"; color = kWarnColor; break;
+            case EOutcome::NotSelected: tag = "not selected"; color = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled); break;
             }
+            // Tick to import. A folder brings everything ticked inside it.
+            bool on = Exchange::IsSelected(s_ImportOpt, src);
+            if (ImGui::Checkbox("##sel", &on)) Exchange::SetSelected(s_ImportOpt, src, on);
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip(src.IsFolder() ? "Import this folder with everything ticked inside it.\nUntick to leave the whole folder out."
+                                                 : "Import this macro.");
+            ImGui::SameLine();
             const bool showChildren = src.IsFolder() && !item.Children.empty();
             ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth;
             if (!showChildren) flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen | (src.IsMacro() ? ImGuiTreeNodeFlags_Bullet : 0);
             ImGui::PushStyleColor(ImGuiCol_Text, src.IsFolder() ? kFolderColor : ImGui::GetStyleColorVec4(ImGuiCol_Text));
             const bool open = ImGui::TreeNodeEx("##item", flags, "%s", src.Name.c_str());
             ImGui::PopStyleColor();
+            if (Exchange::IsPartlySelected(s_ImportOpt, src))
+            {
+                ImGui::SameLine();
+                ImGui::TextDisabled("[some]");
+            }
+            if (item.Conflict && item.Outcome != EOutcome::NotSelected)
+            {
+                ImGui::SameLine();
+                ImGui::TextColored(kCountNearColor, "NAME TAKEN:");
+            }
             ImGui::SameLine();
             ImGui::TextColored(color, "(%s)", tag.c_str());
-            if (item.Conflict)
+            if (item.Conflict && item.Outcome != EOutcome::NotSelected)
             {
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(Px(170.0f));
@@ -2111,6 +2170,7 @@ namespace
         s_ShowImport = false;
         s_ImportPkg.reset();
         s_ImportOpt.PerItem.clear();
+        s_ImportOpt.Unselected.clear();
         s_ImportListStale = true;
     }
 
@@ -2185,8 +2245,15 @@ namespace
         if (plan.Replaced) summary += ", " + std::to_string(plan.Replaced) + " replaced";
         if (plan.Skipped)  summary += ", " + std::to_string(plan.Skipped) + " skipped";
         if (plan.TooDeep)  summary += ", " + std::to_string(plan.TooDeep) + " left out (too deep)";
+        if (plan.NotSelected) summary += ", " + std::to_string(plan.NotSelected) + " not selected";
         ImGui::TextWrapped("%s.", summary.c_str());
-        if (plan.Conflicts) ImGui::TextDisabled("%zu name(s) are already taken: choose for each one below.", plan.Conflicts);
+        if (plan.Conflicts)
+            ImGui::TextColored(kCountNearColor, "%zu name(s) are already taken (marked NAME TAKEN): choose what happens to each one below.", plan.Conflicts);
+        ImGui::TextDisabled("Tick what to import. A folder's tick brings everything inside it.");
+        UiFont::Row selRow;
+        if (ImGui::SmallButton("Select all")) Exchange::SelectAll(s_ImportOpt, s_ImportPkg->Items, true);
+        selRow.Next(UiFont::ButtonWidth("Deselect all"));
+        if (ImGui::SmallButton("Deselect all")) Exchange::SelectAll(s_ImportOpt, s_ImportPkg->Items, false);
 
         const float footer = ImGui::GetFrameHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y;
         ImGui::BeginChild("##preview", ImVec2(0.0f, -footer), true, ImGuiWindowFlags_HorizontalScrollbar);
@@ -2195,7 +2262,7 @@ namespace
 
         const bool canImport = plan.Changes() > 0;
         if (!canImport) ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
-        if (ImGui::Button("Import") && canImport)
+        if (ImGui::Button("Import selected") && canImport)
         {
             s_UndoImport = s_Tree.ToJson();
             const size_t n = Exchange::Apply(s_Tree, *target, plan, s_ImportOpt);
@@ -2207,6 +2274,8 @@ namespace
             CloseImport();
         }
         if (!canImport) ImGui::PopStyleVar();
+        if (!canImport && ImGui::IsItemHovered())
+            ImGui::SetTooltip(plan.NotSelected ? "Nothing ticked would be added or replaced." : "Nothing would be added or replaced.");
         ImGui::SameLine();
         if (ImGui::Button("Cancel")) CloseImport();
 
@@ -2277,7 +2346,11 @@ namespace
             else ExportToFile(TopLevelNodes(), "Chat Messages library", false);
         }
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Saves your whole library to the exports folder.\nRight-click a folder or macro to export just that.");
+        {
+            const std::string note = TrashNotExportedText();
+            ImGui::SetTooltip("Saves your whole library to the exports folder.\nRight-click a folder or macro to export just that.%s%s",
+                              note.empty() ? "" : "\n", note.c_str());
+        }
         row.Next(UiFont::ComboWidth("Text size"));
         UiFont::DrawCombo("Text size");
         if (ImGui::IsItemHovered())
