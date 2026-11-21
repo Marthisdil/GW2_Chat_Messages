@@ -17,7 +17,7 @@ Results so far (keep your notes in `docs\testing results.txt`; it isn't committe
 |---|---|---|
 | A1 | Passed (PR #15 build) | Re-check only the version line with a new build (it's now date-based). |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text now wraps (PR #17) and errors open the error window (PR #18). Re-check those two points only, then go on to A3. |
-| A3 to O | Not run yet | O (trash bin) and the counter in A4 are new. |
+| A3 to O | Not run yet | New since the last build: O (trash bin), the counter in A4, J3b/J6 (import checkboxes, trash bin not exported or imported). |
 
 **Errors since PR #18:** every refusal and error the checks below expect ("refused", "says
 why", "a message") now opens the **error window** instead of a red line under the editor. Click
@@ -269,10 +269,17 @@ and `exports\Say (2).json` appear and the status names the file. **Save as a .tx
 **J2. Import with conflicts.** Right-click the `Test` folder > Export > **Copy to the clipboard**.
 Then toolbar **Import...** > **Paste from clipboard**, with `Test`'s parent as the target. The
 preview shows `Test` as "goes into the existing folder" and the macros as conflicts. Set one to
-Replace and one to Skip, untick **Keep hotkeys**, and click **Import**. The result matches the
+Replace and one to Skip, untick **Keep hotkeys**, and click **Import selected**. The result matches the
 preview, and the imported macros have no hotkeys.
 
 **J3. Undo.** **Undo import**: the library is exactly as before (names, lines, hotkeys, filters).
+
+**J3b. Choosing items.** Copy `Test` to the clipboard again and paste it into the Import window.
+Every row has a checkbox, all ticked. Untick `Test`: everything inside unticks, rows say "not
+selected", and the summary counts them. Tick just `Say`: `Test` ticks again with "[some]", and
+only `Say` is ticked inside. Taken names show **NAME TAKEN** with their choice box. **Deselect
+all**: **Import selected** is greyed out. **Select all**, then untick one macro and click **Import
+selected**: everything but that macro arrives. **Undo import**.
 
 **J4. Files and folders.** Copy `Say.json` into `imports\` and open **Import...**: it's listed and
 loads when clicked. Make a folder in `imports\` with `.txt` files in two levels of sub-folders,
@@ -283,6 +290,12 @@ it loads.
 
 **J5. Focus.** **Open imports folder**: Explorer opens. Back in the game: keys and Tab work.
 With the Import window open, hotkeys still work, and typing in its path box doesn't trigger them.
+
+**J6. Trash bin stays out.** With something in the trash bin: right-click a folder > Export >
+the menu says items in the trash bin aren't exported; **Export all**'s tooltip and the message
+after exporting say the same. Then copy `macros.json` from the addon folder into `imports\` and
+open it in the Import window: a warning says its trash bin isn't imported, and the preview shows
+only the library. Cancel.
 
 ## K. Text file links
 
@@ -371,7 +384,7 @@ sub-folder `Sub` and a macro `Junk` (one line) inside `Sub`.
 
 **O1. Delete and restore.** Select `Junk`, click **Delete**: no question, it's gone from `Sub`, the
 message under the toolbar says it's in the trash bin, and **Trash bin (1)** at the bottom of the
-tree holds it. Click it: the details show when and where from, its line, and no editor. Its
+tree holds it, counted as **Trash bin (0/1)** (folders/macros). Click it: the details show when and where from, its line, and no editor. Its
 hotkey (give it one first, e.g. Ctrl+F11) does nothing and it's not in the quick menu.
 Right-click it > **Restore**: it's back in `Sub`, in its old place, and its hotkey works again.
 
@@ -403,7 +416,7 @@ F1  F2 (which mouse buttons, where):  F3  F4  F5  F6
 G1  G2  G3 (where did it appear?):
 H1  H2  H3  H4 (map: mode, map id):
 I1 (date format sent):  I2  I3  I4  I5  I6  I7
-J1  J2  J3  J4  J5
+J1  J2  J3  J3b  J4  J5  J6
 K1  K2  K3  K4  K5
 L1  L2
 M1 (entries and sizes):  M2  M3  M4  M5

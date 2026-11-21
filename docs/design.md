@@ -143,8 +143,9 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
   an item onto the bin) moves the item to the bin with no question, and says so under the
   toolbar. **Off:** Delete asks first and removes it for good, as before. Items already in the
   bin stay, and the bin stays visible, until it's emptied.
-- **Where:** a "Trash bin (N)" node at the bottom of the library tree, closed by default, newest
-  first. Each entry shows its name (folders: "(folder, N inside)") and, on hover, when it was
+- **Where:** a "Trash bin (F/M)" node at the bottom of the library tree (F folders / M macros,
+  counting everything inside deleted folders; the tooltip spells it out), closed by default,
+  newest first. Each entry shows its name (folders: "(folder, N inside)") and, on hover, when it was
   deleted and from where. Stored in `macros.json` under `"trash"` (left out when empty), each
   with the item, the ids and names of the folders it was in, its place there and the time.
 - **In the bin, an item can't be used:** it's out of the tree, so it can't be sent, edited, found
@@ -216,6 +217,19 @@ imported. A Replace keeps the existing item's id and place.)*
     level if the user chooses that.
   - Nothing is written until the user clicks **Import**. Import can be undone once (the `.bak`
     file).
+  - **Choosing items** (added 2026-11-21): every row has a checkbox, all ticked at first.
+    Ticking or unticking a folder does the same to everything inside it; ticking a macro also
+    ticks the folders above it. A folder whose contents are all unticked is unticked too, and a
+    folder with only some contents ticked shows "[some]" and imports just those. **Select all**
+    and **Deselect all** above the preview. Unticked items stay listed as "not selected" and
+    aren't counted as name conflicts. The button is **Import selected**. Rules in
+    `Exchange::SetSelected`/`SelectAll` (`Options::Unselected`), tested.
+  - Taken names are marked **NAME TAKEN** (yellow) next to the item, with what will happen and a
+    choice box.
+- **The trash bin is never exported or imported** (2026-11-21): exports are built from tree nodes,
+  so the bin isn't in them, and while the bin holds anything, export messages, the Export submenu
+  and the Export all tooltip say "Items in the trash bin (F/M) aren't exported". Importing a
+  whole `macros.json` drops its bin, with a warning in the Import window.
 
 ## Input safety (highest priority)
 
