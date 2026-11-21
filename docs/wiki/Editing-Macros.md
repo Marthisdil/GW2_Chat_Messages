@@ -63,8 +63,10 @@ Just a line in the current channel
 
 ## The 199-character limit
 
-GW2 chat takes at most 199 characters per message, counting the channel command. The editor
-shows the count for every line, and a line that's too long is refused. If a line has
+GW2 chat takes at most 199 characters per message, counting the channel command. Under each
+message box a counter shows `23/199 characters`. It turns **yellow from 150** and **bright red
+from 180**, so you see the limit coming. A line over 199 says "too long, this line won't be sent"
+and is refused. In Raw text the count is next to each row of **Will send**. If a line has
 placeholders, the count is shown with "~", because the real length is only known when it's sent.
 
 ## Chat links

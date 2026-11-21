@@ -42,5 +42,6 @@ namespace Storage
 
     // settings.json as an object; an empty object if it's missing or can't be read (logged).
     nlohmann::json LoadSettings();
+    bool SaveSetting(const char* aKey, const nlohmann::json& aValue); // reads, changes one key, writes
     bool SaveSettings(const nlohmann::json& aSettings);
 }

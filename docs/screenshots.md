@@ -38,7 +38,7 @@ changed gets a new description (and goes back to **Needed** if its picture is ou
 | 4 | `nexus-quick-access.png` | The Nexus Quick Access bar with the scroll icon, mouse over it so the tooltip shows. A small crop is fine. | Installation | Needed |
 | 5 | `nexus-game-keybinds.png` | Nexus > Options > Game Keybinds, showing the **Chat** (and **Squad Broadcast**) keys set. | Installation | Needed |
 | 6 | `tree-context-menu.png` | Right-click menu on a folder in the library tree (shows Export, Import into this folder, Sort...). | The macro library | Needed |
-| 7 | `macro-editor-lines.png` | The macro editor's **Lines** tab with 3-4 lines: a say line, a whisper with a recipient, a squad line with **Broadcast** ticked, and the character counts. | Editing macros | Needed |
+| 7 | `macro-editor-lines.png` | The macro editor's **Lines** tab with 3-4 lines: a say line, a whisper with a recipient, a squad line with **Broadcast** ticked, and the character counters under the message boxes (ideally one long line with a yellow counter). | Editing macros | Needed |
 | 8 | `macro-editor-raw.png` | The **Raw text** tab of the same macro, with the **Will send:** list under it. | Editing macros | Needed |
 | 9 | `send-status.png` | The editor after **Send now**, with the status line ("Sent 3 lines." or "Sending line 2 of 3..."). A successful send: errors now show in the error window instead. | Sending macros | Needed |
 | 10 | `hotkey-set.png` | The **Hotkey:** row of a macro with a hotkey set (e.g. Ctrl+F1), ideally showing the "Also set on" or plain-key warning. | Sending macros | Needed |
@@ -50,3 +50,4 @@ changed gets a new description (and goes back to **Needed** if its picture is ou
 | 16 | `link-file.png` | A macro's **Text file link** section opened, with a file linked ("In step") and the Open file / Open folder / Unlink buttons. | Editing macros | Needed |
 | 17 | `text-size.png` | The library window at the biggest text size, with the **Text size** dropdown (end of the toolbar) open. | The macro library | Needed |
 | 18 | `error-window.png` | The error window with "What you did" and the OK / Copy to clipboard buttons. Easiest: toolbar **Export all** with an empty library, or select a folder 6 levels deep and click **New folder**. (A duplicate name shows it as a pop-up over the name box, which works too.) | Safety and troubleshooting | Needed |
+| 19 | `trash-bin.png` | The library with the **Trash bin** opened at the bottom of the tree (two or three items, one a folder), one item selected so the details pane shows **Restore** / **Delete permanently...**. | The macro library | Needed |

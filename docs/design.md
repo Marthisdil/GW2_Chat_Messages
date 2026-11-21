@@ -132,6 +132,45 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
   sideways for names and rows that can't wrap.
 - Later (see `docs/todo.md`): more sizes than Nexus offers, from a font of our own.
 
+## Trash bin
+
+*(Built 2026-11-21 from the todo item; rules in `MacroTree` (`MoveToTrash`, `Restore`,
+`DeleteFromTrash`, `EmptyTrash`), tested in `tests/TrashTests.cpp`; UI in `Ui.cpp`.)*
+
+- **Setting:** "Use a trash bin for deleted folders and macros" on the addon's Nexus options page,
+  with a description under it. Saved as `trash_bin` in `settings.json`. **On by default.**
+- **On:** Delete (toolbar of the details pane, right-click > "Delete (to trash bin)", or dragging
+  an item onto the bin) moves the item to the bin with no question, and says so under the
+  toolbar. **Off:** Delete asks first and removes it for good, as before. Items already in the
+  bin stay, and the bin stays visible, until it's emptied.
+- **Where:** a "Trash bin (N)" node at the bottom of the library tree, closed by default, newest
+  first. Each entry shows its name (folders: "(folder, N inside)") and, on hover, when it was
+  deleted and from where. Stored in `macros.json` under `"trash"` (left out when empty), each
+  with the item, the ids and names of the folders it was in, its place there and the time.
+- **In the bin, an item can't be used:** it's out of the tree, so it can't be sent, edited, found
+  by a hotkey or the quick menu, or exported. Selecting it shows a read-only view (its lines, or
+  what a folder holds) with **Restore** and **Delete permanently...**.
+- **Restore** (button, or right-click the item): back into the folder it came from, at its old
+  place. If that folder is gone, a pop-up asks: **Recreate the folders** (by name, reusing any
+  that still exist, with their old ids where free) or **Put it at the top level**. A name already
+  taken there gets " (2)" etc., and the message says so. If restoring would nest folders more
+  than 6 deep, it's refused (error window) and stays in the bin; the top level always works.
+- **Delete permanently...** and right-click the bin > **Empty trash bin...** ask first ("can't
+  be undone").
+- No size or age limit: items stay until restored or deleted.
+- Undo import puts the bin back as it was before the import too (the whole library is restored).
+
+## Character counter
+
+*(Built 2026-11-21 from the todo item; levels in `ChatLine::LengthLevel`, tested in
+`tests/ChatLineTests.cpp`.)*
+
+- In the Lines editor the counter sits **under** each message box (the box now uses the full
+  width): `23/199 characters`. In Raw text it's next to each row of the "Will send" list.
+- It counts what's typed into chat, including the channel command (`/s `), as the game does.
+- Colours: grey; **yellow from 150**; **bright red from 180** ("nearly at the limit"); over 199
+  stays bright red with "too long, this line won't be sent". With placeholders it starts with "~".
+
 ## Error window
 
 *(Built 2026-11-21, from in-game testing; `src/ErrorReport.*` (queue and clipboard text, unit
@@ -283,3 +322,5 @@ policy and mention the behaviour when registering with Raidcore.
 8. Text size setting for the addon's windows (Nexus' fonts). *(done; not yet tested in game)*
 9. Error window: every error in its own window with OK and Copy to clipboard. *(done; not yet
    tested in game)*
+10. Trash bin (with its setting) and the character counter under the message box. *(done; not
+    yet tested in game)*

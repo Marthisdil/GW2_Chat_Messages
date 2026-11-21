@@ -44,4 +44,10 @@ namespace ChatLine
 
     // Length as the game counts it (UTF-16 code units of UTF-8 text).
     size_t Utf16Length(const std::string& aUtf8);
+
+    // The character counter's colour steps (docs/design.md, "Character counter").
+    constexpr size_t kLengthWarnAt  = 150; // yellow from here
+    constexpr size_t kLengthAlertAt = 180; // bright red from here
+    enum class ELengthLevel { Normal, Near, Close, Over };
+    ELengthLevel LengthLevel(size_t aLength);
 }

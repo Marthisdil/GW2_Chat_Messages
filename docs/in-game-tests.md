@@ -4,7 +4,7 @@ The unit tests cover the rules (tree, raw text, send plan, hotkeys, filters, pla
 import, link sync). These checks cover what only the game can tell us: whether GW2 takes our keys
 and text, and whether normal game input is ever disturbed.
 
-The checks are grouped into sessions (A to N) in the order to run them: each one builds on the
+The checks are grouped into sessions (A to O) in the order to run them: each one builds on the
 ones before. A whole pass takes about an hour. If the text is hard to read, do M1 first and
 pick a bigger size. Session B is the one that matters most: if it
 fails, most of the later sessions can't be run, so report it first.
@@ -17,7 +17,7 @@ Results so far (keep your notes in `docs\testing results.txt`; it isn't committe
 |---|---|---|
 | A1 | Passed (PR #15 build) | Re-check only the version line with a new build (it's now date-based). |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text now wraps (PR #17) and errors open the error window (PR #18). Re-check those two points only, then go on to A3. |
-| A3 to N | Not run yet | |
+| A3 to O | Not run yet | O (trash bin) and the counter in A4 are new. |
 
 **Errors since PR #18:** every refusal and error the checks below expect ("refused", "says
 why", "a message") now opens the **error window** instead of a red line under the editor. Click
@@ -69,8 +69,11 @@ library** button that works.
   all: each does what it says.
 - Drag a macro into another folder, and drag a folder into a folder: both move. Dragging a folder
   into its own sub-folder, or so that it would end up more than 6 deep, is refused.
-- Delete a folder with macros in it: it asks first, then removes the folder and its contents.
-  *Re-check: the pop-up's text about what's inside wraps and can be read in full.*
+- Delete a folder with macros in it: with the trash bin on (the default) it goes straight to
+  the **Trash bin** at the bottom of the tree (session O tests the bin). *Re-check the old
+  pop-up:* untick the trash bin in the addon's Nexus options, delete another folder with macros
+  in it: it asks first, its text about what's inside wraps and can be read in full, then it's
+  removed. Tick the trash bin again.
 
 **A3. The test macros.** In `Test`, create these (you'll use them in later sessions):
 
@@ -86,8 +89,10 @@ library** button that works.
 **A4. The line editor.** On `Two`:
 - Switch to **Raw text**: it shows `/m test map` and `/p test party`. Add a row `/sagen hallo`
   (German) and a row `/dire salut` (French); back in **Lines** they show as Say lines.
-- The character count on `Long` shows 199/199 (196 plus `/s `). Typing one more character shows
-  it over the limit (red). Remove that character again.
+- The counter is **under** each message box: `23/199 characters`. On `Long` it shows 199/199 (196
+  plus `/s `) in bright red. Delete characters: it's yellow from 150 to 179 and grey below 150
+  (question: are yellow and red easy to see in game?). Type one more than 199: it says "too long,
+  this line won't be sent". Put `Long` back to 196 characters.
 - **Add line** stops at 50 lines (try on a scratch macro, then delete it).
 
 **A5. Saving.** Close the game normally (or unload the addon in Nexus > Addons), start it again:
@@ -358,6 +363,33 @@ hotkeys back afterwards.
 **N3. Text size.** At the biggest text size the error window and its text get bigger and nothing
 is cut off.
 
+## O. Trash bin
+
+Turn on (if you turned it off) Nexus > Options > Addons > Chat Messages > **Use a trash bin for
+deleted folders and macros**, and read its description. Make a scratch folder `Bin test` with a
+sub-folder `Sub` and a macro `Junk` (one line) inside `Sub`.
+
+**O1. Delete and restore.** Select `Junk`, click **Delete**: no question, it's gone from `Sub`, the
+message under the toolbar says it's in the trash bin, and **Trash bin (1)** at the bottom of the
+tree holds it. Click it: the details show when and where from, its line, and no editor. Its
+hotkey (give it one first, e.g. Ctrl+F11) does nothing and it's not in the quick menu.
+Right-click it > **Restore**: it's back in `Sub`, in its old place, and its hotkey works again.
+
+**O2. Folder gone.** Delete `Junk`, then delete `Sub` too. In the bin, right-click `Sub` >
+**Delete permanently...** (it asks; confirm). Now restore `Junk`: a pop-up says its folder no
+longer exists. **Recreate the folders**: `Bin test > Sub > Junk` is back.
+Do it again and choose **Put it at the top level**: `Junk` is at the top level.
+
+**O3. Name taken and drag.** Make a new macro `Junk` in `Sub`, delete it, make another `Junk`
+there and restore the deleted one: it comes back as `Junk (2)` and the message says so. Drag a
+macro onto **Trash bin**: it's moved to the bin.
+
+**O4. Empty and saved.** Delete a couple of items, restart the game: they're still in the bin.
+Right-click the bin > **Empty trash bin...**: it asks, then the bin is empty.
+
+**O5. Turned off.** Untick the setting: Delete asks first and removes for good; items already in
+the bin stay, and the bin still shows until emptied. Tick it again. Delete `Bin test` when done.
+
 ## Report template
 
 ```
@@ -376,5 +408,6 @@ K1  K2  K3  K4  K5
 L1  L2
 M1 (entries and sizes):  M2  M3  M4  M5
 N1 (pasted text):  N2  N3
+O1  O2  O3  O4  O5   A4 colours easy to see?
 Nexus log warnings:
 ```

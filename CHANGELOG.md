@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Trash bin:** deleted folders and macros go to a **Trash bin** at the bottom of the library
+  instead of being gone for good. Right-click an item there to restore it (back where it was;
+  if its folder is gone, you choose to recreate the folders or put it at the top level) or to
+  delete it permanently; right-click the bin to empty it. Items in the bin can't be sent or used
+  by a hotkey. Turn it off with "Use a trash bin for deleted folders and macros" on the addon's
+  Nexus options page (on by default).
+- **Character counter under the message box:** each line shows `23/199 characters` below its
+  message, turning yellow from 150 and bright red from 180.
 - **Error window:** every error now opens a small window with the message, what you did to get
   it, an **OK** button and **Copy to clipboard**. The copy includes the addon version, the time,
   what you did, the error and where you were in game, ready for a bug report. Several errors

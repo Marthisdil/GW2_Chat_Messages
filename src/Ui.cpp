@@ -42,12 +42,18 @@ namespace
     constexpr const char* kDragPayload     = "CHATMSG_NODE";
     constexpr const char* kNamePopup       = "Name##chatmsg";
     constexpr const char* kDeletePopup     = "Delete?##chatmsg";
+    constexpr const char* kRestorePopup    = "Restore?##chatmsg";
+    constexpr const char* kPurgePopup      = "Delete permanently?##chatmsg";
+    constexpr const char* kTrashSetting    = "trash_bin";
     constexpr double      kSaveDelaySec    = 0.75; // batch quick edits (e.g. several expands) into one write
     constexpr double      kStatusShowSec   = 6.0;
 
     const ImVec4 kWarnColor  {1.00f, 0.80f, 0.35f, 1.0f};
     const ImVec4 kErrorColor {1.00f, 0.45f, 0.40f, 1.0f};
     const ImVec4 kFolderColor{0.88f, 0.86f, 0.70f, 1.0f};
+    const ImVec4 kTrashColor {0.62f, 0.62f, 0.62f, 1.0f};
+    const ImVec4 kCountNearColor {1.00f, 0.92f, 0.15f, 1.0f}; // character counter, 150+: yellow
+    const ImVec4 kCountCloseColor{1.00f, 0.20f, 0.20f, 1.0f}; // 180+ and over: bright red
 
     ImVec4 ChannelColorVec(EChannel aChannel); // defined with the macro editor
 
@@ -76,8 +82,17 @@ namespace
 
     uint64_t s_DeleteId = 0;
 
+    // Trash bin (docs/design.md, "Trash bin"). Items are selected by the id of their top node.
+    bool     s_TrashOn    = true;  // settings.json "trash_bin"; off = Delete removes for good
+    bool     s_TrashOpen  = false; // the bin's tree node
+    uint64_t s_TrashSelId = 0;     // selected bin item (shown when nothing in the tree is selected)
+    uint64_t s_RestoreId  = 0;     // restore pop-up: its folder is gone
+    uint64_t s_PurgeId    = 0;     // delete-permanently pop-up (0 with s_PurgeAll = empty the bin)
+    bool     s_PurgeAll   = false;
+
     // Requests raised while drawing the tree, handled after it (never change the tree mid-draw).
-    enum class EAction { None, Move, Shift, Sort, OpenName, OpenDelete, ExpandAll };
+    enum class EAction { None, Move, Shift, Sort, OpenName, OpenDelete, ExpandAll,
+                         Trash, OpenRestore, RestoreNow, OpenPurge, OpenEmpty };
     struct Action
     {
         EAction  Type   = EAction::None;
@@ -783,7 +798,7 @@ namespace
             if (ImGui::MenuItem("Collapse all inside")) s_Pending = {EAction::ExpandAll, aNode.Id, 0, EDrop::Into, 0, ENameMode::NewFolder, false};
         }
         ImGui::Separator();
-        if (ImGui::MenuItem("Delete...")) s_Pending = {EAction::OpenDelete, aNode.Id};
+        if (ImGui::MenuItem(s_TrashOn ? "Delete (to trash bin)" : "Delete...")) s_Pending = {EAction::OpenDelete, aNode.Id};
         ImGui::EndPopup();
     }
 
@@ -846,17 +861,231 @@ namespace
         ImGui::PopID();
     }
 
+    // --- Trash bin -------------------------------------------------------------------------------
+    // Shown under the tree while it's turned on, or while it still holds items. Drawing it never
+    // changes the tree: restore and delete go through s_Pending.
+
+    std::string TrashItemLabel(const TrashItem& aItem)
+    {
+        if (!aItem.Item->IsFolder()) return aItem.Item->Name;
+        const size_t inside = Tree::CountDescendants(*aItem.Item);
+        return aItem.Item->Name + " (folder" + (inside ? ", " + std::to_string(inside) + " inside" : std::string()) + ")";
+    }
+
+    void DrawTrashBin()
+    {
+        const auto& trash = s_Tree.Trash();
+        if (!s_TrashOn && trash.empty()) return;
+        ImGui::Spacing();
+        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+        if (trash.empty()) flags |= ImGuiTreeNodeFlags_Leaf;
+        ImGui::SetNextItemOpen(s_TrashOpen && !trash.empty(), ImGuiCond_Always);
+        ImGui::PushStyleColor(ImGuiCol_Text, kTrashColor);
+        const bool open = ImGui::TreeNodeEx("##trashbin", flags, "Trash bin (%zu)", trash.size());
+        ImGui::PopStyleColor();
+        if (!trash.empty()) s_TrashOpen = open;
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Deleted folders and macros. Right-click an item to restore it,\nor right-click the bin to empty it.");
+        if (s_TrashOn && ImGui::BeginDragDropTarget())
+        {
+            if (const ImGuiPayload* p = ImGui::AcceptDragDropPayload(kDragPayload))
+                if (p->DataSize == sizeof(uint64_t))
+                {
+                    uint64_t id;
+                    std::memcpy(&id, p->Data, sizeof(id));
+                    s_Pending = {EAction::Trash, id};
+                }
+            ImGui::EndDragDropTarget();
+        }
+        if (ImGui::BeginPopupContextItem("##trashctx"))
+        {
+            if (ImGui::MenuItem("Empty trash bin...", nullptr, false, !trash.empty())) s_Pending = {EAction::OpenEmpty};
+            ImGui::EndPopup();
+        }
+        if (!open) return;
+
+        const bool showSel = !s_Tree.Find(s_SelectedId);
+        for (const TrashItem& t : trash)
+        {
+            const uint64_t id = t.Item->Id;
+            ImGui::PushID(static_cast<int>(id ^ (id >> 32)));
+            ImGui::PushID(static_cast<int>(id & 0xFFFFFFFF));
+            ImGuiTreeNodeFlags f = ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Leaf |
+                                   ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_Bullet;
+            if (showSel && id == s_TrashSelId) f |= ImGuiTreeNodeFlags_Selected;
+            ImGui::PushStyleColor(ImGuiCol_Text, kTrashColor);
+            ImGui::TreeNodeEx("##trashitem", f, "%s", TrashItemLabel(t).c_str());
+            ImGui::PopStyleColor();
+            if (ImGui::IsItemClicked()) { s_TrashSelId = id; s_SelectedId = 0; }
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Deleted %s from %s", t.DeletedAt.c_str(), Tree::FromPathText(t).c_str());
+            if (ImGui::BeginPopupContextItem("##trashitemctx"))
+            {
+                s_TrashSelId = id;
+                s_SelectedId = 0;
+                if (ImGui::MenuItem("Restore")) s_Pending = {EAction::OpenRestore, id};
+                if (ImGui::MenuItem("Delete permanently...")) s_Pending = {EAction::OpenPurge, id};
+                ImGui::EndPopup();
+            }
+            ImGui::PopID();
+            ImGui::PopID();
+        }
+        ImGui::TreePop();
+    }
+
+    // Moves a tree item to the bin, or opens the old "can't be undone" pop-up when the bin is off.
+    void DeleteItem(Node& aNode)
+    {
+        if (!s_TrashOn)
+        {
+            s_DeleteId = aNode.Id;
+            ImGui::OpenPopup(kDeletePopup);
+            return;
+        }
+        if (Node* sel = s_Tree.Find(s_SelectedId))
+            if (sel == &aNode || Tree::IsAncestorOf(aNode, *sel)) s_SelectedId = 0;
+        const std::string name = aNode.Name;
+        const uint64_t id = aNode.Id;
+        if (s_Tree.MoveToTrash(aNode, NowText().substr(0, 16)).Ok)
+        {
+            if (s_SelectedId == 0) s_TrashSelId = id;
+            MarkDirty();
+            SetInfo("Moved \"" + name + "\" to the trash bin. Right-click it there to restore it.");
+        }
+    }
+
+    void RestoreItem(uint64_t aId, ERestoreTo aTo)
+    {
+        const int idx = s_Tree.TrashIndexOf(aId);
+        if (idx < 0) return;
+        const std::string name = s_Tree.Trash()[static_cast<size_t>(idx)].Item->Name;
+        Result r = s_Tree.Restore(static_cast<size_t>(idx), aTo);
+        if (!r.Ok)
+        {
+            const char* how = aTo == ERestoreTo::TopLevel ? " to the top level" : aTo == ERestoreTo::RecreateFolders ? " (recreating its folders)" : "";
+            ShowError("Restored \"" + name + "\" from the trash bin" + how, r.Error);
+            return;
+        }
+        s_SelectedId = r.Target ? r.Target->Id : 0;
+        s_TrashSelId = 0;
+        MarkDirty();
+        SetInfo(r.Note.empty() ? "Restored \"" + name + "\" to " + (r.Target ? PathOf(*r.Target) : std::string("the library")) + "." : r.Note);
+    }
+
+    void DrawTrashDetails(const TrashItem& aItem)
+    {
+        const Node& n = *aItem.Item;
+        ImGui::TextDisabled("%s in the trash bin", n.IsFolder() ? "Folder" : "Macro");
+        ImGui::TextWrapped("%s", n.Name.c_str());
+        ImGui::TextDisabled("Deleted %s from %s", aItem.DeletedAt.c_str(), Tree::FromPathText(aItem).c_str());
+        const int idx = s_Tree.TrashIndexOf(n.Id);
+        if (idx >= 0 && !s_Tree.OriginalFolderExists(static_cast<size_t>(idx)))
+            ImGui::TextColored(kWarnColor, "That folder no longer exists. Restoring asks where to put it.");
+        UiFont::Row row;
+        if (ImGui::SmallButton("Restore")) s_Pending = {EAction::OpenRestore, n.Id};
+        row.Next(UiFont::ButtonWidth("Delete permanently..."));
+        if (ImGui::SmallButton("Delete permanently...")) s_Pending = {EAction::OpenPurge, n.Id};
+        ImGui::Separator();
+        ImGui::TextWrapped("Items in the trash bin can't be sent, edited or used by a hotkey. Restore it first.");
+        ImGui::Spacing();
+        if (n.IsFolder())
+        {
+            size_t folders = 0, macros = 0;
+            Tree::CountDescendants(n, &folders, &macros);
+            ImGui::Text("Contains %zu folder(s) and %zu macro(s)", folders, macros);
+        }
+        else
+        {
+            if (n.Lines.empty()) ImGui::TextDisabled("No lines.");
+            for (const Line& l : n.Lines) ImGui::TextColored(ChannelColorVec(l.Channel), "%s", ChatLine::TypedText(l).c_str());
+            if (!n.Hotkey.Empty()) ImGui::TextDisabled("Hotkey (not active in the bin): %s", Hotkey::ToString(n.Hotkey).c_str());
+        }
+    }
+
+    void DrawRestorePopup()
+    {
+        ImGui::SetNextWindowSize(ImVec2(Px(420.0f), 0.0f), ImGuiCond_Always);
+        if (!ImGui::BeginPopupModal(kRestorePopup, nullptr, ImGuiWindowFlags_NoResize)) return;
+        const int idx = s_Tree.TrashIndexOf(s_RestoreId);
+        if (idx < 0)
+        {
+            ImGui::CloseCurrentPopup();
+            ImGui::EndPopup();
+            return;
+        }
+        const TrashItem& t = s_Tree.Trash()[static_cast<size_t>(idx)];
+        ImGui::PushTextWrapPos(0.0f);
+        ImGui::TextWrapped("\"%s\" came from \"%s\", which no longer exists.", t.Item->Name.c_str(), Tree::FromPathText(t).c_str());
+        ImGui::TextWrapped("Where should it go?");
+        ImGui::Spacing();
+        // Restoring happens after the pop-up closes, so an error can be shown in the error window.
+        UiFont::Row row;
+        if (ImGui::Button("Recreate the folders"))
+        {
+            s_Pending = {EAction::RestoreNow, s_RestoreId, 0, EDrop::Into, static_cast<int>(ERestoreTo::RecreateFolders)};
+            ImGui::CloseCurrentPopup();
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Makes the missing folders again (by name) and puts it back inside.");
+        row.Next(UiFont::ButtonWidth("Put it at the top level"));
+        if (ImGui::Button("Put it at the top level"))
+        {
+            s_Pending = {EAction::RestoreNow, s_RestoreId, 0, EDrop::Into, static_cast<int>(ERestoreTo::TopLevel)};
+            ImGui::CloseCurrentPopup();
+        }
+        row.Next(UiFont::ButtonWidth("Cancel"));
+        if (ImGui::Button("Cancel")) ImGui::CloseCurrentPopup();
+        ImGui::PopTextWrapPos();
+        ImGui::EndPopup();
+    }
+
+    void DrawPurgePopup()
+    {
+        ImGui::SetNextWindowSize(ImVec2(Px(400.0f), 0.0f), ImGuiCond_Always);
+        if (!ImGui::BeginPopupModal(kPurgePopup, nullptr, ImGuiWindowFlags_NoResize)) return;
+        const int idx = s_PurgeAll ? -1 : s_Tree.TrashIndexOf(s_PurgeId);
+        if ((s_PurgeAll && s_Tree.Trash().empty()) || (!s_PurgeAll && idx < 0))
+        {
+            ImGui::CloseCurrentPopup();
+            ImGui::EndPopup();
+            return;
+        }
+        ImGui::PushTextWrapPos(0.0f);
+        if (s_PurgeAll)
+            ImGui::TextWrapped("Empty the trash bin? Its %zu item(s) are deleted for good.", s_Tree.Trash().size());
+        else
+        {
+            const TrashItem& t = s_Tree.Trash()[static_cast<size_t>(idx)];
+            ImGui::TextWrapped("Delete \"%s\" permanently?", t.Item->Name.c_str());
+            if (t.Item->IsFolder() && !t.Item->Children.empty())
+                ImGui::TextColored(kWarnColor, "Everything inside it is deleted too: %zu item(s).", Tree::CountDescendants(*t.Item));
+        }
+        ImGui::TextDisabled("This can't be undone.");
+        if (ImGui::Button(s_PurgeAll ? "Empty" : "Delete", Px(100.0f, 0.0f)))
+        {
+            if (s_PurgeAll) s_Tree.EmptyTrash();
+            else s_Tree.DeleteFromTrash(static_cast<size_t>(idx));
+            if (s_Tree.TrashIndexOf(s_TrashSelId) < 0) s_TrashSelId = 0;
+            MarkDirty();
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", Px(100.0f, 0.0f))) ImGui::CloseCurrentPopup();
+        ImGui::PopTextWrapPos();
+        ImGui::EndPopup();
+    }
+
     void DrawTree()
     {
         s_DragError.clear();
         for (auto& child : s_Tree.Root().Children) DrawNode(*child);
+        DrawTrashBin();
 
         // The empty space below the tree: drop here to move to the end of the top level,
         // click here to clear the selection.
         ImVec2 avail = ImGui::GetContentRegionAvail();
         if (avail.y < Px(24.0f)) avail.y = Px(24.0f);
         ImGui::InvisibleButton("##tree_end", ImVec2(avail.x > 1.0f ? avail.x : 1.0f, avail.y));
-        if (ImGui::IsItemClicked()) s_SelectedId = 0;
+        if (ImGui::IsItemClicked()) { s_SelectedId = 0; s_TrashSelId = 0; }
         if (ImGui::BeginDragDropTarget())
         {
             const ImGuiPayload* peek = ImGui::GetDragDropPayload();
@@ -916,8 +1145,33 @@ namespace
             OpenNamePopup(a.Name, a.Target);
             break;
         case EAction::OpenDelete:
-            s_DeleteId = a.Id;
-            ImGui::OpenPopup(kDeletePopup);
+        case EAction::Trash:
+            if (Node* node = s_Tree.Find(a.Id))
+            {
+                if (a.Type == EAction::Trash && !s_TrashOn) break;
+                DeleteItem(*node);
+            }
+            break;
+        case EAction::OpenRestore:
+        {
+            const int idx = s_Tree.TrashIndexOf(a.Id);
+            if (idx < 0) break;
+            if (s_Tree.OriginalFolderExists(static_cast<size_t>(idx))) RestoreItem(a.Id, ERestoreTo::Original);
+            else
+            {
+                s_RestoreId = a.Id;
+                ImGui::OpenPopup(kRestorePopup);
+            }
+            break;
+        }
+        case EAction::RestoreNow:
+            RestoreItem(a.Id, static_cast<ERestoreTo>(a.Delta));
+            break;
+        case EAction::OpenPurge:
+        case EAction::OpenEmpty:
+            s_PurgeAll = a.Type == EAction::OpenEmpty;
+            s_PurgeId  = a.Id;
+            ImGui::OpenPopup(kPurgePopup);
             break;
         }
     }
@@ -998,7 +1252,7 @@ namespace
         {
             ImGui::TextWrapped("Delete the macro \"%s\"?", node->Name.c_str());
         }
-        ImGui::TextDisabled("This can't be undone.");
+        ImGui::TextDisabled("This can't be undone. (Turn on the trash bin in the addon's Nexus options to make deleting undoable.)");
 
         if (ImGui::Button("Delete", Px(100.0f, 0.0f)))
         {
@@ -1073,22 +1327,25 @@ namespace
     }
 
     // Room to leave on the right of a message box for its LengthLabel.
-    float LengthLabelWidth()
-    {
-        return UiFont::TextWidth("~199/199") + ImGui::GetStyle().ItemSpacing.x * 2.0f;
-    }
-
-    // "12/199" after a message, red when too long. Returns the length.
-    void LengthLabel(const Line& aLine)
+    // The character counter: "23/199" (with " characters" and a warning when aLong), grey, then
+    // yellow from 150, bright red from 180 (ChatLine::LengthLevel). Placeholders make it "~".
+    void LengthLabel(const Line& aLine, bool aLong = false)
     {
         const std::string typed = ChatLine::TypedText(aLine);
         const size_t len = ChatLine::Utf16Length(typed);
         const bool placeholders = Placeholders::HasPlaceholders(typed);
+        const ChatLine::ELengthLevel level = ChatLine::LengthLevel(len);
+        const char* tail = !aLong ? ""
+                         : level == ChatLine::ELengthLevel::Over ? " characters: too long, this line won't be sent"
+                         : level == ChatLine::ELengthLevel::Close ? " characters: nearly at the limit"
+                                                                  : " characters";
         // With placeholders the final length is only known when sending: show it as approximate.
-        if (len > ChatLine::kMaxChatLength && !placeholders)
-            ImGui::TextColored(kErrorColor, "%zu/%zu", len, ChatLine::kMaxChatLength);
+        const char* approx = placeholders ? "~" : "";
+        if (level == ChatLine::ELengthLevel::Normal)
+            ImGui::TextDisabled("%s%zu/%zu%s", approx, len, ChatLine::kMaxChatLength, tail);
         else
-            ImGui::TextDisabled("%s%zu/%zu", placeholders ? "~" : "", len, ChatLine::kMaxChatLength);
+            ImGui::TextColored(level == ChatLine::ELengthLevel::Near ? kCountNearColor : kCountCloseColor,
+                               "%s%zu/%zu%s", approx, len, ChatLine::kMaxChatLength, tail);
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Characters typed into chat, including the channel command.\n"
                               "Chat allows at most %zu. Longer lines won't be sent.%s", ChatLine::kMaxChatLength,
@@ -1144,10 +1401,9 @@ namespace
             row.Next(UiFont::ButtonWidth("Remove"));
             if (ImGui::SmallButton("Remove")) removeAt = i;
 
-            ImGui::SetNextItemWidth(-LengthLabelWidth());
+            ImGui::SetNextItemWidth(-1.0f);
             if (InputString("##msg", "Message", l.Message)) MarkDirty();
-            ImGui::SameLine();
-            LengthLabel(l);
+            LengthLabel(l, true); // under the message box
             LineWarnings(l);
 
             ImGui::PopID();
@@ -1520,6 +1776,12 @@ namespace
         Node* node = s_Tree.Find(s_SelectedId);
         if (!node)
         {
+            const int ti = s_Tree.TrashIndexOf(s_TrashSelId);
+            if (ti >= 0)
+            {
+                DrawTrashDetails(s_Tree.Trash()[static_cast<size_t>(ti)]);
+                return;
+            }
             ImGui::TextDisabled("Select a folder or macro.");
             ImGui::Spacing();
             ImGui::TextWrapped("Right-click an item for more options. Drag items to move them: drop on the middle "
@@ -1533,8 +1795,10 @@ namespace
         // Popups must be opened at the main window's ID level, so these buttons queue an action.
         UiFont::Row nameRow;
         if (ImGui::SmallButton("Rename")) s_Pending = {EAction::OpenName, 0, node->Id, EDrop::Into, 0, ENameMode::Rename};
-        nameRow.Next(UiFont::ButtonWidth("Delete..."));
-        if (ImGui::SmallButton("Delete...")) s_Pending = {EAction::OpenDelete, node->Id};
+        const char* deleteLabel = s_TrashOn ? "Delete" : "Delete...";
+        nameRow.Next(UiFont::ButtonWidth(deleteLabel));
+        if (ImGui::SmallButton(deleteLabel)) s_Pending = {EAction::OpenDelete, node->Id};
+        if (s_TrashOn && ImGui::IsItemHovered()) ImGui::SetTooltip("Moves it to the trash bin, where it can be restored.");
         ImGui::Separator();
 
         if (node->IsFolder())
@@ -1962,6 +2226,7 @@ namespace
             s_Tree.FromJson(*s_UndoImport, &ignored);
             s_UndoImport.reset();
             s_SelectedId = 0;
+            s_TrashSelId = 0; // the bin goes back to how it was before the import too
             s_RawForId   = 0;
             CancelCapture();
             MarkDirty();
@@ -2066,6 +2331,8 @@ namespace
         ApplyPending();
         DrawNamePopup();
         DrawDeletePopup();
+        DrawRestorePopup();
+        DrawPurgePopup();
 
         ImGui::PopTextWrapPos();
         ImGui::End();
@@ -2075,6 +2342,12 @@ namespace
 void Ui::Init()
 {
     UiFont::Init();
+    {
+        const nlohmann::json settings = Storage::LoadSettings();
+        const auto it = settings.find(kTrashSetting);
+        s_TrashOn = it == settings.end() || !it->is_boolean() || it->get<bool>(); // on by default
+    }
+    s_TrashSelId = 0;
     s_Mumble = static_cast<Mumble::Data*>(g_Api->DataLink_Get(DL_MUMBLE_LINK));
     s_LoadMessages.clear();
     Storage::LoadMacros(s_Tree, s_LoadMessages);
@@ -2125,6 +2398,18 @@ void Ui::RenderOptions()
     ImGui::Spacing();
     UiFont::DrawCombo("Text size");
     ImGui::TextDisabled("The size of the text in this addon's windows (not this page).");
+    ImGui::Spacing();
+    if (ImGui::Checkbox("Use a trash bin for deleted folders and macros", &s_TrashOn))
+    {
+        if (!Storage::SaveSetting(kTrashSetting, s_TrashOn)) LogF(LOGL_WARNING, "The trash bin setting couldn't be saved.");
+    }
+    ImGui::TextWrapped("On: Delete moves a folder or macro to the Trash bin at the bottom of the library, "
+                       "with no question asked. From there you can restore it (back where it was, or at the top "
+                       "level if its folder is gone) or delete it for good. Items in the bin can't be sent or "
+                       "used by a hotkey. They stay until you empty the bin. "
+                       "Off: Delete asks first and removes the item for good. Items already in the bin stay "
+                       "there, and the bin stays visible, until you empty it.");
+    if (!s_Tree.Trash().empty()) ImGui::TextDisabled("The trash bin holds %zu item(s).", s_Tree.Trash().size());
     ImGui::Spacing();
     ImGui::TextWrapped("Quick menu: right-click the scroll icon in the Nexus bar, or set a key for "
                        "\"Open Chat Messages quick menu\" in Nexus > Options > Keybinds.");
