@@ -53,10 +53,12 @@
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(IntDir)gen;$(ProjectDir)src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
-    <!-- The build stamp (git commit + UTC build time), written fresh before every build. -->
+    <!-- The build stamp (git commit + UTC build time), written fresh before every build, and
+         build\compile_commands.json for clangd, rewritten only when the project changed. -->
     <PreBuildEvent>
-      <Command>powershell -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)tools\build_stamp.ps1" -OutFile "$(IntDir)gen\BuildStampGen.h"</Command>
-      <Message>Writing the build stamp</Message>
+      <Command>powershell -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)tools\build_stamp.ps1" -OutFile "$(IntDir)gen\BuildStampGen.h"
+powershell -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)tools\compile_commands.ps1"</Command>
+      <Message>Writing the build stamp and compile_commands.json</Message>
     </PreBuildEvent>
     <Link>
       <SubSystem>Windows</SubSystem>

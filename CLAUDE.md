@@ -171,6 +171,13 @@ to the todo list", add it there (don't start building it). Move agreed items int
   `/p:PlatformToolset=v145`.
 - Local build: `& "C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe" GW2_Chat_Messages.sln /m /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v145`
 - To test, copy `build\Release\GW2_Chat_Messages.dll` into `<GW2>\addons\`.
+- **clangd:** `tools\compile_commands.ps1` writes `build\compile_commands.json` (clang-cl commands
+  from the `.vcxproj`'s Release settings, plus the test files listed in `tools\run_tests.ps1`).
+  The pre-build step runs it, and it only rewrites the file when it's missing or older than those
+  files (`-Force` rewrites anyway). It never fails the build. clangd finds the file in `build\` by
+  itself, and `.gitignore` keeps `compile_commands.json` and `.cache/` out of git. clangd is at
+  `C:\Program Files\LLVM\bin\clangd.exe`. Its `--check` "errors" from `tweak: ExtractFunction` are
+  refactoring self-tests, not compile errors.
 
 ## Git workflow
 
