@@ -43,5 +43,9 @@ cmake-build-*/
 Thumbs.db
 .DS_Store
 
+# clangd: the compile database (tools\compile_commands.ps1 writes it into build\) and its index
+compile_commands.json
+.cache/
+
 # Claude Code local settings
 .claude/settings.local.json

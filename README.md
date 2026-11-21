@@ -78,6 +78,9 @@ msbuild GW2_Chat_Messages.sln /p:Configuration=Release /p:Platform=x64
 
 The DLL is written to `build\Release\GW2_Chat_Messages.dll`. Copy it into `<GW2>\addons\`.
 
+For editors that use clangd, each build also writes `build\compile_commands.json` (or run
+`tools\compile_commands.ps1` yourself). It's never committed.
+
 ## Versioning
 
 Versions look like `2026.11.21.1412.Dev`: the year, month, day and time (24-hour, `HHMM`) the
