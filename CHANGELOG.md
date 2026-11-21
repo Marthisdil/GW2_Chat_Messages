@@ -6,6 +6,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Build stamp:** every build shows the commit it was built from and its build time (UTC), e.g.
+  `build db84a1e, 2026-11-21 19:20 UTC`, in the Nexus log, under the version on the options page,
+  in copied error reports and in the DLL's Properties > Details (Comments).
 - **Import, choose what to import:** every item in the Import preview has a checkbox. A folder's
   checkbox takes everything inside it, a macro's just that macro; **Select all** and **Deselect
   all** sit above the preview, and **Import selected** imports only what's ticked. Taken names are

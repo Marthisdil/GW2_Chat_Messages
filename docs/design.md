@@ -317,6 +317,14 @@ policy and mention the behaviour when registering with Raidcore.
   text form is shown in the Nexus log, the library window, `{nexus}` and error reports.
 - The DLL's version resource (Properties > Details): File version and Product version are the
   text form, the fixed file version is the four numbers.
+- **Build stamp** (added 2026-11-21): the version is set per release, so test builds in between
+  share it. Every build therefore also carries a stamp, written fresh before each build by
+  `tools\build_stamp.ps1` (a pre-build step; the header lives under `build\`, never committed):
+  git's short SHA, `+changes` if tracked files had uncommitted edits (untracked files don't
+  count), and the UTC build time, e.g. `db84a1e+changes, 2026-11-21 19:20 UTC`. Shown in the Nexus
+  log (`Loaded 2026.11.21.1412.Dev (build ...).`), under the version on the options page, in the
+  error report's first line, and as **Comments** in the DLL's Properties > Details. `{nexus}`
+  stays the version only (it goes into chat). Without git the commit is `unknown`.
 - **GitHub release tags** are the numbers only (`2026.11.21.1412`): Nexus' updater ignores tags
   with a suffix, and the tag must match the DLL's version or Nexus keeps re-downloading it. `Dev`
   and `Beta` builds are published as GitHub pre-releases (Nexus offers those only to users who

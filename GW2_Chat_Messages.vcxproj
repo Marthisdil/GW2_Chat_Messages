@@ -47,9 +47,17 @@
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)vendor\nexus;$(ProjectDir)vendor\mumble;$(ProjectDir)vendor\imgui;$(ProjectDir)vendor\json\single_include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(IntDir)gen;$(ProjectDir)src;$(ProjectDir)vendor\nexus;$(ProjectDir)vendor\mumble;$(ProjectDir)vendor\imgui;$(ProjectDir)vendor\json\single_include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32_LEAN_AND_MEAN;NOMINMAX;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>$(IntDir)gen;$(ProjectDir)src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <!-- The build stamp (git commit + UTC build time), written fresh before every build. -->
+    <PreBuildEvent>
+      <Command>powershell -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)tools\build_stamp.ps1" -OutFile "$(IntDir)gen\BuildStampGen.h"</Command>
+      <Message>Writing the build stamp</Message>
+    </PreBuildEvent>
     <Link>
       <SubSystem>Windows</SubSystem>
       <AdditionalDependencies>winhttp.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -83,6 +91,7 @@
   </ItemDefinitionGroup>
 
   <ItemGroup>
+    <ClCompile Include="src\BuildStamp.cpp" />
     <ClCompile Include="src\ChatLine.cpp" />
     <ClCompile Include="src\entry.cpp" />
     <ClCompile Include="src\Hotkey.cpp" />
@@ -102,6 +111,7 @@
     <ClCompile Include="src\Ui.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\BuildStamp.h" />
     <ClInclude Include="src\ChatLine.h" />
     <ClInclude Include="src\Globals.h" />
     <ClInclude Include="src\Hotkey.h" />

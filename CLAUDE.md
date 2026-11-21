@@ -63,6 +63,11 @@ to the todo list", add it there (don't start building it). Move agreed items int
   The addon `Signature` is `0x523CBA0E`. Never change it.
 - `src/Version.h`: the version (`YYYY.MM.DD.HHMM.Dev|Beta|Rel`, date and time both UTC), written by
   `tools\set_version.ps1`; never edit it by hand. The `.rc` uses it for the DLL's version info.
+- `src/BuildStamp.*`: the build stamp (git short SHA, `+changes` for uncommitted edits, UTC build
+  time), from `BuildStampGen.h`, which `tools\build_stamp.ps1` writes into `build\obj\<config>\gen\`
+  before every build (a pre-build step in the `.vcxproj`; never committed). Shown in the Nexus log,
+  the options page, error reports and the DLL's Properties (Comments). Only `BuildStamp.cpp` and the
+  `.rc` include the generated header.
 - `src/Globals.h`: `g_Api`, the addon name, the version constants (from `Version.h`),
   and `LogF`.
 - `src/MacroTree.*`: the library data model (`Tree`, `Node` folder/macro, `Line`, channels) with the

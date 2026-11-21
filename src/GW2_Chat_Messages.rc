@@ -1,5 +1,6 @@
 #include "resource.h"
 #include "Version.h"
+#include "BuildStampGen.h" // build\obj\<config>\gen, written before every build
 #include <winres.h>
 
 // Quick Access (Nexus bar) icons. Regenerate with tools\draw_chat_icon.ps1.
@@ -20,6 +21,7 @@ BEGIN
     BEGIN
         BLOCK "040904b0"
         BEGIN
+            VALUE "Comments",         CHATMSG_BUILD_TEXT
             VALUE "CompanyName",      "Marthisdil"
             VALUE "FileDescription",  "Chat Messages (Nexus addon for Guild Wars 2)"
             VALUE "FileVersion",      CHATMSG_VER_TEXT
