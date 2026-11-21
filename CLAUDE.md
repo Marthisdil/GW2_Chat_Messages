@@ -152,9 +152,13 @@ to the todo list", add it there (don't start building it). Move agreed items int
   `powershell -NoProfile -ExecutionPolicy Bypass -File tools\update_screenshots.ps1`. It puts any
   new PNG from `docs\images\` into its placeholders in README.md and `docs/wiki/` and marks its
   row in `docs/screenshots.md` "Captured". Tell the user what was captured, and ask about any file
-  it lists as "Not in the list". Captured images go into the current branch's PR. When a new
-  screen or page needs a picture, add a row to `docs/screenshots.md` and a placeholder
-  (`<!-- screenshot: name.png (docs/screenshots.md) -->` plus a "Screenshot to come" line).
+  it lists as "Not in the list". Captured images go into the current branch's PR.
+- **Screenshot list and in-game tests, with every change:** in the same PR, add a row to
+  `docs/screenshots.md` (plus a placeholder `<!-- screenshot: name.png (docs/screenshots.md) -->`
+  and a "Screenshot to come" line) for each new screen, and rewrite any row whose screen changed
+  (back to "Needed" if its picture is now out of date). Also add, change or remove the checks in
+  `docs/in-game-tests.md` that the change affects, and keep its "Progress" table current with the
+  user's results.
 - The repo is in Dropbox. Compile-time PDB writes (`/Zi`) fail under `C:\Dropbox` with
   `C1090 PDB API call failed`. Use `DebugInformationFormat=OldStyle` (`/Z7`) for Debug.
 - Locally only the VS 2026 v145 toolset is installed; CI (windows-2022) uses v143. Build locally with

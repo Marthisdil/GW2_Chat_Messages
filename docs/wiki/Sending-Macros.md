@@ -32,7 +32,8 @@ Each macro can have its own hotkey. In the macro editor, next to **Hotkey:**, cl
   one for PvE.
 - If a key is set on two macros that are both active, it sends nothing and shows an alert. The
   editor warns you about this ("Also set on: ...").
-- If a hotkey send fails, a Nexus alert says why, since the library may be closed.
+- If a hotkey send fails, a Nexus alert says why, since the library may be closed, and the
+  [error window](Safety-and-Troubleshooting) opens (without taking focus) with the details.
 
 <!-- screenshot: hotkey-set.png (docs/screenshots.md) -->
 > 📷 *Screenshot to come: a macro's hotkey row.*
