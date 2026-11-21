@@ -5,6 +5,9 @@
 #include <sstream>
 #include <system_error>
 
+#include <windows.h>
+#include <shellapi.h>
+
 #include <nlohmann/json.hpp>
 
 #include "Globals.h"
@@ -70,6 +73,70 @@ fs::path Storage::AddonDir()
     std::error_code ec;
     fs::create_directories(path, ec);
     return path;
+}
+
+namespace
+{
+    fs::path SubDir(const char* aName)
+    {
+        const fs::path dir = Storage::AddonDir();
+        if (dir.empty()) return {};
+        fs::path sub = dir / aName;
+        std::error_code ec;
+        fs::create_directories(sub, ec);
+        return sub;
+    }
+}
+
+fs::path Storage::ExportsDir() { return SubDir("exports"); }
+fs::path Storage::ImportsDir() { return SubDir("imports"); }
+
+fs::path Storage::FreeFile(const fs::path& aDir, const std::string& aFileName)
+{
+    const fs::path name = fs::u8path(aFileName);
+    fs::path candidate = aDir / name;
+    std::error_code ec;
+    for (int n = 2; fs::exists(candidate, ec) && n < 10000; n++)
+    {
+        fs::path next = name.stem();
+        next += " (" + std::to_string(n) + ")";
+        next += name.extension();
+        candidate = aDir / next;
+    }
+    return candidate;
+}
+
+bool Storage::WriteText(const fs::path& aFile, const std::string& aText)
+{
+    if (aFile.empty()) return false;
+    const fs::path tmp = WithSuffix(aFile, ".tmp");
+    {
+        std::ofstream out(tmp, std::ios::binary | std::ios::trunc);
+        out << aText;
+        out.flush();
+        if (!out)
+        {
+            LogF(LOGL_WARNING, "Could not write %s.", aFile.u8string().c_str());
+            std::error_code ec;
+            fs::remove(tmp, ec);
+            return false;
+        }
+    }
+    std::error_code ec;
+    fs::rename(tmp, aFile, ec);
+    if (ec)
+    {
+        LogF(LOGL_WARNING, "Could not write %s: %s", aFile.u8string().c_str(), ec.message().c_str());
+        fs::remove(tmp, ec);
+        return false;
+    }
+    return true;
+}
+
+void Storage::OpenFolder(const fs::path& aDir)
+{
+    if (aDir.empty()) return;
+    ShellExecuteW(nullptr, L"open", aDir.wstring().c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 }
 
 bool Storage::WriteJson(const fs::path& aFile, const nlohmann::json& aJson, bool aKeepBackup)

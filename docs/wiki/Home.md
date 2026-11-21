@@ -4,7 +4,7 @@ GW2 Chat Messages is a [Nexus](https://raidcore.gg/Nexus) addon for Guild Wars 2
 chat macros in folders and types them into chat for you.
 
 > **Early development:** everything described here is built, but nothing has been tested in game
-> yet. Import and export are still to come.
+> yet.
 
 ## Pages
 
@@ -14,6 +14,7 @@ chat macros in folders and types them into chat for you.
 - [Sending macros](Sending-Macros): Send now, hotkeys and the quick menu.
 - [Filters](Filters): limit a macro to game modes and maps.
 - [Placeholders](Placeholders): `{time}`, `{random}`, `{map}`, text files, JSON and more.
+- [Import and export](Import-and-Export): share and back up macros, with a preview and undo.
 - [Files and data](Files-and-Data): where your macros are saved, and backups.
 - [Safety and troubleshooting](Safety-and-Troubleshooting): how sending stays safe, and what the
   error messages mean.

@@ -145,3 +145,20 @@ the Nexus log for `Chat Messages` warnings.
 65. While "Preparing..." shows, start typing in chat yourself: the send stops ("A text box is
     open") and **your chat box stays open with your text** (the Escape fix).
 66. Unload the addon right after sending a `{json}` macro: unload finishes within a few seconds.
+
+## Phase 7: import and export
+67. Right-click a macro > Export > Save as a .json file, then again: two files appear in
+    `exports\` (`Name.json`, `Name (2).json`), and the status line names the file.
+68. Export > Save as a .txt file and Copy the lines as text: the raw lines, one per row.
+69. Export all, then Import... > Paste from clipboard after "Copy to the clipboard" on a folder:
+    the preview shows the folder as "goes into the existing folder" and its macros as renamed.
+70. Put the export in `imports\`, open Import...: it's listed; click it, pick a folder, change a
+    conflict to Replace for one macro and Skip for another; the preview matches what Import does.
+71. Undo import: the library is exactly as before (names, hotkeys, filters, selection cleared).
+72. Import a folder of .txt files with sub-folders, into a folder at level 5: the too-deep folders
+    are left out, or with the checkbox ticked their macros land one level up.
+73. Import with "Keep hotkeys" unticked: imported macros have no hotkey.
+74. Type a path with quotes (Explorer's "Copy as path") and press Enter: it loads.
+75. Open imports folder: Explorer opens; returning to the game, keys and Tab still work.
+76. While the Import window is open, hotkeys still work and typing in its path box doesn't
+    trigger them.

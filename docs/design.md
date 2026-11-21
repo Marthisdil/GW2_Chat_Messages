@@ -95,6 +95,14 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
 
 ## Import / export
 
+*(Built in phase 7 part 1; `src/Exchange.*`, unit tested in `tests/ExchangeTests.cpp`.
+Decisions 2026-11-20: no Windows file dialog (a modal dialog over the game is risky); exports
+go to `<addon>\exports\` (never overwritten: `Name (2).json`), and the Import window lists
+`<addon>\imports\`, takes a typed path, or pastes from the clipboard. Undo is an in-memory
+copy of the library from just before the import, kept until dismissed, the next import, or
+unload. Hotkeys are kept unless "Keep hotkeys" is unticked. Link files are never exported or
+imported. A Replace keeps the existing item's id and place.)*
+
 - **Export**: the whole tree, one folder, or one macro. The format is
   `ChatMessages.export.json` (`{ "format": 1, "root": Node }`). A single macro can also be
   exported as raw `.txt`.
@@ -191,4 +199,5 @@ policy and mention the behaviour when registering with Raidcore.
 5. Per-macro hotkeys, Quick Access and pop-up nested menus, game-mode and map filters. *(done;
    not yet tested in game)*
 6. Placeholders, with a cached GW2 API map-name lookup. *(done; not yet tested in game)*
-7. Import/export with preview, `.txt` import/export and link-file sync.
+7. Import/export with preview and `.txt` import/export *(done; not yet tested in game)*, then
+   link-file sync.

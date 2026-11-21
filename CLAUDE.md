@@ -84,6 +84,10 @@ to the todo list", add it there (don't start building it). Move agreed items int
   by `tests/PlaceholderTests.cpp`. `{txt}` may only read files inside the addon folder.
 - `src/Http.*`: a small blocking WinHTTP GET (worker threads only). `src/MapNames.*`: GW2 API map
   names cached in `maps.json`, looked up on a background thread. Link `winhttp.lib`.
+- `src/Exchange.*`: import and export: the export format, reading .json/.txt/folders into a
+  package, the import preview (`BuildPlan`) and `Apply`. No Nexus or ImGui dependency. Tested by
+  `tests/ExchangeTests.cpp`. Exports go to `<addon>\exports\`; the Import window lists
+  `<addon>\imports\`.
 - `src/SendPlan.*`: turns a macro's lines into the exact send steps (open chat, wait, type, Tab
   for whispers, Enter, wait) and validates them. No Nexus or ImGui dependency. Tested by
   `tests/SendPlanTests.cpp`.

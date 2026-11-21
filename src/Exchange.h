@@ -1,0 +1,113 @@
+#pragma once
+
+// Import and export of folders and macros (docs/design.md, "Import / export").
+// No Nexus or ImGui dependency (tested by tests/ExchangeTests.cpp). Reads files with
+// std::filesystem; the UI decides which paths.
+//
+// An import never touches the library directly: a source is first read into a Package (its own
+// small tree), then BuildPlan shows what would happen (new, merged, renamed, replaced, skipped,
+// too deep), and only Apply changes the library.
+
+#include <filesystem>
+#include <map>
+#include <string>
+#include <vector>
+
+#include <nlohmann/json_fwd.hpp>
+
+#include "MacroTree.h"
+
+namespace Exchange
+{
+    using MacroTree::Node;
+    using MacroTree::Tree;
+
+    constexpr size_t kMaxJsonBytes   = 4 * 1024 * 1024; // an export file
+    constexpr size_t kMaxTextBytes   = 256 * 1024;      // one .txt macro
+    constexpr size_t kMaxFolderFiles = 2000;            // .txt files read from one folder
+    constexpr size_t kMaxImportItems = 5000;            // folders + macros in one import
+
+    // --- Export ---------------------------------------------------------------------------------
+
+    // The export format: the same as macros.json, with these nodes at the top level. Link files
+    // are left out (they're paths on this PC).
+    nlohmann::json ExportJson(const std::vector<const Node*>& aNodes);
+    std::string    ExportJsonText(const std::vector<const Node*>& aNodes); // pretty-printed
+    // A macro as raw text, one line per row ("/s hi").
+    std::string    ExportText(const Node& aMacro);
+    // A safe Windows file name from a folder or macro name, with the extension (".json", ".txt").
+    std::string    FileNameFor(const std::string& aName, const std::string& aExt);
+
+    // --- Reading a source -----------------------------------------------------------------------
+
+    struct Package
+    {
+        Tree                     Items;   // what was read, at its top level
+        std::string              Error;   // set if nothing could be read
+        std::vector<std::string> Warnings;
+        std::string              Source;  // what was read, for display ("Pasted text", a file name)
+
+        bool Ok() const { return Error.empty(); }
+    };
+
+    // Our export format or a whole macros.json.
+    Package FromJsonText(const std::string& aText);
+    // Raw text (one row per chat line) as one macro called aName.
+    Package FromRawText(const std::string& aName, const std::string& aText);
+    // Pasted text: JSON if it looks like JSON, otherwise raw text.
+    Package FromText(const std::string& aName, const std::string& aText);
+    // A .json or .txt file, or a folder of .txt files (sub-folders become folders).
+    Package FromPath(const std::filesystem::path& aPath);
+
+    // --- Preview and import ---------------------------------------------------------------------
+
+    // What to do when an item has the same name as one already in the target folder.
+    enum class EChoice : uint8_t { Rename, Skip, Replace, Merge /* folders only */ };
+    const char* ChoiceLabel(EChoice aChoice);
+
+    enum class EOutcome : uint8_t
+    {
+        New,       // added as it is
+        Renamed,   // added as "Name (2)"
+        Merged,    // a folder whose contents go into the existing folder of that name
+        Replaced,  // the existing item's contents are replaced
+        Skipped,   // left out (with everything inside)
+        TooDeep,   // a folder that would be nested past level 6: left out
+        Flattened, // a folder that would be too deep: left out, its contents go one level up
+    };
+
+    struct Options
+    {
+        EChoice MacroConflict  = EChoice::Rename;
+        EChoice FolderConflict = EChoice::Merge;
+        bool    Flatten        = false; // too-deep folders: flatten (true) or leave out (false)
+        bool    KeepHotkeys    = true;
+        std::map<const Node*, EChoice> PerItem; // overrides, keyed by the package's node
+    };
+
+    struct PlanItem
+    {
+        const Node*           Src = nullptr;  // the package's node
+        EOutcome              Outcome = EOutcome::New;
+        std::string           Name;           // its name after the import
+        bool                  Conflict = false; // an item of that name was already there
+        EChoice               Choice = EChoice::Rename; // the choice used (when Conflict)
+        std::vector<PlanItem> Children;       // folders: what happens inside
+    };
+
+    struct Plan
+    {
+        std::vector<PlanItem> Items;
+        size_t NewFolders = 0, NewMacros = 0, Merged = 0, Renamed = 0, Replaced = 0, Skipped = 0, TooDeep = 0;
+        size_t Conflicts = 0;
+
+        size_t Changes() const { return NewFolders + NewMacros + Replaced; }
+    };
+
+    // What importing aPackage into aTarget (a folder of aTree) would do. Changes nothing.
+    Plan BuildPlan(const Tree& aTree, const Node& aTarget, const Tree& aPackage, const Options& aOptions);
+
+    // Imports by the plan (built from the same tree, target and package, unchanged since).
+    // Returns the number of folders and macros added or replaced.
+    size_t Apply(Tree& aTree, Node& aTarget, const Plan& aPlan, const Options& aOptions);
+}

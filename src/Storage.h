@@ -11,10 +11,21 @@ namespace MacroTree { class Tree; }
 // On-disk locations for everything this addon stores.
 //   <GW2>\addons\Chat Messages\macros.json        the macro library
 //   <GW2>\addons\Chat Messages\macros.json.bak    the version before the last save
+//   <GW2>\addons\Chat Messages\exports\           files written by Export
+//   <GW2>\addons\Chat Messages\imports\           files listed in the Import window
 // The folder comes from Nexus' Paths_GetAddonDirectory(). Nexus does not create it, so we do.
 namespace Storage
 {
     std::filesystem::path AddonDir(); // created on first call; empty if Nexus is unavailable
+    std::filesystem::path ExportsDir(); // <addon>\exports, created on first call (empty if unavailable)
+    std::filesystem::path ImportsDir(); // <addon>\imports, the same
+
+    // A path in aDir for aFileName that doesn't exist yet: "name.json", else "name (2).json"...
+    std::filesystem::path FreeFile(const std::filesystem::path& aDir, const std::string& aFileName);
+    // Writes UTF-8 text via a temporary file and rename. Returns false (logged) on failure.
+    bool WriteText(const std::filesystem::path& aFile, const std::string& aText);
+    // Opens a folder in Windows Explorer (only ever on a click).
+    void OpenFolder(const std::filesystem::path& aDir);
 
     // Writes via a temporary file and rename so a crash can't leave a half-written file.
     // With aKeepBackup, the previous file is first copied to "<file>.bak".

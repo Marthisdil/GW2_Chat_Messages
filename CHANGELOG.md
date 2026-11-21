@@ -5,15 +5,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-### Documentation
-- The README describes what the addon does, with a quick start.
-- Full usage documentation, written for the project wiki, is in `docs/wiki/`.
-
-### Fixed
-- When a send was refused because you were typing in chat, the addon could press Escape and close
-  your chat box. It now only ever closes a chat box it opened itself.
-
 ### Added
+- **Export:** "Export all" in the toolbar saves your whole library, and right-click > Export saves
+  one folder or macro. Save as a `.json` file, a macro as a `.txt` file of raw lines, or copy
+  either to the clipboard. Files go to `<GW2>\addons\Chat Messages\exports\` and are never
+  overwritten.
+- **Import:** a new Import window (toolbar "Import...", or right-click a folder > "Import into
+  this folder...") reads a `.json` export, a `.txt` file (one macro), a folder of `.txt` files,
+  or pasted text.
+  - A preview shows what happens to every folder and macro before anything changes.
+  - When a name is taken, choose Keep both (rename), Skip, Replace or (folders) Merge, for all
+    items or one by one.
+  - Folders that would be nested more than 6 deep are left out, or their contents moved up.
+  - Choose whether to keep the imported hotkeys.
+- **Undo import:** after an import, one click puts the library back as it was.
 - **More placeholders:**
   - `{map}` is the name of the map you're on, like "Lion's Arch".
   - `{json path url}` is one value from a JSON web page, for example
@@ -114,3 +119,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Dear ImGui v1.80 and nlohmann/json as git submodules.
 - CI build on GitHub Actions. The Release DLL is available as a workflow artifact.
 - Design notes in `docs/design.md`.
+
+### Fixed
+- When a send was refused because you were typing in chat, the addon could press Escape and close
+  your chat box. It now only ever closes a chat box it opened itself.
+
+### Documentation
+- The README describes what the addon does, with a quick start.
+- Full usage documentation, written for the project wiki, is in `docs/wiki/`.

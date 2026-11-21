@@ -27,6 +27,37 @@ Points to settle when we discuss it:
 - Where the bin lives: in `macros.json`, or a separate `trash.json`.
 - Whether the delete confirmation is still needed once deleting is reversible.
 
+### On-screen icon bar for macros (added 2026-11-20)
+
+Explore a small on-screen window that shows macros as icons, so a macro can be sent with one
+click.
+
+- A set of icons to choose from (Claude designs up to 30 full-colour icons, embedded as
+  resources). In the macro editor, the user can assign one to a macro.
+- The user can turn the icon window on. It shows only the icons, nothing else.
+- Hovering over an icon shows the macro's title (and maybe its lines, like the quick menu).
+- Clicking an icon sends the macro, exactly like its hotkey or the quick menu.
+- An icon only shows when the macro's filters say it's active on the current map, so the window
+  changes as you move between maps and game modes.
+
+Points to settle:
+- Layout: a row, a column or a grid; icon size; whether the window can be moved, locked and
+  made click-through when not hovered; its position saved.
+- Order of the icons (tree order, or the user's own order), and what happens when none are
+  active (hide the window, or show an empty frame).
+- Whether it hides during combat, cutscenes or loading screens (like the rest of Nexus UI), and
+  whether a click can ever reach the game behind it (it must not, and it must not steal camera
+  or movement input).
+- Icon style: which 30 icons (callouts, emotes, LFG, guild, trade, waypoint...), how they look
+  next to the GW2 UI, and whether users may add their own images later.
+- Whether the same icon may be used for several macros.
+
+### Windows file picker for import and export (added 2026-11-20)
+
+Phase 7 uses the `exports\` and `imports\` folders, a typed path and the clipboard, because a
+modal Windows dialog over the game could grab input or hide behind a fullscreen game. Look at
+whether a non-modal file picker (on its own thread, no owner window) works well in game.
+
 ### Special character picker (added 2026-11-20)
 
 Add an icon next to the message box that opens a small window of special characters, so they can

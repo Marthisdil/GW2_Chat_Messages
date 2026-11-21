@@ -24,6 +24,9 @@ Right-click any item in the tree for:
 - **Send now** (macros)
 - **Rename**
 - **Move up** / **Move down**
+- **Export**: save as a .json or .txt file, or copy to the clipboard (see
+  [Import and export](Import-and-Export))
+- **Import into this folder...** (folders)
 - **Sort contents A-Z**, **Expand all inside**, **Collapse all inside** (folders)
 - **Delete...**: asks first. Deleting a folder deletes everything inside it, and the dialog says
   how many folders and macros that is. This can't be undone.
@@ -42,6 +45,7 @@ item with the same name. The window tells you why.
 
 - **Expand all** / **Collapse all**
 - **Sort A-Z**: sorts every folder, folders first and then macros, each alphabetically.
+- **Import...** and **Export all** (see [Import and export](Import-and-Export)).
 
 ## Dimmed macros
 
