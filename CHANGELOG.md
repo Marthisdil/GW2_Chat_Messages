@@ -164,6 +164,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Properties > Details tab shows it as File version and Product version.
 
 ### Fixed
+- An unexpected internal error while sending a macro (for example running out of memory, or a
+  bad value from a `{json}` page) could close the game. It now fails like any other send: chat is
+  closed if the addon opened it, and the error is shown.
+- A damaged map-name cache (`maps.json`) entry is now skipped more strictly (only whole map ids
+  are read).
 - When a send was refused because you were typing in chat, the addon could press Escape and close
   your chat box. It now only ever closes a chat box it opened itself.
 

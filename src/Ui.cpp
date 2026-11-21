@@ -1316,7 +1316,8 @@ namespace
     ImVec4 ChannelColorVec(EChannel aChannel)
     {
         const uint32_t c = ChatLine::ChannelColor(aChannel);
-        return ImVec4(((c >> 16) & 0xFF) / 255.0f, ((c >> 8) & 0xFF) / 255.0f, (c & 0xFF) / 255.0f, 1.0f);
+        return ImVec4(static_cast<float>((c >> 16) & 0xFF) / 255.0f, static_cast<float>((c >> 8) & 0xFF) / 255.0f,
+                      static_cast<float>(c & 0xFF) / 255.0f, 1.0f);
     }
 
     // ImGui 1.80 has no std::string overload; grow the string as ImGui asks.

@@ -81,6 +81,7 @@ namespace
     std::function<void()>   s_Call;
     uint64_t                s_CallSeq  = 0; // id of the call waiting in s_Call
     uint64_t                s_CallDone = 0; // id of the last finished call
+    uint64_t                s_CallFail = 0; // id of the last call that threw (counts as failed)
 
     UINT OnWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     {
@@ -97,10 +98,15 @@ namespace
             s_Call = nullptr;
             seq = s_CallSeq;
         }
-        if (call) call();
+        // We're inside the game's window procedure: an exception escaping here would end the game.
+        // Catch everything; the worker sees the step as failed and aborts the macro safely.
+        bool threw = false;
+        try { if (call) call(); }
+        catch (...) { threw = true; }
         {
             std::lock_guard<std::mutex> lock(s_CallMutex);
             s_CallDone = seq;
+            if (threw) s_CallFail = seq;
         }
         s_CallCv.notify_all();
         return 0; // ours: don't pass it to the game
@@ -128,7 +134,7 @@ namespace
         const bool done = s_CallCv.wait_for(lock, std::chrono::milliseconds(kWindowCallTimeoutMs),
                                             [seq] { return s_CallDone >= seq; });
         if (!done && s_CallSeq == seq) s_Call = nullptr; // too late: don't run it
-        return done;
+        return done && s_CallFail != seq;
     }
 
     // Window-thread helpers (only called inside OnWindowThread).
@@ -155,7 +161,9 @@ namespace
     bool Type(const std::string& aText)
     {
         const HWND h = s_Hwnd.load();
-        return OnWindowThread([h, aText] { TypeUtf8(h, aText); });
+        // Copying aText may throw (out of memory) here on the worker, where WorkerMain catches it;
+        // the call itself runs inside OnWndProc's catch.
+        return OnWindowThread([h, aText] { TypeUtf8(h, aText); }); // NOLINT(bugprone-exception-escape): see above
     }
 
     bool Key(UINT aVk, wchar_t aChar)
@@ -398,6 +406,7 @@ namespace
                 std::unique_lock<std::mutex> lock(s_JobMutex);
                 s_JobCv.wait(lock, [] { return s_Stop.load() || s_Job.has_value(); });
                 if (s_Stop) return;
+                if (!s_Job) continue; // can't happen (the wait checks it), but never read an empty job
                 lines = std::move(*s_Job);
                 s_Job.reset();
                 macro = s_JobMacro;
@@ -406,8 +415,22 @@ namespace
             s_EscapeSent   = false;
             s_WeOpenedChat = false;
             SendPlan::Plan plan;
-            std::string error = Prepare(std::move(lines), plan);
-            if (error.empty()) error = Run(plan, macro);
+            std::string error;
+            // An exception escaping this thread would end the game (std::terminate). Treat it as a
+            // failed send: the same clean-up as any other failure below.
+            try
+            {
+                error = Prepare(std::move(lines), plan);
+                if (error.empty()) error = Run(plan, macro);
+            }
+            catch (const std::exception& e)
+            {
+                error = std::string("Internal error while sending: ") + e.what();
+            }
+            catch (...)
+            {
+                error = "Internal error while sending.";
+            }
             if (error.empty())
             {
                 SetStatus(Sender::EState::Done, plan.LinesToSend, plan.LinesToSend,

@@ -1,6 +1,7 @@
 #include "MapNames.h"
 
 #include <atomic>
+#include <charconv>
 #include <chrono>
 #include <condition_variable>
 #include <deque>
@@ -53,8 +54,12 @@ namespace
         for (auto it = names->begin(); it != names->end(); ++it)
         {
             if (!it.value().is_string()) continue;
-            try { s_Names[static_cast<uint32_t>(std::stoul(it.key()))] = it.value().get<std::string>(); }
-            catch (...) {}
+            // The key is a map id; skip anything else (a damaged or hand-edited cache).
+            const std::string& key = it.key();
+            uint32_t id = 0;
+            const auto [end, ec] = std::from_chars(key.data(), key.data() + key.size(), id);
+            if (ec != std::errc() || end != key.data() + key.size() || key.empty()) continue;
+            s_Names[id] = it.value().get<std::string>();
         }
     }
 

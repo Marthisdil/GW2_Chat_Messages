@@ -29,6 +29,7 @@ static void TestDepthLimit()
     Tree t;
     Node* deepest = Chain(t, nullptr, kMaxFolderDepth);
     CHECK(deepest != nullptr);
+    if (!deepest) return;
     CHECK(Tree::FolderLevel(*deepest) == kMaxFolderDepth);
 
     Result tooDeep = t.AddFolder(deepest, "Seven");
