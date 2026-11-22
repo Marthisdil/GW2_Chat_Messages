@@ -441,6 +441,10 @@ Do it again and choose **Put it at the top level**: `Junk` is at the top level.
 **O3. Name taken and drag.** Make a new macro `Junk` in `Sub`, delete it, make another `Junk`
 there and restore the deleted one: it comes back as `Junk (2)` and the message says so. Drag a
 macro onto **Trash bin**: it's moved to the bin.
+*Long name:* name a macro with 100 characters (paste `aaaaaaaaaa` ten times), delete it, make
+another with the same name and restore the first: the game doesn't freeze, and it comes back
+named with 96 `a`s and ` (2)`. Export that macro and import the file into the same folder: the
+preview offers it as a new name ending ` (2)` (or ` (3)`), and the import works.
 
 **O4. Empty and saved.** Delete a couple of items, restart the game: they're still in the bin.
 Right-click the bin > **Empty trash bin...**: it asks, then the bin is empty.
