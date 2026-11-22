@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include <nlohmann/json_fwd.hpp>
@@ -136,6 +137,11 @@ namespace MacroTree
         // aParent must be a folder (nullptr = root).
         Result AddFolder(Node* aParent, const std::string& aName);
         Result AddMacro(Node* aParent, const std::string& aTitle);
+        // For a caller that keeps its own index of the names in aParent (import's Apply): aName must
+        // already be clean (CleanName) and not taken by a sibling of this type. Skips the scan of
+        // every sibling, which made adding N items to one folder cost N² (SEC-027). Still refuses
+        // an empty name, a non-folder parent and a folder that would nest too deep.
+        Result AddKnownFree(Node* aParent, ENodeType aType, const std::string& aName);
         Result Rename(Node& aNode, const std::string& aName);
         Result Delete(Node& aNode);
         // Move aNode before/after aTarget (in aTarget's folder) or into aTarget (a folder, appended).
@@ -171,15 +177,22 @@ namespace MacroTree
         bool FromJson(const nlohmann::json& aJson, std::vector<std::string>* aWarnings = nullptr);
 
         static std::string CleanName(const std::string& aName); // trims spaces, cuts to kMaxNameLength
+        // aName + " (n)", with aName cut short (never inside a UTF-8 sequence) so all of " (n)" fits.
+        // Every n gives a different name, so a loop over n always ends.
+        static std::string NumberedName(const std::string& aName, int aN);
 
     private:
         std::unique_ptr<Node> m_Root;
         std::vector<TrashItem> m_Trash;
+        // Every id in the tree or the bin (plus some since deleted, which is harmless), filled on the
+        // first NewId, so a new id is one lookup instead of a walk over the whole tree (SEC-017).
+        mutable std::unordered_set<uint64_t> m_UsedIds;
+        mutable bool                         m_UsedIdsReady = false;
 
         uint64_t NewId() const;
         bool     IdInUse(uint64_t aId) const; // in the tree or the bin
         std::string FreeName(const Node& aFolder, ENodeType aType, const std::string& aName) const;
         Result   CheckName(const Node& aParent, ENodeType aType, const std::string& aName, const Node* aIgnore) const;
-        Result   Add(Node* aParent, ENodeType aType, const std::string& aName);
+        Result   Add(Node* aParent, ENodeType aType, const std::string& aName, bool aCheckName = true);
     };
 }

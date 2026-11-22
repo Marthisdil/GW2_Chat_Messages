@@ -2,8 +2,10 @@
 // Build and run: tools\run_tests.ps1 (CI runs it too).
 
 #include <algorithm>
+#include <chrono>
 #include <cstdio>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -449,6 +451,55 @@ static void TestChannels()
     }
 }
 
+// SEC-017: every id-less node used to get its id by walking the whole tree (about N² work; 50,000
+// id-less macros took about 40 s, freezing the game). Now it's one set lookup per id.
+static void TestManyMissingIds()
+{
+    const int kCount = 50000;
+    std::string text = R"({"format":1,"root":{"children":[)";
+    for (int i = 0; i < kCount; i++)
+        text += std::string(i ? "," : "") + R"({"type":"macro","name":"m)" + std::to_string(i) + R"(","lines":[]})";
+    text += "]}}";
+    const json j = json::parse(text);
+
+    Tree t;
+    std::vector<std::string> warnings;
+    const auto start = std::chrono::steady_clock::now();
+    CHECK(t.FromJson(j, &warnings));
+    const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+    CHECK(seconds < 10.0); // well under a second now; the old way took about 40 s
+    CHECK(t.Root().Children.size() == static_cast<size_t>(kCount));
+    std::unordered_set<uint64_t> ids;
+    for (const auto& c : t.Root().Children) ids.insert(c->Id);
+    CHECK(ids.size() == static_cast<size_t>(kCount) && !ids.count(0));
+    CHECK(!warnings.empty());
+
+    // Items added afterwards don't reuse a loaded id, nor one in the bin.
+    Tree u;
+    Node* a = u.AddMacro(nullptr, "A").Target;
+    Node* b = u.AddMacro(nullptr, "B").Target;
+    const uint64_t binned = b->Id;
+    u.MoveToTrash(*b, "t");
+    Tree v;
+    CHECK(v.FromJson(u.ToJson()));
+    Node* c = v.AddMacro(nullptr, "C").Target;
+    CHECK(c && c->Id != 0 && c->Id != a->Id && c->Id != binned);
+}
+
+static void TestNumberedName()
+{
+    CHECK(Tree::NumberedName("Hello", 2) == "Hello (2)");
+    const std::string longName(100, 'a');
+    CHECK(Tree::NumberedName(longName, 2) == std::string(96, 'a') + " (2)");
+    CHECK(Tree::NumberedName(longName, 10) == std::string(95, 'a') + " (10)");
+    CHECK(Tree::NumberedName(longName, 2) != Tree::NumberedName(longName, 3));
+    // Never cut inside a UTF-8 sequence: 50 two-byte characters (100 bytes).
+    std::string umlauts;
+    for (int i = 0; i < 50; i++) umlauts += "\xC3\xA4";
+    const std::string n = Tree::NumberedName(umlauts, 2);
+    CHECK(n.size() <= kMaxNameLength && n == std::string(umlauts, 0, 96) + " (2)");
+}
+
 void RunMacroTreeTests()
 {
     TestDepthLimit();
@@ -464,4 +515,6 @@ void RunMacroTreeTests()
     TestJsonFormat();
     TestJsonControlCharacters();
     TestChannels();
+    TestManyMissingIds();
+    TestNumberedName();
 }

@@ -6,6 +6,7 @@
 #include <cctype>
 #include <fstream>
 #include <set>
+#include <unordered_map>
 
 #include <nlohmann/json.hpp>
 
@@ -166,28 +167,36 @@ namespace
         const Node*           Existing = nullptr;
         int                   Level = 0;
         std::set<std::string> Folders, Macros; // lower-case names already there or planned
+        // The existing items by lower-case name: a clash is one lookup, not a scan of every sibling
+        // (SEC-027; the plan is rebuilt every frame while the Import window is open).
+        std::unordered_map<std::string, const Node*> OldFolders, OldMacros;
 
         Dest(const Node* aExisting, int aLevel) : Existing(aExisting), Level(aLevel)
         {
             if (!aExisting) return;
-            for (const auto& c : aExisting->Children) (c->IsFolder() ? Folders : Macros).insert(Lower(c->Name));
+            for (const auto& c : aExisting->Children)
+            {
+                const std::string lower = Lower(c->Name);
+                (c->IsFolder() ? Folders : Macros).insert(lower);
+                (c->IsFolder() ? OldFolders : OldMacros).emplace(lower, c.get()); // the first, as before
+            }
         }
 
         const Node* Find(ENodeType aType, const std::string& aName) const
         {
-            if (!Existing) return nullptr;
-            const std::string lower = Lower(aName);
-            for (const auto& c : Existing->Children)
-                if (c->Type == aType && Lower(c->Name) == lower) return c.get();
-            return nullptr;
+            const auto& old = aType == ENodeType::Folder ? OldFolders : OldMacros;
+            auto it = old.find(Lower(aName));
+            return it == old.end() ? nullptr : it->second;
         }
     };
 
     std::string FreeName(const std::string& aName, const std::set<std::string>& aTaken)
     {
+        // NumberedName keeps all of " (n)": cutting aName + " (n)" back to the length limit gave the
+        // same taken name for every n on a 99-100 byte name, and the loop never ended (SEC-018).
         for (int n = 2;; n++)
         {
-            const std::string candidate = Tree::CleanName(aName + " (" + std::to_string(n) + ")");
+            const std::string candidate = Tree::NumberedName(aName, n);
             if (!aTaken.count(Lower(candidate))) return candidate;
         }
     }
@@ -340,13 +349,25 @@ namespace
 
     // --- Applying -----------------------------------------------------------------------------
 
-    Node* FindChild(Node& aFolder, ENodeType aType, const std::string& aName)
+    // The items in one destination folder by lower-case name, per type: built once per folder, so
+    // finding or adding an item is one lookup instead of a scan of every sibling (SEC-027: 20,000
+    // macros into one folder took 304 s in the test build).
+    struct NameIndex
     {
-        const std::string lower = Lower(aName);
-        for (auto& c : aFolder.Children)
-            if (c->Type == aType && Lower(c->Name) == lower) return c.get();
-        return nullptr;
-    }
+        std::unordered_map<std::string, Node*> Folders, Macros;
+
+        explicit NameIndex(Node& aFolder)
+        {
+            for (auto& c : aFolder.Children) Of(c->Type).emplace(Lower(c->Name), c.get());
+        }
+        std::unordered_map<std::string, Node*>& Of(ENodeType aType) { return aType == ENodeType::Folder ? Folders : Macros; }
+        Node* Find(ENodeType aType, const std::string& aName)
+        {
+            auto& names = Of(aType);
+            auto it = names.find(Lower(aName));
+            return it == names.end() ? nullptr : it->second;
+        }
+    };
 
     void CopyMacro(const Node& aSrc, Node& aDst, bool aKeepHotkey)
     {
@@ -358,21 +379,23 @@ namespace
     }
 
     // Adds a folder or macro, with "Name (2)" if the plan's name is taken after all.
-    Node* AddNamed(Tree& aTree, Node& aDest, ENodeType aType, const std::string& aName)
+    Node* AddNamed(Tree& aTree, Node& aDest, NameIndex& aIndex, ENodeType aType, const std::string& aName)
     {
-        Result r = aType == ENodeType::Folder ? aTree.AddFolder(&aDest, aName) : aTree.AddMacro(&aDest, aName);
-        for (int n = 2; !r.Ok && n < 1000; n++)
-        {
-            if (aType == ENodeType::Folder && Tree::FolderLevel(aDest) + 1 > kMaxFolderDepth) return nullptr;
-            const std::string name = Tree::CleanName(aName + " (" + std::to_string(n) + ")");
-            r = aType == ENodeType::Folder ? aTree.AddFolder(&aDest, name) : aTree.AddMacro(&aDest, name);
-        }
-        return r.Ok ? r.Target : nullptr;
+        if (aType == ENodeType::Folder && Tree::FolderLevel(aDest) + 1 > kMaxFolderDepth) return nullptr;
+        auto& names = aIndex.Of(aType);
+        // NumberedName gives a new name for every n, so this ends.
+        std::string name = Tree::CleanName(aName);
+        for (int n = 2; name.empty() || names.count(Lower(name)); n++) name = Tree::NumberedName(aName, n);
+        Result r = aTree.AddKnownFree(&aDest, aType, name);
+        if (!r.Ok) return nullptr;
+        names.emplace(Lower(r.Target->Name), r.Target);
+        return r.Target;
     }
 
     void ApplyItems(Tree& aTree, Node& aDest, const std::vector<Exchange::PlanItem>& aItems, const Exchange::Options& aOpt, size_t& aCount)
     {
         using Exchange::EOutcome;
+        NameIndex index(aDest);
         for (const Exchange::PlanItem& item : aItems)
         {
             const Node& src = *item.Src;
@@ -386,14 +409,14 @@ namespace
                 ApplyItems(aTree, aDest, item.Children, aOpt, aCount);
                 continue;
             case EOutcome::Merged:
-                if (Node* existing = FindChild(aDest, ENodeType::Folder, item.Name))
+                if (Node* existing = index.Find(ENodeType::Folder, item.Name))
                 {
                     ApplyItems(aTree, *existing, item.Children, aOpt, aCount);
                     continue;
                 }
                 break; // gone since the plan was made: add it instead
             case EOutcome::Replaced:
-                if (Node* existing = FindChild(aDest, src.Type, item.Name))
+                if (Node* existing = index.Find(src.Type, item.Name))
                 {
                     aCount++;
                     if (src.IsFolder())
@@ -411,7 +434,7 @@ namespace
                 break;
             }
 
-            Node* added = AddNamed(aTree, aDest, src.Type, item.Name);
+            Node* added = AddNamed(aTree, aDest, index, src.Type, item.Name);
             if (!added) continue;
             aCount++;
             if (src.IsFolder())

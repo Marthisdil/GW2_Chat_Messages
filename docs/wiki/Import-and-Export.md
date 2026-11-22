@@ -56,7 +56,8 @@ Pick it in one of these ways:
 
 - **Import into**: the top level or any folder.
 - **When a macro's name is taken**:
-  - **Keep both (rename)** (the default): the new one is called `Name (2)`.
+  - **Keep both (rename)** (the default): the new one is called `Name (2)` (a very long name is
+    shortened so " (2)" fits in the 100-character limit).
   - **Skip**: the existing macro stays, the new one is left out.
   - **Replace**: the existing macro keeps its place, but gets the new lines and filters, and the
     new hotkey if **Keep hotkeys** is ticked (otherwise no hotkey).

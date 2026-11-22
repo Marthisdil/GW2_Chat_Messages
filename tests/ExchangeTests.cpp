@@ -1,5 +1,6 @@
 // Standalone tests for src/Exchange.cpp (import and export).
 
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -393,6 +394,51 @@ namespace
             Apply(t, t.Root(), plan, Options());
             CHECK(Child(t.Root(), "Hello (2) (2)", ENodeType::Macro) != nullptr);
         }
+        // SEC-018: a taken name of 99-100 bytes. Cutting "name (n)" back to 100 bytes gave the taken
+        // name again for every n, and planning never ended. The name is now cut to fit " (n)".
+        for (size_t len : {size_t(98), size_t(99), size_t(100)})
+        {
+            const std::string longName(len, 'a');
+            Tree t;
+            t.AddMacro(nullptr, longName);
+            Package p = Pkg(R"J({"format":1,"root":{"children":[{"type":"macro","name":")J" + longName + R"J(","lines":[]}]}})J");
+            Plan plan = BuildPlan(t, t.Root(), p.Items, Options());
+            CHECK(plan.Items.size() == 1 && plan.Items[0].Outcome == EOutcome::Renamed);
+            const std::string& got = plan.Items[0].Name;
+            CHECK(got.size() <= kMaxNameLength && got != longName);
+            CHECK(got.size() >= 4 && got.compare(got.size() - 4, 4, " (2)") == 0);
+            CHECK(Apply(t, t.Root(), plan, Options()) == 1);
+            CHECK(Child(t.Root(), got, ENodeType::Macro) != nullptr);
+        }
+    }
+
+    // SEC-027: each imported item was checked against every sibling (and found again by a scan),
+    // so 5,000 macros (the import limit) into one folder took 19 s in this (unoptimised) test build.
+    void TestApplyMany()
+    {
+        const int kCount = static_cast<int>(kMaxImportItems); // the most one import may hold
+        std::string text = R"J({"format":1,"root":{"children":[)J";
+        for (int i = 0; i < kCount; i++)
+            text += std::string(i ? "," : "") + R"J({"type":"macro","name":"m)J" + std::to_string(i) + R"J(","lines":[]})J";
+        text += "]}}";
+        Package p = Pkg(text);
+        CHECK(p.Ok());
+
+        Tree t;
+        const auto start = std::chrono::steady_clock::now();
+        CHECK(Apply(t, t.Root(), BuildPlan(t, t.Root(), p.Items, Options()), Options()) == static_cast<size_t>(kCount));
+        // Again into the same folder: every name is taken, so all are renamed ("m0 (2)"...).
+        CHECK(Apply(t, t.Root(), BuildPlan(t, t.Root(), p.Items, Options()), Options()) == static_cast<size_t>(kCount));
+        const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+        CHECK(seconds < 10.0); // about a second now; the old way took over a minute
+        CHECK(t.Root().Children.size() == static_cast<size_t>(2 * kCount));
+        CHECK(Child(t.Root(), "m0 (2)", ENodeType::Macro) != nullptr);
+
+        // Replace: the existing macros are updated in place, nothing is added.
+        Options replace;
+        replace.MacroConflict = EChoice::Replace;
+        CHECK(Apply(t, t.Root(), BuildPlan(t, t.Root(), p.Items, replace), replace) == static_cast<size_t>(kCount));
+        CHECK(t.Root().Children.size() == static_cast<size_t>(2 * kCount));
     }
 
     // A package of folders nested aDepth deep (F1 > F2 > ...), with a macro "M<n>" in each.
@@ -687,4 +733,5 @@ void RunExchangeTests()
     TestSelection();
     TestTrashNotImported();
     TestLibraryImport();
+    TestApplyMany();
 }

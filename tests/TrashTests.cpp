@@ -102,6 +102,21 @@ namespace
         Result r = l.t.Restore(0, ERestoreTo::Original);
         CHECK(r.Ok && !r.Note.empty());
         CHECK(r.Target && r.Target->Name == "Gorseval (2)");
+
+        // SEC-018: a taken name of 99-100 bytes. Restore looped forever (every "name (n)" cut back
+        // to the taken name); now the name is cut so all of " (n)" fits.
+        for (size_t len : {size_t(99), size_t(100)})
+        {
+            const std::string longName(len, 'x');
+            Tree t;
+            Node* m = t.AddMacro(nullptr, longName).Target;
+            t.MoveToTrash(*m, "t");
+            t.AddMacro(nullptr, longName);
+            Result lr = t.Restore(0, ERestoreTo::Original);
+            CHECK(lr.Ok && lr.Target);
+            CHECK(lr.Target->Name.size() <= kMaxNameLength && lr.Target->Name != longName);
+            CHECK(lr.Target->Name == std::string(kMaxNameLength - 4, 'x') + " (2)");
+        }
     }
 
     void TestDepth()

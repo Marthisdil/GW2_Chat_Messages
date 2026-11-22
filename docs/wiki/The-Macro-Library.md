@@ -85,7 +85,8 @@ The trash bin is never exported, and isn't imported from someone else's `macros.
   bin can't be sent, edited or used by a hotkey, and don't show in the quick menu.
 - **Restore** (button, or right-click the item): it goes back where it was. If its folder has
   been deleted since, you choose: **Recreate the folders** or **Put it at the top level**. If an
-  item with the same name is already there, the restored one gets " (2)" added.
+  item with the same name is already there, the restored one gets " (2)" added (a very long name
+  is shortened so it fits).
 - **Delete permanently...** removes one item for good. Right-click the bin > **Empty trash
   bin...** removes everything in it. Both ask first and can't be undone.
 - Items stay in the bin until you restore them or empty it.

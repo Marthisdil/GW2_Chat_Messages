@@ -52,21 +52,6 @@ namespace MacroTree
             return out;
         }
 
-        // aName + " (n)", with aName cut short (never inside a UTF-8 sequence) so all of " (n)" fits.
-        std::string WithNumber(const std::string& aName, int aN)
-        {
-            const std::string suffix = " (" + std::to_string(aN) + ")";
-            std::string base = aName;
-            if (base.size() + suffix.size() > kMaxNameLength)
-            {
-                size_t cut = kMaxNameLength - suffix.size();
-                while (cut > 0 && (static_cast<unsigned char>(base[cut]) & 0xC0) == 0x80) cut--;
-                base.resize(cut);
-                while (!base.empty() && base.back() == ' ') base.pop_back();
-            }
-            return Tree::CleanName(base + suffix);
-        }
-
         std::string IdToString(uint64_t aId)
         {
             char buf[17];
@@ -302,7 +287,7 @@ namespace MacroTree
                         // No room left for a number: cut the name shorter so the whole " (n)" fits.
                         for (int& m = cutNext[ti]; !named; m++)
                         {
-                            std::string candidate = WithNumber(old, m);
+                            std::string candidate = Tree::NumberedName(old, m);
                             if (taken[ti].insert(Lower(candidate)).second) { a.Name = std::move(candidate); named = true; }
                         }
                         Warn("Renamed duplicate " + std::string(TypeWord(a.Type)) + " \"" + old + "\" to \"" + a.Name + "\".");
@@ -402,13 +387,50 @@ namespace MacroTree
         return s;
     }
 
+    std::string Tree::NumberedName(const std::string& aName, int aN)
+    {
+        const std::string suffix = " (" + std::to_string(aN) + ")";
+        std::string base = aName;
+        if (base.size() + suffix.size() > kMaxNameLength)
+        {
+            size_t cut = kMaxNameLength - suffix.size();
+            while (cut > 0 && (static_cast<unsigned char>(base[cut]) & 0xC0) == 0x80) cut--;
+            base.resize(cut);
+            while (!base.empty() && base.back() == ' ') base.pop_back();
+        }
+        return CleanName(base + suffix);
+    }
+
+    namespace
+    {
+        void CollectIds(const Node& aNode, std::unordered_set<uint64_t>& aOut)
+        {
+            for (const auto& c : aNode.Children)
+            {
+                aOut.insert(c->Id);
+                CollectIds(*c, aOut);
+            }
+        }
+    }
+
     uint64_t Tree::NewId() const
     {
         static std::mt19937_64 rng{std::random_device{}()};
+        if (!m_UsedIdsReady)
+        {
+            m_UsedIds.clear();
+            CollectIds(*m_Root, m_UsedIds);
+            for (const TrashItem& t : m_Trash)
+            {
+                m_UsedIds.insert(t.Item->Id);
+                CollectIds(*t.Item, m_UsedIds);
+            }
+            m_UsedIdsReady = true;
+        }
         for (;;)
         {
             const uint64_t id = rng();
-            if (id != 0 && !IdInUse(id)) return id;
+            if (id != 0 && m_UsedIds.insert(id).second) return id;
         }
     }
 
@@ -423,9 +445,11 @@ namespace MacroTree
     std::string Tree::FreeName(const Node& aFolder, ENodeType aType, const std::string& aName) const
     {
         if (CheckName(aFolder, aType, aName, nullptr).Ok) return aName;
+        // NumberedName, not CleanName(aName + " (n)"): for a long name that cut every candidate
+        // back to the same taken name and the loop never ended (SEC-018).
         for (int n = 2;; n++)
         {
-            const std::string candidate = CleanName(aName + " (" + std::to_string(n) + ")");
+            const std::string candidate = NumberedName(aName, n);
             if (CheckName(aFolder, aType, candidate, nullptr).Ok) return candidate;
         }
     }
@@ -440,7 +464,7 @@ namespace MacroTree
         return {};
     }
 
-    Result Tree::Add(Node* aParent, ENodeType aType, const std::string& aName)
+    Result Tree::Add(Node* aParent, ENodeType aType, const std::string& aName, bool aCheckName)
     {
         Node& parent = aParent ? *aParent : *m_Root;
         if (!parent.IsFolder()) return Result::Fail("Items can only be added to a folder.");
@@ -448,8 +472,12 @@ namespace MacroTree
             return Result::Fail("Folders can be nested at most " + std::to_string(kMaxFolderDepth) + " levels deep.");
 
         const std::string name = CleanName(aName);
-        Result check = CheckName(parent, aType, name, nullptr);
-        if (!check.Ok) return check;
+        if (aCheckName)
+        {
+            Result check = CheckName(parent, aType, name, nullptr);
+            if (!check.Ok) return check;
+        }
+        else if (name.empty()) return Result::Fail("The name can't be empty.");
 
         auto node = std::make_unique<Node>();
         node->Id     = NewId();
@@ -465,6 +493,7 @@ namespace MacroTree
 
     Result Tree::AddFolder(Node* aParent, const std::string& aName) { return Add(aParent, ENodeType::Folder, aName); }
     Result Tree::AddMacro(Node* aParent, const std::string& aTitle) { return Add(aParent, ENodeType::Macro, aTitle); }
+    Result Tree::AddKnownFree(Node* aParent, ENodeType aType, const std::string& aName) { return Add(aParent, aType, aName, false); }
 
     Result Tree::Rename(Node& aNode, const std::string& aName)
     {
@@ -639,6 +668,7 @@ namespace MacroTree
                 {
                     auto folder = std::make_unique<Node>();
                     folder->Id       = t.FromIds[i] == 0 || IdInUse(t.FromIds[i]) ? NewId() : t.FromIds[i];
+                    if (m_UsedIdsReady) m_UsedIds.insert(folder->Id); // an old id back in use
                     folder->Type     = ENodeType::Folder;
                     folder->Name     = want;
                     folder->Parent   = dest;
@@ -759,6 +789,10 @@ namespace MacroTree
 
         m_Root  = std::move(fresh);
         m_Trash = std::move(trash);
+        // The parser saw every id kept in the tree and the bin: NewId starts from those instead of
+        // walking the tree once per new id, which froze the game on many id-less nodes (SEC-017).
+        m_UsedIds      = std::move(p.SeenIds);
+        m_UsedIdsReady = true;
         if (!p.NeedIdNodes.empty())
         {
             for (Node* n : p.NeedIdNodes) n->Id = NewId();
