@@ -8,5 +8,6 @@
 - [Filters](Filters)
 - [Placeholders](Placeholders)
 - [Import and export](Import-and-Export)
+- [Languages](Languages)
 - [Files and data](Files-and-Data)
 - [Safety and troubleshooting](Safety-and-Troubleshooting)

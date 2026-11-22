@@ -39,7 +39,17 @@ to scan, where untrusted data comes in, which bug classes matter here, and how p
 4. **Text typed into the game** (`src/ChatLine.*`, `src/SendPlan.*`, `src/Sender.*`): a value
    from a placeholder or a file must not add a newline, an extra Enter, a Tab or a channel
    command it didn't have. Check UTF-8 to UTF-16 conversion and the 199-unit limit.
-5. **Our own files** (`macros.json`, `settings.json`, `.bak`): may be hand-edited or damaged; an
+5. **Language files** (`src/Localization.*`, `src/Languages.*`): `.json` files in
+   `<addon>\localization\`, likely written by other people and passed around. Their texts are
+   drawn in our windows and many are **printf format strings** (`Fmt(T("...%s..."), ...)`), so
+   a translation must never change the format codes: check `Placeholders`/`SamePlaceholders`
+   (same codes, same order, no `%n`, `%*`, `%1$`). Also check the size and depth limits in
+   `Localization.h`, the `Identifier` and `DisplayName` rules, `SafeText` (UTF-8, control
+   characters, bidi marks, `##`), that only keys known from English are used, the folder rules
+   in `Languages.cpp` (regular files only, no links, at most `kMaxFiles`), and that a text can't
+   change an ImGui ID (the `##` part is kept from the English literal). The built-in files go
+   through the same checks.
+6. **Our own files** (`macros.json`, `settings.json`, `.bak`): may be hand-edited or damaged; an
    unreadable file is renamed aside, never overwritten.
 
 ## Bug classes that matter here

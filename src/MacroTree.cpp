@@ -1,5 +1,7 @@
 #include "MacroTree.h"
 
+#include "Localization.h"
+
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
@@ -17,22 +19,22 @@ namespace MacroTree
         struct ChannelInfo { const char* Key; const char* Label; };
 
         constexpr ChannelInfo kChannels[] = {
-            {"current", "Current channel"},
-            {"emote",   "Emote"},
-            {"say",     "Say"},
-            {"map",     "Map"},
-            {"party",   "Party"},
-            {"squad",   "Squad"},
-            {"team",    "Team"},
-            {"reply",   "Reply"},
-            {"whisper", "Whisper"},
-            {"guild",   "Guild"},
-            {"guild1",  "Guild 1"},
-            {"guild2",  "Guild 2"},
-            {"guild3",  "Guild 3"},
-            {"guild4",  "Guild 4"},
-            {"guild5",  "Guild 5"},
-            {"guild6",  "Guild 6"},
+            {"current", TX("Current channel")},
+            {"emote",   TX("Emote")},
+            {"say",     TX("Say")},
+            {"map",     TX("Map")},
+            {"party",   TX("Party")},
+            {"squad",   TX("Squad")},
+            {"team",    TX("Team")},
+            {"reply",   TX("Reply")},
+            {"whisper", TX("Whisper")},
+            {"guild",   TX("Guild")},
+            {"guild1",  TX("Guild 1")},
+            {"guild2",  TX("Guild 2")},
+            {"guild3",  TX("Guild 3")},
+            {"guild4",  TX("Guild 4")},
+            {"guild5",  TX("Guild 5")},
+            {"guild6",  TX("Guild 6")},
         };
         static_assert(sizeof(kChannels) / sizeof(kChannels[0]) == static_cast<size_t>(EChannel::Count),
                       "kChannels must list every EChannel");

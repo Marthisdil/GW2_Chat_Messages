@@ -1,5 +1,7 @@
 #include "Exchange.h"
 
+#include "Localization.h"
+
 #include <algorithm>
 #include <cctype>
 #include <fstream>
@@ -646,10 +648,10 @@ namespace Exchange
     {
         switch (aChoice)
         {
-        case EChoice::Rename:  return "Keep both (rename)";
-        case EChoice::Skip:    return "Skip";
-        case EChoice::Replace: return "Replace";
-        case EChoice::Merge:   return "Merge";
+        case EChoice::Rename:  return TX("Keep both (rename)");
+        case EChoice::Skip:    return TX("Skip");
+        case EChoice::Replace: return TX("Replace");
+        case EChoice::Merge:   return TX("Merge");
         }
         return "";
     }

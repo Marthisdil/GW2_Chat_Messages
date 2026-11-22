@@ -19,6 +19,8 @@ chat macros in folders and types them into chat for you.
 - [Filters](Filters): limit a macro to game modes and maps.
 - [Placeholders](Placeholders): `{time}`, `{random}`, `{map}`, text files, JSON and more.
 - [Import and export](Import-and-Export): share and back up macros, with a preview and undo.
+- [Languages](Languages): show the addon in English, German, French, Spanish, or a language
+  file of your own.
 - [Files and data](Files-and-Data): where your macros are saved, and backups.
 - [Safety and troubleshooting](Safety-and-Troubleshooting): how sending stays safe, and what the
   error messages mean.

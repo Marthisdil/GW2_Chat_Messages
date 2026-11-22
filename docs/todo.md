@@ -53,24 +53,29 @@ be clicked into a message.
     cursor rather than at the end of the message.
   - Each special character counts toward the 199-character limit (one or two units).
 
-### Multi-language UI (added 2026-11-20)
+### Signed language files (added 2026-11-21)
 
-Translate the addon's own text (windows, buttons, messages, tooltips) and make it multi-language
-by design.
+Security signatures on translation files where the checksum is checked to make sure the file
+comes from our repository and not some random 3rd party (where the file is rejected if it
+doesn't pass the test).
 
-- Pick the language automatically from the game client's language if possible, with a manual
-  override in the settings.
-- Points to settle:
-  - How to detect the client language. Options to research include Nexus' localization
-    settings (Nexus has its own language setting and a `Localization_*` API) and the game's own
-    settings or launch arguments. Mumble Link doesn't report it.
-  - Which languages: the game's English, German, French and Spanish to start (the raw-text parser
-    already understands their chat commands), then maybe more.
-  - How to store translations: Nexus' `Localization_Set`/`Translate` with per-language files,
-    or our own string tables.
-  - All UI text needs to move to string keys. It's easier to start this early than to retrofit it
-    later.
-  - Fonts: German, French and Spanish accented letters need to be in the font's glyph ranges.
+- Points to settle: a real signature (a private key kept by the maintainer, the public key in
+  the DLL) versus a list of checksums built into each release (which only covers files that
+  existed at release time); what happens to a translator's own file while they test it (an
+  "unsigned, use anyway" switch?); and how the release workflow signs the files.
+
+### Translate the remaining messages (added 2026-11-21)
+
+The multi-language UI (phase 13, `docs/design.md` "Languages") leaves some texts in English:
+messages from the core modules (tree rules, import, sender status, link sync and hotkey errors,
+key names, "Imported library", "From <file>"). They're built off the render thread or in modules
+with no UI dependency, while `T()` is render-thread only. Options: return message ids or codes
+from those modules and translate them in `Ui.cpp`, or a thread-safe lookup.
+
+### Fonts for other scripts (added 2026-11-21)
+
+Nexus' fonts cover Latin with accents. Chinese, Korean, Russian, etc. would show `?` boxes. Load a
+font of our own with those glyph ranges (ties in with "More text sizes from a font of our own").
 
 ### Warn when a hotkey is also a game keybind (added 2026-11-20)
 

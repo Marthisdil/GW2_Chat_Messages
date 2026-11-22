@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Languages:** the addon's text can be shown in English, German, French or Spanish. By default
+  it follows Nexus' language; a **Language** dropdown on the options page picks one instead.
+  The keybind names and the icon's tooltip follow Nexus' language too. More languages can be
+  added as `.json` files in `<GW2>\addons\GW2_Chat_Messages\localization\` (**Open localization
+  folder**, **Reload language files**); every file is checked before use, and texts that fail a
+  check are shown in English. The German, French and Spanish texts were made by AI and need a
+  native speaker's review. `localization/template.json` and `CONTRIBUTING.md` explain how to
+  translate.
 - **Only active here:** a checkbox under the library's search box shows only the macros that are
   active where you are, with a label that names it (e.g. "Only active in WvW on Eternal
   Battlegrounds (38)"). It follows map changes and is remembered.
