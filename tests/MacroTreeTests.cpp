@@ -1,7 +1,11 @@
 // Standalone tests for src/MacroTree.cpp (no Nexus, no ImGui).
 // Build and run: tools\run_tests.ps1 (CI runs it too).
 
+#include <algorithm>
+#include <cstdio>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
@@ -237,6 +241,98 @@ static void TestJsonDamaged()
     CHECK(!warnings.empty());
 }
 
+// {"format":1,"root":{"children":[...]}} with one {"type","name"} entry per item (and an id, if asked).
+static json Library(const std::vector<std::pair<std::string, std::string>>& aItems, bool aIds = false)
+{
+    json children = json::array();
+    for (size_t i = 0; i < aItems.size(); i++)
+    {
+        json c = {{"type", aItems[i].first}, {"name", aItems[i].second}};
+        if (aIds)
+        {
+            char id[17];
+            std::snprintf(id, sizeof(id), "%016llx", static_cast<unsigned long long>(i + 1));
+            c["id"] = id;
+        }
+        children.push_back(std::move(c));
+    }
+    return {{"format", 1}, {"root", {{"children", std::move(children)}}}};
+}
+
+static void TestDuplicateNames()
+{
+    // A repeated name gets the first free number, skipping names any sibling of the same type
+    // holds (before or after it), ignoring case. A folder and a macro may share a name.
+    {
+        Tree u;
+        std::vector<std::string> warnings;
+        CHECK(u.FromJson(Library({{"macro", "x"}, {"macro", "X"}, {"macro", "x (2)"}, {"folder", "x"},
+                                  {"macro", "x"}, {"folder", "X"}}), &warnings));
+        const auto& c = u.Root().Children;
+        CHECK(c.size() == 6);
+        CHECK(c.size() == 6 && c[0]->Name == "x" && c[1]->Name == "X (3)" && c[2]->Name == "x (2)");
+        CHECK(c.size() == 6 && c[3]->Name == "x" && c[4]->Name == "x (4)" && c[5]->Name == "X (2)");
+        CHECK(std::find(warnings.begin(), warnings.end(), "Renamed duplicate macro \"X\" to \"X (3)\".") != warnings.end());
+    }
+
+    // Thousands of copies of one name (a crafted import): each gets the next number, without
+    // rescanning every sibling for every candidate (that took cubic time and froze the game).
+    {
+        const size_t kCopies = 20000;
+        Tree u;
+        CHECK(u.FromJson(Library(std::vector<std::pair<std::string, std::string>>(kCopies, {"macro", "a"}), true)));
+        const auto& c = u.Root().Children;
+        CHECK(c.size() == kCopies);
+        bool numbered = c.size() == kCopies && c[0]->Name == "a";
+        for (size_t i = 1; i < c.size() && numbered; i++) numbered = c[i]->Name == "a (" + std::to_string(i + 1) + ")";
+        CHECK(numbered);
+    }
+
+    // A name too long for the number: the cut to kMaxNameLength dropped it, so every candidate was
+    // taken and the loop never ended. What the cut left is still used while it's new; then the name
+    // is cut shorter so all of " (n)" fits.
+    {
+        const std::string full(kMaxNameLength, 'n');
+        Tree u;
+        CHECK(u.FromJson(Library({{"macro", full}, {"macro", full}, {"macro", full}})));
+        const auto& c = u.Root().Children;
+        CHECK(c.size() == 3 && c[0]->Name == full);
+        CHECK(c.size() == 3 && c[1]->Name == std::string(kMaxNameLength - 4, 'n') + " (2)");
+        CHECK(c.size() == 3 && c[2]->Name == std::string(kMaxNameLength - 4, 'n') + " (3)");
+    }
+    {
+        const std::string name(kMaxNameLength - 2, 'e'); // room for " (" only
+        Tree u;
+        CHECK(u.FromJson(Library({{"macro", name}, {"macro", name}, {"macro", name}})));
+        const auto& c = u.Root().Children;
+        CHECK(c.size() == 3 && c[1]->Name == name + " (");
+        CHECK(c.size() == 3 && c[2]->Name == std::string(kMaxNameLength - 4, 'e') + " (2)");
+    }
+    {
+        const std::string name(kMaxNameLength - 3, 's'); // room for " (" and one digit
+        Tree u;
+        CHECK(u.FromJson(Library(std::vector<std::pair<std::string, std::string>>(11, {"folder", name}))));
+        const auto& c = u.Root().Children;
+        CHECK(c.size() == 11);
+        bool cut = c.size() == 11;
+        for (size_t i = 1; i < 9 && cut; i++) cut = c[i]->Name == name + " (" + std::to_string(i + 1);
+        CHECK(cut);
+        CHECK(c.size() == 11 && c[9]->Name == name + " (1");
+        CHECK(c.size() == 11 && c[10]->Name == std::string(kMaxNameLength - 4, 's') + " (2)");
+    }
+    {
+        std::string name = "a";
+        for (int i = 0; i < 49; i++) name += "\xC3\xA9"; // 99 bytes
+        name += "b";                                     // 100
+        std::string kept = "a";
+        for (int i = 0; i < 47; i++) kept += "\xC3\xA9"; // the cut backs up off the split "é"
+        Tree u;
+        CHECK(u.FromJson(Library({{"macro", name}, {"macro", name}})));
+        const auto& c = u.Root().Children;
+        CHECK(c.size() == 2 && c[1]->Name == kept + " (2)");
+    }
+}
+
 static void TestChannels()
 {
     for (int i = 0; i < static_cast<int>(EChannel::Count); i++)
@@ -257,5 +353,6 @@ void RunMacroTreeTests()
     TestSort();
     TestJsonRoundTrip();
     TestJsonDamaged();
+    TestDuplicateNames();
     TestChannels();
 }

@@ -6,6 +6,7 @@
 #include <cctype>
 #include <cstdio>
 #include <random>
+#include <unordered_map>
 #include <unordered_set>
 
 #include <nlohmann/json.hpp>
@@ -48,6 +49,21 @@ namespace MacroTree
             for (char& c : out)
                 if (static_cast<unsigned char>(c) < 0x80) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
             return out;
+        }
+
+        // aName + " (n)", with aName cut short (never inside a UTF-8 sequence) so all of " (n)" fits.
+        std::string WithNumber(const std::string& aName, int aN)
+        {
+            const std::string suffix = " (" + std::to_string(aN) + ")";
+            std::string base = aName;
+            if (base.size() + suffix.size() > kMaxNameLength)
+            {
+                size_t cut = kMaxNameLength - suffix.size();
+                while (cut > 0 && (static_cast<unsigned char>(base[cut]) & 0xC0) == 0x80) cut--;
+                base.resize(cut);
+                while (!base.empty() && base.back() == ' ') base.pop_back();
+            }
+            return Tree::CleanName(base + suffix);
         }
 
         std::string IdToString(uint64_t aId)
@@ -245,27 +261,49 @@ namespace MacroTree
             }
 
             // Two siblings of the same type with the same name: rename the later one "Name (2)" etc.
+            // The first free number is picked, skipping names any sibling (earlier or later) holds.
+            // Lookups use sets, and each name remembers the next number to try, so a file with
+            // thousands of copies of one name takes linear time, not a rescan per candidate.
             void MakeNamesUnique(Node& aFolder)
             {
-                for (size_t i = 0; i < aFolder.Children.size(); i++)
+                // Per type (0 = folder, 1 = macro), lower case: every name a sibling holds (a renamed
+                // sibling's old name stays taken: the earlier sibling it repeated still holds it), the
+                // names of the siblings before the current one, and the next number to try per name.
+                std::unordered_set<std::string>      taken[2], earlier[2];
+                std::unordered_map<std::string, int> next[2];
+                int                                  cutNext[2] = {2, 2};
+                for (const auto& c : aFolder.Children) taken[c->IsFolder() ? 0 : 1].insert(Lower(c->Name));
+
+                for (const auto& c : aFolder.Children)
                 {
-                    Node& a = *aFolder.Children[i];
-                    for (size_t k = 0; k < i; k++)
+                    Node& a = *c;
+                    const int ti = a.IsFolder() ? 0 : 1;
+                    const std::string old = a.Name;
+                    const std::string lower = Lower(old);
+                    if (earlier[ti].count(lower))
                     {
-                        const Node& b = *aFolder.Children[k];
-                        if (b.Type != a.Type || Lower(b.Name) != Lower(a.Name)) continue;
-                        const std::string old = a.Name;
-                        for (int n = 2;; n++)
+                        // A number already tried for this name is still taken, so carry on from there.
+                        int& n = next[ti].try_emplace(lower, 2).first->second;
+                        bool named = false;
+                        for (; !named; n++)
                         {
-                            std::string candidate = Tree::CleanName(old + " (" + std::to_string(n) + ")");
-                            bool taken = false;
-                            for (const auto& s : aFolder.Children)
-                                if (s.get() != &a && s->Type == a.Type && Lower(s->Name) == Lower(candidate)) taken = true;
-                            if (!taken) { a.Name = candidate; break; }
+                            const std::string raw = old + " (" + std::to_string(n) + ")";
+                            // Once the cut to kMaxNameLength takes ")" and two more characters, this and
+                            // every later candidate repeat one already tried (or the name itself), so
+                            // all are taken and none is left (the old loop never ended here).
+                            if (raw.size() >= kMaxNameLength + 3) break;
+                            std::string candidate = Tree::CleanName(raw);
+                            if (taken[ti].insert(Lower(candidate)).second) { a.Name = std::move(candidate); named = true; }
+                        }
+                        // No room left for a number: cut the name shorter so the whole " (n)" fits.
+                        for (int& m = cutNext[ti]; !named; m++)
+                        {
+                            std::string candidate = WithNumber(old, m);
+                            if (taken[ti].insert(Lower(candidate)).second) { a.Name = std::move(candidate); named = true; }
                         }
                         Warn("Renamed duplicate " + std::string(TypeWord(a.Type)) + " \"" + old + "\" to \"" + a.Name + "\".");
-                        break;
                     }
+                    earlier[ti].insert(Lower(a.Name));
                 }
             }
         };

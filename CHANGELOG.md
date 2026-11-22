@@ -199,6 +199,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   your chat box. It now only ever closes a chat box it opened itself.
 - An imported file, a whole library or a `macros.json` whose trash bin held a very deeply nested
   entry could close the game while it was read. It's now read without copying that entry.
+- Importing or loading a file with thousands of folders or macros of the same name could freeze
+  the game, and a repeated name close to the 100-character limit could freeze it for good.
+  Repeated names are now renamed (`Name (2)`, `Name (3)`...) quickly; a name too long for the
+  number is cut shorter to make room.
 
 ### Documentation
 - The README describes what the addon does, with a quick start.
