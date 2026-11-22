@@ -65,7 +65,15 @@ static void TestPack()
 static void TestRefusal()
 {
     CHECK(Refusal(C(0x70)).empty());          // F1
-    CHECK(Refusal(C(kVkXButton1)).empty());   // Mouse 4
+    // Mouse 3/4/5 need Ctrl, Alt or Shift.
+    CHECK(!Refusal(C(kVkXButton1)).empty());  // Mouse 4 alone
+    CHECK(!Refusal(C(kVkXButton2)).empty());
+    CHECK(!Refusal(C(kVkMButton)).empty());
+    CHECK(Refusal(C(kVkXButton1, true)).empty());
+    CHECK(Refusal(C(kVkXButton2, false, true)).empty());
+    CHECK(Refusal(C(kVkMButton, false, false, true)).empty());
+    CHECK(IsMouseKey(kVkMButton) && IsMouseKey(kVkXButton1) && IsMouseKey(kVkXButton2));
+    CHECK(!IsMouseKey(0x01) && !IsMouseKey('A'));
     CHECK(Refusal(C('1', true)).empty());
     CHECK(!Refusal(Combo{}).empty());
     CHECK(!Refusal(C(0x01)).empty());         // left mouse
@@ -77,6 +85,41 @@ static void TestRefusal()
     CHECK(Refusal(C(0x09, true)).empty());    // Ctrl+Tab is allowed
     CHECK(!Refusal(C(0x0D)).empty());         // Enter alone
     CHECK(!Refusal(C(0x20)).empty());         // Space alone
+}
+
+// Plain mouse hotkeys saved before the modifier rule: kept on load, flagged, never fire.
+static void TestOldMouseHotkeys()
+{
+    CHECK(NeedsModifier(C(kVkXButton1)));
+    CHECK(NeedsModifier(C(kVkMButton)));
+    CHECK(!NeedsModifier(C(kVkXButton1, true)));
+    CHECK(!NeedsModifier(C(0x70)));
+    CHECK(!NeedsModifier(Combo{}));
+
+    CHECK(KeepOnLoad(C(kVkXButton1)));        // kept so the user sees it
+    CHECK(KeepOnLoad(C(kVkXButton1, true)));
+    CHECK(KeepOnLoad(C(0x70)));
+    CHECK(!KeepOnLoad(C(kVkEscape)));
+    CHECK(!KeepOnLoad(C(0x09)));
+    CHECK(!KeepOnLoad(Combo{}));
+
+    CHECK(!Fires(C(kVkXButton1)));            // but it never sends
+    CHECK(!Fires(C(kVkXButton2)));
+    CHECK(Fires(C(kVkXButton1, false, false, true)));
+    CHECK(Fires(C(0x70)));
+    CHECK(!Fires(Combo{}));
+
+    // Through macros.json: the old hotkey stays on the macro, with no warning.
+    using namespace MacroTree;
+    Tree t;
+    Node* m = t.AddMacro(nullptr, "Old").Target;
+    m->Hotkey = C(kVkXButton1);
+    Tree u;
+    std::vector<std::string> warnings;
+    CHECK(u.FromJson(t.ToJson(), &warnings));
+    CHECK(warnings.empty());
+    CHECK(u.MacrosWithHotkey(C(kVkXButton1)).size() == 1);
+    CHECK(t.ToJson()["root"]["children"][0]["hotkey"] == "Mouse 4");
 }
 
 static void TestTree()
@@ -115,5 +158,6 @@ void RunHotkeyTests()
     TestParse();
     TestPack();
     TestRefusal();
+    TestOldMouseHotkeys();
     TestTree();
 }

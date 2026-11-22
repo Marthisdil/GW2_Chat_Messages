@@ -18,10 +18,14 @@ Each macro can have its own hotkey. In the macro editor, next to **Hotkey:**, cl
 (or **Change...**) and press the key you want.
 
 - You can add **Ctrl**, **Alt** or **Shift**. **Mouse 3** (middle), **Mouse 4** and **Mouse 5**
-  work too.
-- Escape cancels. **None** removes the hotkey.
-- Not allowed: left and right mouse buttons, Escape, a modifier key on its own, and plain Tab,
-  Enter, Space or Backspace.
+  work too, but only together with Ctrl, Alt or Shift (for example **Ctrl+Mouse 4**): on their
+  own they're often dodge or a skill, so they'd send the macro by accident.
+- Escape cancels. **Clear** removes the hotkey.
+- Not allowed: left and right mouse buttons, Escape, a modifier key on its own, plain Mouse 3/4/5,
+  and plain Tab, Enter, Space or Backspace.
+- A plain mouse hotkey set with an older version of the addon is kept but **doesn't work any
+  more**: the tree shows it as `[Mouse 4: off, needs Ctrl/Alt/Shift]` and the editor in red.
+  Click **Change...** to set a new one.
 - **The key still does its normal job in game.** The addon only listens; it never blocks a key.
   Pick a key you don't use in game. Plain letters and numbers get a warning, because they're
   usually game keys; adding Ctrl, Alt or Shift is safer.

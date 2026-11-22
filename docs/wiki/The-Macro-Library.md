@@ -19,6 +19,32 @@ the right.
   go into: ..." (the selected folder, or the top level).
 - **New folder** is refused where the folder would go past level 6.
 
+## Search
+
+The **Search (Ctrl+F)** box above the tree finds folders and macros in a big library. Type part
+of:
+
+- a folder's or macro's **name**,
+- the **text of a macro's lines**, or a whisper's **recipient**,
+- a **hotkey**, like `ctrl+f1`.
+
+Case and accents don't matter: `cafe` finds `Café`. While you search:
+
+- The tree shows only what matches, with the folders above each match opened. Matched text in a
+  name is highlighted; a macro found by its lines or hotkey says "(found in its lines)" or
+  "(found in its hotkey)". A matching folder shows everything inside it.
+- A line above the tree counts the matches, or says nothing matches.
+- Dragging, **Move up** and **Move down** are off, because the tree isn't complete. The trash bin
+  isn't searched or shown.
+- A selected item that no longer shows is unselected.
+
+Click **x** next to the box, or press **Escape** in it, to clear the search: the whole tree is
+back, with the same folders open and closed as before. **Ctrl+F** anywhere in the library window
+puts the cursor in the box. Hotkeys don't fire while you type in it.
+
+<!-- screenshot: search.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the library while searching, with a highlighted match.*
+
 ## Right-click menu
 
 Right-click any item in the tree for:
@@ -26,7 +52,7 @@ Right-click any item in the tree for:
 - **New folder inside** / **New macro inside** (folders)
 - **Send now** (macros)
 - **Rename**
-- **Move up** / **Move down**
+- **Move up** / **Move down** (not while [searching](#search))
 - **Export**: save as a .json or .txt file, or copy to the clipboard (see
   [Import and export](Import-and-Export))
 - **Import into this folder...** (folders)

@@ -11,7 +11,7 @@ A Nexus addon that sends pre-written chat messages. It is modelled on the Blish 
 | Tree depth | At most **6 levels of folders** (root → folder 1 → … → folder 6). Macros can sit at the root or in any folder. |
 | Features | Every chat feature from bhm-chat-macros, including raw edit mode and `.txt` import/export. **No voice commands.** |
 | Multi-line | A macro is an ordered list of lines. Each line has its own channel and its own message. One trigger sends the lines in order. |
-| Hotkeys | Each macro can have a hotkey. CTRL, ALT and SHIFT modifiers are allowed, and so are mouse buttons. Built into the addon, set in the macro editor (not Nexus keybinds). |
+| Hotkeys | Each macro can have a hotkey. CTRL, ALT and SHIFT modifiers are allowed, and so are mouse buttons (Mouse 3/4/5 only with a modifier, since 2026-11-21). Built into the addon, set in the macro editor (not Nexus keybinds). |
 | Import/export | Folder structure is carried along. An import **always shows a preview** (folders created, where each macro goes, conflicts) and changes nothing until the user confirms. |
 | Game usability | Top priority: the addon must never break normal game input. See "Input safety". |
 
@@ -161,6 +161,30 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
 - No size or age limit: items stay until restored or deleted.
 - Undo import puts the bin back as it was before the import too (the whole library is restored).
 
+## Search
+
+*(Decided and built 2026-11-21 from the todo list; matching in `src/Search.*`, tested in
+`tests/SearchTests.cpp`; UI in `Ui.cpp`.)*
+
+- A **Search (Ctrl+F)** box above the tree, in the tree pane's width, with an **x** button while
+  it holds text.
+- **What matches:** a folder by its name; a macro by its name, the text of any line, a whisper
+  recipient, or its hotkey's text (`ctrl+f1`). The whole trimmed query is looked for as one piece
+  of text. Case and accents are ignored (`Search::Fold`: Latin-1 letters and œ lose their accents,
+  ß is `ss`). The trash bin isn't searched.
+- **Results: a filtered tree.** Only matches, the folders above them and everything inside a
+  matching folder are shown. Folders above a match are held open while searching without changing
+  their saved open state, so clearing the search brings the tree back as it was. Matched text in
+  a name is highlighted; a macro found by its lines or hotkey gets "(found in its lines)" /
+  "(found in its hotkey)". A line above the tree counts folder and macro matches, or says nothing
+  matches.
+- **While searching:** dragging and dropping, Move up and Move down are off (hidden neighbours);
+  the trash bin is hidden; a selected item that's no longer shown is unselected. Editing still
+  works and the results update every frame.
+- **Keys:** Ctrl+F while the library window is focused puts the cursor in the box; Escape in the
+  box clears it. It's a text box, so macro hotkeys are ignored while typing in it.
+- Later, maybe (in `docs/todo.md`): an "active here only" filter and a search in the quick menu.
+
 ## Character counter
 
 *(Built 2026-11-21 from the todo item; levels in `ChatLine::LengthLevel`, tested in
@@ -226,6 +250,22 @@ imported. A Replace keeps the existing item's id and place.)*
     `Exchange::SetSelected`/`SelectAll` (`Options::Unselected`), tested.
   - Taken names are marked **NAME TAKEN** (yellow) next to the item, with what will happen and a
     choice box.
+- **A whole library** (decided 2026-11-21, from the todo list): someone else's `macros.json`
+  (or `.bak`), imported as a copy. Rules in `Exchange::FromLibraryFile`, `LibraryFolderName`
+  and `WrapInFolder`, tested.
+  - The Import window's step 1 has two choices: **Macros** (as before) and **A whole library**.
+    In library mode the imports list shows only `.json` and `.bak` files, the path box reads one
+    file, and Paste reads JSON only.
+  - Everything at the file's top level is put into **one new folder at the top level** (never
+    the Import window's target folder), so it can't mix into the user's folders. Its name is
+    editable in step 2: `From <file name>` (`From Alex` for `Alex.json`), or `Imported library`
+    for a file still called `macros.json`, pasted text, or an empty name. A taken name gets
+    " (2)" (folder conflicts default to Keep both, not Merge; the per-item choice box still
+    offers the others).
+  - **Keep hotkeys** starts unticked. Their trash bin and link files are left out, as for any
+    import. Their folders are one level deeper, so the usual too-deep rules apply.
+  - Not taken: their `settings.json` (text size and the trash bin setting are personal).
+  - Switching modes, or closing the window, clears what was loaded; the window opens on Macros.
 - **The trash bin is never exported or imported** (2026-11-21): exports are built from tree nodes,
   so the bin isn't in them, and while the bin holds anything, export messages, the Export submenu
   and the Export all tooltip say "Items in the trash bin (F/M) aren't exported". Importing a
@@ -287,6 +327,12 @@ Rules this addon follows:
     game. The user picks keys they don't use in game; plain letters and numbers get a warning.
   - Keyboard keys plus Mouse 3, 4 and 5, with Ctrl, Alt and Shift. Refused: left/right mouse,
     Escape, modifier keys alone, and plain Tab, Enter, Space and Backspace.
+  - **Mouse 3/4/5 need Ctrl, Alt or Shift** (decided 2026-11-21, from the todo list): plain mouse
+    buttons are often dodge or a skill, so they'd send a macro by accident. A plain mouse hotkey
+    saved by an older build is kept in `macros.json` (`Hotkey::KeepOnLoad`, no load warning) but
+    never fires (`Hotkey::Fires`); the tree shows `[Mouse 4: off, needs Ctrl/Alt/Shift]`, the
+    editor shows it in red with a note to change it, and the quick menu doesn't show the key.
+    Ctrl/Alt/Shift + left/right click stay refused (they do things in GW2).
   - Ignored: auto-repeat, a focused game text box (Mumble), ImGui text input in any addon
     (`WantTextInput`), and outside gameplay.
   - The window thread only queues the press. The render thread matches it against the tree and
@@ -347,3 +393,5 @@ policy and mention the behaviour when registering with Raidcore.
    tested in game)*
 10. Trash bin (with its setting) and the character counter under the message box. *(done; not
     yet tested in game)*
+11. Search box, importing a whole library, and mouse hotkeys needing a modifier. *(done; not yet
+    tested in game)*

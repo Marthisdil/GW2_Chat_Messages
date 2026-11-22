@@ -61,6 +61,21 @@ namespace Exchange
     // A .json or .txt file, or a folder of .txt files (sub-folders become folders).
     Package FromPath(const std::filesystem::path& aPath);
 
+    // --- A whole library (someone else's macros.json) -------------------------------------------
+    // Read like an export (its trash bin and link files are left out), but it's put into one new
+    // folder at the top level (WrapInFolder), so it never mixes into the user's own folders.
+
+    // macros.json or its backup, macros.json.bak: a .json or .bak file.
+    bool    IsLibraryFileName(const std::filesystem::path& aPath);
+    Package FromLibraryFile(const std::filesystem::path& aPath);
+    // The suggested folder name: "From <file name>" ("From Alex" for Alex.json), or "Imported
+    // library" for a file just called macros.json / macros.json.bak.
+    std::string LibraryFolderName(const std::string& aSource);
+    constexpr const char* kLibraryFolderFallback = "Imported library";
+    // Moves everything at the package's top level into one new folder called aName (cleaned;
+    // kLibraryFolderFallback if empty). Returns that folder, or nullptr if the package is empty.
+    Node* WrapInFolder(Package& aPkg, const std::string& aName);
+
     // --- Preview and import ---------------------------------------------------------------------
 
     // What to do when an item has the same name as one already in the target folder.

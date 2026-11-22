@@ -94,20 +94,16 @@ Points to settle:
 - What to do with the game's secondary binds (each action has two).
 - Mouse buttons in the game's binds (Mouse 4/5 are often bound to dodge or skills).
 
-### Mouse buttons as hotkeys, with a required modifier (added 2026-11-20)
+### More mouse buttons as hotkeys (added 2026-11-20)
 
-Look at letting mouse buttons send a macro only together with Ctrl, Alt or Shift.
+Mouse 3/4/5 now need Ctrl, Alt or Shift (built 2026-11-21, see `docs/design.md`, "Hotkeys").
+Still to look at:
 
-- Today (PR #5): Mouse 3 (middle), Mouse 4 and Mouse 5 can be hotkeys, with or without a
-  modifier. Left and right click are always refused.
-- Ideas to look at:
-  - Require a modifier for every mouse-button hotkey, so a plain Mouse 4/5 (often dodge or a
-    skill) can't send a macro by accident.
-  - Whether Ctrl/Alt/Shift + left or right click could be allowed safely. In GW2, Shift+click and
-    Ctrl+click already do things (chat links, targeting, ground-target skills), and clicks over
-    addon windows go to ImGui, so this needs careful in-game testing first.
-  - Extra mouse buttons beyond 5 (gaming mice usually send them as keyboard keys, which already
-    work).
+- Whether Ctrl/Alt/Shift + left or right click could be allowed safely. In GW2, Shift+click and
+  Ctrl+click already do things (chat links, targeting, ground-target skills), and clicks over
+  addon windows go to ImGui, so this needs careful in-game testing first.
+- Extra mouse buttons beyond 5 (gaming mice usually send them as keyboard keys, which already
+  work).
 - Depends on in-game check F2: whether mouse buttons reach our hook at all while the pointer is
   over the addon window.
 
@@ -190,47 +186,12 @@ To look into (none of this is checked yet):
 - **UI idea:** an "Emote..." picker next to the line's message box (search box + list), which
   fills in `/command`. It could share the pop-up idea of the special character picker.
 
-### Search box above the folder list (added 2026-11-21)
+### More search (added 2026-11-21)
 
-A search box at the top left of the library window, above the folder tree, to find macros and
-folders quickly in a big library.
+The library's search box is built (see `docs/design.md`, "Search"). Ideas left over from it:
 
-To decide when we discuss it:
-- **What it searches:** macro and folder names only, or also the text of each macro's lines
-  (and hotkeys, e.g. typing `Ctrl+F1`)? Case-insensitive, and ignoring accents?
-- **How results show:**
-  - Filter the tree: only matches stay, along with the folders above them, which open
-    automatically. Matched text is highlighted.
-  - Or a flat list of results that shows each one's folder path, e.g. `Raids › Wing 3 › Gorseval`.
-- **While searching:** dragging and Move up/down could be turned off, because the tree isn't
-  complete. Clearing the box (an **x** button or Escape) brings back the full tree, with the
-  folders that were open before. The selected macro stays selected if it still matches.
-- **Keys:** Ctrl+F while the library is focused puts the cursor in the box. The box is a text box,
-  so macro hotkeys are ignored while typing in it, as in every other text box.
-- **Maybe also:** a filter for "active here only" (the current game mode and map), and a search
-  in the quick menu.
-- Must follow the Text size setting and fit in narrow windows (see `UiFont`).
-
-### Import a copy of someone's whole library (added 2026-11-21)
-
-Let the user import a copy of another player's addon file (their `macros.json`, as if they just
-sent it over), not only files made with Export.
-
-To look into:
-- Today the Import window already reads a whole `macros.json` as JSON (it has the same format as
-  an export, and its trash bin is left out). Check what's missing for this to be a clear,
-  first-class choice:
-  - an **Import a library file...** entry that says what it's for, and maybe accepts the
-    `.bak` file too;
-  - where the other player's library goes: into a new folder named after them (e.g. "From
-    Name"), the top level, or a folder the user picks; merging into the user's own folders could
-    be messy;
-  - their hotkeys: probably off by default ("Keep hotkeys" unticked), since they'd clash;
-  - link files and the trash bin are never taken (already the case);
-  - files saved by a newer version of the addon: warn and import what can be read (already
-    warned).
-- Whether to also take their `settings.json` (probably not: text size and the trash bin setting
-  are personal).
+- A filter for "active here only" (the current game mode and map), next to the search box.
+- A search in the quick menu.
 
 ### Publish the wiki (reminder: do this once the repo is public)
 

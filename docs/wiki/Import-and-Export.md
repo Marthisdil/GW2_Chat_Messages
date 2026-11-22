@@ -33,7 +33,10 @@ folder...**. The Import window has three steps.
 
 ### 1. Choose what to import
 
-You can import:
+At the top, choose **Macros** (the usual) or **A whole library** (someone else's `macros.json`,
+see [Importing a whole library](#importing-a-whole-library) below).
+
+With **Macros**, you can import:
 
 - a **.json** file exported by this addon (or a whole `macros.json`; its trash bin isn't
   imported, and the Import window says so),
@@ -89,6 +92,29 @@ click **Import selected**.
 
 <!-- screenshot: import-window.png (docs/screenshots.md) -->
 > 📷 *Screenshot to come: the Import window with its preview.*
+
+## Importing a whole library
+
+A friend can send you their whole library: the `macros.json` file from their
+`<GW2>\addons\GW2_Chat_Messages\` folder (or its backup, `macros.json.bak`). It's best to rename
+it after them first, for example `Alex.json`.
+
+1. Put the file in your `imports\` folder, open **Import...** and choose **A whole library**. The
+   list then shows only `.json` and `.bak` files. (A path or **Paste from clipboard** work too.)
+2. Their library goes into **one new folder at the top level of your library**, so it never mixes
+   with your own folders. Its name is filled in from the file name (`From Alex` for `Alex.json`,
+   or `Imported library` for a file still called `macros.json`); change it if you like. If you
+   already have a folder with that name, the new one gets " (2)".
+3. **Keep hotkeys** is off at first, so their keys don't clash with yours. Their trash bin and
+   [text file links](Editing-Macros) are never taken.
+4. The preview and the checkboxes work as above: untick anything you don't want. Their folders are
+   one level deeper inside the new folder, so a folder that would end up more than 6 deep is
+   shown as too deep.
+
+Their `settings.json` (text size, trash bin setting) isn't needed: those are your own choices.
+
+<!-- screenshot: import-library.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the Import window with a whole library loaded.*
 
 ## Undo
 

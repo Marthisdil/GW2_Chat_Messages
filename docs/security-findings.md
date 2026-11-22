@@ -23,6 +23,7 @@ folder with someone else's file), **Medium** (wrong behaviour reachable with rea
 | [SEC-004](#sec-004) | 2026-11-21 20:07 | Low | `src/MapNames.cpp:57` | Map ids from the cache parsed with `stoul` inside an empty `catch` | Fixed | PR #29, build `29feb1d` |
 | [SEC-005](#sec-005) | 2026-11-21 20:07 | Info | `src/Ui.cpp:1319` | Implicit `uint32_t` to `float` conversions (x3) | Fixed | PR #29, build `29feb1d` |
 | [SEC-006](#sec-006) | 2026-11-21 20:13 | Info | `tests/MacroTreeTests.cpp:32` | Test uses a pointer after a failed null check | Fixed | PR #29, build `29feb1d` |
+| [SEC-007](#sec-007) | 2026-11-22 00:00 (approx.) | Info | `src/Search.h:27` (`Search::Result`) | The search result's implicit move could throw (MSVC's `unordered_set` move allocates) | Fixed | this PR (`feature/search-import-mouse`), build `afab95b` |
 
 "Build" is the build stamp's commit (shown in the Nexus log and the DLL's Properties). Until a
 release is tagged, it's the PR's commit; the release that first ships a fix is added when it's
@@ -100,6 +101,26 @@ made.
   followed by `*deepest`.
 - **Decision (2026-11-21):** fix: return after the failed check.
 - **Status:** Fixed in **PR #29**, commit `29feb1d`, first build `29feb1d`.
+
+### SEC-007
+
+- **Found:** 2026-11-22 00:00 UTC (approx.), quick audit of `feature/search-import-mouse`
+  (`tools/run_audit.ps1 -Changed -Tests`, clang-tidy `bugprone-exception-escape`), on commit
+  `821f6cd`.
+- **Severity:** Info. **Where:** `src/Search.h:27`, `Search::Result`, moved into `s_Search` every
+  frame (`Ui.cpp`, `UpdateSearch`).
+- **Finding:** `Search::Run` returned a new `Result` (three `unordered_set`s) that was moved into
+  the UI's copy each frame. MSVC's `unordered_set` move can allocate, so the move can throw; only
+  when out of memory, like any other allocation on the render thread. No real risk, but it also
+  rebuilt the sets every frame.
+- **Decision (2026-11-22):** fix. `Search::Run` now fills the caller's `Result` in place (cleared
+  first), so nothing is moved and the sets keep their memory.
+- **Status:** Fixed in this PR (`feature/search-import-mouse`), commit `afab95b`, first build
+  `afab95b`. Release: not released yet.
+- The same audit's `/security-review` (the branch diff, with `docs/security-review.md`) found
+  nothing: the checked candidates (search range maths, UTF-8 folding at string ends, highlight
+  pointers, `WrapInFolder` ownership and the import package's lifetime, link files from an
+  imported library, the mouse hotkey rules) were all false positives.
 
 ## Tuning decisions (checks turned off)
 

@@ -40,9 +40,23 @@ namespace Hotkey
 
     // Shift, Ctrl, Alt and Windows keys: never a hotkey's main key (they're its modifiers).
     bool IsModifierKey(uint16_t aKey);
+    // Mouse 3, 4 or 5.
+    bool IsMouseKey(uint16_t aKey);
 
     // Why aCombo can't be a hotkey, or "" if it can.
-    // Refused: left/right mouse, Escape, modifier keys alone, and Tab/Enter/Space/Backspace without
-    // a modifier (they'd fire every time the key is used normally in game).
+    // Refused: left/right mouse, Escape, modifier keys alone, Tab/Enter/Space/Backspace without
+    // a modifier (they'd fire every time the key is used normally in game), and Mouse 3/4/5
+    // without a modifier (often dodge or a skill, so easy to press by accident).
     std::string Refusal(const Combo& aCombo);
+
+    // A plain Mouse 3/4/5 hotkey saved before mouse buttons needed a modifier. It's kept in
+    // macros.json (so the user sees it and can change it) but never fires.
+    bool NeedsModifier(const Combo& aCombo);
+
+    // Whether a hotkey read from macros.json or an import is kept: everything Refusal allows,
+    // plus the old plain mouse hotkeys (NeedsModifier).
+    bool KeepOnLoad(const Combo& aCombo);
+
+    // Whether a press of aCombo may send a macro (Refusal allows it).
+    bool Fires(const Combo& aCombo);
 }
