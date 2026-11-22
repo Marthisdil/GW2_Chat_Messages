@@ -409,6 +409,37 @@ static void TestJsonFormat()
     }
 }
 
+static void TestJsonControlCharacters()
+{
+    // A file (an import, or a hand-edited macros.json) can't bring control characters into a
+    // line's text or recipient: each one becomes a space. Other characters are kept.
+    const json j = json::parse(R"({
+        "format": 1,
+        "root": { "children": [
+            {"type": "macro", "id": "00000000000000b1", "name": "Bad", "lines": [
+                {"channel": "current", "message": "gg\r/m text"},
+                {"channel": "say", "message": "a\tb\u001b\u0000c\u0085"},
+                {"channel": "whisper", "message": "hi\n", "whisper_to": "Na\tme\u007f"},
+                {"channel": "map", "message": "caf\u00e9 \u2019 \u00a0ok"}
+            ]}
+        ]}
+    })");
+    Tree u;
+    CHECK(u.FromJson(j));
+    const Node* m = u.Find(0xb1);
+    CHECK(m && m->Lines.size() == 4);
+    if (!m || m->Lines.size() != 4) return;
+    CHECK(m->Lines[0].Channel == EChannel::Current && m->Lines[0].Message == "gg /m text");
+    CHECK(m->Lines[1].Message == "a b  c ");
+    CHECK(m->Lines[2].Message == "hi " && m->Lines[2].WhisperTo == "Na me ");
+    CHECK(m->Lines[3].Message == "caf\xC3\xA9 \xE2\x80\x99 \xC2\xA0ok");
+
+    // Saved and loaded again, the text stays the same.
+    Tree again;
+    CHECK(again.FromJson(u.ToJson()));
+    CHECK(again.ToJson() == u.ToJson());
+}
+
 static void TestChannels()
 {
     for (int i = 0; i < static_cast<int>(EChannel::Count); i++)
@@ -431,5 +462,6 @@ void RunMacroTreeTests()
     TestJsonDamaged();
     TestDuplicateNames();
     TestJsonFormat();
+    TestJsonControlCharacters();
     TestChannels();
 }

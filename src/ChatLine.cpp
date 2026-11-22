@@ -124,10 +124,30 @@ namespace ChatLine
         }
     }
 
+    std::string ControlsToSpaces(const std::string& aText)
+    {
+        std::string out;
+        out.reserve(aText.size());
+        for (size_t i = 0; i < aText.size(); i++)
+        {
+            const unsigned char c = static_cast<unsigned char>(aText[i]);
+            if (c < 0x20 || c == 0x7F) { out += ' '; continue; }
+            // C1 is only 0xC2 then 0x80-0x9F; other 0x80-0x9F bytes belong to ordinary characters.
+            if (c == 0xC2 && i + 1 < aText.size())
+            {
+                const unsigned char next = static_cast<unsigned char>(aText[i + 1]);
+                if (next >= 0x80 && next <= 0x9F) { out += ' '; i++; continue; }
+            }
+            out += static_cast<char>(c);
+        }
+        return out;
+    }
+
     Line ParseLine(const std::string& aText)
     {
         Line line;
-        const std::string text = TrimRight(aText);
+        // A tab already counted as a space below, so it parses the same; CR, Esc etc. can't be typed.
+        const std::string text = TrimRight(ControlsToSpaces(aText));
 
         // The command is the first word, cut early at '[' for whispers and '!' for squad.
         size_t end = 0;
@@ -180,7 +200,7 @@ namespace ChatLine
         {
             size_t nl = aText.find('\n', start);
             if (nl == std::string::npos) nl = aText.size();
-            const std::string row = TrimRight(aText.substr(start, nl - start));
+            const std::string row = TrimRight(ControlsToSpaces(aText.substr(start, nl - start)));
             if (row.find_first_not_of(" \t") != std::string::npos) lines.push_back(ParseLine(row));
             start = nl + 1;
         }

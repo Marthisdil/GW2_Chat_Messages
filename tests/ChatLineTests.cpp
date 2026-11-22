@@ -117,6 +117,43 @@ static void TestRoundTrip()
     CHECK(SerializeLine(ParseLine("/squad ! x")) == "/d ! x");
 }
 
+static void TestControlCharacters()
+{
+    // Every control character becomes one space; nothing else changes.
+    CHECK(ControlsToSpaces("a\tb\rc\nd\x1B") == "a b c d ");
+    CHECK(ControlsToSpaces(std::string("a\0b\x01\x1F\x7F", 6)) == "a b   ");
+    CHECK(ControlsToSpaces("x\xC2\x85y\xC2\x80\xC2\x9F") == "x y  ");             // C1 (NEL, U+0080, U+009F)
+    CHECK(ControlsToSpaces("\xC2\xA0 caf\xC3\xA9 \xC2\xA9") == "\xC2\xA0 caf\xC3\xA9 \xC2\xA9"); // NBSP, e acute, (c) kept
+    CHECK(ControlsToSpaces("\xE2\x80\x99 \xF0\x9F\x98\x80") == "\xE2\x80\x99 \xF0\x9F\x98\x80"); // 0x80-0x9F inside other characters
+    CHECK(ControlsToSpaces("end\xC2") == "end\xC2");                               // a lone lead byte isn't a C1 control
+    CHECK(ControlsToSpaces("plain /s text [x] !") == "plain /s text [x] !");
+
+    // Inside a row they're typed as spaces, so they can't add an Enter, Tab or Escape.
+    Line l = ParseLine("gg\r/m text");
+    CHECK(l.Channel == EChannel::Current && l.Message == "gg /m text");
+    l = ParseLine("/s a\tb\x1B" "c\xC2\x85" "d\x1B");
+    CHECK(l.Channel == EChannel::Say && l.Message == "a b c d");
+    l = ParseLine("/w [Na\tme\r] hi");
+    CHECK(l.Channel == EChannel::Whisper && l.WhisperTo == "Na me " && l.Message == "hi");
+    CHECK(TypedText(ParseLine("/s x\ry")) == "/s x y");
+
+    // A tab as the separator parses as before.
+    l = ParseLine("/s\thello");
+    CHECK(l.Channel == EChannel::Say && l.Message == "hello");
+    l = ParseLine("/w\t[Name]\thi");
+    CHECK(l.Channel == EChannel::Whisper && l.WhisperTo == "Name" && l.Message == "hi");
+    l = ParseLine("/d\t!\tgo\t");
+    CHECK(l.Channel == EChannel::Squad && l.SquadBroadcast && l.Message == "go");
+
+    // Rows still split on "\n" (and "\r\n"); a lone CR stays inside its row, as a space. A row of
+    // only control characters is blank.
+    const auto lines = ParseRaw("one\r\ntwo\rthree\n\x1B\x07\r\n/s a\tb");
+    CHECK(lines.size() == 3);
+    CHECK(lines.size() == 3 && lines[0].Message == "one" && lines[1].Message == "two three" &&
+          lines[2].Channel == EChannel::Say && lines[2].Message == "a b");
+    CHECK(SerializeRaw(lines) == "one\ntwo three\n/s a b");
+}
+
 static void TestTypedAndLength()
 {
     Line l;
@@ -203,6 +240,7 @@ void RunChatLineTests()
     TestParseChannels();
     TestWhisperAndSquad();
     TestRoundTrip();
+    TestControlCharacters();
     TestTypedAndLength();
     TestColors();
     TestLengthLevels();

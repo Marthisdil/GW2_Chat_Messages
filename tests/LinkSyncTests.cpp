@@ -174,6 +174,28 @@ namespace
         CHECK(o.LoadMacro && o.Lines.empty());
     }
 
+    void TestControlCharacters()
+    {
+        // A tab or a lone CR inside a row of the file becomes a space in the macro, and that alone
+        // never writes the file back.
+        FakeFile f;
+        f.Text = "/s a\tb\rc\r\n";
+        State st;
+        Outcome o = Sync(st, {}, f.View());
+        CHECK(o.LoadMacro && !o.WriteFile && o.Lines.size() == 1 && o.Lines[0].Message == "a b c");
+        const std::vector<MacroTree::Line> macro = o.Lines;
+        o = Sync(st, macro, f.View());
+        CHECK(!o.LoadMacro && !o.WriteFile);
+        f.Mtime = 200; // saved again, same text
+        o = Sync(st, macro, f.View());
+        CHECK(!o.LoadMacro && !o.WriteFile && st.Mtime == 200);
+
+        // At load the macro (from macros.json) already has the spaces: nothing either way.
+        State fresh;
+        o = Sync(fresh, Lines("/s a b c"), f.View());
+        CHECK(!o.LoadMacro && !o.WriteFile && fresh.Known);
+    }
+
     void TestTooManyLines()
     {
         std::string text;
@@ -237,6 +259,7 @@ void RunLinkSyncTests()
     TestSteadyState();
     TestBothChanged();
     TestMissingAndErrors();
+    TestControlCharacters();
     TestTooManyLines();
     TestNotUtf8();
 }

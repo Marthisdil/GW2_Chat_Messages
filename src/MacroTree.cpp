@@ -1,5 +1,6 @@
 #include "MacroTree.h"
 
+#include "ChatLine.h"
 #include "Localization.h"
 
 #include <algorithm>
@@ -227,8 +228,9 @@ namespace MacroTree
                         if (!jl.is_object()) continue;
                         Line l;
                         l.Channel        = ChannelFromKey(StringField(jl, "channel"));
-                        l.Message        = StringField(jl, "message");
-                        l.WhisperTo      = StringField(jl, "whisper_to");
+                        // From a file (maybe someone else's): no control characters to type.
+                        l.Message        = ChatLine::ControlsToSpaces(StringField(jl, "message"));
+                        l.WhisperTo      = ChatLine::ControlsToSpaces(StringField(jl, "whisper_to"));
                         auto sb = jl.find("squad_broadcast");
                         l.SquadBroadcast = sb != jl.end() && sb->is_boolean() && sb->get<bool>();
                         n.Lines.push_back(std::move(l));
