@@ -22,6 +22,8 @@ static Context Ctx()
             {"lists\\one.txt", {"Only {time}"}},
             {"my file.txt", {"spaced"}},
             {"empty.txt", {"", " "}},
+            {"ctl.txt", {"x\x0By\rz\x08\x08/g hi"}},
+            {"ff.txt", {"a", "\x0C", "b"}}, // a line of only a control character still counts as a line
         };
         auto it = files.find(path);
         if (it == files.end()) { err = "\"" + path + "\" wasn't found."; return false; }
@@ -33,6 +35,8 @@ static Context Ctx()
         if (url == "https://example.test/build") { body = R"({"id": 171234, "name": "Line\nbreak", "ok": true, "f": 1.5,
                                                        "list": [{"name": "first"}, {"name": "second"}], "nothing": null})"; return true; }
         if (url == "https://example.test/bad") { body = "<html>"; return true; }
+        if (url == "https://example.test/ctl") { body = R"({"motd": "\b\b\u001b/g hi", "mix": "a\u0000b\u007fc\u0085d\u009fe\tf\rg",
+                                                      "text": "café Ā€"})"; return true; }
         err = "couldn't reach the address.";
         return false;
     };
@@ -148,6 +152,47 @@ static void TestJson()
     CHECK(!JsonValue("{\"a\": 1}", "", out, err));
 }
 
+// SEC-013: a value can't press a key (control characters become spaces, from any source), and
+// FromValue marks which bytes came from values so SendPlan can refuse a "/" a value would add.
+static void TestControlCharacters()
+{
+    CHECK(X("{json motd https://example.test/ctl}") == "   /g hi");
+    CHECK(X("{json mix https://example.test/ctl}") == "a b c d e f g");
+    // Other text is kept, including U+00A0 (0xC2 0xA0) and U+0100 (0xC4 0x80), which aren't C1.
+    CHECK(X("{json text https://example.test/ctl}") == "caf\xC3\xA9\xC2\xA0\xC4\x80\xE2\x82\xAC");
+
+    CHECK(X("{txt ctl.txt}") == "x y z  /g hi");
+    // Line numbers and the random pick count lines as before: blank means only spaces and tabs.
+    CHECK(X("{txt ff.txt 3}") == "b");
+    CHECK(X("{txt ff.txt 2}") == " ");                // the \x0C line, as a space
+    CHECK(X("{txt ff.txt}") == " ");                  // random among the 3 (the middle with this Random)
+
+    Context c = Ctx();
+    c.MapName = [](std::string& name, std::string&) { name = "Lion\x07s\nArch\xC2\x9B"; return true; };
+    CHECK(Expand("{map}", c).Text == "Lion s Arch ");
+
+    // The macro's own text is left as it is (SendPlan refuses control characters in it).
+    CHECK(X("a\tb {time}") == "a\tb 09:05");
+}
+
+static void TestFromValue()
+{
+    Result r = Expand("/g {time}!", Ctx());
+    CHECK(r.Text == "/g 09:05!");
+    CHECK(r.FromValue == (std::vector<bool>{false, false, false, true, true, true, true, true, false}));
+    // Unknown names and plain braces are the user's text.
+    r = Expand("{smile}{txt \"my file.txt\"}", Ctx());
+    CHECK(r.Text == "{smile}spaced");
+    CHECK(r.FromValue == (std::vector<bool>{false, false, false, false, false, false, false,
+                                            true, true, true, true, true, true}));
+    // No placeholders: nothing from a value.
+    r = Expand("/wave", Ctx());
+    CHECK(r.FromValue == std::vector<bool>(5, false));
+    // A failed placeholder clears both.
+    r = Expand("a {txt missing.txt}", Ctx());
+    CHECK(!r.Error.empty() && r.Text.empty() && r.FromValue.empty());
+}
+
 static void TestHas()
 {
     CHECK(HasPlaceholders("at {time}"));
@@ -166,5 +211,7 @@ void RunPlaceholderTests()
     TestSafePath();
     TestMap();
     TestJson();
+    TestControlCharacters();
+    TestFromValue();
     TestHas();
 }

@@ -9,6 +9,9 @@
 //  - A name we don't know (e.g. {smile}) is left exactly as typed.
 //  - A known placeholder that can't be filled in (bad number, missing file) is an error: the
 //    macro isn't sent at all, rather than sending a half-filled line.
+//  - A filled-in value never holds a control character (C0, DEL, C1): each becomes a space.
+//  - Result::FromValue marks which bytes came from a value, so SendPlan can refuse a value that
+//    would start a chat command (SEC-013).
 
 #include <functional>
 #include <string>
@@ -36,8 +39,9 @@ namespace Placeholders
 
     struct Result
     {
-        std::string Text;
-        std::string Error; // empty on success
+        std::string       Text;
+        std::vector<bool> FromValue; // one per byte of Text: true where it came from a filled-in value
+        std::string       Error;     // empty on success
     };
 
     Result Expand(const std::string& aText, const Context& aContext);
