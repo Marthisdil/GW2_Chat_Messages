@@ -205,7 +205,9 @@ namespace MacroTree
                              " levels. They were kept, but you can't add more folders inside them.");
                         WarnedDepth = true;
                     }
-                    node->Expanded = jc.value("expanded", true);
+                    // Not value(): it throws on a wrongly typed key. Missing or not a bool = open.
+                    auto ex = jc.find("expanded");
+                    node->Expanded = ex == jc.end() || !ex->is_boolean() || ex->get<bool>();
                     ParseChildren(jc, *node, aLevel + 1);
                 }
                 else

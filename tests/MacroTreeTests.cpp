@@ -226,6 +226,38 @@ static void TestJsonDamaged()
     const Node& unnamed = *u.Root().Children[2];
     CHECK(unnamed.Name == "New macro" && unnamed.GameModes == GM_All);
 
+    // A wrongly typed "expanded" (a crafted import or paste) must not throw: the folder opens,
+    // as when the key is missing. In the tree and in the trash bin.
+    const json badExpanded = json::parse(R"({
+        "format": 1,
+        "root": { "children": [
+            {"type": "folder", "name": "Str", "expanded": "yes"},
+            {"type": "folder", "name": "Num", "expanded": 0},
+            {"type": "folder", "name": "Null", "expanded": null},
+            {"type": "folder", "name": "Obj", "expanded": {"a": false}},
+            {"type": "folder", "name": "Arr", "expanded": [false]},
+            {"type": "folder", "name": "Closed", "expanded": false},
+            {"type": "folder", "name": "Missing"}
+        ]},
+        "trash": [
+            {"item": {"type": "folder", "name": "Binned", "expanded": "no"}, "from_ids": [], "from_names": []}
+        ]
+    })");
+    Tree e;
+    bool threw = false;
+    bool parsed = false;
+    try { parsed = e.FromJson(badExpanded, &warnings); }
+    catch (...) { threw = true; }
+    CHECK(!threw);
+    CHECK(parsed);
+    CHECK(e.Root().Children.size() == 7);
+    if (e.Root().Children.size() == 7)
+    {
+        for (size_t i = 0; i < 7; i++)
+            CHECK(e.Root().Children[i]->Expanded == (e.Root().Children[i]->Name != "Closed"));
+    }
+    CHECK(e.Trash().size() == 1 && e.Trash()[0].Item->Expanded);
+
     // Deeper than the limit on disk: kept, with a warning.
     json deep = json::parse(R"({"format":1,"root":{"children":[]}})");
     json* cur = &deep["root"];

@@ -203,6 +203,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   the game, and a repeated name close to the 100-character limit could freeze it for good.
   Repeated names are now renamed (`Name (2)`, `Name (3)`...) quickly; a name too long for the
   number is cut shorter to make room.
+- Importing or pasting a file in which a folder's `expanded` value isn't `true` or `false` (for
+  example `"yes"`) could close the game. That folder is now shown open, as when the value is missing.
 
 ### Documentation
 - The README describes what the addon does, with a quick start.
