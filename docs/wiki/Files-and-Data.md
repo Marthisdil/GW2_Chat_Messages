@@ -7,12 +7,13 @@ when it loads.
 |---|---|
 | `macros.json` | Your library: folders, macros, hotkeys, filters, and the trash bin. |
 | `macros.json.bak` | The previous version of `macros.json`, kept on every save. |
-| `settings.json` | Addon settings: the text size and whether the trash bin is on. Safe to delete (back to the defaults). |
+| `settings.json` | Addon settings: the text size, the language and whether the trash bin is on. Safe to delete (back to the defaults). |
 | `maps.json` | Map names from the GW2 API, so they're only looked up once. Safe to delete. |
 | your `.txt` files | Text files for the `{txt}` placeholder. |
 | `exports\` | Files saved by Export. |
 | `imports\` | Put files here to see them in the Import window. |
 | `links\` | Text files linked to macros (when you give just a file name). |
+| `localization\` | Extra language files (see [Languages](Languages)). |
 
 ## Saving
 

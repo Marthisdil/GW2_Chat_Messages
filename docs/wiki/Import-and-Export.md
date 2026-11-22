@@ -111,7 +111,7 @@ it after them first, for example `Alex.json`.
    one level deeper inside the new folder, so a folder that would end up more than 6 deep is
    shown as too deep.
 
-Their `settings.json` (text size, trash bin setting) isn't needed: those are your own choices.
+Their `settings.json` (text size, language, trash bin setting) isn't needed: those are your own choices.
 
 <!-- screenshot: import-library.png (docs/screenshots.md) -->
 > 📷 *Screenshot to come: the Import window with a whole library loaded.*

@@ -13,6 +13,8 @@
 #include "BuildStamp.h"
 #include "Globals.h"
 #include "Hotkeys.h"
+#include "Languages.h"
+#include "Localization.h"
 #include "MapNames.h"
 #include "Sender.h"
 #include "Ui.h"
@@ -28,8 +30,11 @@ namespace
     constexpr const char* kShortcutMenuId  = "QAM_CHATMSG";
     constexpr const char* kIconId          = "ICON_CHATMSG";
     constexpr const char* kIconHoverId     = "ICON_CHATMSG_HOVER";
-    constexpr const char* kShortcutTooltip = "Chat Messages\nLeft-click: show/hide the macro library\n"
-                                             "Right-click: send a macro from the menu";
+    constexpr const char* kShortcutTooltip = TX("Chat Messages\nLeft-click: show/hide the macro library\n"
+                                                "Right-click: send a macro from the menu");
+    // Texts Nexus shows for us (Keybinds page, Quick Access tooltip); Languages tells Nexus their translations.
+    constexpr const char* kToggleName = TX("Show/hide Chat Messages library");
+    constexpr const char* kMenuName   = TX("Open Chat Messages quick menu");
 
     HMODULE           s_Module = nullptr;
     AddonDefinition_t s_AddonDef{};
@@ -82,6 +87,10 @@ namespace
 
         // Initialise state before registering anything that can call back into us.
         MapNames::Init(); // before Ui and Sender, which ask it for names
+        Languages::AddNexusText(kToggleKeybind, kToggleName);
+        Languages::AddNexusText(kMenuKeybind, kMenuName);
+        Languages::AddNexusText(kShortcutTooltip, kShortcutTooltip); // in case Nexus translates the tooltip by its text
+        Languages::Init(); // before Ui, whose text it translates
         Ui::Init();
         Sender::Init();  // its WndProc hook only reacts to our own private message
         Hotkeys::Init(); // its WndProc hook only reads key presses, never blocks them
@@ -92,9 +101,9 @@ namespace
 
         // No default key: the addon never claims a key the user didn't choose (docs/design.md).
         g_Api->InputBinds_RegisterWithString(kToggleKeybind, OnToggleKeybind, "(null)");
-        g_Api->Localization_Set(kToggleKeybind, "en", "Show/hide Chat Messages library");
+        g_Api->Localization_Set(kToggleKeybind, "en", kToggleName);
         g_Api->InputBinds_RegisterWithString(kMenuKeybind, OnToggleKeybind, "(null)");
-        g_Api->Localization_Set(kMenuKeybind, "en", "Open Chat Messages quick menu");
+        g_Api->Localization_Set(kMenuKeybind, "en", kMenuName);
 
         g_Api->QuickAccess_Add(kShortcutId, kIconId, kIconHoverId, kToggleKeybind, kShortcutTooltip);
         g_Api->QuickAccess_AddContextMenu(kShortcutMenuId, kShortcutId, AddonQuickAccessMenu);
@@ -119,6 +128,7 @@ namespace
         Hotkeys::Shutdown(); // no new presses from here on
         Sender::Shutdown(); // joins the send thread, then removes the WndProc hook
         Ui::Shutdown();     // saves pending changes
+        Languages::Shutdown(); // after Ui: nothing draws translated text any more
         MapNames::Shutdown(); // stops its lookup thread, saves maps.json
 
         LogF(LOGL_INFO, "Unloaded.");
@@ -129,6 +139,7 @@ namespace
     {
         if (s_ToggleRequested.exchange(false)) Ui::ToggleMainWindow();
         if (s_MenuRequested.exchange(false)) Ui::ToggleQuickMenu();
+        Languages::Update(); // a language change or reload takes effect here, before anything is drawn
         Ui::Render();
     }
 

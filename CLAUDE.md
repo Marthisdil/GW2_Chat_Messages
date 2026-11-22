@@ -128,6 +128,19 @@ to the todo list", add it there (don't start building it). Move agreed items int
   `src/UiFont.*`: the ImGui side: `Push`/`Pop` the chosen font around our windows, `Px()` for
   fixed sizes, `WindowFit` for window sizes, `Row` for button rows that wrap. Never hard-code a
   pixel size in `Ui.cpp`: use `Px()` or measure the text. Our windows push `TextWrapPos(0)`.
+- `src/Localization.*`: language files (`Catalog`, `ParseCatalog` and its safety checks: size,
+  depth, ids, `SafeText`, matching `%`-codes) and the lookup. **The English text is the key:**
+  wrap every new UI text in `T("...")` (literals only; render thread only), mark texts in
+  tables with `TX("...")` and look them up with `Localization::Lookup`, and format with
+  `Fmt(T("...%s..."), ...)`. Window and pop-up titles use `"Text###stableid"`. Then run
+  `tools\localization.ps1 -Write` (updates `localization/en.json`, `template.json` and the
+  other languages; `run_tests.ps1` fails if they're stale) and translate the new texts in
+  `de.json`, `fr.json` and `es.json` (the tests require them complete). No Nexus or ImGui
+  dependency. Tested by `tests/LocalizationTests.cpp`.
+  `src/Languages.*`: loads the built-in languages (resource type `LOCALE`) and
+  `<addon>\localization\*.json`, follows Nexus' language, gives Nexus the keybind names, and
+  saves the `language` setting. Language files are an untrusted input
+  (`docs/security-review.md`). `CONTRIBUTING.md` is the translators' guide.
 - `src/SendPlan.*`: turns a macro's lines into the exact send steps (open chat, wait, type, Tab
   for whispers, Enter, wait) and validates them. No Nexus or ImGui dependency. Tested by
   `tests/SendPlanTests.cpp`.
@@ -138,7 +151,7 @@ to the todo list", add it there (don't start building it). Move agreed items int
   only touched on the render thread. Never change the tree while drawing it: queue an `Action`
   and apply it after. Open popups at the main window's ID level, not from inside a child window.
 - `src/resource.h` + `src/GW2_Chat_Messages.rc`: Quick Access icons embedded as resource type
-  `PNG`. The icon is a scroll; regenerate it with `tools/draw_chat_icon.ps1 -OutDir resources\icons`.
+  `PNG`, and the built-in language files (`localization/en|de|fr|es.json`) as type `LOCALE`. The icon is a scroll; regenerate it with `tools/draw_chat_icon.ps1 -OutDir resources\icons`.
   The other icon concepts that were considered are in `docs/icon-suggestions/` (README + SVGs).
 - `vendor/`: submodules `nexus`, `mumble`, `imgui` (tag v1.80) and `json` (nlohmann v3.11.3,
   shallow). Include json as `<nlohmann/json.hpp>`.

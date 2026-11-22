@@ -14,12 +14,14 @@ namespace MacroTree { class Tree; }
 //   <GW2>\addons\GW2_Chat_Messages\settings.json      addon settings (the text size)
 //   <GW2>\addons\GW2_Chat_Messages\exports\           files written by Export
 //   <GW2>\addons\GW2_Chat_Messages\imports\           files listed in the Import window
+//   <GW2>\addons\GW2_Chat_Messages\localization\      language files you add (docs/design.md, "Languages")
 // The folder comes from Nexus' Paths_GetAddonDirectory(). Nexus does not create it, so we do.
 namespace Storage
 {
     std::filesystem::path AddonDir(); // created on first call; empty if Nexus is unavailable
     std::filesystem::path ExportsDir(); // <addon>\exports, created on first call (empty if unavailable)
     std::filesystem::path ImportsDir(); // <addon>\imports, the same
+    std::filesystem::path LocalizationDir(); // <addon>\localization (language files), the same
 
     // A path in aDir for aFileName that doesn't exist yet: "name.json", else "name (2).json"...
     std::filesystem::path FreeFile(const std::filesystem::path& aDir, const std::string& aFileName);

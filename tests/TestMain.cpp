@@ -14,6 +14,7 @@ void RunTextSizeTests();
 void RunErrorReportTests();
 void RunTrashTests();
 void RunSearchTests();
+void RunLocalizationTests();
 
 int main()
 {
@@ -29,6 +30,7 @@ int main()
     RunErrorReportTests();
     RunTrashTests();
     RunSearchTests();
+    RunLocalizationTests();
     std::printf("%d checks, %d failures\n", g_TestChecks, g_TestFailures);
     return g_TestFailures == 0 ? 0 : 1;
 }

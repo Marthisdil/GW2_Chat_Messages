@@ -20,6 +20,9 @@
 
 #include "imgui.h"
 
+#include "Languages.h"
+#include "Localization.h"
+
 #include "BuildStamp.h"
 #include "ChatLine.h"
 #include "ErrorReport.h"
@@ -38,14 +41,16 @@
 
 using namespace MacroTree;
 using UiFont::Px;
+using Localization::Fmt;
 
 namespace
 {
     constexpr const char* kDragPayload     = "CHATMSG_NODE";
-    constexpr const char* kNamePopup       = "Name##chatmsg";
-    constexpr const char* kDeletePopup     = "Delete?##chatmsg";
-    constexpr const char* kRestorePopup    = "Restore?##chatmsg";
-    constexpr const char* kPurgePopup      = "Delete permanently?##chatmsg";
+    // Pop-up titles: translated with T() where drawn; "###" keeps the ID the same in every language.
+    constexpr char kNamePopup[]    = TX("Name###chatmsg_name");
+    constexpr char kDeletePopup[]  = TX("Delete?###chatmsg_delete");
+    constexpr char kRestorePopup[] = TX("Restore?###chatmsg_restore");
+    constexpr char kPurgePopup[]   = TX("Delete permanently?###chatmsg_purge");
     constexpr const char* kTrashSetting    = "trash_bin";
     constexpr double      kSaveDelaySec    = 0.75; // batch quick edits (e.g. several expands) into one write
     constexpr double      kStatusShowSec   = 6.0;
@@ -138,8 +143,8 @@ namespace
         if (!s_SaveFailed) s_Dirty = false;
         else s_SaveAt = ImGui::GetTime() + 5.0; // retry later, without hammering the disk
         if (s_SaveFailed && !failedBefore)
-            ShowError("Changed the library (it's saved to macros.json automatically)",
-                      "Your macros couldn't be saved. Check the Nexus log. The addon keeps trying every 5 seconds.", false);
+            ShowError(T("Changed the library (it's saved to macros.json automatically)"),
+                      T("Your macros couldn't be saved. Check the Nexus log. The addon keeps trying every 5 seconds."), false);
     }
 
     // Good news ("Exported to ..."), shown for a few seconds under the toolbar.
@@ -174,10 +179,10 @@ namespace
     {
         switch (aMode)
         {
-        case GM_PvE: return "PvE";
-        case GM_WvW: return "WvW";
-        case GM_PvP: return "PvP";
-        default:     return "no game mode";
+        case GM_PvE: return T("PvE");
+        case GM_WvW: return T("WvW");
+        case GM_PvP: return T("PvP");
+        default:     return T("no game mode");
         }
     }
 
@@ -192,9 +197,9 @@ namespace
             for (uint8_t b : bits)
                 if (m & b) modes += (modes.empty() ? "" : ", ") + std::string(ModeName(b));
         }
-        if (aMacro.MapIds.empty()) return modes.empty() ? "Everywhere" : modes;
-        const std::string maps = aMacro.MapIds.size() == 1 ? "1 map" : std::to_string(aMacro.MapIds.size()) + " maps";
-        return modes.empty() ? "On " + maps : modes + " on " + maps;
+        if (aMacro.MapIds.empty()) return modes.empty() ? std::string(T("Everywhere")) : modes;
+        const std::string maps = aMacro.MapIds.size() == 1 ? std::string(T("1 map")) : Fmt(T("%zu maps"), aMacro.MapIds.size());
+        return modes.empty() ? Fmt(T("On %s"), maps.c_str()) : Fmt(T("%s on %s"), modes.c_str(), maps.c_str());
     }
 
     // --- Errors -----------------------------------------------------------------------------------
@@ -203,8 +208,8 @@ namespace
     // open ImGui takes every mouse click, which would block the game after a hotkey error. Only an
     // error inside our Name pop-up is shown as a pop-up within it (a pop-up blocks other windows).
 
-    constexpr const char* kErrorWindow = "Chat Messages: error##chatmsg_error";
-    constexpr const char* kErrorPopup  = "Chat Messages: error##chatmsg_errorpopup";
+    constexpr char kErrorWindow[] = TX("Chat Messages: error###chatmsg_error");
+    constexpr char kErrorPopup[]  = TX("Chat Messages: error###chatmsg_errorpopup");
 
     std::vector<ErrorReport::Report> s_Errors; // oldest first; the window shows the first
     bool   s_ErrorFocus       = false; // bring the window to the front next frame
@@ -225,7 +230,7 @@ namespace
     {
         const Here h = WhereAmI();
         if (h.Mode == GM_None && h.MapId == 0) return {};
-        return std::string(ModeName(h.Mode)) + ", " + (h.MapId ? MapNames::Label(h.MapId) : std::string("no map"));
+        return std::string(ModeName(h.Mode)) + ", " + (h.MapId ? MapNames::Label(h.MapId) : std::string(T("no map")));
     }
 
     void ShowError(const std::string& aAction, const std::string& aMessage, bool aFocus)
@@ -239,26 +244,26 @@ namespace
     {
         if (s_Errors.empty()) return true;
         const ErrorReport::Report& e = s_Errors.front();
-        if (s_Errors.size() > 1) ImGui::TextDisabled("Error 1 of %zu", s_Errors.size());
+        if (s_Errors.size() > 1) ImGui::TextDisabled(T("Error 1 of %zu"), s_Errors.size());
         ImGui::PushTextWrapPos(0.0f);
         ImGui::TextColored(kErrorColor, "%s", e.Message.c_str());
         ImGui::Spacing();
-        ImGui::TextDisabled("What you did: %s", e.Action.c_str());
+        ImGui::TextDisabled(T("What you did: %s"), e.Action.c_str());
         ImGui::PopTextWrapPos();
         ImGui::Spacing();
-        const bool ok = ImGui::Button("OK", Px(100.0f, 0.0f));
+        const bool ok = ImGui::Button(T("OK"), Px(100.0f, 0.0f));
         ImGui::SameLine();
-        if (ImGui::Button("Copy to clipboard"))
+        if (ImGui::Button(T("Copy to clipboard")))
         {
             ImGui::SetClipboardText(ErrorReport::ToText(e, std::string(kVersionText) + " (build " + BuildStamp::Text() + ")").c_str());
             s_ErrorCopiedUntil = ImGui::GetTime() + 3.0;
         }
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Copies the error, what you did, the time and where you were in game,\nready to paste into a bug report.");
+            ImGui::SetTooltip(T("Copies the error, what you did, the time and where you were in game,\nready to paste into a bug report."));
         if (ImGui::GetTime() < s_ErrorCopiedUntil)
         {
             ImGui::SameLine();
-            ImGui::TextDisabled("Copied.");
+            ImGui::TextDisabled(T("Copied."));
         }
         if (ok)
         {
@@ -279,7 +284,7 @@ namespace
             ImGui::SetNextWindowFocus();
             s_ErrorFocus = false;
         }
-        if (ImGui::Begin(kErrorWindow, nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings))
+        if (ImGui::Begin(T(kErrorWindow), nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings))
             DrawErrorBody();
         ImGui::End();
     }
@@ -292,7 +297,7 @@ namespace
         if (!ImGui::IsPopupOpen(kErrorPopup)) ImGui::OpenPopup(kErrorPopup);
         ImGui::SetNextWindowSize(ImVec2(Px(420.0f), 0.0f), ImGuiCond_Always);
         bool closed = false;
-        if (ImGui::BeginPopupModal(kErrorPopup, nullptr, ImGuiWindowFlags_NoResize))
+        if (ImGui::BeginPopupModal(T(kErrorPopup), nullptr, ImGuiWindowFlags_NoResize))
         {
             if (DrawErrorBody() && s_Errors.empty())
             {
@@ -330,9 +335,9 @@ namespace
         const bool alert = aFrom != ESendFrom::Window;
         if (aFrom == ESendFrom::Hotkey && Sender::IsBusy()) return; // one macro at a time; extra presses are ignored
         const std::string name = "\"" + aMacro.Name + "\"";
-        const std::string action = aFrom == ESendFrom::Hotkey ? "Pressed the hotkey " + Hotkey::ToString(aMacro.Hotkey) + " to send " + name
-                                 : aFrom == ESendFrom::Menu   ? "Sent " + name + " from the quick menu"
-                                                              : "Sent " + name + " from the library (Send now)";
+        const std::string action = aFrom == ESendFrom::Hotkey ? Fmt(T("Pressed the hotkey %s to send %s"), Hotkey::ToString(aMacro.Hotkey).c_str(), name.c_str())
+                                 : aFrom == ESendFrom::Menu   ? Fmt(T("Sent %s from the quick menu"), name.c_str())
+                                                              : Fmt(T("Sent %s from the library (Send now)"), name.c_str());
         std::string error;
         if (Sender::Start(aMacro.Id, aMacro.Lines, error))
         {
@@ -406,7 +411,7 @@ namespace
             if (!cancelled && m && m->IsMacro())
             {
                 const std::string why = Hotkey::Refusal(combo);
-                if (!why.empty()) ShowError("Set a hotkey for \"" + m->Name + "\" and pressed " + Hotkey::ToString(combo), why);
+                if (!why.empty()) ShowError(Fmt(T("Set a hotkey for \"%s\" and pressed %s"), m->Name.c_str(), Hotkey::ToString(combo).c_str()), why);
                 else
                 {
                     m->Hotkey = combo;
@@ -428,9 +433,9 @@ namespace
             if (macros.empty()) continue;
             if (macros.size() > 1)
             {
-                const std::string why = Hotkey::ToString(combo) + " is set on " + std::to_string(macros.size()) +
-                                        " macros, so nothing was sent. Give each macro its own hotkey.";
-                ShowError("Pressed the hotkey " + Hotkey::ToString(combo), why, false);
+                const std::string why = Fmt(T("%s is set on %zu macros, so nothing was sent. Give each macro its own hotkey."),
+                                            Hotkey::ToString(combo).c_str(), macros.size());
+                ShowError(Fmt(T("Pressed the hotkey %s"), Hotkey::ToString(combo).c_str()), why, false);
                 Alert(why);
                 continue;
             }
@@ -442,22 +447,22 @@ namespace
     {
         UiFont::Row row;
         ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted("Hotkey:");
+        ImGui::TextUnformatted(T("Hotkey:"));
         if (s_CaptureFor == aMacro.Id && Hotkeys::IsCapturing())
         {
             ImGui::SameLine();
-            ImGui::TextColored(kWarnColor, "Press a key or mouse button (Escape cancels)...");
-            row.Next(UiFont::ButtonWidth("Cancel"));
-            if (ImGui::SmallButton("Cancel")) CancelCapture();
+            ImGui::TextColored(kWarnColor, T("Press a key or mouse button (Escape cancels)..."));
+            row.Next(UiFont::ButtonWidth(T("Cancel")));
+            if (ImGui::SmallButton(T("Cancel"))) CancelCapture();
             return;
         }
 
-        const std::string keys = aMacro.Hotkey.Empty() ? std::string("None") : Hotkey::ToString(aMacro.Hotkey);
+        const std::string keys = aMacro.Hotkey.Empty() ? std::string(T("None")) : Hotkey::ToString(aMacro.Hotkey);
         row.Next(UiFont::TextWidth(keys.c_str()));
-        if (aMacro.Hotkey.Empty()) ImGui::TextDisabled("None");
+        if (aMacro.Hotkey.Empty()) ImGui::TextDisabled(T("None"));
         else if (Hotkey::NeedsModifier(aMacro.Hotkey)) ImGui::TextColored(kErrorColor, "%s", keys.c_str());
         else ImGui::TextUnformatted(keys.c_str());
-        const char* setLabel = aMacro.Hotkey.Empty() ? "Set..." : "Change...";
+        const char* setLabel = aMacro.Hotkey.Empty() ? T("Set...") : T("Change...");
         row.Next(UiFont::ButtonWidth(setLabel));
         if (ImGui::SmallButton(setLabel))
         {
@@ -465,22 +470,22 @@ namespace
             Hotkeys::StartCapture();
         }
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Then press the key you want, with Ctrl, Alt or Shift if you like.\n"
+            ImGui::SetTooltip(T("Then press the key you want, with Ctrl, Alt or Shift if you like.\n"
                               "Mouse 3 (middle), Mouse 4 and Mouse 5 work too, together with Ctrl, Alt or Shift.\n"
                               "The key still does its normal job in game, so pick one you don't use there.\n"
-                              "Hotkeys don't fire while you're typing in chat or in a text box.");
+                              "Hotkeys don't fire while you're typing in chat or in a text box."));
         if (!aMacro.Hotkey.Empty())
         {
-            row.Next(UiFont::ButtonWidth("Clear##hotkey"));
-            if (ImGui::SmallButton("Clear##hotkey"))
+            row.Next(UiFont::ButtonWidth(T("Clear##hotkey")));
+            if (ImGui::SmallButton(T("Clear##hotkey")))
             {
                 aMacro.Hotkey = {};
                 MarkDirty();
             }
             if (Hotkey::NeedsModifier(aMacro.Hotkey))
             {
-                ImGui::TextColored(kErrorColor, "This hotkey doesn't work any more: mouse buttons need Ctrl, Alt or "
-                                                "Shift. Click Change... to set a new one.");
+                ImGui::TextColored(kErrorColor, T("This hotkey doesn't work any more: mouse buttons need Ctrl, Alt or "
+                                                "Shift. Click Change... to set a new one."));
                 return;
             }
             // A shared hotkey is only a conflict where both macros can be active at once.
@@ -489,13 +494,13 @@ namespace
                 if (n != &aMacro && FiltersOverlap(aMacro, *n)) names += (names.empty() ? "" : ", ") + n->Name;
             if (!names.empty())
             {
-                ImGui::TextColored(kWarnColor, "Also set on: %s. Where both are active, this hotkey sends nothing.",
+                ImGui::TextColored(kWarnColor, T("Also set on: %s. Where both are active, this hotkey sends nothing."),
                                    names.c_str());
             }
             else if (!aMacro.Hotkey.HasModifier() && aMacro.Hotkey.Key < 0x60 && aMacro.Hotkey.Key > Hotkey::kVkXButton2)
             {
-                ImGui::TextColored(kWarnColor, "Plain letters, numbers and keys like Space are usually game keys. "
-                                               "Adding Ctrl, Alt or Shift is safer.");
+                ImGui::TextColored(kWarnColor, T("Plain letters, numbers and keys like Space are usually game keys. "
+                                               "Adding Ctrl, Alt or Shift is safer."));
             }
         }
     }
@@ -507,20 +512,21 @@ namespace
         const Here here = WhereAmI();
         const bool active = IsActiveHere(aMacro, here);
         // "###filters" keeps the header's open state while its label changes.
-        const std::string header = "Where it's active: " + FilterSummary(aMacro) + (active ? "" : "  (not here)") + "###filters";
+        const std::string header = Fmt(T("Where it's active: %s"), FilterSummary(aMacro).c_str()) +
+                                   (active ? std::string() : std::string("  ") + T("(not here)")) + "###filters";
         if (!active) ImGui::PushStyleColor(ImGuiCol_Text, kWarnColor);
         const bool open = ImGui::CollapsingHeader(header.c_str());
         if (!active) ImGui::PopStyleColor();
         if (!open) return;
         ImGui::Indent();
-        ImGui::TextWrapped("Hotkeys and the quick menu only use a macro where it's active. "
-                           "Send now here in the library always works.");
+        ImGui::TextWrapped(T("Hotkeys and the quick menu only use a macro where it's active. "
+                           "Send now here in the library always works."));
 
         // Game modes. At least one stays ticked: "none" would mean the macro can never be used.
         if (aMacro.GameModes == GM_None) aMacro.GameModes = GM_All;
         UiFont::Row modesRow;
         ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted("Game modes:");
+        ImGui::TextUnformatted(T("Game modes:"));
         const uint8_t bits[] = {GM_PvE, GM_WvW, GM_PvP};
         for (uint8_t b : bits)
         {
@@ -531,8 +537,8 @@ namespace
                 const uint8_t next = on ? static_cast<uint8_t>(aMacro.GameModes | b)
                                         : static_cast<uint8_t>(aMacro.GameModes & ~b);
                 if (next == GM_None)
-                    ShowError("Unticked " + std::string(ModeName(b)) + " under \"Where it's active\" for \"" + aMacro.Name + "\"",
-                              "A macro needs at least one game mode.");
+                    ShowError(Fmt(T("Unticked %s under \"Where it's active\" for \"%s\""), ModeName(b), aMacro.Name.c_str()),
+                              T("A macro needs at least one game mode."));
                 else
                 {
                     aMacro.GameModes = next;
@@ -541,20 +547,20 @@ namespace
             }
             if (ImGui::IsItemHovered())
             {
-                if (b == GM_WvW) ImGui::SetTooltip("Includes Armistice Bastion and Edge of the Mists.");
-                else if (b == GM_PvE) ImGui::SetTooltip("Open world, story, fractals, raids and strikes.");
-                else ImGui::SetTooltip("PvP maps, including the Heart of the Mists lobby.");
+                if (b == GM_WvW) ImGui::SetTooltip(T("Includes Armistice Bastion and Edge of the Mists."));
+                else if (b == GM_PvE) ImGui::SetTooltip(T("Open world, story, fractals, raids and strikes."));
+                else ImGui::SetTooltip(T("PvP maps, including the Heart of the Mists lobby."));
             }
         }
 
         // Maps: one button per map, flowing onto more rows when there are many.
         UiFont::Row mapsRow;
         ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted("Maps:");
+        ImGui::TextUnformatted(T("Maps:"));
         if (aMacro.MapIds.empty())
         {
             ImGui::SameLine();
-            ImGui::TextDisabled("Any map");
+            ImGui::TextDisabled(T("Any map"));
         }
         int removeAt = -1;
         for (size_t i = 0; i < aMacro.MapIds.size(); i++)
@@ -564,7 +570,7 @@ namespace
             const std::string label = name + " x";
             mapsRow.Next(UiFont::ButtonWidth(label.c_str()));
             if (ImGui::SmallButton(label.c_str())) removeAt = static_cast<int>(i);
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Remove %s", name.c_str());
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip(T("Remove %s"), name.c_str());
             ImGui::PopID();
         }
         if (removeAt >= 0)
@@ -579,11 +585,11 @@ namespace
             return false;
         };
         auto addMap = [&](int aId) {
-            const std::string action = "Added map id " + std::to_string(aId) + " to \"" + aMacro.Name + "\"";
-            if (aId <= 0) ShowError(action, "Map ids are positive numbers.");
-            else if (hasMap(aId)) ShowError(action, "That map is already in the list.");
+            const std::string action = Fmt(T("Added map id %d to \"%s\""), aId, aMacro.Name.c_str());
+            if (aId <= 0) ShowError(action, T("Map ids are positive numbers."));
+            else if (hasMap(aId)) ShowError(action, T("That map is already in the list."));
             else if (aMacro.MapIds.size() >= kMaxMapIds)
-                ShowError(action, "A macro can list at most " + std::to_string(kMaxMapIds) + " maps.");
+                ShowError(action, Fmt(T("A macro can list at most %zu maps."), kMaxMapIds));
             else
             {
                 aMacro.MapIds.push_back(aId);
@@ -594,20 +600,20 @@ namespace
         const int current = static_cast<int>(here.MapId);
         const bool canAddCurrent = current > 0 && !hasMap(current);
         if (!canAddCurrent) ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
-        const std::string addCurrent = current > 0 ? "Add this map: " + MapNames::Label(here.MapId) : "Add this map";
+        const std::string addCurrent = current > 0 ? Fmt(T("Add this map: %s"), MapNames::Label(here.MapId).c_str()) : std::string(T("Add this map"));
         UiFont::Row addRow;
         if (ImGui::SmallButton(addCurrent.c_str()) && canAddCurrent) addMap(current);
         if (!canAddCurrent) ImGui::PopStyleVar();
         addRow.Next(Px(90.0f));
         ImGui::SetNextItemWidth(Px(90.0f));
         ImGui::InputInt("##mapid", &s_MapIdInput, 0, 0);
-        addRow.Next(UiFont::ButtonWidth("Add id"));
-        if (ImGui::SmallButton("Add id")) addMap(s_MapIdInput);
-        ImGui::TextDisabled("Map names come from the GW2 API. Ids are also listed on the GW2 wiki.");
+        addRow.Next(UiFont::ButtonWidth(T("Add id")));
+        if (ImGui::SmallButton(T("Add id"))) addMap(s_MapIdInput);
+        ImGui::TextDisabled(T("Map names come from the GW2 API. Ids are also listed on the GW2 wiki."));
 
-        const std::string where = here.MapId ? MapNames::Label(here.MapId) : std::string("no map");
-        if (active) ImGui::TextDisabled("Active here (%s, %s).", ModeName(here.Mode), where.c_str());
-        else ImGui::TextColored(kWarnColor, "Not active here (%s, %s).", ModeName(here.Mode), where.c_str());
+        const std::string where = here.MapId ? MapNames::Label(here.MapId) : std::string(T("no map"));
+        if (active) ImGui::TextDisabled(T("Active here (%s, %s)."), ModeName(here.Mode), where.c_str());
+        else ImGui::TextColored(kWarnColor, T("Not active here (%s, %s)."), ModeName(here.Mode), where.c_str());
         ImGui::Unindent();
     }
 
@@ -616,8 +622,8 @@ namespace
         const Sender::Status st = Sender::GetStatus();
         if (st.State == Sender::EState::Sending)
         {
-            if (st.Line == 0) ImGui::TextColored(kWarnColor, "Preparing..."); // filling in placeholders
-            else ImGui::TextColored(kWarnColor, "Sending line %zu of %zu...", st.Line, st.Lines);
+            if (st.Line == 0) ImGui::TextColored(kWarnColor, T("Preparing...")); // filling in placeholders
+            else ImGui::TextColored(kWarnColor, T("Sending line %zu of %zu..."), st.Line, st.Lines);
         }
         else if (!s_SendNote.empty() && ImGui::GetTime() < s_SendNoteUntil)
         {
@@ -644,7 +650,7 @@ namespace
     {
         std::vector<const Node*> chain;
         for (const Node* n = aNode.Parent; n && n->Parent; n = n->Parent) chain.push_back(n);
-        std::string path = "Top level";
+        std::string path = T("Top level");
         for (auto it = chain.rbegin(); it != chain.rend(); ++it) path += " > " + (*it)->Name;
         return path;
     }
@@ -667,15 +673,15 @@ namespace
         const std::filesystem::path dir = Storage::ExportsDir();
         if (dir.empty() || aNodes.empty() || !aNodes.front())
         {
-            ShowError("Exported \"" + aName + "\"", "The exports folder isn't available.");
+            ShowError(Fmt(T("Exported \"%s\""), aName.c_str()), T("The exports folder isn't available."));
             return;
         }
         const std::string text = aAsText ? Exchange::ExportText(*aNodes.front()) : Exchange::ExportJsonText(aNodes);
         const std::filesystem::path file = Storage::FreeFile(dir, Exchange::FileNameFor(aName, aAsText ? ".txt" : ".json"));
         if (Storage::WriteText(file, text))
-            SetInfo(WithTrashNote("Exported to <GW2>\\addons\\GW2_Chat_Messages\\exports\\" + file.filename().u8string() + "."));
-        else ShowError("Exported \"" + aName + "\" as a " + (aAsText ? ".txt" : ".json") + " file",
-                       "The export couldn't be written. Check the Nexus log.");
+            SetInfo(WithTrashNote(Fmt(T("Exported to %s."), ("<GW2>\\addons\\GW2_Chat_Messages\\exports\\" + file.filename().u8string()).c_str())));
+        else ShowError(Fmt(T("Exported \"%s\" as a %s file"), aName.c_str(), aAsText ? ".txt" : ".json"),
+                       T("The export couldn't be written. Check the Nexus log."));
     }
 
     void ExportToClipboard(const std::vector<const Node*>& aNodes, bool aAsText)
@@ -683,8 +689,8 @@ namespace
         if (aNodes.empty() || !aNodes.front()) return;
         const std::string text = aAsText ? Exchange::ExportText(*aNodes.front()) : Exchange::ExportJsonText(aNodes);
         ImGui::SetClipboardText(text.c_str());
-        SetInfo(aAsText ? std::string("Copied the macro's lines to the clipboard.")
-                        : WithTrashNote("Copied to the clipboard. Paste it into the Import window to import it."));
+        SetInfo(aAsText ? std::string(T("Copied the macro's lines to the clipboard."))
+                        : WithTrashNote(T("Copied to the clipboard. Paste it into the Import window to import it.")));
     }
 
     std::vector<const Node*> TopLevelNodes()
@@ -709,8 +715,8 @@ namespace
         s_NameFocus    = true;
         const Node* target = NodeOrRoot(aTargetId);
         const char* initial = aMode == ENameMode::Rename && target ? target->Name.c_str()
-                            : aMode == ENameMode::NewFolder        ? "New folder"
-                                                                   : "New macro";
+                            : aMode == ENameMode::NewFolder        ? T("New folder")
+                                                                   : T("New macro");
         std::snprintf(s_NameBuf, sizeof(s_NameBuf), "%s", initial);
         ImGui::OpenPopup(kNamePopup);
     }
@@ -793,29 +799,29 @@ namespace
         if (aNode.IsFolder())
         {
             const bool canNest = Tree::FolderLevel(aNode) < kMaxFolderDepth;
-            if (ImGui::MenuItem("New folder inside", nullptr, false, canNest))
+            if (ImGui::MenuItem(T("New folder inside"), nullptr, false, canNest))
                 s_Pending = {EAction::OpenName, 0, aNode.Id, EDrop::Into, 0, ENameMode::NewFolder};
-            if (ImGui::MenuItem("New macro inside"))
+            if (ImGui::MenuItem(T("New macro inside")))
                 s_Pending = {EAction::OpenName, 0, aNode.Id, EDrop::Into, 0, ENameMode::NewMacro};
             ImGui::Separator();
         }
         else
         {
-            if (ImGui::MenuItem("Send now", nullptr, false, !Sender::IsBusy())) SendMacro(aNode); // doesn't change the tree
+            if (ImGui::MenuItem(T("Send now"), nullptr, false, !Sender::IsBusy())) SendMacro(aNode); // doesn't change the tree
             ImGui::Separator();
         }
-        if (ImGui::MenuItem("Rename"))
+        if (ImGui::MenuItem(T("Rename")))
             s_Pending = {EAction::OpenName, 0, aNode.Id, EDrop::Into, 0, ENameMode::Rename};
         // Off while searching: the neighbours it would move past may be hidden.
-        if (ImGui::MenuItem("Move up", nullptr, false, !s_Search.Active))   s_Pending = {EAction::Shift, aNode.Id, 0, EDrop::Into, -1};
-        if (ImGui::MenuItem("Move down", nullptr, false, !s_Search.Active)) s_Pending = {EAction::Shift, aNode.Id, 0, EDrop::Into, +1};
-        if (ImGui::BeginMenu("Export"))
+        if (ImGui::MenuItem(T("Move up"), nullptr, false, !s_Search.Active))   s_Pending = {EAction::Shift, aNode.Id, 0, EDrop::Into, -1};
+        if (ImGui::MenuItem(T("Move down"), nullptr, false, !s_Search.Active)) s_Pending = {EAction::Shift, aNode.Id, 0, EDrop::Into, +1};
+        if (ImGui::BeginMenu(T("Export")))
         {
             const std::vector<const Node*> one{&aNode};
-            if (ImGui::MenuItem("Save as a .json file")) ExportToFile(one, aNode.Name, false);
-            if (aNode.IsMacro() && ImGui::MenuItem("Save as a .txt file")) ExportToFile(one, aNode.Name, true);
-            if (ImGui::MenuItem("Copy to the clipboard")) ExportToClipboard(one, false);
-            if (aNode.IsMacro() && ImGui::MenuItem("Copy the lines as text")) ExportToClipboard(one, true);
+            if (ImGui::MenuItem(T("Save as a .json file"))) ExportToFile(one, aNode.Name, false);
+            if (aNode.IsMacro() && ImGui::MenuItem(T("Save as a .txt file"))) ExportToFile(one, aNode.Name, true);
+            if (ImGui::MenuItem(T("Copy to the clipboard"))) ExportToClipboard(one, false);
+            if (aNode.IsMacro() && ImGui::MenuItem(T("Copy the lines as text"))) ExportToClipboard(one, true);
             const std::string note = TrashNotExportedText();
             if (!note.empty())
             {
@@ -824,19 +830,19 @@ namespace
             }
             ImGui::EndMenu();
         }
-        if (aNode.IsFolder() && ImGui::MenuItem("Import into this folder..."))
+        if (aNode.IsFolder() && ImGui::MenuItem(T("Import into this folder...")))
         {
             s_ImportTarget = aNode.Id;
             s_ShowImport   = true;
         }
         if (aNode.IsFolder())
         {
-            if (ImGui::MenuItem("Sort contents A-Z")) s_Pending = {EAction::Sort, aNode.Id};
-            if (ImGui::MenuItem("Expand all inside")) s_Pending = {EAction::ExpandAll, aNode.Id, 0, EDrop::Into, 0, ENameMode::NewFolder, true};
-            if (ImGui::MenuItem("Collapse all inside")) s_Pending = {EAction::ExpandAll, aNode.Id, 0, EDrop::Into, 0, ENameMode::NewFolder, false};
+            if (ImGui::MenuItem(T("Sort contents A-Z"))) s_Pending = {EAction::Sort, aNode.Id};
+            if (ImGui::MenuItem(T("Expand all inside"))) s_Pending = {EAction::ExpandAll, aNode.Id, 0, EDrop::Into, 0, ENameMode::NewFolder, true};
+            if (ImGui::MenuItem(T("Collapse all inside"))) s_Pending = {EAction::ExpandAll, aNode.Id, 0, EDrop::Into, 0, ENameMode::NewFolder, false};
         }
         ImGui::Separator();
-        if (ImGui::MenuItem(s_TrashOn ? "Delete (to trash bin)" : "Delete...")) s_Pending = {EAction::OpenDelete, aNode.Id};
+        if (ImGui::MenuItem(s_TrashOn ? T("Delete (to trash bin)") : T("Delete..."))) s_Pending = {EAction::OpenDelete, aNode.Id};
         ImGui::EndPopup();
     }
 
@@ -848,8 +854,8 @@ namespace
         size_t at = 0, len = 0;
         if (Search::FindRange(aNode.Name, s_SearchBuf, at, len)) return {};
         if (!aNode.Hotkey.Empty() && Search::FindRange(Hotkey::ToString(aNode.Hotkey), s_SearchBuf, at, len))
-            return "  (found in its hotkey)";
-        return "  (found in its lines)";
+            return std::string("  ") + T("(found in its hotkey)");
+        return std::string("  ") + T("(found in its lines)");
     }
 
     void HighlightSearch(const Node& aNode)
@@ -903,7 +909,7 @@ namespace
             ImGui::PushStyleColor(ImGuiCol_Text, color);
             if (aNode.Hotkey.Empty()) ImGui::TreeNodeEx("##node", flags, "%s%s", aNode.Name.c_str(), suffix.c_str());
             else if (Hotkey::NeedsModifier(aNode.Hotkey))
-                ImGui::TreeNodeEx("##node", flags, "%s  [%s: off, needs Ctrl/Alt/Shift]%s", aNode.Name.c_str(),
+                ImGui::TreeNodeEx("##node", flags, T("%s  [%s: off, needs Ctrl/Alt/Shift]%s"), aNode.Name.c_str(),
                                   Hotkey::ToString(aNode.Hotkey).c_str(), suffix.c_str());
             else ImGui::TreeNodeEx("##node", flags, "%s  [%s]%s", aNode.Name.c_str(), Hotkey::ToString(aNode.Hotkey).c_str(), suffix.c_str());
             ImGui::PopStyleColor();
@@ -917,7 +923,7 @@ namespace
         {
             ImGui::SetDragDropPayload(kDragPayload, &aNode.Id, sizeof(aNode.Id));
             UiFont::PushTooltipWrap();
-            ImGui::Text("%s %s", aNode.IsFolder() ? "Folder:" : "Macro:", aNode.Name.c_str());
+            ImGui::Text("%s %s", aNode.IsFolder() ? T("Folder:") : T("Macro:"), aNode.Name.c_str());
             if (!s_DragError.empty()) ImGui::TextColored(kErrorColor, "%s", s_DragError.c_str());
             ImGui::PopTextWrapPos();
             ImGui::EndDragDropSource();
@@ -942,7 +948,7 @@ namespace
     {
         if (!aItem.Item->IsFolder()) return aItem.Item->Name;
         const size_t inside = Tree::CountDescendants(*aItem.Item);
-        return aItem.Item->Name + " (folder" + (inside ? ", " + std::to_string(inside) + " inside" : std::string()) + ")";
+        return aItem.Item->Name + " (" + (inside ? Fmt(T("folder, %zu inside"), inside) : std::string(T("folder"))) + ")";
     }
 
     // Folders and macros in the bin, counting what's inside deleted folders.
@@ -963,7 +969,7 @@ namespace
         if (s_Tree.Trash().empty()) return {};
         size_t f = 0, m = 0;
         TrashCounts(f, m);
-        return "Items in the trash bin (" + std::to_string(f) + "/" + std::to_string(m) + ") aren't exported.";
+        return Fmt(T("Items in the trash bin (%zu/%zu) aren't exported."), f, m);
     }
 
     void DrawTrashBin()
@@ -977,12 +983,12 @@ namespace
         ImGui::PushStyleColor(ImGuiCol_Text, kTrashColor);
         size_t binFolders = 0, binMacros = 0;
         TrashCounts(binFolders, binMacros);
-        const bool open = ImGui::TreeNodeEx("##trashbin", flags, "Trash bin (%zu/%zu)", binFolders, binMacros);
+        const bool open = ImGui::TreeNodeEx("##trashbin", flags, T("Trash bin (%zu/%zu)"), binFolders, binMacros);
         ImGui::PopStyleColor();
         if (!trash.empty()) s_TrashOpen = open;
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("%zu folder(s) / %zu macro(s) in the bin, counting everything inside deleted folders.\n"
-                              "Right-click an item to restore it, or right-click the bin to empty it.", binFolders, binMacros);
+            ImGui::SetTooltip(T("%zu folder(s) / %zu macro(s) in the bin, counting everything inside deleted folders.\n"
+                              "Right-click an item to restore it, or right-click the bin to empty it."), binFolders, binMacros);
         if (s_TrashOn && ImGui::BeginDragDropTarget())
         {
             if (const ImGuiPayload* p = ImGui::AcceptDragDropPayload(kDragPayload))
@@ -996,7 +1002,7 @@ namespace
         }
         if (ImGui::BeginPopupContextItem("##trashctx"))
         {
-            if (ImGui::MenuItem("Empty trash bin...", nullptr, false, !trash.empty())) s_Pending = {EAction::OpenEmpty};
+            if (ImGui::MenuItem(T("Empty trash bin..."), nullptr, false, !trash.empty())) s_Pending = {EAction::OpenEmpty};
             ImGui::EndPopup();
         }
         if (!open) return;
@@ -1015,13 +1021,13 @@ namespace
             ImGui::PopStyleColor();
             if (ImGui::IsItemClicked()) { s_TrashSelId = id; s_SelectedId = 0; }
             if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("Deleted %s from %s", t.DeletedAt.c_str(), Tree::FromPathText(t).c_str());
+                ImGui::SetTooltip(T("Deleted %s from %s"), t.DeletedAt.c_str(), Tree::FromPathText(t).c_str());
             if (ImGui::BeginPopupContextItem("##trashitemctx"))
             {
                 s_TrashSelId = id;
                 s_SelectedId = 0;
-                if (ImGui::MenuItem("Restore")) s_Pending = {EAction::OpenRestore, id};
-                if (ImGui::MenuItem("Delete permanently...")) s_Pending = {EAction::OpenPurge, id};
+                if (ImGui::MenuItem(T("Restore"))) s_Pending = {EAction::OpenRestore, id};
+                if (ImGui::MenuItem(T("Delete permanently..."))) s_Pending = {EAction::OpenPurge, id};
                 ImGui::EndPopup();
             }
             ImGui::PopID();
@@ -1047,7 +1053,7 @@ namespace
         {
             if (s_SelectedId == 0) s_TrashSelId = id;
             MarkDirty();
-            SetInfo("Moved \"" + name + "\" to the trash bin. Right-click it there to restore it.");
+            SetInfo(Fmt(T("Moved \"%s\" to the trash bin. Right-click it there to restore it."), name.c_str()));
         }
     }
 
@@ -1059,50 +1065,52 @@ namespace
         Result r = s_Tree.Restore(static_cast<size_t>(idx), aTo);
         if (!r.Ok)
         {
-            const char* how = aTo == ERestoreTo::TopLevel ? " to the top level" : aTo == ERestoreTo::RecreateFolders ? " (recreating its folders)" : "";
-            ShowError("Restored \"" + name + "\" from the trash bin" + how, r.Error);
+            const std::string action = aTo == ERestoreTo::TopLevel ? Fmt(T("Restored \"%s\" from the trash bin to the top level"), name.c_str())
+                                     : aTo == ERestoreTo::RecreateFolders ? Fmt(T("Restored \"%s\" from the trash bin (recreating its folders)"), name.c_str())
+                                                                          : Fmt(T("Restored \"%s\" from the trash bin"), name.c_str());
+            ShowError(action, r.Error);
             return;
         }
         s_SelectedId = r.Target ? r.Target->Id : 0;
         s_TrashSelId = 0;
         MarkDirty();
-        SetInfo(r.Note.empty() ? "Restored \"" + name + "\" to " + (r.Target ? PathOf(*r.Target) : std::string("the library")) + "." : r.Note);
+        SetInfo(r.Note.empty() ? Fmt(T("Restored \"%s\" to %s."), name.c_str(), (r.Target ? PathOf(*r.Target) : std::string(T("the library"))).c_str()) : r.Note);
     }
 
     void DrawTrashDetails(const TrashItem& aItem)
     {
         const Node& n = *aItem.Item;
-        ImGui::TextDisabled("%s in the trash bin", n.IsFolder() ? "Folder" : "Macro");
+        ImGui::TextDisabled("%s", n.IsFolder() ? T("Folder in the trash bin") : T("Macro in the trash bin"));
         ImGui::TextWrapped("%s", n.Name.c_str());
-        ImGui::TextDisabled("Deleted %s from %s", aItem.DeletedAt.c_str(), Tree::FromPathText(aItem).c_str());
+        ImGui::TextDisabled(T("Deleted %s from %s"), aItem.DeletedAt.c_str(), Tree::FromPathText(aItem).c_str());
         const int idx = s_Tree.TrashIndexOf(n.Id);
         if (idx >= 0 && !s_Tree.OriginalFolderExists(static_cast<size_t>(idx)))
-            ImGui::TextColored(kWarnColor, "That folder no longer exists. Restoring asks where to put it.");
+            ImGui::TextColored(kWarnColor, T("That folder no longer exists. Restoring asks where to put it."));
         UiFont::Row row;
-        if (ImGui::SmallButton("Restore")) s_Pending = {EAction::OpenRestore, n.Id};
-        row.Next(UiFont::ButtonWidth("Delete permanently..."));
-        if (ImGui::SmallButton("Delete permanently...")) s_Pending = {EAction::OpenPurge, n.Id};
+        if (ImGui::SmallButton(T("Restore"))) s_Pending = {EAction::OpenRestore, n.Id};
+        row.Next(UiFont::ButtonWidth(T("Delete permanently...")));
+        if (ImGui::SmallButton(T("Delete permanently..."))) s_Pending = {EAction::OpenPurge, n.Id};
         ImGui::Separator();
-        ImGui::TextWrapped("Items in the trash bin can't be sent, edited or used by a hotkey. Restore it first.");
+        ImGui::TextWrapped(T("Items in the trash bin can't be sent, edited or used by a hotkey. Restore it first."));
         ImGui::Spacing();
         if (n.IsFolder())
         {
             size_t folders = 0, macros = 0;
             Tree::CountDescendants(n, &folders, &macros);
-            ImGui::Text("Contains %zu folder(s) and %zu macro(s)", folders, macros);
+            ImGui::Text(T("Contains %zu folder(s) and %zu macro(s)"), folders, macros);
         }
         else
         {
-            if (n.Lines.empty()) ImGui::TextDisabled("No lines.");
+            if (n.Lines.empty()) ImGui::TextDisabled(T("No lines."));
             for (const Line& l : n.Lines) ImGui::TextColored(ChannelColorVec(l.Channel), "%s", ChatLine::TypedText(l).c_str());
-            if (!n.Hotkey.Empty()) ImGui::TextDisabled("Hotkey (not active in the bin): %s", Hotkey::ToString(n.Hotkey).c_str());
+            if (!n.Hotkey.Empty()) ImGui::TextDisabled(T("Hotkey (not active in the bin): %s"), Hotkey::ToString(n.Hotkey).c_str());
         }
     }
 
     void DrawRestorePopup()
     {
         ImGui::SetNextWindowSize(ImVec2(Px(420.0f), 0.0f), ImGuiCond_Always);
-        if (!ImGui::BeginPopupModal(kRestorePopup, nullptr, ImGuiWindowFlags_NoResize)) return;
+        if (!ImGui::BeginPopupModal(T(kRestorePopup), nullptr, ImGuiWindowFlags_NoResize)) return;
         const int idx = s_Tree.TrashIndexOf(s_RestoreId);
         if (idx < 0)
         {
@@ -1112,25 +1120,25 @@ namespace
         }
         const TrashItem& t = s_Tree.Trash()[static_cast<size_t>(idx)];
         ImGui::PushTextWrapPos(0.0f);
-        ImGui::TextWrapped("\"%s\" came from \"%s\", which no longer exists.", t.Item->Name.c_str(), Tree::FromPathText(t).c_str());
-        ImGui::TextWrapped("Where should it go?");
+        ImGui::TextWrapped(T("\"%s\" came from \"%s\", which no longer exists."), t.Item->Name.c_str(), Tree::FromPathText(t).c_str());
+        ImGui::TextWrapped(T("Where should it go?"));
         ImGui::Spacing();
         // Restoring happens after the pop-up closes, so an error can be shown in the error window.
         UiFont::Row row;
-        if (ImGui::Button("Recreate the folders"))
+        if (ImGui::Button(T("Recreate the folders")))
         {
             s_Pending = {EAction::RestoreNow, s_RestoreId, 0, EDrop::Into, static_cast<int>(ERestoreTo::RecreateFolders)};
             ImGui::CloseCurrentPopup();
         }
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Makes the missing folders again (by name) and puts it back inside.");
-        row.Next(UiFont::ButtonWidth("Put it at the top level"));
-        if (ImGui::Button("Put it at the top level"))
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip(T("Makes the missing folders again (by name) and puts it back inside."));
+        row.Next(UiFont::ButtonWidth(T("Put it at the top level")));
+        if (ImGui::Button(T("Put it at the top level")))
         {
             s_Pending = {EAction::RestoreNow, s_RestoreId, 0, EDrop::Into, static_cast<int>(ERestoreTo::TopLevel)};
             ImGui::CloseCurrentPopup();
         }
-        row.Next(UiFont::ButtonWidth("Cancel"));
-        if (ImGui::Button("Cancel")) ImGui::CloseCurrentPopup();
+        row.Next(UiFont::ButtonWidth(T("Cancel")));
+        if (ImGui::Button(T("Cancel"))) ImGui::CloseCurrentPopup();
         ImGui::PopTextWrapPos();
         ImGui::EndPopup();
     }
@@ -1138,7 +1146,7 @@ namespace
     void DrawPurgePopup()
     {
         ImGui::SetNextWindowSize(ImVec2(Px(400.0f), 0.0f), ImGuiCond_Always);
-        if (!ImGui::BeginPopupModal(kPurgePopup, nullptr, ImGuiWindowFlags_NoResize)) return;
+        if (!ImGui::BeginPopupModal(T(kPurgePopup), nullptr, ImGuiWindowFlags_NoResize)) return;
         const int idx = s_PurgeAll ? -1 : s_Tree.TrashIndexOf(s_PurgeId);
         if ((s_PurgeAll && s_Tree.Trash().empty()) || (!s_PurgeAll && idx < 0))
         {
@@ -1148,16 +1156,16 @@ namespace
         }
         ImGui::PushTextWrapPos(0.0f);
         if (s_PurgeAll)
-            ImGui::TextWrapped("Empty the trash bin? Its %zu item(s) are deleted for good.", s_Tree.Trash().size());
+            ImGui::TextWrapped(T("Empty the trash bin? Its %zu item(s) are deleted for good."), s_Tree.Trash().size());
         else
         {
             const TrashItem& t = s_Tree.Trash()[static_cast<size_t>(idx)];
-            ImGui::TextWrapped("Delete \"%s\" permanently?", t.Item->Name.c_str());
+            ImGui::TextWrapped(T("Delete \"%s\" permanently?"), t.Item->Name.c_str());
             if (t.Item->IsFolder() && !t.Item->Children.empty())
-                ImGui::TextColored(kWarnColor, "Everything inside it is deleted too: %zu item(s).", Tree::CountDescendants(*t.Item));
+                ImGui::TextColored(kWarnColor, T("Everything inside it is deleted too: %zu item(s)."), Tree::CountDescendants(*t.Item));
         }
-        ImGui::TextDisabled("This can't be undone.");
-        if (ImGui::Button(s_PurgeAll ? "Empty" : "Delete", Px(100.0f, 0.0f)))
+        ImGui::TextDisabled(T("This can't be undone."));
+        if (ImGui::Button(s_PurgeAll ? T("Empty") : T("Delete"), Px(100.0f, 0.0f)))
         {
             if (s_PurgeAll) s_Tree.EmptyTrash();
             else s_Tree.DeleteFromTrash(static_cast<size_t>(idx));
@@ -1166,7 +1174,7 @@ namespace
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", Px(100.0f, 0.0f))) ImGui::CloseCurrentPopup();
+        if (ImGui::Button(T("Cancel"), Px(100.0f, 0.0f))) ImGui::CloseCurrentPopup();
         ImGui::PopTextWrapPos();
         ImGui::EndPopup();
     }
@@ -1220,7 +1228,7 @@ namespace
             if (!node || !target) break;
             Result r = s_Tree.Move(*node, *target, a.Drop);
             if (r.Ok) { s_SelectedId = a.Id; MarkDirty(); }
-            else ShowError("Moved \"" + node->Name + "\" by dragging it", r.Error);
+            else ShowError(Fmt(T("Moved \"%s\" by dragging it"), node->Name.c_str()), r.Error);
             break;
         }
         case EAction::Shift:
@@ -1276,30 +1284,30 @@ namespace
     void DrawNamePopup()
     {
         ImGui::SetNextWindowSize(ImVec2(Px(360.0f), 0.0f), ImGuiCond_Always);
-        if (!ImGui::BeginPopupModal(kNamePopup, nullptr, ImGuiWindowFlags_NoResize))
+        if (!ImGui::BeginPopupModal(T(kNamePopup), nullptr, ImGuiWindowFlags_NoResize))
         {
             s_ErrorInPopup = false; // the pop-up is gone: any error left shows in the error window
             return;
         }
         ImGui::PushTextWrapPos(0.0f);
 
-        const char* title = s_NameMode == ENameMode::NewFolder ? "New folder name:"
-                          : s_NameMode == ENameMode::NewMacro  ? "New macro title:"
-                                                               : "New name:";
+        const char* title = s_NameMode == ENameMode::NewFolder ? T("New folder name:")
+                          : s_NameMode == ENameMode::NewMacro  ? T("New macro title:")
+                                                               : T("New name:");
         ImGui::TextUnformatted(title);
         if (s_NameFocus) { ImGui::SetKeyboardFocusHere(); s_NameFocus = false; }
         ImGui::SetNextItemWidth(-1.0f);
         const bool enter = ImGui::InputText("##name", s_NameBuf, kMaxNameLength + 1,
                                             ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll);
 
-        const bool ok = ImGui::Button(s_NameMode == ENameMode::Rename ? "Rename" : "Create", Px(100.0f, 0.0f)) || enter;
+        const bool ok = ImGui::Button(s_NameMode == ENameMode::Rename ? T("Rename") : T("Create"), Px(100.0f, 0.0f)) || enter;
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", Px(100.0f, 0.0f))) ImGui::CloseCurrentPopup();
+        if (ImGui::Button(T("Cancel"), Px(100.0f, 0.0f))) ImGui::CloseCurrentPopup();
 
         if (ok)
         {
             Node* target = NodeOrRoot(s_NameTargetId);
-            Result r = !target ? Result::Fail("That item no longer exists.")
+            Result r = !target ? Result::Fail(T("That item no longer exists."))
                      : s_NameMode == ENameMode::NewFolder ? s_Tree.AddFolder(target, s_NameBuf)
                      : s_NameMode == ENameMode::NewMacro  ? s_Tree.AddMacro(target, s_NameBuf)
                                                           : s_Tree.Rename(*target, s_NameBuf);
@@ -1311,10 +1319,10 @@ namespace
             }
             else
             {
-                const std::string where = target && target->Parent ? "\"" + target->Name + "\"" : std::string("the top level");
-                const std::string action = s_NameMode == ENameMode::NewFolder ? "Created a folder named \"" + std::string(s_NameBuf) + "\" in " + where
-                                         : s_NameMode == ENameMode::NewMacro  ? "Created a macro named \"" + std::string(s_NameBuf) + "\" in " + where
-                                         : "Renamed " + (target ? "\"" + target->Name + "\"" : std::string("an item")) + " to \"" + std::string(s_NameBuf) + "\"";
+                const std::string where = target && target->Parent ? "\"" + target->Name + "\"" : std::string(T("the top level"));
+                const std::string action = s_NameMode == ENameMode::NewFolder ? Fmt(T("Created a folder named \"%s\" in %s"), s_NameBuf, where.c_str())
+                                         : s_NameMode == ENameMode::NewMacro  ? Fmt(T("Created a macro named \"%s\" in %s"), s_NameBuf, where.c_str())
+                                         : Fmt(T("Renamed %s to \"%s\""), (target ? "\"" + target->Name + "\"" : std::string(T("an item"))).c_str(), s_NameBuf);
                 ShowError(action, r.Error);
                 s_ErrorInPopup = true; // shown inside this pop-up, which blocks other windows
             }
@@ -1327,7 +1335,7 @@ namespace
     void DrawDeletePopup()
     {
         ImGui::SetNextWindowSize(ImVec2(Px(380.0f), 0.0f), ImGuiCond_Always);
-        if (!ImGui::BeginPopupModal(kDeletePopup, nullptr, ImGuiWindowFlags_NoResize)) return;
+        if (!ImGui::BeginPopupModal(T(kDeletePopup), nullptr, ImGuiWindowFlags_NoResize)) return;
 
         Node* node = s_Tree.Find(s_DeleteId);
         if (!node)
@@ -1341,17 +1349,17 @@ namespace
         {
             size_t folders = 0, macros = 0;
             Tree::CountDescendants(*node, &folders, &macros);
-            ImGui::TextWrapped("Delete the folder \"%s\"?", node->Name.c_str());
+            ImGui::TextWrapped(T("Delete the folder \"%s\"?"), node->Name.c_str());
             if (folders + macros > 0)
-                ImGui::TextColored(kWarnColor, "Everything inside it is deleted too: %zu folder(s) and %zu macro(s).", folders, macros);
+                ImGui::TextColored(kWarnColor, T("Everything inside it is deleted too: %zu folder(s) and %zu macro(s)."), folders, macros);
         }
         else
         {
-            ImGui::TextWrapped("Delete the macro \"%s\"?", node->Name.c_str());
+            ImGui::TextWrapped(T("Delete the macro \"%s\"?"), node->Name.c_str());
         }
-        ImGui::TextDisabled("This can't be undone. (Turn on the trash bin in the addon's Nexus options to make deleting undoable.)");
+        ImGui::TextDisabled(T("This can't be undone. (Turn on the trash bin in the addon's Nexus options to make deleting undoable.)"));
 
-        if (ImGui::Button("Delete", Px(100.0f, 0.0f)))
+        if (ImGui::Button(T("Delete"), Px(100.0f, 0.0f)))
         {
             if (s_SelectedId == node->Id || (s_Tree.Find(s_SelectedId) && Tree::IsAncestorOf(*node, *s_Tree.Find(s_SelectedId))))
                 s_SelectedId = 0;
@@ -1360,7 +1368,7 @@ namespace
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", Px(100.0f, 0.0f))) ImGui::CloseCurrentPopup();
+        if (ImGui::Button(T("Cancel"), Px(100.0f, 0.0f))) ImGui::CloseCurrentPopup();
         ImGui::PopTextWrapPos();
         ImGui::EndPopup();
     }
@@ -1409,14 +1417,14 @@ namespace
     {
         bool changed = false;
         ImGui::PushStyleColor(ImGuiCol_Text, ChannelColorVec(aChannel));
-        const bool open = ImGui::BeginCombo(aLabel, ChannelLabel(aChannel));
+        const bool open = ImGui::BeginCombo(aLabel, Localization::Lookup(ChannelLabel(aChannel)));
         ImGui::PopStyleColor();
         if (!open) return false;
         for (int i = 0; i < static_cast<int>(EChannel::Count); i++)
         {
             const EChannel c = static_cast<EChannel>(i);
             ImGui::PushStyleColor(ImGuiCol_Text, ChannelColorVec(c));
-            if (ImGui::Selectable(ChannelLabel(c), c == aChannel)) { aChannel = c; changed = true; }
+            if (ImGui::Selectable(Localization::Lookup(ChannelLabel(c)), c == aChannel)) { aChannel = c; changed = true; }
             ImGui::PopStyleColor();
             if (c == aChannel) ImGui::SetItemDefaultFocus();
         }
@@ -1433,30 +1441,30 @@ namespace
         const size_t len = ChatLine::Utf16Length(typed);
         const bool placeholders = Placeholders::HasPlaceholders(typed);
         const ChatLine::ELengthLevel level = ChatLine::LengthLevel(len);
-        const char* tail = !aLong ? ""
-                         : level == ChatLine::ELengthLevel::Over ? " characters: too long, this line won't be sent"
-                         : level == ChatLine::ELengthLevel::Close ? " characters: nearly at the limit"
-                                                                  : " characters";
+        const std::string tail = !aLong ? std::string()
+                         : std::string(" ") + (level == ChatLine::ELengthLevel::Over ? T("characters: too long, this line won't be sent")
+                                             : level == ChatLine::ELengthLevel::Close ? T("characters: nearly at the limit")
+                                                                                      : T("characters"));
         // With placeholders the final length is only known when sending: show it as approximate.
         const char* approx = placeholders ? "~" : "";
         if (level == ChatLine::ELengthLevel::Normal)
-            ImGui::TextDisabled("%s%zu/%zu%s", approx, len, ChatLine::kMaxChatLength, tail);
+            ImGui::TextDisabled("%s%zu/%zu%s", approx, len, ChatLine::kMaxChatLength, tail.c_str());
         else
             ImGui::TextColored(level == ChatLine::ELengthLevel::Near ? kCountNearColor : kCountCloseColor,
-                               "%s%zu/%zu%s", approx, len, ChatLine::kMaxChatLength, tail);
+                               "%s%zu/%zu%s", approx, len, ChatLine::kMaxChatLength, tail.c_str());
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Characters typed into chat, including the channel command.\n"
-                              "Chat allows at most %zu. Longer lines won't be sent.%s", ChatLine::kMaxChatLength,
-                              placeholders ? "\nThis line has placeholders: they're filled in when it's sent,\n"
-                                             "and the real length is checked then." : "");
+            ImGui::SetTooltip(T("Characters typed into chat, including the channel command.\n"
+                              "Chat allows at most %zu. Longer lines won't be sent.%s"), ChatLine::kMaxChatLength,
+                              placeholders ? (std::string("\n") + T("This line has placeholders: they're filled in when it's sent,\n"
+                                                                    "and the real length is checked then.")).c_str() : "");
     }
 
     void LineWarnings(const Line& aLine)
     {
         if (aLine.Channel == EChannel::Whisper && aLine.WhisperTo.empty())
-            ImGui::TextColored(kWarnColor, "Whisper needs a recipient.");
+            ImGui::TextColored(kWarnColor, T("Whisper needs a recipient."));
         if (aLine.Message.empty())
-            ImGui::TextColored(kWarnColor, "Empty message.");
+            ImGui::TextColored(kWarnColor, T("Empty message."));
     }
 
     enum class EEditMode { Lines, Raw };
@@ -1485,22 +1493,22 @@ namespace
             {
                 row.Next(Px(150.0f));
                 ImGui::SetNextItemWidth(Px(150.0f));
-                if (InputString("##to", "Recipient", l.WhisperTo)) MarkDirty();
-                if (ImGui::IsItemHovered()) ImGui::SetTooltip("Character or account name to whisper.");
+                if (InputString("##to", T("Recipient"), l.WhisperTo)) MarkDirty();
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip(T("Character or account name to whisper."));
             }
             else if (l.Channel == EChannel::Squad)
             {
-                row.Next(UiFont::CheckboxWidth("Broadcast"));
-                if (ImGui::Checkbox("Broadcast", &l.SquadBroadcast)) MarkDirty();
+                row.Next(UiFont::CheckboxWidth(T("Broadcast")));
+                if (ImGui::Checkbox(T("Broadcast"), &l.SquadBroadcast)) MarkDirty();
                 if (ImGui::IsItemHovered())
-                    ImGui::SetTooltip("Send as a squad broadcast. Only works while you're the commander;\n"
-                                      "otherwise it's sent as a normal squad message.");
+                    ImGui::SetTooltip(T("Send as a squad broadcast. Only works while you're the commander;\n"
+                                      "otherwise it's sent as a normal squad message."));
             }
-            row.Next(UiFont::ButtonWidth("Remove"));
-            if (ImGui::SmallButton("Remove")) removeAt = i;
+            row.Next(UiFont::ButtonWidth(T("Remove")));
+            if (ImGui::SmallButton(T("Remove"))) removeAt = i;
 
             ImGui::SetNextItemWidth(-1.0f);
-            if (InputString("##msg", "Message", l.Message)) MarkDirty();
+            if (InputString("##msg", T("Message"), l.Message)) MarkDirty();
             LengthLabel(l, true); // under the message box
             LineWarnings(l);
 
@@ -1514,7 +1522,7 @@ namespace
 
         if (lines.size() < kMaxLinesPerMacro)
         {
-            if (ImGui::Button("Add line"))
+            if (ImGui::Button(T("Add line")))
             {
                 Line l;
                 if (!lines.empty()) { l.Channel = lines.back().Channel; l.WhisperTo = lines.back().WhisperTo; }
@@ -1524,7 +1532,7 @@ namespace
         }
         else
         {
-            ImGui::TextDisabled("A macro can have at most %zu lines.", kMaxLinesPerMacro);
+            ImGui::TextDisabled(T("A macro can have at most %zu lines."), kMaxLinesPerMacro);
         }
     }
 
@@ -1536,8 +1544,8 @@ namespace
             s_RawForId = aMacro.Id;
         }
 
-        ImGui::TextDisabled("One message per row, typed as in game:");
-        ImGui::TextDisabled("/s hello   /w [Name] hi   /d ! broadcast   /g3 guild 3");
+        ImGui::TextDisabled(T("One message per row, typed as in game:"));
+        ImGui::TextDisabled(T("/s hello   /w [Name] hi   /d ! broadcast   /g3 guild 3"));
         const float height = ImGui::GetTextLineHeightWithSpacing() * 8.0f;
         if (InputStringMultiline("##raw", s_RawText, ImVec2(-1.0f, height)))
         {
@@ -1548,22 +1556,22 @@ namespace
         }
 
         ImGui::Spacing();
-        ImGui::TextDisabled("Will send:");
-        if (aMacro.Lines.empty()) ImGui::TextDisabled("(nothing)");
+        ImGui::TextDisabled(T("Will send:"));
+        if (aMacro.Lines.empty()) ImGui::TextDisabled(T("(nothing)"));
         for (size_t i = 0; i < aMacro.Lines.size(); i++)
         {
             const Line& l = aMacro.Lines[i];
             ImGui::PushID(static_cast<int>(i));
-            ImGui::TextColored(ChannelColorVec(l.Channel), "[%s]", ChannelLabel(l.Channel));
+            ImGui::TextColored(ChannelColorVec(l.Channel), "[%s]", Localization::Lookup(ChannelLabel(l.Channel)));
             ImGui::SameLine();
             if (l.Channel == EChannel::Whisper && !l.WhisperTo.empty())
             {
-                ImGui::TextColored(ChannelColorVec(l.Channel), "to %s:", l.WhisperTo.c_str());
+                ImGui::TextColored(ChannelColorVec(l.Channel), T("to %s:"), l.WhisperTo.c_str());
                 ImGui::SameLine();
             }
             if (l.Channel == EChannel::Squad && l.SquadBroadcast)
             {
-                ImGui::TextColored(ChannelColorVec(l.Channel), "(broadcast)");
+                ImGui::TextColored(ChannelColorVec(l.Channel), "%s", T("(broadcast)"));
                 ImGui::SameLine();
             }
             LengthLabel(l);
@@ -1573,7 +1581,7 @@ namespace
             ImGui::PopID();
         }
         if (aMacro.Lines.size() >= kMaxLinesPerMacro)
-            ImGui::TextColored(kWarnColor, "Only the first %zu lines are kept.", kMaxLinesPerMacro);
+            ImGui::TextColored(kWarnColor, T("Only the first %zu lines are kept."), kMaxLinesPerMacro);
     }
 
     // --- Link files ---------------------------------------------------------------------------
@@ -1581,6 +1589,7 @@ namespace
     // second on the render thread, outside the tree drawing; only a changed file is read.
 
     constexpr double kLinkSyncEverySec = 1.0;
+    constexpr char   kLinkMissing[]    = TX("The file isn't there. Changes aren't saved to it until it's back or recreated.");
 
     std::unordered_map<uint64_t, LinkSync::State> s_LinkStates;
     std::unordered_map<uint64_t, std::string>     s_LinkProblems; // what's wrong with a link, for the editor
@@ -1601,10 +1610,10 @@ namespace
     {
         std::error_code ec;
         const auto size = std::filesystem::file_size(aFile, ec);
-        if (ec) { aError = "the file couldn't be read."; return false; }
-        if (size > LinkSync::kMaxFileBytes) { aError = "the file is too big (over 256 KB)."; return false; }
+        if (ec) { aError = T("the file couldn't be read."); return false; }
+        if (size > LinkSync::kMaxFileBytes) { aError = T("the file is too big (over 256 KB)."); return false; }
         std::ifstream in(aFile, std::ios::binary);
-        if (!in) { aError = "the file couldn't be opened (is another program locking it?)."; return false; }
+        if (!in) { aError = T("the file couldn't be opened (is another program locking it?)."); return false; }
         aText.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
         if (aText.size() >= 3 && aText.compare(0, 3, "\xEF\xBB\xBF") == 0) aText.erase(0, 3); // UTF-8 BOM
         return true;
@@ -1661,8 +1670,8 @@ namespace
 
             const LinkSync::Outcome o = LinkSync::Sync(st, m->Lines, view);
             std::string problem;
-            if (o.Missing) problem = "The file isn't there. Changes aren't saved to it until it's back or recreated.";
-            else if (!o.Error.empty()) problem = "The file can't be read: " + o.Error;
+            if (o.Missing) problem = T(kLinkMissing);
+            else if (!o.Error.empty()) problem = Fmt(T("The file can't be read: %s"), o.Error.c_str());
             else if (o.LoadMacro)
             {
                 m->Lines = o.Lines;
@@ -1675,7 +1684,7 @@ namespace
                 else
                 {
                     st = before; // try again next time
-                    problem = "The file couldn't be written. Check the Nexus log.";
+                    problem = T("The file couldn't be written. Check the Nexus log.");
                 }
             }
             if (problem.empty() && !o.Warning.empty()) problem = o.Warning;
@@ -1701,15 +1710,15 @@ namespace
 
     void LinkMacro(Node& aMacro, const std::string& aPath)
     {
-        const std::string action = "Linked \"" + aMacro.Name + "\" to the file \"" + aPath + "\"";
+        const std::string action = Fmt(T("Linked \"%s\" to the file \"%s\""), aMacro.Name.c_str(), aPath.c_str());
         const std::string bad = LinkSync::CheckPath(aPath);
         if (!bad.empty()) { ShowError(action, bad); return; }
         const std::filesystem::path dir = Storage::AddonDir();
-        if (dir.empty()) { ShowError(action, "The addon folder isn't available."); return; }
+        if (dir.empty()) { ShowError(action, T("The addon folder isn't available.")); return; }
         const std::filesystem::path file = LinkSync::Resolve(dir, aPath);
         if (const Node* other = LinkedElsewhere(s_Tree.Root(), aMacro, dir, file))
         {
-            ShowError(action, "\"" + other->Name + "\" is already linked to that file.");
+            ShowError(action, Fmt(T("\"%s\" is already linked to that file."), other->Name.c_str()));
             return;
         }
 
@@ -1719,7 +1728,7 @@ namespace
         std::string text, error;
         if (exists && !ReadLinkFile(file, text, error))
         {
-            ShowError(action, "That file can't be used: " + error); // never overwrite a file we couldn't read
+            ShowError(action, Fmt(T("That file can't be used: %s"), error.c_str())); // never overwrite a file we couldn't read
             return;
         }
         const bool hasLines = exists && !ChatLine::ParseRaw(text).empty();
@@ -1728,12 +1737,12 @@ namespace
             // No file yet (or an empty one): it's made from the macro.
             if (!WriteLinkFile(aMacro, file, st))
             {
-                ShowError(action, "The file couldn't be created. Check the path and the Nexus log.");
+                ShowError(action, T("The file couldn't be created. Check the path and the Nexus log."));
                 return;
             }
-            SetInfo("Linked. The file was created from the macro's lines.");
+            SetInfo(T("Linked. The file was created from the macro's lines."));
         }
-        else SetInfo("Linked. The macro now has the file's lines.");
+        else SetInfo(T("Linked. The macro now has the file's lines."));
         // An existing file with lines wins: the first sync (State not known yet) loads it.
 
         const size_t first = aPath.find_first_not_of(" \t");
@@ -1754,22 +1763,23 @@ namespace
         }
         const auto problem = s_LinkProblems.find(aMacro.Id);
         const std::string header = aMacro.LinkFile.empty()
-            ? std::string("Text file link: none###linkfile")
-            : "Text file link: " + aMacro.LinkFile + (problem != s_LinkProblems.end() ? " (needs attention)" : "") + "###linkfile";
+            ? std::string(T("Text file link: none")) + "###linkfile"
+            : Fmt(T("Text file link: %s"), aMacro.LinkFile.c_str()) +
+                  (problem != s_LinkProblems.end() ? std::string(" ") + T("(needs attention)") : std::string()) + "###linkfile";
         if (!ImGui::CollapsingHeader(header.c_str())) return;
         ImGui::Indent();
 
         if (aMacro.LinkFile.empty())
         {
-            ImGui::TextWrapped("Keep this macro in step with a .txt file, one chat line per row (like the Raw text "
+            ImGui::TextWrapped(T("Keep this macro in step with a .txt file, one chat line per row (like the Raw text "
                                "tab). Edit the file in Notepad and the macro follows; edit the macro here and the "
-                               "file follows.");
-            ImGui::TextDisabled("A name alone goes in <GW2>\\addons\\GW2_Chat_Messages\\links\\. A file that already "
-                                "has lines replaces the macro's lines; otherwise it's created from them.");
-            ImGui::SetNextItemWidth(-(UiFont::ButtonWidth("Link") + ImGui::GetStyle().ItemSpacing.x));
-            const bool enter = InputString("##linkpath", "callouts.txt, or a full path", s_LinkPath, ImGuiInputTextFlags_EnterReturnsTrue);
+                               "file follows."));
+            ImGui::TextDisabled(T("A name alone goes in <GW2>\\addons\\GW2_Chat_Messages\\links\\. A file that already "
+                                "has lines replaces the macro's lines; otherwise it's created from them."));
+            ImGui::SetNextItemWidth(-(UiFont::ButtonWidth(T("Link")) + ImGui::GetStyle().ItemSpacing.x));
+            const bool enter = InputString("##linkpath", T("callouts.txt, or a full path"), s_LinkPath, ImGuiInputTextFlags_EnterReturnsTrue);
             ImGui::SameLine();
-            if (ImGui::Button("Link") || enter)
+            if (ImGui::Button(T("Link")) || enter)
             {
                 std::string path = s_LinkPath;
                 if (path.size() >= 2 && path.front() == '"' && path.back() == '"') path = path.substr(1, path.size() - 2);
@@ -1780,34 +1790,34 @@ namespace
         {
             const std::filesystem::path dir  = Storage::AddonDir();
             const std::filesystem::path file = LinkSync::Resolve(dir, aMacro.LinkFile);
-            ImGui::TextWrapped("File: %s", file.u8string().c_str());
-            const bool missing = problem != s_LinkProblems.end() && problem->second.rfind("The file isn't there", 0) == 0;
+            ImGui::TextWrapped(T("File: %s"), file.u8string().c_str());
+            const bool missing = problem != s_LinkProblems.end() && problem->second == T(kLinkMissing);
             if (problem != s_LinkProblems.end()) ImGui::TextColored(kWarnColor, "%s", problem->second.c_str());
-            else ImGui::TextDisabled("In step. Changes on either side show up within a second.");
+            else ImGui::TextDisabled(T("In step. Changes on either side show up within a second."));
             UiFont::Row row;
-            if (ImGui::SmallButton("Open file")) Storage::OpenFolder(file);
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Opens it in your text editor (Notepad, unless you chose another).");
-            row.Next(UiFont::ButtonWidth("Open folder"));
-            if (ImGui::SmallButton("Open folder")) Storage::OpenFolder(file.parent_path());
+            if (ImGui::SmallButton(T("Open file"))) Storage::OpenFolder(file);
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip(T("Opens it in your text editor (Notepad, unless you chose another)."));
+            row.Next(UiFont::ButtonWidth(T("Open folder")));
+            if (ImGui::SmallButton(T("Open folder"))) Storage::OpenFolder(file.parent_path());
             if (missing)
             {
-                row.Next(UiFont::ButtonWidth("Recreate the file"));
-                if (ImGui::SmallButton("Recreate the file"))
+                row.Next(UiFont::ButtonWidth(T("Recreate the file")));
+                if (ImGui::SmallButton(T("Recreate the file")))
                 {
                     if (WriteLinkFile(aMacro, file, s_LinkStates[aMacro.Id])) s_LinkProblems.erase(aMacro.Id);
-                    else ShowError("Clicked Recreate the file for \"" + aMacro.Name + "\"", "The file couldn't be created. Check the Nexus log.");
+                    else ShowError(Fmt(T("Clicked Recreate the file for \"%s\""), aMacro.Name.c_str()), T("The file couldn't be created. Check the Nexus log."));
                 }
             }
-            row.Next(UiFont::ButtonWidth("Unlink"));
-            if (ImGui::SmallButton("Unlink"))
+            row.Next(UiFont::ButtonWidth(T("Unlink")));
+            if (ImGui::SmallButton(T("Unlink")))
             {
                 aMacro.LinkFile.clear();
                 s_LinkStates.erase(aMacro.Id);
                 s_LinkProblems.erase(aMacro.Id);
                 MarkDirty();
-                SetInfo("Unlinked. The file was left as it is.");
+                SetInfo(T("Unlinked. The file was left as it is."));
             }
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Stops keeping the macro and the file in step. Neither is deleted.");
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip(T("Stops keeping the macro and the file in step. Neither is deleted."));
         }
         ImGui::Unindent();
     }
@@ -1816,11 +1826,11 @@ namespace
     {
         const bool busy = Sender::IsBusy();
         if (busy) ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
-        if (ImGui::Button("Send now") && !busy) SendMacro(aMacro);
+        if (ImGui::Button(T("Send now")) && !busy) SendMacro(aMacro);
         if (busy) ImGui::PopStyleVar();
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Types each line into its chat channel and sends it.\n"
-                              "Needs your Chat key set in Nexus > Options > Game Keybinds.");
+            ImGui::SetTooltip(T("Types each line into its chat channel and sends it.\n"
+                              "Needs your Chat key set in Nexus > Options > Game Keybinds."));
         ImGui::SameLine();
         DrawSendStatus();
         DrawHotkeyRow(aMacro);
@@ -1830,20 +1840,20 @@ namespace
 
         UiFont::Row modeRow;
         int mode = static_cast<int>(s_EditMode);
-        if (ImGui::RadioButton("Lines", &mode, static_cast<int>(EEditMode::Lines))) s_RawForId = 0;
-        modeRow.Next(UiFont::CheckboxWidth("Raw text"));
-        if (ImGui::RadioButton("Raw text", &mode, static_cast<int>(EEditMode::Raw))) s_RawForId = 0;
+        if (ImGui::RadioButton(T("Lines"), &mode, static_cast<int>(EEditMode::Lines))) s_RawForId = 0;
+        modeRow.Next(UiFont::CheckboxWidth(T("Raw text")));
+        if (ImGui::RadioButton(T("Raw text"), &mode, static_cast<int>(EEditMode::Raw))) s_RawForId = 0;
         s_EditMode = static_cast<EEditMode>(mode);
-        const std::string count = std::to_string(aMacro.Lines.size()) + " line(s)";
+        const std::string count = Fmt(T("%zu line(s)"), aMacro.Lines.size());
         modeRow.Next(UiFont::TextWidth(count.c_str()));
         ImGui::TextDisabled("%s", count.c_str());
-        modeRow.Next(UiFont::TextWidth("Placeholders (?)"));
-        ImGui::TextDisabled("Placeholders (?)");
+        modeRow.Next(UiFont::TextWidth(T("Placeholders (?)")));
+        ImGui::TextDisabled(T("Placeholders (?)"));
         if (ImGui::IsItemHovered())
         {
             ImGui::BeginTooltip();
             UiFont::PushTooltipWrap();
-            ImGui::TextUnformatted("Type these in a message; they're filled in when it's sent:");
+            ImGui::TextUnformatted(T("Type these in a message; they're filled in when it's sent:"));
             ImGui::Separator();
             float syntaxWidth = 0.0f;
             for (const Placeholders::Info& p : Placeholders::List())
@@ -1852,12 +1862,12 @@ namespace
             {
                 ImGui::TextUnformatted(p.Syntax);
                 ImGui::SameLine(syntaxWidth + ImGui::GetStyle().ItemSpacing.x * 3.0f);
-                ImGui::TextDisabled("%s", p.Description);
+                ImGui::TextDisabled("%s", Localization::Lookup(p.Description));
             }
             ImGui::Separator();
-            ImGui::TextDisabled("Text files go in <GW2>\\addons\\GW2_Chat_Messages\\ (or a folder inside it). "
+            ImGui::TextDisabled(T("Text files go in <GW2>\\addons\\GW2_Chat_Messages\\ (or a folder inside it). "
                                 "Use \"quotes\" for names with spaces: {txt \"my lines.txt\"}. "
-                                "Anything else in { } is sent as typed. Chat links like [&BDAEAAA=] work as is.");
+                                "Anything else in { } is sent as typed. Chat links like [&BDAEAAA=] work as is."));
             ImGui::PopTextWrapPos();
             ImGui::EndTooltip();
         }
@@ -1880,23 +1890,23 @@ namespace
                 DrawTrashDetails(s_Tree.Trash()[static_cast<size_t>(ti)]);
                 return;
             }
-            ImGui::TextDisabled("Select a folder or macro.");
+            ImGui::TextDisabled(T("Select a folder or macro."));
             ImGui::Spacing();
-            ImGui::TextWrapped("Right-click an item for more options. Drag items to move them: drop on the middle "
-                               "of a folder to put them inside it, or above or below an item to place them next to it.");
+            ImGui::TextWrapped(T("Right-click an item for more options. Drag items to move them: drop on the middle "
+                               "of a folder to put them inside it, or above or below an item to place them next to it."));
             return;
         }
 
-        ImGui::TextDisabled("%s", node->IsFolder() ? "Folder" : "Macro");
+        ImGui::TextDisabled("%s", node->IsFolder() ? T("Folder") : T("Macro"));
         ImGui::TextWrapped("%s", node->Name.c_str());
-        ImGui::TextDisabled("In: %s", PathOf(*node).c_str());
+        ImGui::TextDisabled(T("In: %s"), PathOf(*node).c_str());
         // Popups must be opened at the main window's ID level, so these buttons queue an action.
         UiFont::Row nameRow;
-        if (ImGui::SmallButton("Rename")) s_Pending = {EAction::OpenName, 0, node->Id, EDrop::Into, 0, ENameMode::Rename};
-        const char* deleteLabel = s_TrashOn ? "Delete" : "Delete...";
+        if (ImGui::SmallButton(T("Rename"))) s_Pending = {EAction::OpenName, 0, node->Id, EDrop::Into, 0, ENameMode::Rename};
+        const char* deleteLabel = s_TrashOn ? T("Delete") : T("Delete...");
         nameRow.Next(UiFont::ButtonWidth(deleteLabel));
         if (ImGui::SmallButton(deleteLabel)) s_Pending = {EAction::OpenDelete, node->Id};
-        if (s_TrashOn && ImGui::IsItemHovered()) ImGui::SetTooltip("Moves it to the trash bin, where it can be restored.");
+        if (s_TrashOn && ImGui::IsItemHovered()) ImGui::SetTooltip(T("Moves it to the trash bin, where it can be restored."));
         ImGui::Separator();
 
         if (node->IsFolder())
@@ -1904,17 +1914,17 @@ namespace
             size_t folders = 0, macros = 0;
             Tree::CountDescendants(*node, &folders, &macros);
             const int level = Tree::FolderLevel(*node);
-            ImGui::Text("Folder level %d of %d", level, kMaxFolderDepth);
-            ImGui::Text("Contains %zu folder(s) and %zu macro(s)", folders, macros);
+            ImGui::Text(T("Folder level %d of %d"), level, kMaxFolderDepth);
+            ImGui::Text(T("Contains %zu folder(s) and %zu macro(s)"), folders, macros);
             ImGui::Spacing();
             UiFont::Row newRow;
             if (level < kMaxFolderDepth)
             {
-                if (ImGui::Button("New folder inside"))
+                if (ImGui::Button(T("New folder inside")))
                     s_Pending = {EAction::OpenName, 0, node->Id, EDrop::Into, 0, ENameMode::NewFolder};
-                newRow.Next(UiFont::ButtonWidth("New macro inside"));
+                newRow.Next(UiFont::ButtonWidth(T("New macro inside")));
             }
-            if (ImGui::Button("New macro inside"))
+            if (ImGui::Button(T("New macro inside")))
                 s_Pending = {EAction::OpenName, 0, node->Id, EDrop::Into, 0, ENameMode::NewMacro};
         }
         else
@@ -1944,14 +1954,14 @@ namespace
     {
         ImGui::BeginTooltip();
         UiFont::PushTooltipWrap(); // a chat line can be 199 characters long
-        if (aMacro.Lines.empty()) ImGui::TextDisabled("No lines yet.");
+        if (aMacro.Lines.empty()) ImGui::TextDisabled(T("No lines yet."));
         for (size_t i = 0; i < aMacro.Lines.size() && i < kPreviewLines; i++)
         {
             const Line& l = aMacro.Lines[i];
             ImGui::TextColored(ChannelColorVec(l.Channel), "%s", ChatLine::TypedText(l).c_str());
         }
         if (aMacro.Lines.size() > kPreviewLines)
-            ImGui::TextDisabled("...and %zu more line(s)", aMacro.Lines.size() - kPreviewLines);
+            ImGui::TextDisabled(T("...and %zu more line(s)"), aMacro.Lines.size() - kPreviewLines);
         ImGui::PopTextWrapPos();
         ImGui::EndTooltip();
     }
@@ -2015,9 +2025,11 @@ namespace
     // The folders a search result sits in, "A > B" ("" at the top level).
     std::string MenuPath(const Node& aNode)
     {
-        const std::string path = PathOf(aNode);
-        const std::string top = "Top level > ";
-        return path.compare(0, top.size(), top) == 0 ? path.substr(top.size()) : std::string();
+        std::vector<const Node*> chain;
+        for (const Node* n = aNode.Parent; n && n->Parent; n = n->Parent) chain.push_back(n);
+        std::string path;
+        for (auto it = chain.rbegin(); it != chain.rend(); ++it) path += (path.empty() ? "" : " > ") + (*it)->Name;
+        return path;
     }
 
     void CollectShownMacros(const Node& aFolder, const Search::Result& aResult, std::vector<const Node*>& aOut)
@@ -2044,10 +2056,10 @@ namespace
         const bool busy = Sender::IsBusy();
         if (found.empty())
         {
-            ImGui::TextDisabled("No macro active here matches \"%s\".", Search::Trim(aQuery).c_str());
+            ImGui::TextDisabled(T("No macro active here matches \"%s\"."), Search::Trim(aQuery).c_str());
             return;
         }
-        if (busy) ImGui::TextColored(kWarnColor, "Sending...");
+        if (busy) ImGui::TextColored(kWarnColor, T("Sending..."));
         for (size_t i = 0; i < found.size() && i < kMenuResultsMax; i++)
         {
             const Node& n = *found[i];
@@ -2058,7 +2070,7 @@ namespace
             ImGui::PopID();
         }
         if (found.size() > kMenuResultsMax)
-            ImGui::TextDisabled("...and %zu more: type more to narrow it down.", found.size() - kMenuResultsMax);
+            ImGui::TextDisabled(T("...and %zu more: type more to narrow it down."), found.size() - kMenuResultsMax);
         if (aEnter && !busy)
         {
             SendMacro(*found.front(), ESendFrom::Menu);
@@ -2074,7 +2086,7 @@ namespace
 
         const Here here = WhereAmI();
         if (!HasActiveMacros(s_Tree.Root(), here))
-            ImGui::TextDisabled(s_Tree.Root().Children.empty() ? "No macros yet." : "No macros for this map.");
+            ImGui::TextDisabled("%s", s_Tree.Root().Children.empty() ? T("No macros yet.") : T("No macros for this map."));
         else
         {
             if (aSearch.Focus)
@@ -2083,21 +2095,21 @@ namespace
                 ImGui::SetKeyboardFocusHere();
             }
             ImGui::SetNextItemWidth(UiFont::Px(220.0f));
-            const bool enter = ImGui::InputTextWithHint("##menusearch", "Search (Enter sends the first)", aSearch.Buf,
+            const bool enter = ImGui::InputTextWithHint("##menusearch", T("Search (Enter sends the first)"), aSearch.Buf,
                                                         sizeof(aSearch.Buf), ImGuiInputTextFlags_EnterReturnsTrue);
             if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("Finds the macros active here by name, line text, recipient or hotkey.\n"
-                                  "Enter sends the first one.");
+                ImGui::SetTooltip(T("Finds the macros active here by name, line text, recipient or hotkey.\n"
+                                  "Enter sends the first one."));
             const std::string query = aSearch.Buf;
             if (!Search::Trim(query).empty()) DrawMenuResults(here, query, enter);
             else
             {
-                if (Sender::IsBusy()) ImGui::TextColored(kWarnColor, "Sending...");
+                if (Sender::IsBusy()) ImGui::TextColored(kWarnColor, T("Sending..."));
                 DrawQuickMenuItems(s_Tree.Root(), here);
             }
         }
         ImGui::Separator();
-        if (ImGui::MenuItem(s_ShowMainWindow ? "Hide macro library" : "Open macro library"))
+        if (ImGui::MenuItem(s_ShowMainWindow ? T("Hide macro library") : T("Open macro library")))
             s_ShowMainWindow = !s_ShowMainWindow;
     }
 
@@ -2148,8 +2160,9 @@ namespace
         s_ImportOpt.Unselected.clear();
         if (!aPkg.Ok())
         {
-            const std::string what = aPkg.Source.empty() ? std::string("it") : "\"" + aPkg.Source + "\"";
-            ShowError("Opened " + what + " in the Import window", (aPkg.Source.empty() ? std::string("It") : what) + " can't be imported. " + aPkg.Error);
+            if (aPkg.Source.empty()) ShowError(T("Opened it in the Import window"), std::string(T("It can't be imported.")) + " " + aPkg.Error);
+            else ShowError(Fmt(T("Opened \"%s\" in the Import window"), aPkg.Source.c_str()),
+                           Fmt(T("\"%s\" can't be imported."), aPkg.Source.c_str()) + " " + aPkg.Error);
             s_ImportPkg.reset();
             return;
         }
@@ -2219,21 +2232,21 @@ namespace
 
     std::string FolderPath(const Node& aFolder)
     {
-        return aFolder.Parent ? PathOf(aFolder) + " > " + aFolder.Name : "Top level";
+        return aFolder.Parent ? PathOf(aFolder) + " > " + aFolder.Name : std::string(T("Top level"));
     }
 
     bool ChoiceCombo(const char* aLabel, Exchange::EChoice& aChoice, bool aFolder)
     {
         using Exchange::EChoice;
         bool changed = false;
-        if (ImGui::BeginCombo(aLabel, Exchange::ChoiceLabel(aChoice)))
+        if (ImGui::BeginCombo(aLabel, Localization::Lookup(Exchange::ChoiceLabel(aChoice))))
         {
             const EChoice folderChoices[] = {EChoice::Merge, EChoice::Rename, EChoice::Skip, EChoice::Replace};
             const EChoice macroChoices[]  = {EChoice::Rename, EChoice::Skip, EChoice::Replace};
             const EChoice* list = aFolder ? folderChoices : macroChoices;
             const size_t count  = aFolder ? 4 : 3;
             for (size_t i = 0; i < count; i++)
-                if (ImGui::Selectable(Exchange::ChoiceLabel(list[i]), list[i] == aChoice))
+                if (ImGui::Selectable(Localization::Lookup(Exchange::ChoiceLabel(list[i])), list[i] == aChoice))
                 {
                     aChoice = list[i];
                     changed = true;
@@ -2255,21 +2268,21 @@ namespace
             ImVec4 color = ImGui::GetStyleColorVec4(ImGuiCol_Text);
             switch (item.Outcome)
             {
-            case EOutcome::New:       tag = "new"; color = newColor; break;
-            case EOutcome::Renamed:   tag = "new, as \"" + item.Name + "\""; color = newColor; break;
-            case EOutcome::Merged:    tag = "goes into the existing folder"; break;
-            case EOutcome::Replaced:  tag = "replaces the existing one"; color = kWarnColor; break;
-            case EOutcome::Skipped:   tag = "skipped"; color = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled); break;
-            case EOutcome::TooDeep:   tag = "left out: folders would be nested more than 6 deep"; color = kErrorColor; break;
-            case EOutcome::Flattened: tag = "folder left out (too deep); its contents move up a level"; color = kWarnColor; break;
-            case EOutcome::NotSelected: tag = "not selected"; color = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled); break;
+            case EOutcome::New:       tag = T("new"); color = newColor; break;
+            case EOutcome::Renamed:   tag = Fmt(T("new, as \"%s\""), item.Name.c_str()); color = newColor; break;
+            case EOutcome::Merged:    tag = T("goes into the existing folder"); break;
+            case EOutcome::Replaced:  tag = T("replaces the existing one"); color = kWarnColor; break;
+            case EOutcome::Skipped:   tag = T("skipped"); color = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled); break;
+            case EOutcome::TooDeep:   tag = T("left out: folders would be nested more than 6 deep"); color = kErrorColor; break;
+            case EOutcome::Flattened: tag = T("folder left out (too deep); its contents move up a level"); color = kWarnColor; break;
+            case EOutcome::NotSelected: tag = T("not selected"); color = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled); break;
             }
             // Tick to import. A folder brings everything ticked inside it.
             bool on = Exchange::IsSelected(s_ImportOpt, src);
             if (ImGui::Checkbox("##sel", &on)) Exchange::SetSelected(s_ImportOpt, src, on);
             if (ImGui::IsItemHovered())
-                ImGui::SetTooltip(src.IsFolder() ? "Import this folder with everything ticked inside it.\nUntick to leave the whole folder out."
-                                                 : "Import this macro.");
+                ImGui::SetTooltip("%s", src.IsFolder() ? T("Import this folder with everything ticked inside it.\nUntick to leave the whole folder out.")
+                                                       : T("Import this macro."));
             ImGui::SameLine();
             const bool showChildren = src.IsFolder() && !item.Children.empty();
             ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth;
@@ -2280,12 +2293,12 @@ namespace
             if (Exchange::IsPartlySelected(s_ImportOpt, src))
             {
                 ImGui::SameLine();
-                ImGui::TextDisabled("[some]");
+                ImGui::TextDisabled(T("[some]"));
             }
             if (item.Conflict && item.Outcome != EOutcome::NotSelected)
             {
                 ImGui::SameLine();
-                ImGui::TextColored(kCountNearColor, "NAME TAKEN:");
+                ImGui::TextColored(kCountNearColor, T("NAME TAKEN:"));
             }
             ImGui::SameLine();
             ImGui::TextColored(color, "(%s)", tag.c_str());
@@ -2296,7 +2309,8 @@ namespace
                 Exchange::EChoice choice = item.Choice;
                 if (ChoiceCombo("##choice", choice, src.IsFolder())) s_ImportOpt.PerItem[&src] = choice;
                 if (ImGui::IsItemHovered())
-                    ImGui::SetTooltip("There's already a %s called \"%s\" there.", src.IsFolder() ? "folder" : "macro", src.Name.c_str());
+                    ImGui::SetTooltip(src.IsFolder() ? T("There's already a folder called \"%s\" there.") : T("There's already a macro called \"%s\" there."),
+                                      src.Name.c_str());
             }
             if (showChildren && open)
             {
@@ -2309,25 +2323,25 @@ namespace
 
     void DrawImportSource()
     {
-        ImGui::TextUnformatted("1. Choose what to import");
-        if (ImGui::RadioButton("Macros", !s_ImportLibrary)) SetImportLibrary(false);
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("A .json export, a .txt file (one macro), or a folder of .txt files.");
+        ImGui::TextUnformatted(T("1. Choose what to import"));
+        if (ImGui::RadioButton(T("Macros"), !s_ImportLibrary)) SetImportLibrary(false);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip(T("A .json export, a .txt file (one macro), or a folder of .txt files."));
         ImGui::SameLine();
-        if (ImGui::RadioButton("A whole library", s_ImportLibrary)) SetImportLibrary(true);
+        if (ImGui::RadioButton(T("A whole library"), s_ImportLibrary)) SetImportLibrary(true);
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Someone else's macros.json (or macros.json.bak), as they sent it to you.\n"
-                              "It goes into a new folder of its own, so it never mixes with your folders.");
+            ImGui::SetTooltip(T("Someone else's macros.json (or macros.json.bak), as they sent it to you.\n"
+                              "It goes into a new folder of its own, so it never mixes with your folders."));
         if (s_ImportLibrary)
-            ImGui::TextDisabled("Someone's macros.json or macros.json.bak. Rename it (e.g. Alex.json) so it's easy to tell apart. "
-                                "It goes into a new folder at the top level. Their trash bin and text file links aren't taken.");
-        else ImGui::TextDisabled("A .json export, a .txt file (one macro), or a folder of .txt files.");
+            ImGui::TextDisabled(T("Someone's macros.json or macros.json.bak. Rename it (e.g. Alex.json) so it's easy to tell apart. "
+                                "It goes into a new folder at the top level. Their trash bin and text file links aren't taken."));
+        else ImGui::TextDisabled(T("A .json export, a .txt file (one macro), or a folder of .txt files."));
         if (s_ImportListStale) RefreshImportList();
 
         ImGui::BeginChild("##imports", ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 5.0f), true,
                           ImGuiWindowFlags_HorizontalScrollbar);
         ImGui::PushTextWrapPos(0.0f);
         if (s_ImportList.empty())
-            ImGui::TextDisabled("Put files in <GW2>\\addons\\GW2_Chat_Messages\\imports\\ to see them here.");
+            ImGui::TextDisabled(T("Put files in <GW2>\\addons\\GW2_Chat_Messages\\imports\\ to see them here."));
         for (const std::filesystem::path& p : s_ImportList)
         {
             std::error_code ec;
@@ -2338,27 +2352,27 @@ namespace
         ImGui::PopTextWrapPos();
         ImGui::EndChild();
         UiFont::Row row;
-        if (ImGui::SmallButton("Open imports folder")) Storage::OpenFolder(Storage::ImportsDir());
-        row.Next(UiFont::ButtonWidth("Refresh"));
-        if (ImGui::SmallButton("Refresh")) s_ImportListStale = true;
-        row.Next(UiFont::ButtonWidth("Paste from clipboard"));
-        if (ImGui::SmallButton("Paste from clipboard"))
+        if (ImGui::SmallButton(T("Open imports folder"))) Storage::OpenFolder(Storage::ImportsDir());
+        row.Next(UiFont::ButtonWidth(T("Refresh")));
+        if (ImGui::SmallButton(T("Refresh"))) s_ImportListStale = true;
+        row.Next(UiFont::ButtonWidth(T("Paste from clipboard")));
+        if (ImGui::SmallButton(T("Paste from clipboard")))
         {
             const char* text = ImGui::GetClipboardText();
-            if (!text || !*text) ShowError("Clicked Paste from clipboard in the Import window", "The clipboard has no text.");
+            if (!text || !*text) ShowError(T("Clicked Paste from clipboard in the Import window"), T("The clipboard has no text."));
             else
             {
-                Exchange::Package pkg = s_ImportLibrary ? Exchange::FromJsonText(text) : Exchange::FromText("Pasted macro", text);
-                pkg.Source = "Pasted text";
+                Exchange::Package pkg = s_ImportLibrary ? Exchange::FromJsonText(text) : Exchange::FromText(T("Pasted macro"), text);
+                pkg.Source = T("Pasted text");
                 LoadImport(std::move(pkg), true);
             }
         }
 
-        ImGui::SetNextItemWidth(-(UiFont::ButtonWidth("Load") + ImGui::GetStyle().ItemSpacing.x));
-        const bool enter = InputString("##path", s_ImportLibrary ? "Or a full path to the file" : "Or a full path to a file or folder",
+        ImGui::SetNextItemWidth(-(UiFont::ButtonWidth(T("Load")) + ImGui::GetStyle().ItemSpacing.x));
+        const bool enter = InputString("##path", s_ImportLibrary ? T("Or a full path to the file") : T("Or a full path to a file or folder"),
                                        s_ImportPath, ImGuiInputTextFlags_EnterReturnsTrue);
         ImGui::SameLine();
-        if ((ImGui::Button("Load") || enter) && !s_ImportPath.empty())
+        if ((ImGui::Button(T("Load")) || enter) && !s_ImportPath.empty())
         {
             std::string path = s_ImportPath;
             if (path.size() >= 2 && path.front() == '"' && path.back() == '"') path = path.substr(1, path.size() - 2); // "Copy as path"
@@ -2385,7 +2399,7 @@ namespace
             return;
         }
         UiFont::BeforeBegin(s_ImportFit, ImVec2(640.0f, 600.0f), ImVec2(460.0f, 360.0f));
-        const bool shown = ImGui::Begin("Import macros##chatmsg", &s_ShowImport,
+        const bool shown = ImGui::Begin(T("Import macros###chatmsg_import"), &s_ShowImport,
                                         ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_HorizontalScrollbar);
         UiFont::AfterBegin(s_ImportFit);
         if (!shown)
@@ -2408,25 +2422,25 @@ namespace
         if (Node* folder = LibraryFolder())
         {
             // A library always goes into its own new folder at the top level.
-            ImGui::Text("2. Name the new folder it goes into (from %s)", s_ImportPkg->Source.c_str());
+            ImGui::Text(T("2. Name the new folder it goes into (from %s)"), s_ImportPkg->Source.c_str());
             ImGui::SetNextItemWidth(-1.0f);
             if (InputString("##libname", Exchange::kLibraryFolderFallback, s_LibraryName))
             {
                 const std::string clean = Tree::CleanName(s_LibraryName);
                 folder->Name = clean.empty() ? std::string(Exchange::kLibraryFolderFallback) : clean;
             }
-            ImGui::TextDisabled("It's added at the top level of your library. If that name is taken, it gets \" (2)\".");
+            ImGui::TextDisabled(T("It's added at the top level of your library. If that name is taken, it gets \" (2)\"."));
             target = &s_Tree.Root();
         }
         else
         {
-            ImGui::Text("2. Choose where it goes (from %s)", s_ImportPkg->Source.c_str());
+            ImGui::Text(T("2. Choose where it goes (from %s)"), s_ImportPkg->Source.c_str());
             target = NodeOrRoot(s_ImportTarget);
             if (!target || !target->IsFolder()) { s_ImportTarget = 0; target = &s_Tree.Root(); }
-            ImGui::SetNextItemWidth(-(UiFont::TextWidth("Import into") + ImGui::GetStyle().ItemInnerSpacing.x * 2.0f));
-            if (ImGui::BeginCombo("Import into", FolderPath(*target).c_str()))
+            ImGui::SetNextItemWidth(-(UiFont::TextWidth(T("Import into")) + ImGui::GetStyle().ItemInnerSpacing.x * 2.0f));
+            if (ImGui::BeginCombo(T("Import into"), FolderPath(*target).c_str()))
             {
-                if (ImGui::Selectable("Top level", target == &s_Tree.Root())) s_ImportTarget = 0;
+                if (ImGui::Selectable(T("Top level"), target == &s_Tree.Root())) s_ImportTarget = 0;
                 std::vector<const Node*> folders;
                 FolderTargets(s_Tree.Root(), folders);
                 for (const Node* f : folders)
@@ -2441,40 +2455,40 @@ namespace
             if (!target) target = &s_Tree.Root();
 
             ImGui::SetNextItemWidth(Px(170.0f));
-            ChoiceCombo("When a macro's name is taken", s_ImportOpt.MacroConflict, false);
+            ChoiceCombo(T("When a macro's name is taken"), s_ImportOpt.MacroConflict, false);
             ImGui::SetNextItemWidth(Px(170.0f));
-            ChoiceCombo("When a folder's name is taken", s_ImportOpt.FolderConflict, true);
+            ChoiceCombo(T("When a folder's name is taken"), s_ImportOpt.FolderConflict, true);
             if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("Merge: the folder's contents go into the existing folder.\nReplace: the existing folder's contents are deleted first.");
+                ImGui::SetTooltip(T("Merge: the folder's contents go into the existing folder.\nReplace: the existing folder's contents are deleted first."));
         }
-        ImGui::Checkbox("Move the contents of too-deep folders up a level", &s_ImportOpt.Flatten);
+        ImGui::Checkbox(T("Move the contents of too-deep folders up a level"), &s_ImportOpt.Flatten);
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Folders can be nested at most %d deep. Unticked, folders that would go deeper are left out.", kMaxFolderDepth);
-        ImGui::Checkbox("Keep hotkeys", &s_ImportOpt.KeepHotkeys);
+            ImGui::SetTooltip(T("Folders can be nested at most %d deep. Unticked, folders that would go deeper are left out."), kMaxFolderDepth);
+        ImGui::Checkbox(T("Keep hotkeys"), &s_ImportOpt.KeepHotkeys);
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip(s_ImportLibrary ? "Off by default for someone else's library, so their keys don't clash with yours."
-                                              : "Untick this for macros from someone else, so their keys don't clash with yours.");
+            ImGui::SetTooltip("%s", s_ImportLibrary ? T("Off by default for someone else's library, so their keys don't clash with yours.")
+                                                    : T("Untick this for macros from someone else, so their keys don't clash with yours."));
         for (const std::string& w : s_ImportPkg->Warnings) ImGui::TextColored(kWarnColor, "%s", w.c_str());
 
         // Built every frame against the live library, so the preview is always what Import does.
         const Exchange::Plan plan = Exchange::BuildPlan(s_Tree, *target, s_ImportPkg->Items, s_ImportOpt);
 
         ImGui::Separator();
-        ImGui::TextUnformatted("3. Check the preview");
-        std::string summary = std::to_string(plan.NewMacros) + " new macro(s), " + std::to_string(plan.NewFolders) + " new folder(s)";
-        if (plan.Merged)   summary += ", " + std::to_string(plan.Merged) + " merged";
-        if (plan.Replaced) summary += ", " + std::to_string(plan.Replaced) + " replaced";
-        if (plan.Skipped)  summary += ", " + std::to_string(plan.Skipped) + " skipped";
-        if (plan.TooDeep)  summary += ", " + std::to_string(plan.TooDeep) + " left out (too deep)";
-        if (plan.NotSelected) summary += ", " + std::to_string(plan.NotSelected) + " not selected";
+        ImGui::TextUnformatted(T("3. Check the preview"));
+        std::string summary = Fmt(T("%zu new macro(s), %zu new folder(s)"), plan.NewMacros, plan.NewFolders);
+        if (plan.Merged)   summary += ", " + Fmt(T("%zu merged"), plan.Merged);
+        if (plan.Replaced) summary += ", " + Fmt(T("%zu replaced"), plan.Replaced);
+        if (plan.Skipped)  summary += ", " + Fmt(T("%zu skipped"), plan.Skipped);
+        if (plan.TooDeep)  summary += ", " + Fmt(T("%zu left out (too deep)"), plan.TooDeep);
+        if (plan.NotSelected) summary += ", " + Fmt(T("%zu not selected"), plan.NotSelected);
         ImGui::TextWrapped("%s.", summary.c_str());
         if (plan.Conflicts)
-            ImGui::TextColored(kCountNearColor, "%zu name(s) are already taken (marked NAME TAKEN): choose what happens to each one below.", plan.Conflicts);
-        ImGui::TextDisabled("Tick what to import. A folder's tick brings everything inside it.");
+            ImGui::TextColored(kCountNearColor, T("%zu name(s) are already taken (marked NAME TAKEN): choose what happens to each one below."), plan.Conflicts);
+        ImGui::TextDisabled(T("Tick what to import. A folder's tick brings everything inside it."));
         UiFont::Row selRow;
-        if (ImGui::SmallButton("Select all")) Exchange::SelectAll(s_ImportOpt, s_ImportPkg->Items, true);
-        selRow.Next(UiFont::ButtonWidth("Deselect all"));
-        if (ImGui::SmallButton("Deselect all")) Exchange::SelectAll(s_ImportOpt, s_ImportPkg->Items, false);
+        if (ImGui::SmallButton(T("Select all"))) Exchange::SelectAll(s_ImportOpt, s_ImportPkg->Items, true);
+        selRow.Next(UiFont::ButtonWidth(T("Deselect all")));
+        if (ImGui::SmallButton(T("Deselect all"))) Exchange::SelectAll(s_ImportOpt, s_ImportPkg->Items, false);
 
         const float footer = ImGui::GetFrameHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y;
         ImGui::BeginChild("##preview", ImVec2(0.0f, -footer), true, ImGuiWindowFlags_HorizontalScrollbar);
@@ -2483,11 +2497,11 @@ namespace
 
         const bool canImport = plan.Changes() > 0;
         if (!canImport) ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
-        if (ImGui::Button("Import selected") && canImport)
+        if (ImGui::Button(T("Import selected")) && canImport)
         {
             s_UndoImport = s_Tree.ToJson();
             const size_t n = Exchange::Apply(s_Tree, *target, plan, s_ImportOpt);
-            s_UndoText = "Imported " + std::to_string(n) + " item(s) from " + s_ImportPkg->Source + " into " + FolderPath(*target) + ".";
+            s_UndoText = Fmt(T("Imported %zu item(s) from %s into %s."), n, s_ImportPkg->Source.c_str(), FolderPath(*target).c_str());
             s_RawForId = 0; // a replaced macro's raw text is stale
             CancelCapture();
             MarkDirty();
@@ -2496,9 +2510,9 @@ namespace
         }
         if (!canImport) ImGui::PopStyleVar();
         if (!canImport && ImGui::IsItemHovered())
-            ImGui::SetTooltip(plan.NotSelected ? "Nothing ticked would be added or replaced." : "Nothing would be added or replaced.");
+            ImGui::SetTooltip("%s", plan.NotSelected ? T("Nothing ticked would be added or replaced.") : T("Nothing would be added or replaced."));
         ImGui::SameLine();
-        if (ImGui::Button("Cancel")) CloseImport();
+        if (ImGui::Button(T("Cancel"))) CloseImport();
 
         ImGui::PopTextWrapPos();
         ImGui::End();
@@ -2510,7 +2524,7 @@ namespace
         if (!s_UndoImport) return;
         ImGui::TextWrapped("%s", s_UndoText.c_str());
         UiFont::Row row;
-        if (ImGui::SmallButton("Undo import"))
+        if (ImGui::SmallButton(T("Undo import")))
         {
             std::vector<std::string> ignored;
             s_Tree.FromJson(*s_UndoImport, &ignored);
@@ -2520,13 +2534,13 @@ namespace
             s_RawForId   = 0;
             CancelCapture();
             MarkDirty();
-            SetInfo("The import was undone.");
+            SetInfo(T("The import was undone."));
             return;
         }
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Puts your library back as it was before the import.\nChanges you made since then are undone too.");
-        row.Next(UiFont::ButtonWidth("Dismiss##undo"));
-        if (ImGui::SmallButton("Dismiss##undo")) s_UndoImport.reset();
+            ImGui::SetTooltip(T("Puts your library back as it was before the import.\nChanges you made since then are undone too."));
+        row.Next(UiFont::ButtonWidth(T("Dismiss##undo")));
+        if (ImGui::SmallButton(T("Dismiss##undo"))) s_UndoImport.reset();
         ImGui::Separator();
     }
 
@@ -2535,56 +2549,56 @@ namespace
         Node& into = InsertFolder();
         const bool canNest = into.Parent == nullptr || Tree::FolderLevel(into) < kMaxFolderDepth;
         UiFont::Row row; // buttons that don't fit continue on the next line
-        if (ImGui::Button("New folder"))
+        if (ImGui::Button(T("New folder")))
         {
             if (canNest) OpenNamePopup(ENameMode::NewFolder, into.Id);
-            else ShowError("Clicked New folder with \"" + into.Name + "\" selected",
-                           "Folders can be nested at most " + std::to_string(kMaxFolderDepth) + " levels deep.");
+            else ShowError(Fmt(T("Clicked New folder with \"%s\" selected"), into.Name.c_str()),
+                           Fmt(T("Folders can be nested at most %d levels deep."), static_cast<int>(kMaxFolderDepth)));
         }
-        row.Next(UiFont::ButtonWidth("New macro"));
-        if (ImGui::Button("New macro")) OpenNamePopup(ENameMode::NewMacro, into.Id);
-        row.Next(UiFont::ButtonWidth("Expand all"));
-        if (ImGui::Button("Expand all"))   s_Pending = {EAction::ExpandAll, 0, 0, EDrop::Into, 0, ENameMode::NewFolder, true};
-        row.Next(UiFont::ButtonWidth("Collapse all"));
-        if (ImGui::Button("Collapse all")) s_Pending = {EAction::ExpandAll, 0, 0, EDrop::Into, 0, ENameMode::NewFolder, false};
-        row.Next(UiFont::ButtonWidth("Sort A-Z"));
-        if (ImGui::Button("Sort A-Z"))
+        row.Next(UiFont::ButtonWidth(T("New macro")));
+        if (ImGui::Button(T("New macro"))) OpenNamePopup(ENameMode::NewMacro, into.Id);
+        row.Next(UiFont::ButtonWidth(T("Expand all")));
+        if (ImGui::Button(T("Expand all")))   s_Pending = {EAction::ExpandAll, 0, 0, EDrop::Into, 0, ENameMode::NewFolder, true};
+        row.Next(UiFont::ButtonWidth(T("Collapse all")));
+        if (ImGui::Button(T("Collapse all"))) s_Pending = {EAction::ExpandAll, 0, 0, EDrop::Into, 0, ENameMode::NewFolder, false};
+        row.Next(UiFont::ButtonWidth(T("Sort A-Z")));
+        if (ImGui::Button(T("Sort A-Z")))
         {
             s_Tree.SortChildren(s_Tree.Root(), true);
             MarkDirty();
         }
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Sorts every folder: folders first, then macros, each A-Z.");
-        row.Next(UiFont::ButtonWidth("Import..."));
-        if (ImGui::Button("Import..."))
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip(T("Sorts every folder: folders first, then macros, each A-Z."));
+        row.Next(UiFont::ButtonWidth(T("Import...")));
+        if (ImGui::Button(T("Import...")))
         {
             s_ImportTarget = InsertFolder().Parent ? InsertFolder().Id : 0;
             s_ShowImport   = true;
         }
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Import exported macros or .txt files,\nor a whole library (macros.json) someone sent you.");
-        row.Next(UiFont::ButtonWidth("Export all"));
-        if (ImGui::Button("Export all"))
+            ImGui::SetTooltip(T("Import exported macros or .txt files,\nor a whole library (macros.json) someone sent you."));
+        row.Next(UiFont::ButtonWidth(T("Export all")));
+        if (ImGui::Button(T("Export all")))
         {
-            if (s_Tree.Root().Children.empty()) ShowError("Clicked Export all", "There's nothing to export yet.");
+            if (s_Tree.Root().Children.empty()) ShowError(T("Clicked Export all"), T("There's nothing to export yet."));
             else ExportToFile(TopLevelNodes(), "Chat Messages library", false);
         }
         if (ImGui::IsItemHovered())
         {
             const std::string note = TrashNotExportedText();
-            ImGui::SetTooltip("Saves your whole library to the exports folder.\nRight-click a folder or macro to export just that.%s%s",
+            ImGui::SetTooltip(T("Saves your whole library to the exports folder.\nRight-click a folder or macro to export just that.%s%s"),
                               note.empty() ? "" : "\n", note.c_str());
         }
-        row.Next(UiFont::ComboWidth("Text size"));
-        UiFont::DrawCombo("Text size");
+        row.Next(UiFont::ComboWidth(T("Text size")));
+        UiFont::DrawCombo(T("Text size"));
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("The size of the text in this addon's windows.\nThe sizes are the fonts Nexus provides.");
-        ImGui::TextDisabled("New items go into: %s", into.Parent ? into.Name.c_str() : "Top level");
+            ImGui::SetTooltip(T("The size of the text in this addon's windows.\nThe sizes are the fonts Nexus provides."));
+        ImGui::TextDisabled(T("New items go into: %s"), into.Parent ? into.Name.c_str() : T("Top level"));
     }
 
     void DrawMessages()
     {
         if (s_SaveFailed) // stays until a save works (the error window said why)
-            ImGui::TextColored(kErrorColor, "Your macros couldn't be saved. Check the Nexus log. Retrying...");
+            ImGui::TextColored(kErrorColor, T("Your macros couldn't be saved. Check the Nexus log. Retrying..."));
         if (!s_Status.empty() && ImGui::GetTime() < s_StatusUntil) ImGui::TextWrapped("%s", s_Status.c_str());
         DrawUndoImport();
     }
@@ -2593,25 +2607,25 @@ namespace
     void DrawSearchBox(float aWidth)
     {
         const bool hasText = s_SearchBuf[0] != '\0';
-        const float clearW = hasText ? UiFont::ButtonWidth("x##search") + ImGui::GetStyle().ItemSpacing.x : 0.0f;
+        const float clearW = hasText ? UiFont::ButtonWidth(T("x##search")) + ImGui::GetStyle().ItemSpacing.x : 0.0f;
         if (s_SearchFocus)
         {
             ImGui::SetKeyboardFocusHere();
             s_SearchFocus = false;
         }
         ImGui::SetNextItemWidth(std::max(aWidth - clearW, Px(60.0f)));
-        ImGui::InputTextWithHint("##search", "Search (Ctrl+F)", s_SearchBuf, sizeof(s_SearchBuf));
+        ImGui::InputTextWithHint("##search", T("Search (Ctrl+F)"), s_SearchBuf, sizeof(s_SearchBuf));
         // Escape leaves the box; it also clears it.
         if (ImGui::IsItemDeactivated() && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Escape), false)) s_SearchBuf[0] = '\0';
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Finds folders and macros by name, by the text of their lines, a whisper's\n"
+            ImGui::SetTooltip(T("Finds folders and macros by name, by the text of their lines, a whisper's\n"
                               "recipient, or their hotkey (e.g. ctrl+f1). Case and accents don't matter.\n"
-                              "While searching, dragging and Move up/down are off.");
+                              "While searching, dragging and Move up/down are off."));
         if (hasText)
         {
             ImGui::SameLine();
-            if (ImGui::Button("x##search")) s_SearchBuf[0] = '\0';
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Clear the search (or press Escape in the box).");
+            if (ImGui::Button(T("x##search"))) s_SearchBuf[0] = '\0';
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip(T("Clear the search (or press Escape in the box)."));
         }
     }
 
@@ -2631,8 +2645,8 @@ namespace
     std::string ActiveOnlyLabel()
     {
         const Here h = WhereAmI();
-        if (h.Mode == GM_None) return "Only active here (no game mode right now: only macros active everywhere)";
-        return std::string("Only active in ") + ModeName(h.Mode) + " on " + (h.MapId ? MapNames::Label(h.MapId) : std::string("this map"));
+        if (h.Mode == GM_None) return T("Only active here (no game mode right now: only macros active everywhere)");
+        return Fmt(T("Only active in %s on %s"), ModeName(h.Mode), (h.MapId ? MapNames::Label(h.MapId) : std::string(T("this map"))).c_str());
     }
 
     // At the top of the tree pane: the filter checkbox and what the search and filter found.
@@ -2644,21 +2658,22 @@ namespace
             UpdateSearch(); // this frame's tree already uses the new choice
         }
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Shows only the macros your hotkeys and the quick menu would use where you are now\n"
+            ImGui::SetTooltip(T("Shows only the macros your hotkeys and the quick menu would use where you are now\n"
                               "(see \"Where it's active\" in the editor). It follows you as you change maps.\n"
-                              "While it's on, dragging and Move up/down are off.");
+                              "While it's on, dragging and Move up/down are off."));
         if (s_Tree.Root().Children.empty() || !s_Search.Active) return;
         const std::string text = Search::Trim(s_SearchBuf);
         if (!text.empty())
         {
             if (s_Search.Visible.empty())
-                ImGui::TextDisabled(s_ActiveOnly ? "Nothing active here matches \"%s\"." : "Nothing matches \"%s\".", text.c_str());
+                ImGui::TextDisabled(s_ActiveOnly ? T("Nothing active here matches \"%s\".") : T("Nothing matches \"%s\"."), text.c_str());
+            else if (s_ActiveOnly)
+                ImGui::TextDisabled(T("Found: %zu folder(s), %zu macro(s), active here"), s_Search.FolderMatches, s_Search.MacroMatches);
             else
-                ImGui::TextDisabled("Found: %zu folder(s), %zu macro(s)%s", s_Search.FolderMatches, s_Search.MacroMatches,
-                                    s_ActiveOnly ? ", active here" : "");
+                ImGui::TextDisabled(T("Found: %zu folder(s), %zu macro(s)"), s_Search.FolderMatches, s_Search.MacroMatches);
         }
-        else if (s_Search.Visible.empty()) ImGui::TextDisabled("No macros are active here.");
-        else ImGui::TextDisabled("%zu macro(s) active here", s_Search.ShownMacros);
+        else if (s_Search.Visible.empty()) ImGui::TextDisabled(T("No macros are active here."));
+        else ImGui::TextDisabled(T("%zu macro(s) active here"), s_Search.ShownMacros);
     }
 
     void DrawMainWindow()
@@ -2694,7 +2709,7 @@ namespace
         DrawSearchSummary();
         if (s_Tree.Root().Children.empty())
         {
-            ImGui::TextWrapped("Your library is empty. Create a folder or a macro to get started.");
+            ImGui::TextWrapped(T("Your library is empty. Create a folder or a macro to get started."));
         }
         DrawTree();
         ImGui::PopTextWrapPos();
@@ -2717,6 +2732,77 @@ namespace
         ImGui::PopTextWrapPos();
         ImGui::End();
     }
+
+    // --- Language (Nexus options page) -------------------------------------------------------
+    // docs/design.md, "Languages". The list and the checks are in Languages.* / Localization.*.
+
+    bool s_LangReloadClicked = false; // the next problems came from Reload, not from loading
+
+    std::string LanguageLabel(const Languages::Entry& aEntry)
+    {
+        std::string label = aEntry.DisplayName;
+        if (aEntry.Percent < 100) label += Fmt(" (%d%%)", aEntry.Percent);
+        if (aEntry.FromFolder) label += std::string(" - ") + T("file from your localization folder");
+        return label;
+    }
+
+    void DrawLanguageOptions()
+    {
+        const std::vector<Languages::Entry>& list = Languages::List();
+        const std::string& choice = Languages::Choice();
+        const std::string nexusId = Languages::NexusLanguage();
+        std::string nexusName = nexusId;
+        for (const Languages::Entry& e : list)
+            if (e.Id == nexusId) nexusName = e.DisplayName;
+        const std::string follow = Fmt(T("Follow Nexus (%s)"), nexusName.c_str());
+        std::string current = follow;
+        if (choice != Languages::kFollowNexus)
+        {
+            current = choice; // a chosen language whose file is gone shows its id
+            for (const Languages::Entry& e : list)
+                if (e.Id == choice) current = LanguageLabel(e);
+        }
+        ImGui::SetNextItemWidth(Px(320.0f));
+        if (ImGui::BeginCombo(T("Language"), current.c_str()))
+        {
+            if (ImGui::Selectable(follow.c_str(), choice == Languages::kFollowNexus)) Languages::Choose(Languages::kFollowNexus);
+            for (const Languages::Entry& e : list)
+            {
+                ImGui::PushID(e.Id.c_str());
+                if (ImGui::Selectable(LanguageLabel(e).c_str(), choice == e.Id)) Languages::Choose(e.Id);
+                if (ImGui::IsItemHovered() && e.FromFolder)
+                    ImGui::SetTooltip(T("From %s in your localization folder, made for version %s.\n"
+                                        "%zu text(s) were left out by the checks (English is shown for them)."),
+                                      e.File.c_str(), e.AddonVersion.empty() ? "?" : e.AddonVersion.c_str(), e.Skipped);
+                ImGui::PopID();
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::TextDisabled("%s", T("The language of this addon's text. \"Follow Nexus\" uses the language set in Nexus' own options."));
+        if (Languages::ActiveId() == "en" && nexusId != "en" && choice == Languages::kFollowNexus)
+            ImGui::TextDisabled("%s", T("This addon has no translation for that language yet, so it's shown in English."));
+        UiFont::Row row;
+        if (ImGui::SmallButton(T("Open localization folder"))) Storage::OpenFolder(Languages::Folder());
+        row.Next(UiFont::ButtonWidth(T("Reload language files")));
+        if (ImGui::SmallButton(T("Reload language files")))
+        {
+            Languages::RequestReload();
+            s_LangReloadClicked = true;
+        }
+        ImGui::TextWrapped("%s", T("To add a language, put its .json file in <GW2>\\addons\\GW2_Chat_Messages\\localization\\ and click "
+                                   "Reload. Every file is checked before it's used, but only use files from this addon's GitHub "
+                                   "page (the localization folder there)."));
+    }
+
+    void ShowLanguageProblems()
+    {
+        const std::vector<std::string> problems = Languages::TakeProblems();
+        if (problems.empty()) return;
+        const char* action = s_LangReloadClicked ? T("Clicked Reload language files in the addon's options")
+                                                 : T("Started the game (the addon read its language files)");
+        for (const std::string& p : problems) ShowError(action, p);
+        s_LangReloadClicked = false;
+    }
 }
 
 void Ui::Init()
@@ -2736,9 +2822,10 @@ void Ui::Init()
     for (const std::string& m : s_LoadMessages)
     {
         LogF(LOGL_WARNING, "%s", m.c_str());
-        ShowError("Started the game (the addon loaded macros.json)", m);
+        ShowError(T("Started the game (the addon loaded macros.json)"), m);
     }
     s_LoadMessages.clear();
+    ShowLanguageProblems();
     s_Dirty = false;
 }
 
@@ -2758,6 +2845,7 @@ void Ui::Shutdown()
 
 void Ui::Render()
 {
+    ShowLanguageProblems(); // after a reload (Languages::Update ran before this)
     PollSender();
     WatchMap();
     SyncLinks(false);
@@ -2774,28 +2862,30 @@ void Ui::Render()
 
 void Ui::RenderOptions()
 {
-    ImGui::Text("Chat Messages %s", kVersionText);
-    ImGui::TextDisabled("Build %s", BuildStamp::Text());
-    ImGui::TextDisabled("Your macros are saved in <GW2>\\addons\\GW2_Chat_Messages\\macros.json.");
-    if (ImGui::Button("Open macro library")) s_ShowMainWindow = true;
+    ImGui::Text(T("Chat Messages %s"), kVersionText);
+    ImGui::TextDisabled(T("Build %s"), BuildStamp::Text());
+    ImGui::TextDisabled(T("Your macros are saved in <GW2>\\addons\\GW2_Chat_Messages\\macros.json."));
+    if (ImGui::Button(T("Open macro library"))) s_ShowMainWindow = true;
     ImGui::Spacing();
-    UiFont::DrawCombo("Text size");
-    ImGui::TextDisabled("The size of the text in this addon's windows (not this page).");
+    UiFont::DrawCombo(T("Text size"));
+    ImGui::TextDisabled(T("The size of the text in this addon's windows (not this page)."));
     ImGui::Spacing();
-    if (ImGui::Checkbox("Use a trash bin for deleted folders and macros", &s_TrashOn))
+    DrawLanguageOptions();
+    ImGui::Spacing();
+    if (ImGui::Checkbox(T("Use a trash bin for deleted folders and macros"), &s_TrashOn))
     {
         if (!Storage::SaveSetting(kTrashSetting, s_TrashOn)) LogF(LOGL_WARNING, "The trash bin setting couldn't be saved.");
     }
-    ImGui::TextWrapped("On: Delete moves a folder or macro to the Trash bin at the bottom of the library, "
+    ImGui::TextWrapped(T("On: Delete moves a folder or macro to the Trash bin at the bottom of the library, "
                        "with no question asked. From there you can restore it (back where it was, or at the top "
                        "level if its folder is gone) or delete it for good. Items in the bin can't be sent or "
                        "used by a hotkey. They stay until you empty the bin. "
                        "Off: Delete asks first and removes the item for good. Items already in the bin stay "
-                       "there, and the bin stays visible, until you empty it.");
-    if (!s_Tree.Trash().empty()) ImGui::TextDisabled("The trash bin holds %zu item(s).", s_Tree.Trash().size());
+                       "there, and the bin stays visible, until you empty it."));
+    if (!s_Tree.Trash().empty()) ImGui::TextDisabled(T("The trash bin holds %zu item(s)."), s_Tree.Trash().size());
     ImGui::Spacing();
-    ImGui::TextWrapped("Quick menu: right-click the scroll icon in the Nexus bar, or set a key for "
-                       "\"Open Chat Messages quick menu\" in Nexus > Options > Keybinds.");
+    ImGui::TextWrapped(T("Quick menu: right-click the scroll icon in the Nexus bar, or set a key for "
+                       "\"Open Chat Messages quick menu\" in Nexus > Options > Keybinds."));
 }
 
 void Ui::ToggleMainWindow() { s_ShowMainWindow = !s_ShowMainWindow; }

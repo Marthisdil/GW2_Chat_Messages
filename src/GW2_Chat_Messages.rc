@@ -7,6 +7,12 @@
 IDB_ICON        PNG "..\\resources\\icons\\icon.png"
 IDB_ICON_HOVER  PNG "..\\resources\\icons\\icon_hover.png"
 
+// Built-in languages (localization\*.json; en.json is written by tools\localization.ps1).
+IDR_LANG_EN     LOCALE "..\\localization\\en.json"
+IDR_LANG_DE     LOCALE "..\\localization\\de.json"
+IDR_LANG_FR     LOCALE "..\\localization\\fr.json"
+IDR_LANG_ES     LOCALE "..\\localization\\es.json"
+
 // Shown in the DLL's Properties > Details. The numbers are YYYY, MM, DD, HHMM, all UTC.
 VS_VERSION_INFO VERSIONINFO
  FILEVERSION    CHATMSG_VER_YEAR, CHATMSG_VER_MONTH, CHATMSG_VER_DAY, CHATMSG_VER_TIME

@@ -4,7 +4,7 @@ The unit tests cover the rules (tree, raw text, send plan, hotkeys, filters, pla
 import, link sync). These checks cover what only the game can tell us: whether GW2 takes our keys
 and text, and whether normal game input is ever disturbed.
 
-The checks are grouped into sessions (A to P) in the order to run them: each one builds on the
+The checks are grouped into sessions (A to Q) in the order to run them: each one builds on the
 ones before. A whole pass takes about an hour. If the text is hard to read, do M1 first and
 pick a bigger size. Session B is the one that matters most: if it
 fails, most of the later sessions can't be run, so report it first.
@@ -17,7 +17,7 @@ Results so far (keep your notes in `docs\testing results.txt`; it isn't committe
 |---|---|---|
 | A1 | Passed (PR #15 build) | Re-check only the version and build stamp lines with a new build. |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text now wraps (PR #17) and errors open the error window (PR #18). Re-check those two points only, then go on to A3. |
-| A3 to P | Not run yet | New since the last build: O (trash bin), the counter in A4, J3b/J6 (import checkboxes, trash bin not exported or imported). Newer still: P (search box; P6-P8 the "only active here" filter and the quick menu search), J7 (a whole library), and F2/F3/F7 (mouse buttons now need Ctrl, Alt or Shift). |
+| A3 to Q | Not run yet | New since the last build: O (trash bin), the counter in A4, J3b/J6 (import checkboxes, trash bin not exported or imported). Newer still: P (search box; P6-P8 the "only active here" filter and the quick menu search), J7 (a whole library), and F2/F3/F7 (mouse buttons now need Ctrl, Alt or Shift). Newest: Q (languages). |
 
 **Errors since PR #18:** every refusal and error the checks below expect ("refused", "says
 why", "a message") now opens the **error window** instead of a red line under the editor. Click
@@ -483,6 +483,42 @@ not focused. Click it and type `say`: the same flat list. Click `Say` to send it
 the menu: the box is empty. A macro that isn't active here (P6's `Emote` in WvW) never shows in the
 results.
 
+## Q. Languages
+
+Languages are on the addon's page in **Nexus > Options**, under **Text size**. The German, French
+and Spanish texts were made by AI: if you speak one of them, note any text that reads oddly.
+
+**Q1. Following Nexus.** The **Language** dropdown shows **Follow Nexus (English (US))**. In
+Nexus' own options, switch Nexus to Deutsch: within a second or two the addon's windows (library,
+quick menu, this page) switch to German, and the dropdown shows **Nexus folgen (Deutsch)**. Switch
+Nexus back to English: the addon follows. Set Nexus to a language the addon doesn't have (e.g.
+Italiano): the addon stays in English, the dropdown shows **Follow Nexus (it)**, and a line under it says there's no translation yet. Set Nexus back.
+
+**Q2. Picking a language.** Pick **Français**: everything switches to French at once, while
+Nexus stays in English. Restart the game: still French. Pick **Follow Nexus** again afterwards.
+
+**Q3. German in the windows.** With German on, open the library, the macro editor, the Import
+window, the trash bin's pop-ups and the error window (e.g. a duplicate name). Note anything cut
+off, overlapping or running out of a window, at the default and the biggest text size.
+
+**Q4. Accented letters.** In French and German, letters like é, è, à, ç, ö, ü and ß show
+correctly (no `?` boxes) in the library, the menus and the tooltips.
+
+**Q5. Names in Nexus.** With Nexus set to Deutsch, **Nexus > Options > Keybinds** shows the
+addon's two keybinds in German, and hovering the scroll icon shows a German tooltip.
+
+**Q6. A file of your own.** Click **Open localization folder**: Explorer opens
+`<GW2>\addons\GW2_Chat_Messages\localization\`. Copy `localization\template.json` from the
+repository into it as `nl.json`, set `"Identifier": "nl"`, `"DisplayName": "Nederlands"`, and
+translate one text, e.g. `"Open macro library": "Macrobibliotheek openen"`. Click **Reload
+language files**: **Nederlands (0%) - file from your localization folder** is in the list. Pick
+it: that one text is in Dutch, the rest in English.
+
+**Q7. A bad file.** In `nl.json`, change a text with a `%s` so the `%s` is missing (e.g. `"Sent
+%s from the quick menu": "Verzonden"`), then click **Reload language files**: the error window
+says one text was left out, and that text shows in English. Then break the file (delete the last
+`}`) and reload: the error window says the file wasn't loaded and why, and the dropdown falls
+back. Delete `nl.json` and reload afterwards.
 ## Report template
 
 ```

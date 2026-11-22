@@ -1,5 +1,7 @@
 #include "TextSize.h"
 
+#include "Localization.h"
+
 #include <algorithm>
 #include <cmath>
 
@@ -77,16 +79,17 @@ namespace TextSize
 
     std::string Label(const Font& aFont)
     {
-        const char* name = "Default";
+        const char* name = TX("Default");
         switch (aFont.Kind)
         {
-        case EFont::Nexus:    name = "Nexus font"; break;
-        case EFont::NexusUi:  name = "Nexus UI font"; break;
-        case EFont::NexusBig: name = "Nexus large font"; break;
+        case EFont::Nexus:    name = TX("Nexus font"); break;
+        case EFont::NexusUi:  name = TX("Nexus UI font"); break;
+        case EFont::NexusBig: name = TX("Nexus large font"); break;
         default: break;
         }
-        if (aFont.Size <= 0.0f) return name;
-        return std::string(name) + " (" + std::to_string(static_cast<int>(std::lround(aFont.Size))) + " px)";
+        // Render thread only (Localization): the font name is translated.
+        if (aFont.Size <= 0.0f) return Localization::LookupText(name);
+        return Localization::LookupText(name) + " (" + std::to_string(static_cast<int>(std::lround(aFont.Size))) + " px)";
     }
 
     float Scale(float aDefaultSize, float aChosenSize)

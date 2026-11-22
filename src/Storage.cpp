@@ -91,6 +91,7 @@ namespace
 
 fs::path Storage::ExportsDir() { return SubDir("exports"); }
 fs::path Storage::ImportsDir() { return SubDir("imports"); }
+fs::path Storage::LocalizationDir() { return SubDir("localization"); }
 
 fs::path Storage::FreeFile(const fs::path& aDir, const std::string& aFileName)
 {

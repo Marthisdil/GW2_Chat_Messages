@@ -14,8 +14,8 @@ New-Item -ItemType Directory -Force -Path $out | Out-Null
 
 # Every test file, plus the Nexus-free sources under test. Add new ones here.
 $sources = @(
-    "tests\TestMain.cpp", "tests\MacroTreeTests.cpp", "tests\ChatLineTests.cpp", "tests\SendPlanTests.cpp", "tests\HotkeyTests.cpp", "tests\FilterTests.cpp", "tests\PlaceholderTests.cpp", "tests\ExchangeTests.cpp", "tests\LinkSyncTests.cpp", "tests\TextSizeTests.cpp", "tests\ErrorReportTests.cpp", "tests\TrashTests.cpp", "tests\SearchTests.cpp",
-    "src\MacroTree.cpp", "src\ChatLine.cpp", "src\SendPlan.cpp", "src\Hotkey.cpp", "src\Placeholders.cpp", "src\Exchange.cpp", "src\LinkSync.cpp", "src\TextSize.cpp", "src\ErrorReport.cpp", "src\Search.cpp"
+    "tests\TestMain.cpp", "tests\MacroTreeTests.cpp", "tests\ChatLineTests.cpp", "tests\SendPlanTests.cpp", "tests\HotkeyTests.cpp", "tests\FilterTests.cpp", "tests\PlaceholderTests.cpp", "tests\ExchangeTests.cpp", "tests\LinkSyncTests.cpp", "tests\TextSizeTests.cpp", "tests\ErrorReportTests.cpp", "tests\TrashTests.cpp", "tests\SearchTests.cpp", "tests\LocalizationTests.cpp",
+    "src\MacroTree.cpp", "src\ChatLine.cpp", "src\SendPlan.cpp", "src\Hotkey.cpp", "src\Placeholders.cpp", "src\Exchange.cpp", "src\LinkSync.cpp", "src\TextSize.cpp", "src\ErrorReport.cpp", "src\Search.cpp", "src\Localization.cpp"
 ) | ForEach-Object { "`"$(Join-Path $root $_)`"" }
 $includes = "/I `"$root\src`" /I `"$root\tests`" /I `"$root\vendor\json\single_include`""
 # /Z7 keeps debug info in the .obj files (compile-time PDBs fail inside Dropbox folders).
@@ -25,5 +25,11 @@ $cl = "cl /nologo /std:c++17 /utf-8 /EHsc /W3 /Z7 /MTd $includes $($sources -joi
 cmd /c "`"$vcvars`" >nul && $cl"
 if ($LASTEXITCODE -ne 0) { throw "Test build failed" }
 
-& "$out\UnitTests.exe"
+# From the repository root: the localization tests read localization\*.json.
+Push-Location $root
+try { & "$out\UnitTests.exe"; $code = $LASTEXITCODE } finally { Pop-Location }
+if ($code -ne 0) { exit $code }
+
+# localization\en.json and template.json must list exactly the texts in the code.
+& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "localization.ps1")
 exit $LASTEXITCODE

@@ -46,6 +46,8 @@ chat for you, from a hotkey, a menu or a button.
   turned off).
 - **Text size:** make the addon's text bigger (or smaller) with the fonts Nexus provides; the
   windows resize to match.
+- **Languages:** English, German, French and Spanish, following Nexus' language or your own
+  choice. More languages can be added with a file (see [Contributing](#contributing)).
 
 <!-- screenshot: chat-result.png (docs/screenshots.md) -->
 > 📷 *Screenshot to come: a multi-line macro sent to several chat channels.*
@@ -97,6 +99,13 @@ uncommitted edits) and the build time, also UTC, for example
 `build db84a1e, 2026-11-21 19:20 UTC`. It's in the Nexus log line, under the version on the
 addon's options page, in copied error reports and in the DLL's Properties (Comments), so two
 builds with the same version can be told apart.
+
+## Contributing
+
+Translations, bug reports, ideas and code are all welcome. [CONTRIBUTING.md](CONTRIBUTING.md)
+explains how, including how to translate the addon into your language with the files in
+[localization/](localization/). The German, French and Spanish translations were made by AI, so
+corrections from native speakers would help a lot.
 
 ## AI Disclosure
 

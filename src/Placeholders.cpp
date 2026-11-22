@@ -1,5 +1,7 @@
 #include "Placeholders.h"
 
+#include "Localization.h"
+
 #include <cctype>
 #include <cstdio>
 
@@ -304,18 +306,18 @@ bool Placeholders::IsSafeRelativePath(const std::string& aPath)
 const std::vector<Placeholders::Info>& Placeholders::List()
 {
     static const std::vector<Info> kList = {
-        {"{time}",                 "the time now, like 21:05"},
-        {"{hour}",                 "the hour, like 21"},
-        {"{min}",                  "the minutes, like 05"},
-        {"{today}",                "the date, like Friday, 20.11.2026"},
-        {"{random}",               "a random number from 0 to 100"},
-        {"{random max}",           "a random number from 0 to max"},
-        {"{random min max}",       "a random number from min to max"},
-        {"{txt file}",             "a random line from a text file in the addon folder"},
-        {"{txt file line}",        "that line of the file (1 = first)"},
-        {"{map}",                  "the name of the map you're on"},
-        {"{json path url}",        "one value from a JSON page, e.g. {json id https://...}"},
-        {"{nexus}",                "this addon's name and version"},
+        {"{time}",                 TX("the time now, like 21:05")},
+        {"{hour}",                 TX("the hour, like 21")},
+        {"{min}",                  TX("the minutes, like 05")},
+        {"{today}",                TX("the date, like Friday, 20.11.2026")},
+        {"{random}",               TX("a random number from 0 to 100")},
+        {"{random max}",           TX("a random number from 0 to max")},
+        {"{random min max}",       TX("a random number from min to max")},
+        {"{txt file}",             TX("a random line from a text file in the addon folder")},
+        {"{txt file line}",        TX("that line of the file (1 = first)")},
+        {"{map}",                  TX("the name of the map you're on")},
+        {"{json path url}",        TX("one value from a JSON page, e.g. {json id https://...}")},
+        {"{nexus}",                TX("this addon's name and version")},
     };
     return kList;
 }
