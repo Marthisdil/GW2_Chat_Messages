@@ -89,6 +89,18 @@ include the scan link in the release's text, for people to review if they wish.
   some engines flag it (false positives are common for DLLs that hook a game's window), and
   whether the release waits for the scan or the link is added afterwards.
 
+### Hide {txt} and {json} behind an "advanced" setting (added 2026-11-22)
+
+Investigate putting `{txt}` and `{json}` behind an "advanced" setting, with danger disclaimers,
+etc.
+
+- Points to settle (from the 2026-11-22 security scan, findings F5, F6 and F9): `{json}` makes
+  the PC fetch a URL that can come from someone else's import, and `{txt}` can send lines of
+  files in the addon folder. Questions: is the setting off by default; what happens to an
+  imported macro that uses them while it's off (kept but not sent, or flagged in the import
+  preview); where the disclaimer is shown (the setting, the first send, the import preview);
+  and whether this replaces or adds to the address checks and the "/" guard drafted for F5/F6.
+
 ### Warn when a hotkey is also a game keybind (added 2026-11-20)
 
 Look into ways to read the game's current keybinds, so the hotkey editor can warn "Ctrl+F1 is

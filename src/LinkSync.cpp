@@ -88,12 +88,18 @@ namespace LinkSync
                 if (out.Error.empty()) out.Error = "the file couldn't be read.";
                 return out;
             }
+            // Not UTF-8 (saved as Windows-1252, say): those bytes are replaced, the same way on
+            // every read, so the file isn't written back for it (only when the macro is edited).
+            if (ChatLine::RepairUtf8(text))
+                out.Warning = "The file isn't saved as UTF-8, so some of its characters couldn't be read and were replaced. "
+                              "Save it as UTF-8 to keep them.";
             std::vector<Line> lines = ChatLine::ParseRaw(text);
             if (lines.size() > MacroTree::kMaxLines)
             {
                 lines.resize(MacroTree::kMaxLines);
-                out.Warning = "The file has more than " + std::to_string(MacroTree::kMaxLines) + " lines. Only the first " +
-                              std::to_string(MacroTree::kMaxLines) + " are used.";
+                if (!out.Warning.empty()) out.Warning += " ";
+                out.Warning += "The file has more than " + std::to_string(MacroTree::kMaxLines) + " lines. Only the first " +
+                               std::to_string(MacroTree::kMaxLines) + " are used.";
             }
             const std::string fileText = ChatLine::SerializeRaw(lines);
             const bool firstSync = !aState.Known;

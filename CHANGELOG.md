@@ -183,6 +183,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   a modifier (e.g. Ctrl+Mouse 4), so a plain dodge or skill button can't send a macro by accident.
   A plain mouse hotkey you set earlier is kept but doesn't fire; the tree and the editor mark it
   so you can change it.
+- **Imported macros come without their hotkeys:** **Keep hotkeys** in the Import window now starts
+  unticked for every import (it was ticked for macros), so a shared file can't bind its macros to
+  keys you press. Tick it for your own exports; the preview then shows each macro's hotkey.
 - The data folder is now `<GW2>\addons\GW2_Chat_Messages\`, named like the DLL (it was
   `Chat Messages`). If you ran an earlier build, move that folder's files across.
 - **Version numbers** are now the date and time the version was set (both UTC) plus the kind of build, like
@@ -197,6 +200,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   are read).
 - When a send was refused because you were typing in chat, the addon could press Escape and close
   your chat box. It now only ever closes a chat box it opened itself.
+- An imported file, a whole library or a `macros.json` whose trash bin held a very deeply nested
+  entry could close the game while it was read. It's now read without copying that entry.
+- Importing or loading a file with thousands of folders or macros of the same name could freeze
+  the game, and a repeated name close to the 100-character limit could freeze it for good.
+  Repeated names are now renamed (`Name (2)`, `Name (3)`...) quickly; a name too long for the
+  number is cut shorter to make room.
+- Importing or pasting a file in which a folder's `expanded` value isn't `true` or `false` (for
+  example `"yes"`) could close the game. That folder is now shown open, as when the value is missing.
+- Importing a JSON file or pasted text whose `"format"` was `null`, text (`"1"`), a list or an
+  object could close the game. It's now refused like any other file that isn't a Chat Messages
+  export, and other errors while reading an import's JSON are shown as an import error.
+- A `.txt` file not saved as UTF-8 (e.g. ANSI, with `ä` or `é`), imported or linked to a macro,
+  stopped your macros from being saved for the rest of the session, and a `.json` export could
+  close the game. Its characters that can't be read are now replaced with `�` (the font may show
+  `?`), with a warning, and saving and exporting work.
+- A tab, a lone carriage return or another control character inside a macro's line (from an
+  import, a link file or `macros.json`) was typed into chat as that key. It's now a space.
 
 ### Documentation
 - The README describes what the addon does, with a quick start.

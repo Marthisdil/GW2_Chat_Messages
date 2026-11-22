@@ -294,14 +294,21 @@ Decisions 2026-11-20: no Windows file dialog (a modal dialog over the game is ri
 go to `<addon>\exports\` (never overwritten: `Name (2).json`), and the Import window lists
 `<addon>\imports\`, takes a typed path, or pastes from the clipboard. Undo is an in-memory
 copy of the library from just before the import, kept until dismissed, the next import, or
-unload. Hotkeys are kept unless "Keep hotkeys" is unticked. Link files are never exported or
-imported. A Replace keeps the existing item's id and place.)*
+unload. Hotkeys are kept only if "Keep hotkeys" is ticked; it starts unticked for every
+import, each time a source is loaded (changed 2026-11-22, security review: a shared file's
+hotkey would send its macro on an ordinary key press). While it's ticked, the preview shows
+each macro's hotkey as `Name  [key]`. Link files are never exported or imported. A Replace
+keeps the existing item's id and place.)*
 
 - **Export**: the whole tree, one folder, or one macro. The format is
   `ChatMessages.export.json` (`{ "format": 1, "root": Node }`). A single macro can also be
   exported as raw `.txt`.
 - **Import sources**: our JSON format, a raw `.txt` (becomes one macro), or a folder of `.txt`
   files (sub-folders become folders).
+  - Raw text (`.txt` imports, pasted text and link files) is read as UTF-8. Bytes that aren't
+    UTF-8 (an ANSI file, say) become U+FFFD, with a warning (`ChatLine::RepairUtf8`); they're
+    not guessed from the ANSI code page. So the library always saves as valid JSON. For a link
+    file the repair alone never writes the file back.
 - **Preview step** (always shown):
   - A tree showing the result, with the new folders, new macros and merged folders marked.
   - The user picks the target folder.

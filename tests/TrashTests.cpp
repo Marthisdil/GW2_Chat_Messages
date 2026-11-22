@@ -162,6 +162,21 @@ namespace
         CHECK(b.FromJson(bad));
         CHECK(b.Trash().size() == 1);
     }
+
+    // A hostile file nests a value in a bin entry very deeply. Reading it must not copy that
+    // json (a copy recurses once per level and would overflow the stack).
+    void TestDeepItem()
+    {
+        const int kDepth = 100000;
+        const std::string text = R"({"format":1,"root":{"children":[]},"trash":[{"from_ids":[],"from_names":[],)"
+                                 R"("item":{"type":"macro","name":"Deep","junk":)" +
+                                 std::string(kDepth, '[') + std::string(kDepth, ']') + "}}]}";
+        const json j = json::parse(text);
+        Tree t;
+        CHECK(t.FromJson(j));
+        CHECK(t.Trash().size() == 1);
+        CHECK(t.Trash()[0].Item->Name == "Deep" && t.Trash()[0].Item->IsMacro());
+    }
 }
 
 void RunTrashTests()
@@ -171,4 +186,5 @@ void RunTrashTests()
     TestNameTaken();
     TestDepth();
     TestJson();
+    TestDeepItem();
 }

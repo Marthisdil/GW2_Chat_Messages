@@ -281,7 +281,7 @@
     "Folders can be nested at most %d deep. Unticked, folders that would go deeper are left out.": "",
     "Keep hotkeys": "",
     "Off by default for someone else's library, so their keys don't clash with yours.": "",
-    "Untick this for macros from someone else, so their keys don't clash with yours.": "",
+    "Off at first, so macros from someone else come without their hotkeys. Tick it for your own exports; the preview then shows each macro's hotkey.": "",
     "3. Check the preview": "",
     "%zu new macro(s), %zu new folder(s)": "",
     "%zu merged": "",

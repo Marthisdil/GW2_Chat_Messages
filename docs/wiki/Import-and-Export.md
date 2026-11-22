@@ -58,7 +58,8 @@ Pick it in one of these ways:
 - **When a macro's name is taken**:
   - **Keep both (rename)** (the default): the new one is called `Name (2)`.
   - **Skip**: the existing macro stays, the new one is left out.
-  - **Replace**: the existing macro keeps its place, but gets the new lines, filters and hotkey.
+  - **Replace**: the existing macro keeps its place, but gets the new lines and filters, and the
+    new hotkey if **Keep hotkeys** is ticked (otherwise no hotkey).
 - **When a folder's name is taken**:
   - **Merge** (the default): the new folder's contents go into the existing folder, with the
     rules above for anything inside.
@@ -67,8 +68,10 @@ Pick it in one of these ways:
 - **Move the contents of too-deep folders up a level**: folders can be nested at most 6 deep.
   Unticked, a folder that would go deeper is left out with everything inside. Ticked, that
   folder is left out but its contents go into the folder above.
-- **Keep hotkeys**: untick it for macros from someone else, so their keys don't clash with
-  yours.
+- **Keep hotkeys**: off at first, for every import, so macros from someone else come without
+  their hotkeys (a hotkey sends its macro whenever you press that key, and could clash with
+  yours). Tick it for your own exports; the preview then shows each macro's hotkey next to its
+  name, like `Stack  [Ctrl+F1]`.
 
 ### 3. Check the preview
 
@@ -105,8 +108,8 @@ it after them first, for example `Alex.json`.
    with your own folders. Its name is filled in from the file name (`From Alex` for `Alex.json`,
    or `Imported library` for a file still called `macros.json`); change it if you like. If you
    already have a folder with that name, the new one gets " (2)".
-3. **Keep hotkeys** is off at first, so their keys don't clash with yours. Their trash bin and
-   [text file links](Editing-Macros) are never taken.
+3. **Keep hotkeys** is off at first, as for any import, so their keys don't clash with yours.
+   Their trash bin and [text file links](Editing-Macros) are never taken.
 4. The preview and the checkboxes work as above: untick anything you don't want. Their folders are
    one level deeper inside the new folder, so a folder that would end up more than 6 deep is
    shown as too deep.
@@ -131,3 +134,6 @@ Every save also keeps the previous version as `macros.json.bak` (see
 - A folder import reads at most 2000 .txt files.
 - One import can hold up to 5000 folders and macros.
 - A macro keeps at most 50 lines; longer .txt files are cut, with a warning in the Import window.
+- .txt files are read as UTF-8 (Notepad's default). In a file saved another way (ANSI, say),
+  characters like `ä` or `é` can't be read: they're replaced with `�` (the font may show `?`),
+  with a warning in the Import window. Save the file as UTF-8 and import it again to keep them.

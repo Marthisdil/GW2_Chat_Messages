@@ -32,9 +32,15 @@ namespace ChatLine
     // Channel heading colour from the game's chat (as bhm-chat-macros uses), 0xRRGGBB.
     uint32_t ChannelColor(EChannel aChannel);
 
+    // Chat text is one line of printable characters: every control character (C0 0x00-0x1F, DEL
+    // 0x7F, and C1 U+0080-U+009F, UTF-8 0xC2 0x80-0x9F) becomes one space, so stored text can't
+    // type an Enter, Tab or Escape of its own. Other bytes are kept as they are.
+    std::string ControlsToSpaces(const std::string& aText);
+
+    // Control characters in the row become spaces first (ControlsToSpaces).
     Line              ParseLine(const std::string& aText);
     std::string       SerializeLine(const Line& aLine);
-    // Splits on newlines; blank rows are dropped.
+    // Splits on newlines; blank rows are dropped. Inside a row, control characters become spaces.
     std::vector<Line> ParseRaw(const std::string& aText);
     std::string       SerializeRaw(const std::vector<Line>& aLines);
 
@@ -44,6 +50,14 @@ namespace ChatLine
 
     // Length as the game counts it (UTF-16 code units of UTF-8 text).
     size_t Utf16Length(const std::string& aUtf8);
+
+    // Makes raw text from a file or the clipboard valid UTF-8, as a macro's lines must be (they're
+    // saved as JSON): every byte sequence that isn't UTF-8 (a stray byte, a cut-off character, an
+    // overlong form, a surrogate, past U+10FFFF) becomes one U+FFFD replacement character, per
+    // maximal invalid sequence as the Unicode standard recommends. Valid text is left as it is.
+    // Returns true if anything was replaced (e.g. a file saved as Windows-1252: its accented
+    // letters are replaced).
+    bool RepairUtf8(std::string& aText);
 
     // The character counter's colour steps (docs/design.md, "Character counter").
     constexpr size_t kLengthWarnAt  = 150; // yellow from here

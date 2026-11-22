@@ -1,7 +1,11 @@
 // Standalone tests for src/MacroTree.cpp (no Nexus, no ImGui).
 // Build and run: tools\run_tests.ps1 (CI runs it too).
 
+#include <algorithm>
+#include <cstdio>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
@@ -222,6 +226,38 @@ static void TestJsonDamaged()
     const Node& unnamed = *u.Root().Children[2];
     CHECK(unnamed.Name == "New macro" && unnamed.GameModes == GM_All);
 
+    // A wrongly typed "expanded" (a crafted import or paste) must not throw: the folder opens,
+    // as when the key is missing. In the tree and in the trash bin.
+    const json badExpanded = json::parse(R"({
+        "format": 1,
+        "root": { "children": [
+            {"type": "folder", "name": "Str", "expanded": "yes"},
+            {"type": "folder", "name": "Num", "expanded": 0},
+            {"type": "folder", "name": "Null", "expanded": null},
+            {"type": "folder", "name": "Obj", "expanded": {"a": false}},
+            {"type": "folder", "name": "Arr", "expanded": [false]},
+            {"type": "folder", "name": "Closed", "expanded": false},
+            {"type": "folder", "name": "Missing"}
+        ]},
+        "trash": [
+            {"item": {"type": "folder", "name": "Binned", "expanded": "no"}, "from_ids": [], "from_names": []}
+        ]
+    })");
+    Tree e;
+    bool threw = false;
+    bool parsed = false;
+    try { parsed = e.FromJson(badExpanded, &warnings); }
+    catch (...) { threw = true; }
+    CHECK(!threw);
+    CHECK(parsed);
+    CHECK(e.Root().Children.size() == 7);
+    if (e.Root().Children.size() == 7)
+    {
+        for (size_t i = 0; i < 7; i++)
+            CHECK(e.Root().Children[i]->Expanded == (e.Root().Children[i]->Name != "Closed"));
+    }
+    CHECK(e.Trash().size() == 1 && e.Trash()[0].Item->Expanded);
+
     // Deeper than the limit on disk: kept, with a warning.
     json deep = json::parse(R"({"format":1,"root":{"children":[]}})");
     json* cur = &deep["root"];
@@ -235,6 +271,173 @@ static void TestJsonDamaged()
     CHECK(d.FromJson(deep, &warnings));
     CHECK(Tree::FolderHeight(*d.Root().Children[0]) == kMaxFolderDepth + 2);
     CHECK(!warnings.empty());
+}
+
+// {"format":1,"root":{"children":[...]}} with one {"type","name"} entry per item (and an id, if asked).
+static json Library(const std::vector<std::pair<std::string, std::string>>& aItems, bool aIds = false)
+{
+    json children = json::array();
+    for (size_t i = 0; i < aItems.size(); i++)
+    {
+        json c = {{"type", aItems[i].first}, {"name", aItems[i].second}};
+        if (aIds)
+        {
+            char id[17];
+            std::snprintf(id, sizeof(id), "%016llx", static_cast<unsigned long long>(i + 1));
+            c["id"] = id;
+        }
+        children.push_back(std::move(c));
+    }
+    return {{"format", 1}, {"root", {{"children", std::move(children)}}}};
+}
+
+static void TestDuplicateNames()
+{
+    // A repeated name gets the first free number, skipping names any sibling of the same type
+    // holds (before or after it), ignoring case. A folder and a macro may share a name.
+    {
+        Tree u;
+        std::vector<std::string> warnings;
+        CHECK(u.FromJson(Library({{"macro", "x"}, {"macro", "X"}, {"macro", "x (2)"}, {"folder", "x"},
+                                  {"macro", "x"}, {"folder", "X"}}), &warnings));
+        const auto& c = u.Root().Children;
+        CHECK(c.size() == 6);
+        CHECK(c.size() == 6 && c[0]->Name == "x" && c[1]->Name == "X (3)" && c[2]->Name == "x (2)");
+        CHECK(c.size() == 6 && c[3]->Name == "x" && c[4]->Name == "x (4)" && c[5]->Name == "X (2)");
+        CHECK(std::find(warnings.begin(), warnings.end(), "Renamed duplicate macro \"X\" to \"X (3)\".") != warnings.end());
+    }
+
+    // Thousands of copies of one name (a crafted import): each gets the next number, without
+    // rescanning every sibling for every candidate (that took cubic time and froze the game).
+    {
+        const size_t kCopies = 20000;
+        Tree u;
+        CHECK(u.FromJson(Library(std::vector<std::pair<std::string, std::string>>(kCopies, {"macro", "a"}), true)));
+        const auto& c = u.Root().Children;
+        CHECK(c.size() == kCopies);
+        bool numbered = c.size() == kCopies && c[0]->Name == "a";
+        for (size_t i = 1; i < c.size() && numbered; i++) numbered = c[i]->Name == "a (" + std::to_string(i + 1) + ")";
+        CHECK(numbered);
+    }
+
+    // A name too long for the number: the cut to kMaxNameLength dropped it, so every candidate was
+    // taken and the loop never ended. What the cut left is still used while it's new; then the name
+    // is cut shorter so all of " (n)" fits.
+    {
+        const std::string full(kMaxNameLength, 'n');
+        Tree u;
+        CHECK(u.FromJson(Library({{"macro", full}, {"macro", full}, {"macro", full}})));
+        const auto& c = u.Root().Children;
+        CHECK(c.size() == 3 && c[0]->Name == full);
+        CHECK(c.size() == 3 && c[1]->Name == std::string(kMaxNameLength - 4, 'n') + " (2)");
+        CHECK(c.size() == 3 && c[2]->Name == std::string(kMaxNameLength - 4, 'n') + " (3)");
+    }
+    {
+        const std::string name(kMaxNameLength - 2, 'e'); // room for " (" only
+        Tree u;
+        CHECK(u.FromJson(Library({{"macro", name}, {"macro", name}, {"macro", name}})));
+        const auto& c = u.Root().Children;
+        CHECK(c.size() == 3 && c[1]->Name == name + " (");
+        CHECK(c.size() == 3 && c[2]->Name == std::string(kMaxNameLength - 4, 'e') + " (2)");
+    }
+    {
+        const std::string name(kMaxNameLength - 3, 's'); // room for " (" and one digit
+        Tree u;
+        CHECK(u.FromJson(Library(std::vector<std::pair<std::string, std::string>>(11, {"folder", name}))));
+        const auto& c = u.Root().Children;
+        CHECK(c.size() == 11);
+        bool cut = c.size() == 11;
+        for (size_t i = 1; i < 9 && cut; i++) cut = c[i]->Name == name + " (" + std::to_string(i + 1);
+        CHECK(cut);
+        CHECK(c.size() == 11 && c[9]->Name == name + " (1");
+        CHECK(c.size() == 11 && c[10]->Name == std::string(kMaxNameLength - 4, 's') + " (2)");
+    }
+    {
+        std::string name = "a";
+        for (int i = 0; i < 49; i++) name += "\xC3\xA9"; // 99 bytes
+        name += "b";                                     // 100
+        std::string kept = "a";
+        for (int i = 0; i < 47; i++) kept += "\xC3\xA9"; // the cut backs up off the split "é"
+        Tree u;
+        CHECK(u.FromJson(Library({{"macro", name}, {"macro", name}})));
+        const auto& c = u.Root().Children;
+        CHECK(c.size() == 2 && c[1]->Name == kept + " (2)");
+    }
+}
+
+// aTree.FromJson on a one-macro file whose "format" is aFormat (JSON text; "" leaves it out).
+// aThrew is set if FromJson threw.
+static bool ReadWithFormat(Tree& aTree, const std::string& aFormat, std::vector<std::string>* aWarnings, bool& aThrew)
+{
+    const std::string format = aFormat.empty() ? std::string() : R"("format":)" + aFormat + ",";
+    const json j = json::parse("{" + format + R"("root":{"children":[{"type":"macro","id":"00000000000000aa","name":"M"}]}})");
+    aThrew = false;
+    try { return aTree.FromJson(j, aWarnings); }
+    catch (...) { aThrew = true; return false; }
+}
+
+// "format" of any type never throws. Types value() used to throw on (null, text, an object or
+// array) aren't a library: FromJson fails and leaves the tree as it was. Numbers and true/false
+// read as before (as an int: above 1 is newer, with a warning); missing is 0.
+static void TestJsonFormat()
+{
+    std::vector<std::string> w;
+    bool threw = true;
+    for (const char* bad : {"null", "\"1\"", "{}", "{\"v\":1}", "[1]"})
+    {
+        Tree t;
+        t.AddFolder(nullptr, "Mine");
+        w.clear();
+        CHECK(!ReadWithFormat(t, bad, &w, threw) && !threw);
+        CHECK(w.empty() && t.Root().Children.size() == 1 && t.Root().Children[0]->Name == "Mine");
+        Tree u;
+        CHECK(!ReadWithFormat(u, bad, nullptr, threw) && !threw);
+    }
+    for (const char* known : {"", "0", "1", "-1", "1.5", "true"})
+    {
+        Tree t;
+        w.clear();
+        CHECK(ReadWithFormat(t, known, &w, threw) && !threw);
+        CHECK(w.empty() && t.Root().Children.size() == 1);
+    }
+    for (const char* newer : {"2", "2.5"})
+    {
+        Tree t;
+        w.clear();
+        CHECK(ReadWithFormat(t, newer, &w, threw) && !threw);
+        CHECK(w.size() == 1 && w[0].find("newer version") != std::string::npos && t.Root().Children.size() == 1);
+    }
+}
+
+static void TestJsonControlCharacters()
+{
+    // A file (an import, or a hand-edited macros.json) can't bring control characters into a
+    // line's text or recipient: each one becomes a space. Other characters are kept.
+    const json j = json::parse(R"({
+        "format": 1,
+        "root": { "children": [
+            {"type": "macro", "id": "00000000000000b1", "name": "Bad", "lines": [
+                {"channel": "current", "message": "gg\r/m text"},
+                {"channel": "say", "message": "a\tb\u001b\u0000c\u0085"},
+                {"channel": "whisper", "message": "hi\n", "whisper_to": "Na\tme\u007f"},
+                {"channel": "map", "message": "caf\u00e9 \u2019 \u00a0ok"}
+            ]}
+        ]}
+    })");
+    Tree u;
+    CHECK(u.FromJson(j));
+    const Node* m = u.Find(0xb1);
+    CHECK(m && m->Lines.size() == 4);
+    if (!m || m->Lines.size() != 4) return;
+    CHECK(m->Lines[0].Channel == EChannel::Current && m->Lines[0].Message == "gg /m text");
+    CHECK(m->Lines[1].Message == "a b  c ");
+    CHECK(m->Lines[2].Message == "hi " && m->Lines[2].WhisperTo == "Na me ");
+    CHECK(m->Lines[3].Message == "caf\xC3\xA9 \xE2\x80\x99 \xC2\xA0ok");
+
+    // Saved and loaded again, the text stays the same.
+    Tree again;
+    CHECK(again.FromJson(u.ToJson()));
+    CHECK(again.ToJson() == u.ToJson());
 }
 
 static void TestChannels()
@@ -257,5 +460,8 @@ void RunMacroTreeTests()
     TestSort();
     TestJsonRoundTrip();
     TestJsonDamaged();
+    TestDuplicateNames();
+    TestJsonFormat();
+    TestJsonControlCharacters();
     TestChannels();
 }

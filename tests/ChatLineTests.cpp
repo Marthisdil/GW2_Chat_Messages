@@ -117,6 +117,43 @@ static void TestRoundTrip()
     CHECK(SerializeLine(ParseLine("/squad ! x")) == "/d ! x");
 }
 
+static void TestControlCharacters()
+{
+    // Every control character becomes one space; nothing else changes.
+    CHECK(ControlsToSpaces("a\tb\rc\nd\x1B") == "a b c d ");
+    CHECK(ControlsToSpaces(std::string("a\0b\x01\x1F\x7F", 6)) == "a b   ");
+    CHECK(ControlsToSpaces("x\xC2\x85y\xC2\x80\xC2\x9F") == "x y  ");             // C1 (NEL, U+0080, U+009F)
+    CHECK(ControlsToSpaces("\xC2\xA0 caf\xC3\xA9 \xC2\xA9") == "\xC2\xA0 caf\xC3\xA9 \xC2\xA9"); // NBSP, e acute, (c) kept
+    CHECK(ControlsToSpaces("\xE2\x80\x99 \xF0\x9F\x98\x80") == "\xE2\x80\x99 \xF0\x9F\x98\x80"); // 0x80-0x9F inside other characters
+    CHECK(ControlsToSpaces("end\xC2") == "end\xC2");                               // a lone lead byte isn't a C1 control
+    CHECK(ControlsToSpaces("plain /s text [x] !") == "plain /s text [x] !");
+
+    // Inside a row they're typed as spaces, so they can't add an Enter, Tab or Escape.
+    Line l = ParseLine("gg\r/m text");
+    CHECK(l.Channel == EChannel::Current && l.Message == "gg /m text");
+    l = ParseLine("/s a\tb\x1B" "c\xC2\x85" "d\x1B");
+    CHECK(l.Channel == EChannel::Say && l.Message == "a b c d");
+    l = ParseLine("/w [Na\tme\r] hi");
+    CHECK(l.Channel == EChannel::Whisper && l.WhisperTo == "Na me " && l.Message == "hi");
+    CHECK(TypedText(ParseLine("/s x\ry")) == "/s x y");
+
+    // A tab as the separator parses as before.
+    l = ParseLine("/s\thello");
+    CHECK(l.Channel == EChannel::Say && l.Message == "hello");
+    l = ParseLine("/w\t[Name]\thi");
+    CHECK(l.Channel == EChannel::Whisper && l.WhisperTo == "Name" && l.Message == "hi");
+    l = ParseLine("/d\t!\tgo\t");
+    CHECK(l.Channel == EChannel::Squad && l.SquadBroadcast && l.Message == "go");
+
+    // Rows still split on "\n" (and "\r\n"); a lone CR stays inside its row, as a space. A row of
+    // only control characters is blank.
+    const auto lines = ParseRaw("one\r\ntwo\rthree\n\x1B\x07\r\n/s a\tb");
+    CHECK(lines.size() == 3);
+    CHECK(lines.size() == 3 && lines[0].Message == "one" && lines[1].Message == "two three" &&
+          lines[2].Channel == EChannel::Say && lines[2].Message == "a b");
+    CHECK(SerializeRaw(lines) == "one\ntwo three\n/s a b");
+}
+
 static void TestTypedAndLength()
 {
     Line l;
@@ -146,6 +183,50 @@ static void TestLengthLevels()
     CHECK(LengthLevel(200) == ELengthLevel::Over);
 }
 
+// RepairUtf8 on a copy: the result, and whether anything was replaced.
+static std::string Repaired(std::string s, bool* aChanged = nullptr)
+{
+    const bool changed = RepairUtf8(s);
+    if (aChanged) *aChanged = changed;
+    return s;
+}
+
+static void TestRepairUtf8()
+{
+    const std::string bad = "\xEF\xBF\xBD"; // U+FFFD
+    bool changed = true;
+
+    // Valid UTF-8 is left exactly as it is, including the edges of each range.
+    for (const char* ok : {"", "abc", "a\r\nb\tc", "caf\xC3\xA9", "\xC2\x80", "\xDF\xBF", "\xE0\xA0\x80",
+                           "\xED\x9F\xBF", "\xEE\x80\x80", "\xEF\xBF\xBD", "\xF0\x90\x80\x80", "\xF0\x9F\x98\x80",
+                           "\xF4\x8F\xBF\xBF"})
+    {
+        CHECK(Repaired(ok, &changed) == ok && !changed);
+    }
+
+    // A Windows-1252 file: each accented letter is one byte, and one U+FFFD.
+    CHECK(Repaired("/s K\xE4se f\xFCr dich", &changed) == "/s K" + bad + "se f" + bad + "r dich" && changed);
+    // Stray bytes.
+    CHECK(Repaired("\xFF") == bad);
+    CHECK(Repaired("\x80") == bad);
+    CHECK(Repaired("a\xFE\xFF" "b") == "a" + bad + bad + "b");
+    // Overlong forms, surrogates and past U+10FFFF: one U+FFFD per byte.
+    CHECK(Repaired("\xC0\xAF") == bad + bad);
+    CHECK(Repaired("\xE0\x80\xAF") == bad + bad + bad);
+    CHECK(Repaired("\xF0\x80\x80\x80") == bad + bad + bad + bad);
+    CHECK(Repaired("\xED\xA0\x80") == bad + bad + bad);
+    CHECK(Repaired("\xF4\x90\x80\x80") == bad + bad + bad + bad);
+    CHECK(Repaired("\xF5\x80") == bad + bad);
+    // A cut-off character is one U+FFFD; what follows it is kept.
+    CHECK(Repaired("\xE2\x9C") == bad);
+    CHECK(Repaired("\xE2\x9C" "x\xE2\x9C\x93") == bad + "x\xE2\x9C\x93");
+    CHECK(Repaired("ok \xF0\x9F\x98") == "ok " + bad);
+
+    // The result is valid: repairing it again changes nothing.
+    Repaired(Repaired("\xC3(\xE0\xA0\xF8\x88\x80\x80\x80 \xFF"), &changed);
+    CHECK(!changed);
+}
+
 static void TestColors()
 {
     CHECK(ChannelColor(EChannel::Current) == 0xFFFFFF);
@@ -159,7 +240,9 @@ void RunChatLineTests()
     TestParseChannels();
     TestWhisperAndSquad();
     TestRoundTrip();
+    TestControlCharacters();
     TestTypedAndLength();
     TestColors();
     TestLengthLevels();
+    TestRepairUtf8();
 }

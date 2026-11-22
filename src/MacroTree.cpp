@@ -1,11 +1,13 @@
 #include "MacroTree.h"
 
+#include "ChatLine.h"
 #include "Localization.h"
 
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
 #include <random>
+#include <unordered_map>
 #include <unordered_set>
 
 #include <nlohmann/json.hpp>
@@ -48,6 +50,21 @@ namespace MacroTree
             for (char& c : out)
                 if (static_cast<unsigned char>(c) < 0x80) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
             return out;
+        }
+
+        // aName + " (n)", with aName cut short (never inside a UTF-8 sequence) so all of " (n)" fits.
+        std::string WithNumber(const std::string& aName, int aN)
+        {
+            const std::string suffix = " (" + std::to_string(aN) + ")";
+            std::string base = aName;
+            if (base.size() + suffix.size() > kMaxNameLength)
+            {
+                size_t cut = kMaxNameLength - suffix.size();
+                while (cut > 0 && (static_cast<unsigned char>(base[cut]) & 0xC0) == 0x80) cut--;
+                base.resize(cut);
+                while (!base.empty() && base.back() == ' ') base.pop_back();
+            }
+            return Tree::CleanName(base + suffix);
         }
 
         std::string IdToString(uint64_t aId)
@@ -149,49 +166,56 @@ namespace MacroTree
             {
                 auto it = aJson.find("children");
                 if (it == aJson.end() || !it->is_array()) return;
-                for (const json& jc : *it)
-                {
-                    if (!jc.is_object()) { Warn("Skipped an entry that isn't a folder or macro."); continue; }
-                    const std::string type = StringField(jc, "type");
-                    ENodeType t;
-                    if (type == "folder") t = ENodeType::Folder;
-                    else if (type == "macro") t = ENodeType::Macro;
-                    else { Warn("Skipped an entry of unknown type \"" + type + "\"."); continue; }
-
-                    if (t == ENodeType::Folder && aLevel + 1 > kMaxParseDepth)
-                    {
-                        Warn("Skipped folders nested too deeply to read.");
-                        continue;
-                    }
-
-                    auto node = std::make_unique<Node>();
-                    node->Type   = t;
-                    node->Parent = &aFolder;
-                    node->Name   = Tree::CleanName(StringField(jc, "name"));
-                    if (node->Name.empty()) node->Name = t == ENodeType::Folder ? "New folder" : "New macro";
-
-                    const uint64_t id = IdFromString(StringField(jc, "id"));
-                    if (id != 0 && SeenIds.insert(id).second) node->Id = id;
-                    else NeedIdNodes.push_back(node.get());
-
-                    if (t == ENodeType::Folder)
-                    {
-                        if (aLevel + 1 > kMaxFolderDepth && !WarnedDepth)
-                        {
-                            Warn("Some folders are nested deeper than " + std::to_string(kMaxFolderDepth) +
-                                 " levels. They were kept, but you can't add more folders inside them.");
-                            WarnedDepth = true;
-                        }
-                        node->Expanded = jc.value("expanded", true);
-                        ParseChildren(jc, *node, aLevel + 1);
-                    }
-                    else
-                    {
-                        ParseMacro(jc, *node);
-                    }
-                    aFolder.Children.push_back(std::move(node));
-                }
+                for (const json& jc : *it) ParseNode(jc, aFolder, aLevel);
                 MakeNamesUnique(aFolder);
+            }
+
+            // Parses one folder or macro json into a new last child of aFolder. aLevel = aFolder's
+            // folder level. Reads jc in place: never copy untrusted json, because a json copy recurses
+            // once per nesting level and a hostile file can nest it deep enough to overflow the stack.
+            void ParseNode(const json& jc, Node& aFolder, int aLevel)
+            {
+                if (!jc.is_object()) { Warn("Skipped an entry that isn't a folder or macro."); return; }
+                const std::string type = StringField(jc, "type");
+                ENodeType t;
+                if (type == "folder") t = ENodeType::Folder;
+                else if (type == "macro") t = ENodeType::Macro;
+                else { Warn("Skipped an entry of unknown type \"" + type + "\"."); return; }
+
+                if (t == ENodeType::Folder && aLevel + 1 > kMaxParseDepth)
+                {
+                    Warn("Skipped folders nested too deeply to read.");
+                    return;
+                }
+
+                auto node = std::make_unique<Node>();
+                node->Type   = t;
+                node->Parent = &aFolder;
+                node->Name   = Tree::CleanName(StringField(jc, "name"));
+                if (node->Name.empty()) node->Name = t == ENodeType::Folder ? "New folder" : "New macro";
+
+                const uint64_t id = IdFromString(StringField(jc, "id"));
+                if (id != 0 && SeenIds.insert(id).second) node->Id = id;
+                else NeedIdNodes.push_back(node.get());
+
+                if (t == ENodeType::Folder)
+                {
+                    if (aLevel + 1 > kMaxFolderDepth && !WarnedDepth)
+                    {
+                        Warn("Some folders are nested deeper than " + std::to_string(kMaxFolderDepth) +
+                             " levels. They were kept, but you can't add more folders inside them.");
+                        WarnedDepth = true;
+                    }
+                    // Not value(): it throws on a wrongly typed key. Missing or not a bool = open.
+                    auto ex = jc.find("expanded");
+                    node->Expanded = ex == jc.end() || !ex->is_boolean() || ex->get<bool>();
+                    ParseChildren(jc, *node, aLevel + 1);
+                }
+                else
+                {
+                    ParseMacro(jc, *node);
+                }
+                aFolder.Children.push_back(std::move(node));
             }
 
             void ParseMacro(const json& j, Node& n)
@@ -204,8 +228,9 @@ namespace MacroTree
                         if (!jl.is_object()) continue;
                         Line l;
                         l.Channel        = ChannelFromKey(StringField(jl, "channel"));
-                        l.Message        = StringField(jl, "message");
-                        l.WhisperTo      = StringField(jl, "whisper_to");
+                        // From a file (maybe someone else's): no control characters to type.
+                        l.Message        = ChatLine::ControlsToSpaces(StringField(jl, "message"));
+                        l.WhisperTo      = ChatLine::ControlsToSpaces(StringField(jl, "whisper_to"));
                         auto sb = jl.find("squad_broadcast");
                         l.SquadBroadcast = sb != jl.end() && sb->is_boolean() && sb->get<bool>();
                         n.Lines.push_back(std::move(l));
@@ -240,27 +265,49 @@ namespace MacroTree
             }
 
             // Two siblings of the same type with the same name: rename the later one "Name (2)" etc.
+            // The first free number is picked, skipping names any sibling (earlier or later) holds.
+            // Lookups use sets, and each name remembers the next number to try, so a file with
+            // thousands of copies of one name takes linear time, not a rescan per candidate.
             void MakeNamesUnique(Node& aFolder)
             {
-                for (size_t i = 0; i < aFolder.Children.size(); i++)
+                // Per type (0 = folder, 1 = macro), lower case: every name a sibling holds (a renamed
+                // sibling's old name stays taken: the earlier sibling it repeated still holds it), the
+                // names of the siblings before the current one, and the next number to try per name.
+                std::unordered_set<std::string>      taken[2], earlier[2];
+                std::unordered_map<std::string, int> next[2];
+                int                                  cutNext[2] = {2, 2};
+                for (const auto& c : aFolder.Children) taken[c->IsFolder() ? 0 : 1].insert(Lower(c->Name));
+
+                for (const auto& c : aFolder.Children)
                 {
-                    Node& a = *aFolder.Children[i];
-                    for (size_t k = 0; k < i; k++)
+                    Node& a = *c;
+                    const int ti = a.IsFolder() ? 0 : 1;
+                    const std::string old = a.Name;
+                    const std::string lower = Lower(old);
+                    if (earlier[ti].count(lower))
                     {
-                        const Node& b = *aFolder.Children[k];
-                        if (b.Type != a.Type || Lower(b.Name) != Lower(a.Name)) continue;
-                        const std::string old = a.Name;
-                        for (int n = 2;; n++)
+                        // A number already tried for this name is still taken, so carry on from there.
+                        int& n = next[ti].try_emplace(lower, 2).first->second;
+                        bool named = false;
+                        for (; !named; n++)
                         {
-                            std::string candidate = Tree::CleanName(old + " (" + std::to_string(n) + ")");
-                            bool taken = false;
-                            for (const auto& s : aFolder.Children)
-                                if (s.get() != &a && s->Type == a.Type && Lower(s->Name) == Lower(candidate)) taken = true;
-                            if (!taken) { a.Name = candidate; break; }
+                            const std::string raw = old + " (" + std::to_string(n) + ")";
+                            // Once the cut to kMaxNameLength takes ")" and two more characters, this and
+                            // every later candidate repeat one already tried (or the name itself), so
+                            // all are taken and none is left (the old loop never ended here).
+                            if (raw.size() >= kMaxNameLength + 3) break;
+                            std::string candidate = Tree::CleanName(raw);
+                            if (taken[ti].insert(Lower(candidate)).second) { a.Name = std::move(candidate); named = true; }
+                        }
+                        // No room left for a number: cut the name shorter so the whole " (n)" fits.
+                        for (int& m = cutNext[ti]; !named; m++)
+                        {
+                            std::string candidate = WithNumber(old, m);
+                            if (taken[ti].insert(Lower(candidate)).second) { a.Name = std::move(candidate); named = true; }
                         }
                         Warn("Renamed duplicate " + std::string(TypeWord(a.Type)) + " \"" + old + "\" to \"" + a.Name + "\".");
-                        break;
                     }
+                    earlier[ti].insert(Lower(a.Name));
                 }
             }
         };
@@ -659,7 +706,12 @@ namespace MacroTree
         auto root = aJson.find("root");
         if (root == aJson.end() || !root->is_object()) return false;
 
-        const int format = aJson.value("format", 0);
+        // "format" is untrusted, and value() throws on a type get<int>() can't read. Those types
+        // (null, text, an object or array) aren't a file we can read; missing means 0, and
+        // numbers and true/false are read as get<int>() always read them.
+        auto jf = aJson.find("format");
+        if (jf != aJson.end() && !jf->is_number() && !jf->is_boolean()) return false;
+        const int format = jf != aJson.end() ? jf->get<int>() : 0;
         if (format > kFormatVersion && aWarnings)
             aWarnings->push_back("This file was saved by a newer version of the addon. Some details may be lost.");
 
@@ -697,7 +749,7 @@ namespace MacroTree
                 t.DeletedAt = StringField(je, "deleted_at");
                 Node holder;
                 holder.Type = ENodeType::Folder;
-                p.ParseChildren(json{{"children", json::array({*item})}}, holder, static_cast<int>(t.FromIds.size()));
+                p.ParseNode(*item, holder, static_cast<int>(t.FromIds.size())); // in place: no json copy
                 if (holder.Children.empty()) continue;
                 t.Item = std::move(holder.Children.front());
                 t.Item->Parent = nullptr;

@@ -275,7 +275,7 @@
     "Folders can be nested at most %d deep. Unticked, folders that would go deeper are left out.": "Las carpetas se pueden anidar como máximo %d niveles. Si está desmarcado, se excluyen las carpetas que irían más abajo.",
     "Keep hotkeys": "Conservar los atajos",
     "Off by default for someone else's library, so their keys don't clash with yours.": "Desactivado por defecto para la biblioteca de otra persona, para que sus teclas no choquen con las tuyas.",
-    "Untick this for macros from someone else, so their keys don't clash with yours.": "Desmarca esto para macros de otra persona, para que sus teclas no choquen con las tuyas.",
+    "Off at first, so macros from someone else come without their hotkeys. Tick it for your own exports; the preview then shows each macro's hotkey.": "Desactivado al principio, para que las macros de otra persona lleguen sin sus atajos. Márcalo para tus propias exportaciones; la vista previa mostrará entonces el atajo de cada macro.",
     "3. Check the preview": "3. Revisa la vista previa",
     "%zu new macro(s), %zu new folder(s)": "%zu macro(s) nueva(s), %zu carpeta(s) nueva(s)",
     "%zu merged": "%zu combinada(s)",

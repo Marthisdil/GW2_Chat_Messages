@@ -128,6 +128,43 @@ namespace
         CHECK(FromText("Pasted", "/s hi").Items.Root().Children[0]->Name == "Pasted");
     }
 
+    // Whether the library (or any json) can be saved: dump() with nlohmann's default, strict
+    // handling throws on text that isn't UTF-8.
+    bool Dumps(const nlohmann::json& j)
+    {
+        try { (void)j.dump(2); return true; }
+        catch (const std::exception&) { return false; }
+    }
+
+    void TestNotUtf8()
+    {
+        const std::string bad = "\xEF\xBF\xBD"; // U+FFFD
+        // A .txt saved as Windows-1252 (ä, ö as single bytes): imported with U+FFFD in their place,
+        // and a warning.
+        Package p = FromRawText("Ansi", "/s K\xE4se\r\n/w [B\xF6" "b] hi\r\n");
+        CHECK(p.Ok() && p.Warnings.size() == 1);
+        Node* m = p.Ok() ? p.Items.Root().Children[0].get() : nullptr;
+        CHECK(m && m->Lines.size() == 2);
+        CHECK(m && m->Lines[0].Message == "K" + bad + "se");
+        CHECK(m && m->Lines[1].Channel == EChannel::Whisper && m->Lines[1].WhisperTo == "B" + bad + "b");
+        // So the library still saves, and the macro exports.
+        CHECK(Dumps(p.Items.ToJson()));
+        CHECK(m && Dumps(ExportJson({m})));
+        // UTF-8 text: no warning.
+        CHECK(FromRawText("Utf8", "/s K\xC3\xA4se").Warnings.empty());
+        // Pasted text goes the same way.
+        CHECK(FromText("Pasted", "/s \xFF").Items.Root().Children[0]->Lines[0].Message == bad);
+
+        // Text that isn't UTF-8 from anywhere else still exports, as U+FFFD, instead of throwing.
+        Tree t;
+        Node* raw = AddM(t, nullptr, "Raw", "bad \xFF");
+        std::string text;
+        try { text = ExportJsonText({raw}); }
+        catch (const std::exception&) { text.clear(); }
+        Package back = FromJsonText(text);
+        CHECK(back.Ok() && back.Items.Root().Children[0]->Lines[0].Message == "bad " + bad);
+    }
+
     void TestReadJson()
     {
         CHECK(!FromJsonText("not json").Ok());
@@ -138,6 +175,48 @@ namespace
         Package p = Pkg(R"J({"format":1,"root":{"children":[
             {"type":"macro","id":"00000000000000aa","name":"M","link_file":"x.txt","lines":[{"channel":"say","message":"a"}]}]}})J");
         CHECK(p.Items.Root().Children[0]->LinkFile.empty());
+    }
+
+    bool HasWarning(const Package& aPkg, const std::string& aPart)
+    {
+        for (const std::string& w : aPkg.Warnings)
+            if (w.find(aPart) != std::string::npos) return true;
+        return false;
+    }
+
+    // FromJsonText(aText), with aThrew set (instead of the tests crashing) if it throws.
+    Package ReadNoThrow(const std::string& aText, bool& aThrew)
+    {
+        aThrew = false;
+        try { return FromJsonText(aText); }
+        catch (...) { aThrew = true; return Package{}; }
+    }
+
+    // A "format" of the wrong type never throws out of FromJsonText: it isn't an export.
+    void TestReadJsonBadFormat()
+    {
+        const std::string body = R"J(,"root":{"children":[{"type":"macro","name":"M","lines":[{"channel":"say","message":"a"}]}]}})J";
+        bool threw = true;
+        for (const char* bad : {"null", "\"1\"", "{}", "{\"v\":1}", "[1]"})
+        {
+            Package p = ReadNoThrow(std::string("{\"format\":") + bad + body, threw);
+            CHECK(!threw);
+            CHECK(!p.Ok() && p.Error == "It isn't a Chat Messages export." && p.Items.Root().Children.empty());
+        }
+        // The report's example.
+        Package example = ReadNoThrow("{\"format\":null,\"root\":{\"children\":[]}}", threw);
+        CHECK(!threw && !example.Ok());
+        // Any other wrongly typed value that throws while reading becomes the package's error.
+        Package odd = ReadNoThrow(R"J({"format":1,"root":{"children":[{"type":"folder","name":"F","expanded":null,"children":[
+            {"type":"macro","name":"M","lines":[{"channel":"say","message":"a"}]}]}]}})J", threw);
+        CHECK(!threw && (odd.Ok() || (odd.Error == "It couldn't be read." && odd.Items.Root().Children.empty())));
+
+        // Numbers and true/false read as before: missing, 1, 1.5 and true aren't newer; 2 is.
+        CHECK(!HasWarning(Pkg("{" + body.substr(1)), "newer version"));
+        CHECK(!HasWarning(Pkg("{\"format\":1" + body), "newer version"));
+        CHECK(!HasWarning(Pkg("{\"format\":1.5" + body), "newer version"));
+        CHECK(!HasWarning(Pkg("{\"format\":true" + body), "newer version"));
+        CHECK(HasWarning(Pkg("{\"format\":2" + body), "newer version"));
     }
 
     void TestPlanSimple()
@@ -173,12 +252,13 @@ namespace
 
     void TestPlanConflicts()
     {
-        // Defaults: macros are kept as both (renamed), folders merge.
+        // Defaults: macros are kept as both (renamed), folders merge, hotkeys aren't kept.
         {
             Tree t;
             MakeLibrary(t);
             Package p = Pkg(kConflicts);
             Options o;
+            CHECK(!o.KeepHotkeys);
             Plan plan = BuildPlan(t, t.Root(), p.Items, o);
             CHECK(plan.Conflicts == 3); // hello, RAIDS, Stack
             CHECK(plan.Items[0].Conflict && plan.Items[0].Outcome == EOutcome::Renamed && plan.Items[0].Name == "hello (2)");
@@ -193,7 +273,24 @@ namespace
             CHECK(raids->Children.size() == 3);
             CHECK(Child(*raids, "Stack", ENodeType::Macro)->Lines[0].Message == "old");
             CHECK(Child(*raids, "Stack (2)", ENodeType::Macro)->Lines[0].Message == "new");
+            CHECK(Child(t.Root(), "hello (2)", ENodeType::Macro)->Hotkey.Empty()); // a shared file's hotkey isn't bound
+        }
+        // Keep hotkeys ticked: the imported hotkey comes along, on a new macro and on a replaced one.
+        {
+            Tree t;
+            MakeLibrary(t);
+            Package p = Pkg(kConflicts);
+            Options o;
+            o.KeepHotkeys = true;
+            Apply(t, t.Root(), BuildPlan(t, t.Root(), p.Items, o), o);
             CHECK(Child(t.Root(), "hello (2)", ENodeType::Macro)->Hotkey == Hotkey::FromString("Ctrl+F2"));
+
+            Tree r;
+            MakeLibrary(r);
+            Node* hello = Child(r.Root(), "Hello", ENodeType::Macro);
+            o.MacroConflict = EChoice::Replace;
+            Apply(r, r.Root(), BuildPlan(r, r.Root(), p.Items, o), o);
+            CHECK(hello->Lines[0].Message == "new hi" && hello->Hotkey == Hotkey::FromString("Ctrl+F2"));
         }
         // Replace keeps the existing item (its place and id) and swaps its contents.
         {
@@ -374,6 +471,7 @@ namespace
         WriteFile(dir / "Pack" / "Sub" / "deep.txt", "/g hi");
         WriteFile(dir / "Pack" / "Nothing" / "x.md", "no txt here");
         WriteFile(dir / "one.txt", "/s single");
+        WriteFile(dir / "ansi.txt", "/s caf\xE9\r\n");
         WriteFile(dir / "bad.json", "{oops");
         WriteFile(dir / "other.csv", "a,b");
 
@@ -395,6 +493,8 @@ namespace
 
         Package one = FromPath(dir / "one.txt");
         CHECK(one.Ok() && one.Items.Root().Children[0]->Name == "one" && one.Source == "one.txt");
+        Package ansi = FromPath(dir / "ansi.txt"); // not UTF-8: read with U+FFFD, and a warning
+        CHECK(ansi.Ok() && ansi.Warnings.size() == 1 && ansi.Items.Root().Children[0]->Lines[0].Message == "caf\xEF\xBF\xBD");
         CHECK(!FromPath(dir / "bad.json").Ok());
         CHECK(!FromPath(dir / "other.csv").Ok());
         CHECK(!FromPath(dir / "missing.txt").Ok());
@@ -577,7 +677,9 @@ void RunExchangeTests()
     TestFileNames();
     TestExport();
     TestReadText();
+    TestNotUtf8();
     TestReadJson();
+    TestReadJsonBadFormat();
     TestPlanSimple();
     TestPlanConflicts();
     TestPlanDepth();

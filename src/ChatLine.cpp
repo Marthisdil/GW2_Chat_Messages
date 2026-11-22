@@ -1,6 +1,7 @@
 #include "ChatLine.h"
 
 #include <cctype>
+#include <utility>
 
 namespace ChatLine
 {
@@ -123,10 +124,30 @@ namespace ChatLine
         }
     }
 
+    std::string ControlsToSpaces(const std::string& aText)
+    {
+        std::string out;
+        out.reserve(aText.size());
+        for (size_t i = 0; i < aText.size(); i++)
+        {
+            const unsigned char c = static_cast<unsigned char>(aText[i]);
+            if (c < 0x20 || c == 0x7F) { out += ' '; continue; }
+            // C1 is only 0xC2 then 0x80-0x9F; other 0x80-0x9F bytes belong to ordinary characters.
+            if (c == 0xC2 && i + 1 < aText.size())
+            {
+                const unsigned char next = static_cast<unsigned char>(aText[i + 1]);
+                if (next >= 0x80 && next <= 0x9F) { out += ' '; i++; continue; }
+            }
+            out += static_cast<char>(c);
+        }
+        return out;
+    }
+
     Line ParseLine(const std::string& aText)
     {
         Line line;
-        const std::string text = TrimRight(aText);
+        // A tab already counted as a space below, so it parses the same; CR, Esc etc. can't be typed.
+        const std::string text = TrimRight(ControlsToSpaces(aText));
 
         // The command is the first word, cut early at '[' for whispers and '!' for squad.
         size_t end = 0;
@@ -179,7 +200,7 @@ namespace ChatLine
         {
             size_t nl = aText.find('\n', start);
             if (nl == std::string::npos) nl = aText.size();
-            const std::string row = TrimRight(aText.substr(start, nl - start));
+            const std::string row = TrimRight(ControlsToSpaces(aText.substr(start, nl - start)));
             if (row.find_first_not_of(" \t") != std::string::npos) lines.push_back(ParseLine(row));
             start = nl + 1;
         }
@@ -221,5 +242,46 @@ namespace ChatLine
             units += (c >= 0xF0) ? 2 : 1;       // 4-byte sequences are surrogate pairs in UTF-16
         }
         return units;
+    }
+
+    bool RepairUtf8(std::string& aText)
+    {
+        const auto at = [&aText](size_t k) { return static_cast<unsigned char>(aText[k]); };
+        std::string out;
+        bool repaired = false;
+        size_t i = 0, kept = 0; // aText[kept, i) is valid and not yet copied to out
+        while (i < aText.size())
+        {
+            const unsigned char c = at(i);
+            if (c < 0x80) { i++; continue; }
+            // Well-formed sequences (Unicode Table 3-7): the length, and the second byte's range.
+            size_t len = 0;
+            unsigned char lo = 0x80, hi = 0xBF;
+            if (c >= 0xC2 && c <= 0xDF) len = 2;
+            else if (c == 0xE0) { len = 3; lo = 0xA0; } // no overlong forms
+            else if (c == 0xED) { len = 3; hi = 0x9F; } // no surrogates
+            else if (c >= 0xE1 && c <= 0xEF) len = 3;
+            else if (c == 0xF0) { len = 4; lo = 0x90; } // no overlong forms
+            else if (c == 0xF4) { len = 4; hi = 0x8F; } // nothing past U+10FFFF
+            else if (c >= 0xF1 && c <= 0xF3) len = 4;
+            size_t n = len ? 1 : 0; // bytes that start a well-formed sequence
+            while (n && n < len && i + n < aText.size())
+            {
+                const unsigned char b = at(i + n);
+                if (b < (n == 1 ? lo : 0x80) || b > (n == 1 ? hi : 0xBF)) break;
+                n++;
+            }
+            if (len && n == len) { i += len; continue; }
+            // Not UTF-8: that start (or the one stray byte) becomes one U+FFFD.
+            out.append(aText, kept, i - kept);
+            out += "\xEF\xBF\xBD";
+            i += n ? n : 1;
+            kept = i;
+            repaired = true;
+        }
+        if (!repaired) return false;
+        out.append(aText, kept, std::string::npos);
+        aText = std::move(out);
+        return true;
     }
 }
