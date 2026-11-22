@@ -393,6 +393,22 @@ namespace
             Apply(t, t.Root(), plan, Options());
             CHECK(Child(t.Root(), "Hello (2) (2)", ENodeType::Macro) != nullptr);
         }
+        // SEC-018: a taken name of 99-100 bytes. Cutting "name (n)" back to 100 bytes gave the taken
+        // name again for every n, and planning never ended. The name is now cut to fit " (n)".
+        for (size_t len : {size_t(98), size_t(99), size_t(100)})
+        {
+            const std::string longName(len, 'a');
+            Tree t;
+            t.AddMacro(nullptr, longName);
+            Package p = Pkg(R"J({"format":1,"root":{"children":[{"type":"macro","name":")J" + longName + R"J(","lines":[]}]}})J");
+            Plan plan = BuildPlan(t, t.Root(), p.Items, Options());
+            CHECK(plan.Items.size() == 1 && plan.Items[0].Outcome == EOutcome::Renamed);
+            const std::string& got = plan.Items[0].Name;
+            CHECK(got.size() <= kMaxNameLength && got != longName);
+            CHECK(got.size() >= 4 && got.compare(got.size() - 4, 4, " (2)") == 0);
+            CHECK(Apply(t, t.Root(), plan, Options()) == 1);
+            CHECK(Child(t.Root(), got, ENodeType::Macro) != nullptr);
+        }
     }
 
     // A package of folders nested aDepth deep (F1 > F2 > ...), with a macro "M<n>" in each.

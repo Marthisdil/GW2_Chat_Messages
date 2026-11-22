@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include <nlohmann/json_fwd.hpp>
@@ -171,10 +172,17 @@ namespace MacroTree
         bool FromJson(const nlohmann::json& aJson, std::vector<std::string>* aWarnings = nullptr);
 
         static std::string CleanName(const std::string& aName); // trims spaces, cuts to kMaxNameLength
+        // aName + " (n)", with aName cut short (never inside a UTF-8 sequence) so all of " (n)" fits.
+        // Every n gives a different name, so a loop over n always ends.
+        static std::string NumberedName(const std::string& aName, int aN);
 
     private:
         std::unique_ptr<Node> m_Root;
         std::vector<TrashItem> m_Trash;
+        // Every id in the tree or the bin (plus some since deleted, which is harmless), filled on the
+        // first NewId, so a new id is one lookup instead of a walk over the whole tree (SEC-017).
+        mutable std::unordered_set<uint64_t> m_UsedIds;
+        mutable bool                         m_UsedIdsReady = false;
 
         uint64_t NewId() const;
         bool     IdInUse(uint64_t aId) const; // in the tree or the bin

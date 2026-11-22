@@ -185,9 +185,11 @@ namespace
 
     std::string FreeName(const std::string& aName, const std::set<std::string>& aTaken)
     {
+        // NumberedName keeps all of " (n)": cutting aName + " (n)" back to the length limit gave the
+        // same taken name for every n on a 99-100 byte name, and the loop never ended (SEC-018).
         for (int n = 2;; n++)
         {
-            const std::string candidate = Tree::CleanName(aName + " (" + std::to_string(n) + ")");
+            const std::string candidate = Tree::NumberedName(aName, n);
             if (!aTaken.count(Lower(candidate))) return candidate;
         }
     }
@@ -364,7 +366,7 @@ namespace
         for (int n = 2; !r.Ok && n < 1000; n++)
         {
             if (aType == ENodeType::Folder && Tree::FolderLevel(aDest) + 1 > kMaxFolderDepth) return nullptr;
-            const std::string name = Tree::CleanName(aName + " (" + std::to_string(n) + ")");
+            const std::string name = Tree::NumberedName(aName, n);
             r = aType == ENodeType::Folder ? aTree.AddFolder(&aDest, name) : aTree.AddMacro(&aDest, name);
         }
         return r.Ok ? r.Target : nullptr;
