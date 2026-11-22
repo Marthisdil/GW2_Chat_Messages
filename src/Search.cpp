@@ -133,12 +133,16 @@ bool Search::NodeMatches(const MacroTree::Node& aNode, const std::string& aFolde
     return !aNode.Hotkey.Empty() && Contains(Hotkey::ToString(aNode.Hotkey), aFoldedQuery);
 }
 
-Search::Result Search::Run(const MacroTree::Node& aRoot, const std::string& aQuery)
+void Search::Run(const MacroTree::Node& aRoot, const std::string& aQuery, Result& aOut)
 {
-    Result r;
+    aOut.Active = false;
+    aOut.Matches.clear();
+    aOut.Open.clear();
+    aOut.Inside.clear();
+    aOut.FolderMatches = 0;
+    aOut.MacroMatches  = 0;
     const std::string q = Fold(Trim(aQuery));
-    if (q.empty()) return r;
-    r.Active = true;
-    Walk(aRoot, q, r);
-    return r;
+    if (q.empty()) return;
+    aOut.Active = true;
+    Walk(aRoot, q, aOut);
 }

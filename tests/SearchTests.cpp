@@ -52,12 +52,13 @@ static void TestRun()
     tag->Hotkey.Ctrl = true;
 
     // Empty query: inactive, everything shows.
-    Search::Result r = Search::Run(t.Root(), "   ");
+    Search::Result r;
+    Search::Run(t.Root(), "   ", r);
     CHECK(!r.Active);
     CHECK(r.Shows(gors->Id) && r.Shows(empty->Id));
 
     // A macro's name: it and the folders above it show; the folders open.
-    r = Search::Run(t.Root(), "gorse");
+    Search::Run(t.Root(), "gorse", r);
     CHECK(r.Active && r.MacroMatches == 1 && r.FolderMatches == 0);
     CHECK(r.Matches.count(gors->Id) == 1);
     CHECK(r.Shows(gors->Id) && r.Shows(w3->Id) && r.Shows(raids->Id));
@@ -65,20 +66,22 @@ static void TestRun()
     CHECK(!r.Shows(sab->Id) && !r.Shows(wvw->Id) && !r.Shows(tag->Id) && !r.Shows(empty->Id));
 
     // Line text, whisper recipient and hotkey.
-    CHECK(Search::Run(t.Root(), "EGG").Matches.count(gors->Id) == 1);
-    CHECK(Search::Run(t.Root(), "friend").Matches.count(sab->Id) == 1);
-    r = Search::Run(t.Root(), "ctrl+f1");
+    Search::Run(t.Root(), "EGG", r);
+    CHECK(r.Matches.count(gors->Id) == 1);
+    Search::Run(t.Root(), "friend", r);
+    CHECK(r.Matches.count(sab->Id) == 1 && r.MacroMatches == 1); // and the last search was cleared
+    Search::Run(t.Root(), "ctrl+f1", r);
     CHECK(r.Matches.count(tag->Id) == 1 && r.MacroMatches == 1 && r.ForcedOpen(wvw->Id));
 
     // A folder's name: it and everything inside show; it isn't forced open.
-    r = Search::Run(t.Root(), "wing");
+    Search::Run(t.Root(), "wing", r);
     CHECK(r.FolderMatches == 1 && r.MacroMatches == 0);
     CHECK(r.Matches.count(w3->Id) == 1);
     CHECK(r.Shows(gors->Id) && r.Shows(sab->Id) && r.Inside.count(sab->Id) == 1);
     CHECK(r.ForcedOpen(raids->Id) && !r.ForcedOpen(w3->Id));
 
     // Nothing matches.
-    r = Search::Run(t.Root(), "zzz");
+    Search::Run(t.Root(), "zzz", r);
     CHECK(r.Active && r.Matches.empty() && !r.Shows(raids->Id));
 
     // A folder never matches on its contents' text, only its name.

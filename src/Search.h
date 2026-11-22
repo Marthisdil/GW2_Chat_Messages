@@ -38,8 +38,10 @@ namespace Search
         bool ForcedOpen(uint64_t aId) const { return Active && Open.count(aId); }
     };
 
-    // Searches the tree under aRoot (the root itself never matches). The trash bin isn't searched.
-    Result Run(const MacroTree::Node& aRoot, const std::string& aQuery);
+    // Searches the tree under aRoot (the root itself never matches) into aOut, which is cleared
+    // first (filled in place: the UI runs it every frame, so its sets keep their memory).
+    // The trash bin isn't searched.
+    void Run(const MacroTree::Node& aRoot, const std::string& aQuery, Result& aOut);
 
     std::string Trim(const std::string& aText);
 }

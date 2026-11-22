@@ -2522,7 +2522,7 @@ namespace
     // Works out the search for this frame. A selected item that's no longer shown is unselected.
     void UpdateSearch()
     {
-        s_Search = Search::Run(s_Tree.Root(), s_SearchBuf);
+        Search::Run(s_Tree.Root(), s_SearchBuf, s_Search);
         if (s_Search.Active && s_SelectedId && !s_Search.Shows(s_SelectedId)) s_SelectedId = 0;
     }
 
