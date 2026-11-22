@@ -36,7 +36,9 @@ and in whisper recipients.
   command (at the start of the message or whisper recipient, or right after a command such as
   `/g `), **the macro is not sent**. Say a `{json}` page sends back `/w Someone hi`: in
   `/g {json ...}` that would whisper, so it's refused. Only a `/` you typed yourself can begin a
-  command; a `/` later in the message is just text.
+  command; a `/` later in the message is just text. A `/` you type right before a placeholder
+  (`/{txt emotes.txt}`) is your choice to let that value pick the command, so don't do that with a
+  `{json}` page or file you don't trust.
 
 ## Text files
 

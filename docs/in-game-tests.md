@@ -282,6 +282,10 @@ the error window says the path wasn't found.
   `waves at /wave` in Say.
 - Put `tabs.txt` with one line `a`, a Tab, `b` (typed in Notepad), and send `/s {txt tabs.txt}`:
   `a b` arrives in Say, and nothing else happens (chat doesn't jump to another box or channel).
+- *(question)* Look-alikes: put `slash.txt` with `／g hi` (a fullwidth slash, U+FF0F) and
+  `filler.txt` with `ㅤ/g hi` (U+3164 first), and send each as `{txt ...}` on Current. Note whether
+  either posts to guild chat (the addon only treats `/` and ordinary spaces as commands). If one
+  does, report it: the check has to learn that character.
 
 ## J. Import and export
 
