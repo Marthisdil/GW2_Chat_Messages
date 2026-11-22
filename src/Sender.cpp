@@ -8,6 +8,7 @@
 #include <functional>
 #include <mutex>
 #include <optional>
+#include <utility>
 #include <thread>
 
 #include <filesystem>
@@ -381,18 +382,23 @@ namespace
     std::string Prepare(std::vector<MacroTree::Line> aLines, SendPlan::Plan& aPlan)
     {
         const Placeholders::Context ctx = PlaceholderContext();
+        std::vector<SendPlan::Origin> origins(aLines.size()); // which bytes came from values
         for (size_t i = 0; i < aLines.size(); i++)
         {
-            for (std::string* field : {&aLines[i].Message, &aLines[i].WhisperTo})
+            std::pair<std::string*, std::vector<bool>*> fields[] = {{&aLines[i].Message, &origins[i].Message},
+                                                                     {&aLines[i].WhisperTo, &origins[i].WhisperTo}};
+            for (auto& [field, fromValue] : fields)
             {
                 if (s_Stop) return "Stopped.";
                 Placeholders::Result r = Placeholders::Expand(*field, ctx);
                 if (!r.Error.empty()) return "Line " + std::to_string(i + 1) + ": " + r.Error;
-                *field = std::move(r.Text);
+                *field     = std::move(r.Text);
+                *fromValue = std::move(r.FromValue);
             }
         }
-        // Built from the filled-in text, so the 199-character check is on what's really typed.
-        aPlan = SendPlan::Build(aLines, IsCommander());
+        // Built from the filled-in text, so the 199-character and control character checks are on
+        // what's really typed, and a value can't start a command (SEC-013).
+        aPlan = SendPlan::Build(aLines, IsCommander(), origins);
         return aPlan.Error;
     }
 

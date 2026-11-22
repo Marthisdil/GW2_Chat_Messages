@@ -40,7 +40,23 @@ namespace SendPlan
 
     constexpr int kPauseBetweenLinesMs = 50;
 
+    // Which bytes of a line's Message and WhisperTo came from placeholder values
+    // (Placeholders::Result::FromValue). Empty vectors: all written by the user.
+    struct Origin
+    {
+        std::vector<bool> Message, WhisperTo;
+    };
+
     // Checks every line first, so a macro is either sent whole or not at all.
     // Lines with an empty message are skipped (chat ignores them anyway).
-    Plan Build(const std::vector<MacroTree::Line>& aLines, bool aIsCommander);
+    // Refused (SEC-013):
+    //  - typed text with a control character (C0, DEL, C1), so our own Enter and Tab are the only
+    //    ones the game ever gets;
+    //  - a "/" that chat would read as a command but that came from a placeholder value. The game
+    //    reads commands as the text arrives and a channel command ("/g ") empties the box, so that's
+    //    a "/" at the start of a box we type into, or right after a command word and its spaces
+    //    ("/g /w Name"), on any channel, after any kind of space.
+    // aOrigins: empty, or one per line.
+    Plan Build(const std::vector<MacroTree::Line>& aLines, bool aIsCommander,
+               const std::vector<Origin>& aOrigins = {});
 }

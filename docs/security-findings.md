@@ -29,12 +29,12 @@ folder with someone else's file), **Medium** (wrong behaviour reachable with rea
 | [SEC-010](#sec-010) | 2026-11-22 01:59 | High | `src/MacroTree.cpp:185` (`ParseChildren`) | A wrongly typed `"expanded"` threw `type_error` out of the render callback | Fixed | PR #33 (merged via #34), commit `f8f58b1`, build `1dcd3c0` |
 | [SEC-011](#sec-011) | 2026-11-22 01:59 | High | `src/MacroTree.cpp:662` (`Tree::FromJson`) | A wrongly typed `"format"` threw `type_error` out of the render callback | Fixed | PR #33 (merged via #34), commit `36e562c`, build `1dcd3c0` |
 | [SEC-012](#sec-012) | 2026-11-22 01:59 | Medium | `src/Placeholders.cpp:181` (`{json}`) | An imported `{json}` can fetch this PC's or the LAN's addresses and type the answer into chat | Open | |
-| [SEC-013](#sec-013) | 2026-11-22 01:59 | Medium | `src/Sender.cpp:149` (`TypeUtf8`) | Placeholder values can add control characters or start a line with a `/` command | Open | |
+| [SEC-013](#sec-013) | 2026-11-22 01:59 | Medium | `src/Sender.cpp:149` (`TypeUtf8`) | Placeholder values can add control characters or start a line with a `/` command | Fixing | `feature/sec-013`, commit `727675a` |
 | [SEC-014](#sec-014) | 2026-11-22 01:59 | High | `src/Exchange.cpp:445` (`ExportJsonText`) | Non-UTF-8 text from a `.txt` made every save fail and a JSON export close the game | Fixed | PR #33 (merged via #34), commit `8ea6ce0`, build `1dcd3c0` |
 | [SEC-015](#sec-015) | 2026-11-22 01:59 | Medium | `src/Sender.cpp:149` (`TypeUtf8`) | Control characters in imported lines were typed into chat as `WM_CHAR` | Fixed | PR #33 (merged via #34), commit `d7435e2`, build `1dcd3c0` |
 | [SEC-016](#sec-016) | 2026-11-22 01:59 | Medium | `src/Exchange.cpp:350` (`CopyMacro`) | Imported macros kept their hotkeys by default | Fixed | PR #33 (merged via #34), commit `11e0ab7`, build `1dcd3c0` |
-| [SEC-017](#sec-017) | 2026-11-22 (approx.) | High | `src/MacroTree.cpp` (`Tree::FromJson`, `NewId`) | Giving ids to many id-less imported nodes takes quadratic time: the game freezes | Fixing | `feature/sec-017-018`, commit `644f9ed` |
-| [SEC-018](#sec-018) | 2026-11-22 (approx.) | High | `src/Exchange.cpp:179`, `src/MacroTree.cpp:414` (`FreeName`) | Rename (import) and trash Restore loop forever on a taken name of 99-100 bytes | Fixing | `feature/sec-017-018`, commit `644f9ed` |
+| [SEC-017](#sec-017) | 2026-11-22 (approx.) | High | `src/MacroTree.cpp` (`Tree::FromJson`, `NewId`) | Giving ids to many id-less imported nodes takes quadratic time: the game freezes | Fixed | PR #35, commit `644f9ed`, build `f055144` |
+| [SEC-018](#sec-018) | 2026-11-22 (approx.) | High | `src/Exchange.cpp:179`, `src/MacroTree.cpp:414` (`FreeName`) | Rename (import) and trash Restore loop forever on a taken name of 99-100 bytes | Fixed | PR #35, commit `644f9ed`, build `f055144` |
 | [SEC-019](#sec-019) | 2026-11-22 (approx.) | Low | `src/MacroTree.cpp` (`MakeNamesUnique`, after SEC-009) | Names crafted to share a hash bucket still cost about 13 s | Open | |
 | [SEC-020](#sec-020) | 2026-11-22 (approx.) | Low | `src/Exchange.cpp:65` (`Utf8Name`) | `path::u8string()` throws on a file name with an unpaired surrogate, outside any `try` | Open | |
 | [SEC-021](#sec-021) | 2026-11-22 (approx.) | Low | `src/MapNames.cpp:51` (`LoadFile`) | `json::value()` on `maps.json` throws on a wrongly typed value | Open | |
@@ -43,7 +43,7 @@ folder with someone else's file), **Medium** (wrong behaviour reachable with rea
 | [SEC-024](#sec-024) | 2026-11-22 (approx.) | Low | `src/Storage.cpp:98`, `LinkSync.cpp:47`, `Ui.cpp:2401` | A typed name or path with a lone surrogate makes `fs::u8path` throw in the render callback | Open | |
 | [SEC-025](#sec-025) | 2026-11-22 (approx.) | Low | `src/Exchange.cpp` (folder import) | A crafted folder import can hold about 1.5 GB; an out-of-memory error there isn't caught | Open | |
 | [SEC-026](#sec-026) | 2026-11-22 (approx.) | Info | `src/Ui.cpp:1404` (`InputString`) | A C1 control character pasted into the editor stays in the line until the next load | Open | |
-| [SEC-027](#sec-027) | 2026-11-22 22:05 | High | `src/Exchange.cpp` (`ApplyItems`), `src/MacroTree.cpp` (`CheckName`) | Importing many macros into one folder, and its preview on a re-import, took quadratic time: the game freezes | Fixing | `feature/sec-017-018`, commit `1247a73` |
+| [SEC-027](#sec-027) | 2026-11-22 22:05 | High | `src/Exchange.cpp` (`ApplyItems`), `src/MacroTree.cpp` (`CheckName`) | Importing many macros into one folder, and its preview on a re-import, took quadratic time: the game freezes | Fixed | PR #35, commit `1247a73`, build `f055144` |
 
 "Build" is the build stamp's commit (shown in the Nexus log and the DLL's Properties). Until a
 release is tagged, it's the PR's commit; the release that first ships a fix is added when it's
@@ -227,7 +227,15 @@ made.
   channel command the user wrote (`/g {json ...}`), a value `/w Name` still picks another channel.
   Its draft is `CLAUDE-SECURITY-20261122-015931/F6-declined-draft.diff`. SEC-015 already cleans
   control characters in stored lines.
-- **Status:** Open.
+- **Decision (2026-11-22, the owner):** finish the fix. Built on the draft, with the gap closed:
+  `Placeholders::Expand` marks which bytes came from a value (`Result::FromValue`), and
+  `SendPlan::Build` walks each box we type into the way chat reads commands. Every `/` at the
+  start (after any kind of space) or right after a command word and its spaces must be one the
+  user wrote, so `/g /w Name` from `/g {json}` is refused while `/g {time}` and the user's own
+  `/g /wave` are not. Control characters in every value become spaces; typed text with one is
+  refused. Tests: `TestControlCharacters`, `TestFromValue` (placeholders), `TestControlCharacters`,
+  `TestPlaceholderCommand` (send plan); in-game check I8.
+- **Status:** Fixing in `feature/sec-013`, commit `727675a`.
 
 ### SEC-014
 
@@ -275,7 +283,7 @@ made.
   ids on load, or once on the first new id), so each new id is one lookup. 50,000 id-less macros
   now load in well under a second (test `TestManyMissingIds`). Importing many items into one
   folder was also slow for another reason, fixed in the same PR: see SEC-027.
-- **Status:** Fixing in `feature/sec-017-018`, commit `644f9ed`.
+- **Status:** Fixed in PR #35, commit `644f9ed`; first build `f055144`.
 
 ### SEC-018
 
@@ -289,7 +297,7 @@ made.
 - **Decision (2026-11-22):** fix. Both loops (and `AddNamed` in `Apply`, which gave up after 1,000
   tries) now use `Tree::NumberedName`, the shortened-name rule from SEC-009: the name is cut so
   all of " (n)" fits, so every number gives a new name. A 100-byte name becomes 96 bytes + " (2)".
-- **Status:** Fixing in `feature/sec-017-018`, commit `644f9ed`.
+- **Status:** Fixed in PR #35, commit `644f9ed`; first build `f055144`.
 
 ### SEC-019
 
@@ -378,7 +386,7 @@ made.
   destination folder (`NameIndex`) and adds with `Tree::AddKnownFree`, which skips the sibling
   scan; `Dest` keeps the existing items by lower-case name. Test `TestApplyMany`: 5,000 macros
   into one folder, again (all renamed), then with Replace.
-- **Status:** Fixing in `feature/sec-017-018`, commit `1247a73`.
+- **Status:** Fixed in PR #35, commit `1247a73`; first build `f055144`.
 
 ## Tuning decisions (checks turned off)
 

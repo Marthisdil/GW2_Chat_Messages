@@ -17,7 +17,7 @@ Results so far (keep your notes in `docs\testing results.txt`; it isn't committe
 |---|---|---|
 | A1 | Passed (PR #15 build) | Re-check only the version and build stamp lines with a new build. |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text now wraps (PR #17) and errors open the error window (PR #18). Re-check those two points only, then go on to A3. |
-| A3 to Q | Not run yet | New since the last build: O (trash bin), the counter in A4, J3b/J6 (import checkboxes, trash bin not exported or imported). Newer still: P (search box; P6-P8 the "only active here" filter and the quick menu search), J7 (a whole library), and F2/F3/F7 (mouse buttons now need Ctrl, Alt or Shift). Newest: Q (languages), J8/K6 (text files that aren't UTF-8), and J2 (**Keep hotkeys** now starts unticked for every import; ticked, the preview shows the hotkeys). |
+| A3 to Q | Not run yet | New since the last build: O (trash bin), the counter in A4, J3b/J6 (import checkboxes, trash bin not exported or imported). Newer still: P (search box; P6-P8 the "only active here" filter and the quick menu search), J7 (a whole library), and F2/F3/F7 (mouse buttons now need Ctrl, Alt or Shift). Newest: Q (languages), J8/K6 (text files that aren't UTF-8), and J2 (**Keep hotkeys** now starts unticked for every import; ticked, the preview shows the hotkeys), O3's long name, and I8 (a placeholder can't add a command or a key). |
 
 **Errors since PR #18:** every refusal and error the checks below expect ("refused", "says
 why", "a message") now opens the **error window** instead of a red line under the editor. Click
@@ -272,6 +272,20 @@ the error window says the path wasn't found.
 **I7. Typing while it prepares.** Send the `{json ...build}` macro and, while the status says
 "Preparing...", open chat and start typing. The send stops (error window: "A text box is open") and
 **your chat box stays open with your text**. The error window doesn't take your typing away.
+
+**I8. A placeholder can't add a command or a key.** Put `emote.txt` with the one line `/wave` in
+`<GW2>\addons\GW2_Chat_Messages\`.
+- A Current-channel line `{txt emote.txt}`: nothing is sent, and the error window says a
+  placeholder would start a chat command. `/s {txt emote.txt}` and `/g {txt emote.txt}` (typed in
+  a Current-channel line): the same.
+- A line `/wave` (typed yourself) still waves, and `/s waves at {txt emote.txt}` sends
+  `waves at /wave` in Say.
+- Put `tabs.txt` with one line `a`, a Tab, `b` (typed in Notepad), and send `/s {txt tabs.txt}`:
+  `a b` arrives in Say, and nothing else happens (chat doesn't jump to another box or channel).
+- *(question)* Look-alikes: put `slash.txt` with `／g hi` (a fullwidth slash, U+FF0F) and
+  `filler.txt` with `ㅤ/g hi` (U+3164 first), and send each as `{txt ...}` on Current. Note whether
+  either posts to guild chat (the addon only treats `/` and ordinary spaces as commands). If one
+  does, report it: the check has to learn that character.
 
 ## J. Import and export
 

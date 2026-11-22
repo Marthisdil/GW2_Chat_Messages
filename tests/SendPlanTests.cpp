@@ -93,6 +93,107 @@ static void TestEmptyAndTooLong()
     CHECK(!p.Error.empty() && p.Steps.empty());
 }
 
+// SEC-013: only our own Enter and Tab may reach the chat box.
+static void TestControlCharacters()
+{
+    const char* bad[] = {"a\tb", "a\rb", "a\nb", "a\x08" "b", "\x1B" "a", "a\x7F", "a\xC2\x85" "b", "a\xC2\x9F"};
+    for (const char* msg : bad)
+    {
+        Plan p = Build({L(EChannel::Say, "ok"), L(EChannel::Current, msg)}, false);
+        CHECK(!p.Error.empty() && p.Steps.empty());
+        CHECK(p.Error.find("Line 2") == 0);
+        p = Build({L(EChannel::Squad, msg, "", true)}, true); // the broadcast box too
+        CHECK(!p.Error.empty() && p.Steps.empty());
+    }
+    // A whisper's recipient is typed too; one left on a non-whisper line isn't.
+    CHECK(!Build({L(EChannel::Whisper, "hi", "Some\tName")}, false).Error.empty());
+    CHECK(Build({L(EChannel::Say, "hi", "Some\tName")}, false).Error.empty());
+    // Accents, a no-break space (0xC2 0xA0) and other UTF-8 text are fine.
+    Plan p = Build({L(EChannel::Say, "caf\xC3\xA9 \xC2\xA0 \xE2\x82\xAC")}, false);
+    CHECK(p.Error.empty() && p.Steps[2].Text == "/s caf\xC3\xA9 \xC2\xA0 \xE2\x82\xAC");
+}
+
+// The mask for a text whose bytes from aFrom on came from a placeholder value.
+static std::vector<bool> V(const std::string& aText, size_t aFrom)
+{
+    std::vector<bool> m(aText.size(), false);
+    for (size_t k = aFrom; k < aText.size(); k++) m[k] = true;
+    return m;
+}
+
+static Origin O(std::vector<bool> aMessage, std::vector<bool> aTo = {})
+{
+    Origin o;
+    o.Message   = std::move(aMessage);
+    o.WhisperTo = std::move(aTo);
+    return o;
+}
+
+// SEC-013: a "/" chat reads as a command must be one the user wrote.
+static void TestPlaceholderCommand()
+{
+    auto refused = [](const Plan& p) { return !p.Error.empty() && p.Steps.empty(); };
+    auto line1 = [&](EChannel c, const std::string& msg, size_t from, bool commander = false, bool bc = false) {
+        return Build({L(c, msg, "", bc)}, commander, {O(V(msg, from))});
+    };
+
+    // A whole value at the start, on any channel (the game reads commands as the text arrives, so
+    // even after our own "/s " a "/" may begin one).
+    CHECK(refused(line1(EChannel::Current, "/g hello", 0)));
+    CHECK(line1(EChannel::Current, "/g hello", 0).Error.find("Line 1") == 0);
+    CHECK(refused(line1(EChannel::Say, "/g hello", 0)));
+    CHECK(refused(line1(EChannel::Guild, "/w Victim", 0)));
+    CHECK(refused(line1(EChannel::Guild3, "/g hello", 0)));
+    CHECK(refused(line1(EChannel::Squad, "/g hello", 0, true, true)));  // the broadcast box
+    CHECK(refused(line1(EChannel::Squad, "/g hello", 0, false, true))); // not commander: "/d /g hello"
+
+    // The gap the declined draft left: after a channel command the user wrote, the box is empty
+    // again, so a value's "/" right after it starts another command.
+    CHECK(refused(line1(EChannel::Current, "/g /w Victim", 3)));
+    CHECK(refused(line1(EChannel::Current, "/g  \xC2\xA0/w Victim", 3)));  // after more spaces of any kind
+    CHECK(refused(line1(EChannel::Current, "/g /wave /w Victim", 9)));    // after two of the user's commands
+    CHECK(refused(line1(EChannel::Current, "/g /w Victim", 2)));           // the value adds the space too
+    CHECK(refused(line1(EChannel::Current, "/wave /g hi", 1)));            // the user's "/", the value's word and "/g"
+    CHECK(refused(line1(EChannel::Say, "/g hi", 0)));                      // after our own "/s "
+
+    // Any kind of space first.
+    CHECK(refused(line1(EChannel::Current, "   /g hello", 0)));
+    CHECK(refused(line1(EChannel::Current, "\xC2\xA0/g hello", 0)));                   // U+00A0
+    CHECK(refused(line1(EChannel::Say, "\xE3\x80\x80/g hello", 0)));                   // U+3000
+    CHECK(refused(line1(EChannel::Map, "\xE2\x80\x8B \xEF\xBB\xBF/g hello", 0)));      // U+200B, U+FEFF
+    CHECK(refused(line1(EChannel::Current, "\xE1\x9A\x80\xE2\x80\xAF\xE2\x81\x9F/g", 0))); // U+1680, U+202F, U+205F
+
+    // Whispers: the recipient box (after our "/w ") and the message box (after Tab) both start fresh.
+    Plan p = Build({L(EChannel::Whisper, "hello", "/g")}, false, {O(V("hello", 5), V("/g", 0))});
+    CHECK(refused(p));
+    p = Build({L(EChannel::Whisper, "/g hello", "Some Name")}, false, {O(V("/g hello", 0), V("Some Name", 9))});
+    CHECK(refused(p));
+    p = Build({L(EChannel::Whisper, "hello", "Some Name")}, false, {O(V("hello", 0), V("Some Name", 0))});
+    CHECK(p.Error.empty()); // values without "/" are fine
+
+    // Allowed: the user's own commands, values after them that don't start with "/", and a "/"
+    // later in the text.
+    CHECK(line1(EChannel::Current, "/wave", 5).Error.empty());              // no value at all
+    CHECK(line1(EChannel::Current, "/wave", 1).Error.empty());              // "/{txt emotes.txt}": the user's "/"
+    CHECK(line1(EChannel::Current, " /wave", 6).Error.empty());
+    CHECK(line1(EChannel::Current, "/g 09:05", 3).Error.empty());           // "/g {time}"
+    CHECK(line1(EChannel::Current, "/g /wave", 8).Error.empty());           // two of the user's commands
+    p = line1(EChannel::Say, "/shrug 09:05", 7);
+    CHECK(p.Error.empty() && p.Steps[2].Text == "/s /shrug 09:05");
+    CHECK(line1(EChannel::Current, "at 09:05 /g", 3).Error.empty());        // "at {time} {json}"
+    CHECK(line1(EChannel::Current, "/g hi /w x", 6).Error.empty());         // after the message started
+    CHECK(line1(EChannel::Current, "/g hi /w x", 3).Error.empty());
+    CHECK(line1(EChannel::Current, "  ", 0).Error.empty());                 // no "/" at all
+    p = Build({L(EChannel::Say, "hi", "/g")}, false, {O(V("hi", 2), V("/g", 0))});
+    CHECK(p.Error.empty()); // a recipient on a non-whisper line isn't typed
+
+    // Every line is checked, and nothing is sent if one fails.
+    p = Build({L(EChannel::Say, "ok"), L(EChannel::Current, "/g hello")}, false, {O(V("ok", 2)), O(V("/g hello", 0))});
+    CHECK(refused(p) && p.Error.find("Line 2") == 0);
+    // The origins must match the lines.
+    CHECK(refused(Build({L(EChannel::Say, "a"), L(EChannel::Say, "b")}, false, {O(V("a", 1))})));
+}
+
 void RunSendPlanTests()
 {
     TestSimpleLine();
@@ -100,4 +201,6 @@ void RunSendPlanTests()
     TestWhisper();
     TestBroadcast();
     TestEmptyAndTooLong();
+    TestControlCharacters();
+    TestPlaceholderCommand();
 }

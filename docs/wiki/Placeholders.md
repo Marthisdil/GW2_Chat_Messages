@@ -30,6 +30,15 @@ and in whisper recipients.
 - Anything else in `{ }` is sent exactly as typed, so `{hello}` stays `{hello}`.
 - If a placeholder can't be filled in (a missing file, no internet for `{map}`), **the whole
   macro is not sent**, and the error window says why. Nothing half-finished goes to chat.
+- A filled-in value is plain text on one line: line breaks, tabs and other control characters in
+  it become spaces, so it can't press Enter or Tab in chat.
+- A placeholder can't start a chat command. If its value would put a `/` where chat reads a
+  command (at the start of the message or whisper recipient, or right after a command such as
+  `/g `), **the macro is not sent**. Say a `{json}` page sends back `/w Someone hi`: in
+  `/g {json ...}` that would whisper, so it's refused. Only a `/` you typed yourself can begin a
+  command; a `/` later in the message is just text. A `/` you type right before a placeholder
+  (`/{txt emotes.txt}`) is your choice to let that value pick the command, so don't do that with a
+  `{json}` page or file you don't trust.
 
 ## Text files
 

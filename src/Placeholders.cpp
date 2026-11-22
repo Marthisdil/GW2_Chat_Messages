@@ -1,5 +1,6 @@
 #include "Placeholders.h"
 
+#include "ChatLine.h"
 #include "Localization.h"
 
 #include <cctype>
@@ -68,14 +69,6 @@ namespace
     {
         const std::string l = Lower(aUrl.substr(0, 8));
         return (l.rfind("https://", 0) == 0 && aUrl.size() > 8) || (l.rfind("http://", 0) == 0 && aUrl.size() > 7);
-    }
-
-    // Chat is one line: newlines and tabs in fetched text become spaces.
-    std::string OneLine(std::string s)
-    {
-        for (char& c : s)
-            if (c == '\n' || c == '\r' || c == '\t') c = ' ';
-        return s;
     }
 
     bool IsKnown(const std::string& aLowerName)
@@ -170,7 +163,6 @@ namespace
             if (!aArgs.empty()) { aError = tag + "it doesn't take anything after the name."; return false; }
             std::string why;
             if (!c.MapName || !c.MapName(aOut, why)) { aError = tag + (why.empty() ? "the map name isn't known." : why); return false; }
-            aOut = OneLine(aOut);
             return true;
         }
         if (aName == "json")
@@ -180,7 +172,6 @@ namespace
             std::string body, why;
             if (!c.FetchUrl || !c.FetchUrl(aArgs[1], body, why)) { aError = tag + (why.empty() ? "the download failed." : why); return false; }
             if (!Placeholders::JsonValue(body, aArgs[0], aOut, why)) { aError = tag + why; return false; }
-            aOut = OneLine(aOut);
             return true;
         }
         aError = tag + "unknown placeholder.";
@@ -191,21 +182,25 @@ namespace
 Placeholders::Result Placeholders::Expand(const std::string& aText, const Context& aContext)
 {
     Result r;
+    // Written text and filled-in values, with FromValue kept the same length as Text.
+    auto written = [&r](const std::string& s) { r.Text += s; r.FromValue.insert(r.FromValue.end(), s.size(), false); };
+    auto filled  = [&r](const std::string& s) { r.Text += s; r.FromValue.insert(r.FromValue.end(), s.size(), true); };
+    auto fail    = [&r]() { r.Text.clear(); r.FromValue.clear(); };
     size_t i = 0;
     while (i < aText.size())
     {
         const size_t open = aText.find('{', i);
         if (open == std::string::npos)
         {
-            r.Text += aText.substr(i);
+            written(aText.substr(i));
             break;
         }
-        r.Text += aText.substr(i, open - i);
+        written(aText.substr(i, open - i));
         size_t close = 0;
         const std::string name = NameAt(aText, open, close);
         if (name.empty() || !IsKnown(name))
         {
-            r.Text += '{'; // not ours: keep it as typed
+            written("{"); // not ours: keep it as typed
             i = open + 1;
             continue;
         }
@@ -213,16 +208,19 @@ Placeholders::Result Placeholders::Expand(const std::string& aText, const Contex
         if (!Split(aText.substr(open + 1, close - open - 1), words))
         {
             r.Error = "{" + name + "}: a quote isn't closed.";
-            r.Text.clear();
+            fail();
             return r;
         }
         std::string value;
         if (!Resolve(name, std::vector<std::string>(words.begin() + 1, words.end()), aContext, value, r.Error))
         {
-            r.Text.clear();
+            fail();
             return r;
         }
-        r.Text += value; // never re-scanned: a file line containing "{time}" stays as written
+        // Every value, whatever its source (a file, the map name, a web page, Windows' weekday name),
+        // is one line of plain text: its control characters become spaces, so it can't press Enter,
+        // Tab, Backspace or Escape (SEC-013). Never re-scanned: a file line with "{time}" stays as written.
+        filled(ChatLine::ControlsToSpaces(value));
         i = close + 1;
     }
     return r;
