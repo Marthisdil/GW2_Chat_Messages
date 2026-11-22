@@ -1,5 +1,6 @@
 // Standalone tests for src/Exchange.cpp (import and export).
 
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -411,6 +412,35 @@ namespace
         }
     }
 
+    // SEC-027: each imported item was checked against every sibling (and found again by a scan),
+    // so 5,000 macros (the import limit) into one folder took 19 s in this (unoptimised) test build.
+    void TestApplyMany()
+    {
+        const int kCount = static_cast<int>(kMaxImportItems); // the most one import may hold
+        std::string text = R"J({"format":1,"root":{"children":[)J";
+        for (int i = 0; i < kCount; i++)
+            text += std::string(i ? "," : "") + R"J({"type":"macro","name":"m)J" + std::to_string(i) + R"J(","lines":[]})J";
+        text += "]}}";
+        Package p = Pkg(text);
+        CHECK(p.Ok());
+
+        Tree t;
+        const auto start = std::chrono::steady_clock::now();
+        CHECK(Apply(t, t.Root(), BuildPlan(t, t.Root(), p.Items, Options()), Options()) == static_cast<size_t>(kCount));
+        // Again into the same folder: every name is taken, so all are renamed ("m0 (2)"...).
+        CHECK(Apply(t, t.Root(), BuildPlan(t, t.Root(), p.Items, Options()), Options()) == static_cast<size_t>(kCount));
+        const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+        CHECK(seconds < 10.0); // about a second now; the old way took over a minute
+        CHECK(t.Root().Children.size() == static_cast<size_t>(2 * kCount));
+        CHECK(Child(t.Root(), "m0 (2)", ENodeType::Macro) != nullptr);
+
+        // Replace: the existing macros are updated in place, nothing is added.
+        Options replace;
+        replace.MacroConflict = EChoice::Replace;
+        CHECK(Apply(t, t.Root(), BuildPlan(t, t.Root(), p.Items, replace), replace) == static_cast<size_t>(kCount));
+        CHECK(t.Root().Children.size() == static_cast<size_t>(2 * kCount));
+    }
+
     // A package of folders nested aDepth deep (F1 > F2 > ...), with a macro "M<n>" in each.
     std::string Nested(int aDepth)
     {
@@ -703,4 +733,5 @@ void RunExchangeTests()
     TestSelection();
     TestTrashNotImported();
     TestLibraryImport();
+    TestApplyMany();
 }

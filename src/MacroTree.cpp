@@ -464,7 +464,7 @@ namespace MacroTree
         return {};
     }
 
-    Result Tree::Add(Node* aParent, ENodeType aType, const std::string& aName)
+    Result Tree::Add(Node* aParent, ENodeType aType, const std::string& aName, bool aCheckName)
     {
         Node& parent = aParent ? *aParent : *m_Root;
         if (!parent.IsFolder()) return Result::Fail("Items can only be added to a folder.");
@@ -472,8 +472,12 @@ namespace MacroTree
             return Result::Fail("Folders can be nested at most " + std::to_string(kMaxFolderDepth) + " levels deep.");
 
         const std::string name = CleanName(aName);
-        Result check = CheckName(parent, aType, name, nullptr);
-        if (!check.Ok) return check;
+        if (aCheckName)
+        {
+            Result check = CheckName(parent, aType, name, nullptr);
+            if (!check.Ok) return check;
+        }
+        else if (name.empty()) return Result::Fail("The name can't be empty.");
 
         auto node = std::make_unique<Node>();
         node->Id     = NewId();
@@ -489,6 +493,7 @@ namespace MacroTree
 
     Result Tree::AddFolder(Node* aParent, const std::string& aName) { return Add(aParent, ENodeType::Folder, aName); }
     Result Tree::AddMacro(Node* aParent, const std::string& aTitle) { return Add(aParent, ENodeType::Macro, aTitle); }
+    Result Tree::AddKnownFree(Node* aParent, ENodeType aType, const std::string& aName) { return Add(aParent, aType, aName, false); }
 
     Result Tree::Rename(Node& aNode, const std::string& aName)
     {
