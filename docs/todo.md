@@ -77,6 +77,18 @@ from those modules and translate them in `Ui.cpp`, or a thread-safe lookup.
 Nexus' fonts cover Latin with accents. Chinese, Korean, Russian, etc. would show `?` boxes. Load a
 font of our own with those glyph ranges (ties in with "More text sizes from a font of our own").
 
+### VirusTotal scan for every released DLL (added 2026-11-21)
+
+If there's a way to automate it, submit every DLL that's to be released to virustotal.com, and
+include the scan link in the release's text, for people to review if they wish.
+
+- Points to settle: VirusTotal has a public API (a free API key, with rate limits) that can
+  upload a file and return its analysis page (`https://www.virustotal.com/gui/file/<sha256>`);
+  the release workflow could upload the DLL, wait for the result, and add the link and the
+  SHA-256 to the release notes. The key would be a GitHub Actions secret. Also: what to do when
+  some engines flag it (false positives are common for DLLs that hook a game's window), and
+  whether the release waits for the scan or the link is added afterwards.
+
 ### Warn when a hotkey is also a game keybind (added 2026-11-20)
 
 Look into ways to read the game's current keybinds, so the hotkey editor can warn "Ctrl+F1 is
