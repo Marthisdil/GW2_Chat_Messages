@@ -140,6 +140,48 @@ namespace
         CHECK(p.Items.Root().Children[0]->LinkFile.empty());
     }
 
+    bool HasWarning(const Package& aPkg, const std::string& aPart)
+    {
+        for (const std::string& w : aPkg.Warnings)
+            if (w.find(aPart) != std::string::npos) return true;
+        return false;
+    }
+
+    // FromJsonText(aText), with aThrew set (instead of the tests crashing) if it throws.
+    Package ReadNoThrow(const std::string& aText, bool& aThrew)
+    {
+        aThrew = false;
+        try { return FromJsonText(aText); }
+        catch (...) { aThrew = true; return Package{}; }
+    }
+
+    // A "format" of the wrong type never throws out of FromJsonText: it isn't an export.
+    void TestReadJsonBadFormat()
+    {
+        const std::string body = R"J(,"root":{"children":[{"type":"macro","name":"M","lines":[{"channel":"say","message":"a"}]}]}})J";
+        bool threw = true;
+        for (const char* bad : {"null", "\"1\"", "{}", "{\"v\":1}", "[1]"})
+        {
+            Package p = ReadNoThrow(std::string("{\"format\":") + bad + body, threw);
+            CHECK(!threw);
+            CHECK(!p.Ok() && p.Error == "It isn't a Chat Messages export." && p.Items.Root().Children.empty());
+        }
+        // The report's example.
+        Package example = ReadNoThrow("{\"format\":null,\"root\":{\"children\":[]}}", threw);
+        CHECK(!threw && !example.Ok());
+        // Any other wrongly typed value that throws while reading becomes the package's error.
+        Package odd = ReadNoThrow(R"J({"format":1,"root":{"children":[{"type":"folder","name":"F","expanded":null,"children":[
+            {"type":"macro","name":"M","lines":[{"channel":"say","message":"a"}]}]}]}})J", threw);
+        CHECK(!threw && (odd.Ok() || (odd.Error == "It couldn't be read." && odd.Items.Root().Children.empty())));
+
+        // Numbers and true/false read as before: missing, 1, 1.5 and true aren't newer; 2 is.
+        CHECK(!HasWarning(Pkg("{" + body.substr(1)), "newer version"));
+        CHECK(!HasWarning(Pkg("{\"format\":1" + body), "newer version"));
+        CHECK(!HasWarning(Pkg("{\"format\":1.5" + body), "newer version"));
+        CHECK(!HasWarning(Pkg("{\"format\":true" + body), "newer version"));
+        CHECK(HasWarning(Pkg("{\"format\":2" + body), "newer version"));
+    }
+
     void TestPlanSimple()
     {
         Tree t;
@@ -578,6 +620,7 @@ void RunExchangeTests()
     TestExport();
     TestReadText();
     TestReadJson();
+    TestReadJsonBadFormat();
     TestPlanSimple();
     TestPlanConflicts();
     TestPlanDepth();

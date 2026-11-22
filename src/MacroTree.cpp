@@ -704,7 +704,12 @@ namespace MacroTree
         auto root = aJson.find("root");
         if (root == aJson.end() || !root->is_object()) return false;
 
-        const int format = aJson.value("format", 0);
+        // "format" is untrusted, and value() throws on a type get<int>() can't read. Those types
+        // (null, text, an object or array) aren't a file we can read; missing means 0, and
+        // numbers and true/false are read as get<int>() always read them.
+        auto jf = aJson.find("format");
+        if (jf != aJson.end() && !jf->is_number() && !jf->is_boolean()) return false;
+        const int format = jf != aJson.end() ? jf->get<int>() : 0;
         if (format > kFormatVersion && aWarnings)
             aWarnings->push_back("This file was saved by a newer version of the addon. Some details may be lost.");
 

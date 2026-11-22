@@ -365,6 +365,50 @@ static void TestDuplicateNames()
     }
 }
 
+// aTree.FromJson on a one-macro file whose "format" is aFormat (JSON text; "" leaves it out).
+// aThrew is set if FromJson threw.
+static bool ReadWithFormat(Tree& aTree, const std::string& aFormat, std::vector<std::string>* aWarnings, bool& aThrew)
+{
+    const std::string format = aFormat.empty() ? std::string() : R"("format":)" + aFormat + ",";
+    const json j = json::parse("{" + format + R"("root":{"children":[{"type":"macro","id":"00000000000000aa","name":"M"}]}})");
+    aThrew = false;
+    try { return aTree.FromJson(j, aWarnings); }
+    catch (...) { aThrew = true; return false; }
+}
+
+// "format" of any type never throws. Types value() used to throw on (null, text, an object or
+// array) aren't a library: FromJson fails and leaves the tree as it was. Numbers and true/false
+// read as before (as an int: above 1 is newer, with a warning); missing is 0.
+static void TestJsonFormat()
+{
+    std::vector<std::string> w;
+    bool threw = true;
+    for (const char* bad : {"null", "\"1\"", "{}", "{\"v\":1}", "[1]"})
+    {
+        Tree t;
+        t.AddFolder(nullptr, "Mine");
+        w.clear();
+        CHECK(!ReadWithFormat(t, bad, &w, threw) && !threw);
+        CHECK(w.empty() && t.Root().Children.size() == 1 && t.Root().Children[0]->Name == "Mine");
+        Tree u;
+        CHECK(!ReadWithFormat(u, bad, nullptr, threw) && !threw);
+    }
+    for (const char* known : {"", "0", "1", "-1", "1.5", "true"})
+    {
+        Tree t;
+        w.clear();
+        CHECK(ReadWithFormat(t, known, &w, threw) && !threw);
+        CHECK(w.empty() && t.Root().Children.size() == 1);
+    }
+    for (const char* newer : {"2", "2.5"})
+    {
+        Tree t;
+        w.clear();
+        CHECK(ReadWithFormat(t, newer, &w, threw) && !threw);
+        CHECK(w.size() == 1 && w[0].find("newer version") != std::string::npos && t.Root().Children.size() == 1);
+    }
+}
+
 static void TestChannels()
 {
     for (int i = 0; i < static_cast<int>(EChannel::Count); i++)
@@ -386,5 +430,6 @@ void RunMacroTreeTests()
     TestJsonRoundTrip();
     TestJsonDamaged();
     TestDuplicateNames();
+    TestJsonFormat();
     TestChannels();
 }

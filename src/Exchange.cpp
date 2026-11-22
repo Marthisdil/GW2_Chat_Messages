@@ -485,25 +485,38 @@ namespace Exchange
             p.Error = "It's too big (over " + std::to_string(kMaxJsonBytes / (1024 * 1024)) + " MB).";
             return p;
         }
-        const json j = json::parse(aText, nullptr, false);
-        if (j.is_discarded()) { p.Error = "It isn't valid JSON."; return p; }
-        std::vector<std::string> warnings;
-        if (!p.Items.FromJson(j, &warnings))
+        // The text is untrusted (pasted, or a file from imports\ or a library file): anything that
+        // throws while reading it becomes the package's error, so it never reaches the UI and the
+        // game. FromPath, FromText and FromLibraryFile read their JSON through here.
+        try
         {
-            p.Error = "It isn't a Chat Messages export.";
+            const json j = json::parse(aText, nullptr, false);
+            if (j.is_discarded()) { p.Error = "It isn't valid JSON."; return p; }
+            std::vector<std::string> warnings;
+            if (!p.Items.FromJson(j, &warnings))
+            {
+                p.Error = "It isn't a Chat Messages export.";
+                return p;
+            }
+            for (std::string& w : warnings)
+                if (w.find("new ids") == std::string::npos) p.Warnings.push_back(std::move(w)); // ids are always new on import
+            if (!p.Items.Trash().empty())
+            {
+                p.Warnings.push_back("Its trash bin (" + std::to_string(p.Items.Trash().size()) +
+                                     " item(s)) isn't imported: only its library is.");
+                p.Items.EmptyTrash();
+            }
+            ClearLinkFiles(p.Items.Root());
+            Finish(p);
             return p;
         }
-        for (std::string& w : warnings)
-            if (w.find("new ids") == std::string::npos) p.Warnings.push_back(std::move(w)); // ids are always new on import
-        if (!p.Items.Trash().empty())
+        catch (const std::exception&)
         {
-            p.Warnings.push_back("Its trash bin (" + std::to_string(p.Items.Trash().size()) +
-                                 " item(s)) isn't imported: only its library is.");
-            p.Items.EmptyTrash();
+            Package failed; // nothing half-read is kept
+            failed.Source = "JSON";
+            failed.Error  = "It couldn't be read.";
+            return failed;
         }
-        ClearLinkFiles(p.Items.Root());
-        Finish(p);
-        return p;
     }
 
     Package FromRawText(const std::string& aName, const std::string& aText)

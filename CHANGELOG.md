@@ -205,6 +205,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   number is cut shorter to make room.
 - Importing or pasting a file in which a folder's `expanded` value isn't `true` or `false` (for
   example `"yes"`) could close the game. That folder is now shown open, as when the value is missing.
+- Importing a JSON file or pasted text whose `"format"` was `null`, text (`"1"`), a list or an
+  object could close the game. It's now refused like any other file that isn't a Chat Messages
+  export, and anything else that fails while reading an import is shown as an import error.
 
 ### Documentation
 - The README describes what the addon does, with a quick start.
