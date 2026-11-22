@@ -17,7 +17,7 @@ Results so far (keep your notes in `docs\testing results.txt`; it isn't committe
 |---|---|---|
 | A1 | Passed (PR #15 build) | Re-check only the version and build stamp lines with a new build. |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text now wraps (PR #17) and errors open the error window (PR #18). Re-check those two points only, then go on to A3. |
-| A3 to P | Not run yet | New since the last build: O (trash bin), the counter in A4, J3b/J6 (import checkboxes, trash bin not exported or imported). Newer still: P (search box), J7 (a whole library), and F2/F3/F7 (mouse buttons now need Ctrl, Alt or Shift). |
+| A3 to P | Not run yet | New since the last build: O (trash bin), the counter in A4, J3b/J6 (import checkboxes, trash bin not exported or imported). Newer still: P (search box; P6-P8 the "only active here" filter and the quick menu search), J7 (a whole library), and F2/F3/F7 (mouse buttons now need Ctrl, Alt or Shift). |
 
 **Errors since PR #18:** every refusal and error the checks below expect ("refused", "says
 why", "a message") now opens the **error window** instead of a red line under the editor. Click
@@ -462,6 +462,27 @@ in the box, macro hotkeys don't fire (try Ctrl+F1).
 **P5. Text size and narrow windows.** At the biggest text size, make the library narrow: the box
 and its **x** stay inside the tree pane, the box gets narrower, and nothing is cut off.
 
+**P6. Only active here.** Give `Emote` a PvE-only filter (as in H1). In the open world, look at
+the checkbox under the search box: it names where you are, e.g. **Only active in PvE on Queensdale
+(15)**. Tick it: `Emote` still shows, and the line above the tree says how many macros are active
+here. Go into WvW (or the Edge of the Mists): the label changes to **Only active in WvW on ...**,
+`Emote` is gone, and folders with nothing active are hidden. With the box ticked, type `emo`:
+"Nothing active here matches". Restart the game: the box is still ticked. Untick it and clear
+`Emote`'s filter afterwards. On the character select screen (or while loading), note what the
+label says.
+
+**P7. Search in the quick menu (pop-up).** Open the quick menu with its key: the cursor is
+already in the search box at the top. Type `say`: the menu becomes a flat list, `Say  (Test)`,
+coloured by channel, with its hotkey on the right and the line preview on hover. Press **Enter**:
+`Say` is sent and the menu closes. Open it again: the box is empty and the folders are back. Type
+`zzz`: "No macro active here matches". **(question)** While typing in the box, did any letter, or
+the Enter, also reach the game (chat opening, a skill, movement)?
+
+**P8. Search in the Quick Access menu.** Right-click the scroll icon: the search box is there but
+not focused. Click it and type `say`: the same flat list. Click `Say` to send it. Close and reopen
+the menu: the box is empty. A macro that isn't active here (P6's `Emote` in WvW) never shows in the
+results.
+
 ## Report template
 
 ```
@@ -481,6 +502,6 @@ L1  L2
 M1 (entries and sizes):  M2  M3  M4  M5
 N1 (pasted text):  N2  N3
 O1  O2  O3  O4  O5   A4 colours easy to see?
-P1  P2  P3  P4 (did Ctrl+F / Escape reach the game?):  P5
+P1  P2  P3  P4 (did Ctrl+F / Escape reach the game?):  P5  P6 (label at character select):  P7 (did typing or Enter reach the game?):  P8
 Nexus log warnings:
 ```

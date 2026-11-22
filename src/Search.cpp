@@ -24,37 +24,54 @@ namespace
         return !aText.empty() && Search::Fold(aText).find(aFoldedQuery) != std::string::npos;
     }
 
-    // Marks every node inside aFolder.
-    void MarkInside(const MacroTree::Node& aFolder, Search::Result& aOut)
+    struct Walked
     {
-        for (const auto& c : aFolder.Children)
-        {
-            aOut.Inside.insert(c->Id);
-            if (c->IsFolder()) MarkInside(*c, aOut);
-        }
-    }
+        bool Shown  = false; // something at or below is shown
+        bool Reason = false; // ...because it matches the text, or (filtering) is an active macro:
+                             // the folders above it are opened
+    };
 
-    // Returns whether anything at or below aNode matches.
-    bool Walk(const MacroTree::Node& aNode, const std::string& aQuery, Search::Result& aOut)
+    // aInMatch: an ancestor folder matched the text, so its contents are shown too.
+    Walked Walk(const MacroTree::Node& aNode, const std::string& aQuery, const Search::Where& aWhere,
+                bool aInMatch, Search::Result& aOut)
     {
-        bool below = false;
+        Walked below;
         for (const auto& c : aNode.Children)
         {
-            const bool self = Search::NodeMatches(*c, aQuery);
+            const bool self = !aQuery.empty() && Search::NodeMatches(*c, aQuery);
+            if (c->IsMacro())
+            {
+                const bool byText = aQuery.empty() || self || aInMatch;
+                const bool here   = !aWhere.ActiveOnly || MacroTree::IsActive(*c, aWhere.Mode, aWhere.MapId);
+                if (!byText || !here) continue;
+                aOut.Visible.insert(c->Id);
+                aOut.ShownMacros++;
+                if (self)
+                {
+                    aOut.Matches.insert(c->Id);
+                    aOut.MacroMatches++;
+                }
+                if (aInMatch && !self) aOut.Inside.insert(c->Id);
+                below.Shown = true;
+                // A macro shown only because its folder matched doesn't open folders; a filtered one does.
+                if (self || aWhere.ActiveOnly) below.Reason = true;
+                continue;
+            }
+            const Walked inner = Walk(*c, aQuery, aWhere, aInMatch || self, aOut);
+            // Without the filter a matched folder shows everything inside it, even empty folders;
+            // with it, a folder only shows when an active macro is below it.
+            const bool shown = inner.Shown || (!aWhere.ActiveOnly && (self || aInMatch));
             if (self)
             {
                 aOut.Matches.insert(c->Id);
-                if (c->IsFolder())
-                {
-                    aOut.FolderMatches++;
-                    MarkInside(*c, aOut);
-                }
-                else aOut.MacroMatches++;
+                aOut.FolderMatches++;
             }
-            bool inner = false;
-            if (c->IsFolder()) inner = Walk(*c, aQuery, aOut);
-            if (inner) aOut.Open.insert(c->Id);
-            below = below || self || inner;
+            if (!shown) continue;
+            aOut.Visible.insert(c->Id);
+            if (aInMatch && !self) aOut.Inside.insert(c->Id);
+            if (inner.Reason) aOut.Open.insert(c->Id);
+            below.Shown = true;
+            if (self || inner.Reason) below.Reason = true;
         }
         return below;
     }
@@ -133,16 +150,23 @@ bool Search::NodeMatches(const MacroTree::Node& aNode, const std::string& aFolde
     return !aNode.Hotkey.Empty() && Contains(Hotkey::ToString(aNode.Hotkey), aFoldedQuery);
 }
 
-void Search::Run(const MacroTree::Node& aRoot, const std::string& aQuery, Result& aOut)
+void Search::Run(const MacroTree::Node& aRoot, const std::string& aQuery, const Where& aWhere, Result& aOut)
 {
     aOut.Active = false;
     aOut.Matches.clear();
+    aOut.Visible.clear();
     aOut.Open.clear();
     aOut.Inside.clear();
     aOut.FolderMatches = 0;
     aOut.MacroMatches  = 0;
+    aOut.ShownMacros   = 0;
     const std::string q = Fold(Trim(aQuery));
-    if (q.empty()) return;
+    if (q.empty() && !aWhere.ActiveOnly) return;
     aOut.Active = true;
-    Walk(aRoot, q, aOut);
+    Walk(aRoot, q, aWhere, false, aOut);
+}
+
+void Search::Run(const MacroTree::Node& aRoot, const std::string& aQuery, Result& aOut)
+{
+    Run(aRoot, aQuery, Where{}, aOut);
 }
