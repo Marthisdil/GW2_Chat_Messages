@@ -89,6 +89,12 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
     the plan is built, so the 199-unit check uses the real text and nothing is typed if a
     placeholder fails. The status shows "Preparing..." meanwhile. Text from a file isn't
     expanded again. The editor shows "~" on lengths of lines with placeholders.
+  - A value can't add a key or a command (SEC-013). Its control characters (C0, DEL, C1) become
+    spaces. `SendPlan::Build` refuses typed text with any control character, and a "/" that came
+    from a value where chat reads a command: at the start of a box we type into (after any kind of
+    space, even after our own `/s `), or right after a command word and its spaces. The game reads
+    commands as the text arrives and a channel command empties the box, so in `/g {json}` a value
+    `/w Name` would whisper. `Placeholders::Result::FromValue` marks the bytes that came from values.
   - Waypoint and other chat links (`[&BDAEAAA=]`) need no feature: they're typed as text and the
     game turns them into links.
 - **`.txt` link file**: optional two-way sync of one macro with a text file in raw format.

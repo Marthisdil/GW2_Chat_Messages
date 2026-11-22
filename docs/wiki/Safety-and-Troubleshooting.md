@@ -44,6 +44,8 @@ taking focus, so you can keep playing and read it later.
 | Not in game (loading screen or character select) | Wait until you are in the game world. |
 | The game window isn't focused | Click into the game first. |
 | Line 2: {txt}: ... | A placeholder failed, so nothing was sent. The message says why. |
+| Line 2: a placeholder would start a chat command ... | A placeholder's value would have put a `/` where chat reads a command, so nothing was sent. See [Placeholders](Placeholders). |
+| Line 2: it has a control character ... | The line's own text has a tab, line break or another control character (for example from an imported file). Edit the line and send it again. |
 | ... the GW2 API couldn't be reached | `{map}` needs the internet for a map it hasn't seen before. |
 | ... is set on 2 macros | Two active macros share this hotkey. Change one, or set filters that don't overlap. |
 | Your macros couldn't be saved | See the Nexus log. The addon keeps retrying. |

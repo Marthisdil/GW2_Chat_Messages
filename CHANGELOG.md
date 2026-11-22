@@ -193,6 +193,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Properties > Details tab shows it as File version and Product version.
 
 ### Fixed
+- A placeholder value (`{json}`, `{txt}`, `{map}`) could type control characters (Backspace,
+  Escape, Tab...) into chat, or put a `/` where chat reads a command and so pick a channel or
+  command the macro didn't name, even after one you wrote (`/g {json}` with the value `/w Name`).
+  Control characters in a value now become spaces, and a macro isn't sent if a line's own text has
+  one, or if a placeholder would start a command.
 - Restoring from the trash bin, or importing next to an item with the same name, no longer
   freezes the game when that name is 99-100 characters long. The new name is shortened so all
   of " (2)" fits.
