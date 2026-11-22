@@ -24,16 +24,27 @@ namespace Search
     // Whether one node matches an already folded, trimmed, non-empty query.
     bool NodeMatches(const MacroTree::Node& aNode, const std::string& aFoldedQuery);
 
+    // "Only active here" (the library's checkbox, and always for the quick menu): only macros that
+    // are active in this game mode and on this map (MacroTree::IsActive) are shown.
+    struct Where
+    {
+        bool     ActiveOnly = false;
+        uint8_t  Mode  = MacroTree::GM_None;
+        uint32_t MapId = 0;
+    };
+
     struct Result
     {
-        bool Active = false;                    // false: the box is empty, show the whole tree
-        std::unordered_set<uint64_t> Matches;   // the nodes that match (highlighted)
-        std::unordered_set<uint64_t> Open;      // folders above a match: shown and opened
-        std::unordered_set<uint64_t> Inside;    // everything inside a matched folder: shown as is
+        bool Active = false;                    // false: no search text and no filter, show the whole tree
+        std::unordered_set<uint64_t> Matches;   // the nodes that match the text (highlighted)
+        std::unordered_set<uint64_t> Visible;   // every node shown
+        std::unordered_set<uint64_t> Open;      // folders above a match (or, filtering, a shown macro): opened
+        std::unordered_set<uint64_t> Inside;    // shown because they're inside a matched folder
         size_t FolderMatches = 0;
         size_t MacroMatches  = 0;
+        size_t ShownMacros   = 0;               // macros shown (matches plus, without the filter, those inside matched folders)
 
-        bool Shows(uint64_t aId) const { return !Active || Matches.count(aId) || Open.count(aId) || Inside.count(aId); }
+        bool Shows(uint64_t aId) const { return !Active || Visible.count(aId); }
         // A folder with a match below it is opened while searching (its own open state is kept).
         bool ForcedOpen(uint64_t aId) const { return Active && Open.count(aId); }
     };
@@ -41,7 +52,11 @@ namespace Search
     // Searches the tree under aRoot (the root itself never matches) into aOut, which is cleared
     // first (filled in place: the UI runs it every frame, so its sets keep their memory).
     // The trash bin isn't searched.
-    void Run(const MacroTree::Node& aRoot, const std::string& aQuery, Result& aOut);
+    // - Text only: matches, the folders above them, and everything inside a matched folder.
+    // - aWhere.ActiveOnly: only macros active there are shown (with the folders above them); with
+    //   text too, an active macro shows when it matches or sits in a matched folder.
+    void Run(const MacroTree::Node& aRoot, const std::string& aQuery, const Where& aWhere, Result& aOut);
+    void Run(const MacroTree::Node& aRoot, const std::string& aQuery, Result& aOut); // no filter
 
     std::string Trim(const std::string& aText);
 }

@@ -88,9 +88,71 @@ static void TestRun()
     CHECK(!Search::NodeMatches(*w3, "egg"));
 }
 
+// "Only active here": the filter alone, and together with search text.
+static void TestActiveOnly()
+{
+    Tree t;
+    Node* raids = t.AddFolder(nullptr, "Raids").Target;
+    Node* w3    = t.AddFolder(raids, "Wing 3").Target;
+    Node* gors  = t.AddMacro(w3, "Gorseval").Target; // PvE only
+    Node* sab   = t.AddMacro(w3, "Sabetha").Target;  // everywhere
+    Node* wvw   = t.AddFolder(nullptr, "WvW").Target;
+    Node* tag   = t.AddMacro(wvw, "Tag up").Target;  // WvW, map 38 only
+    Node* empty = t.AddFolder(nullptr, "Empty").Target;
+    gors->GameModes = GM_PvE;
+    tag->GameModes  = GM_WvW;
+    tag->MapIds     = {38};
+
+    Search::Where wvw38;
+    wvw38.ActiveOnly = true;
+    wvw38.Mode       = GM_WvW;
+    wvw38.MapId      = 38;
+
+    // The filter alone: only active macros, with their folders opened.
+    Search::Result r;
+    Search::Run(t.Root(), "", wvw38, r);
+    CHECK(r.Active && r.Matches.empty() && r.ShownMacros == 2);
+    CHECK(r.Shows(sab->Id) && r.Shows(tag->Id) && !r.Shows(gors->Id));
+    CHECK(r.Shows(raids->Id) && r.Shows(w3->Id) && r.Shows(wvw->Id) && !r.Shows(empty->Id));
+    CHECK(r.ForcedOpen(raids->Id) && r.ForcedOpen(w3->Id) && r.ForcedOpen(wvw->Id));
+
+    // Another map in WvW: "Tag up" (map 38 only) isn't active.
+    Search::Where wvw95 = wvw38;
+    wvw95.MapId = 95;
+    Search::Run(t.Root(), "   ", wvw95, r);
+    CHECK(r.ShownMacros == 1 && !r.Shows(tag->Id) && !r.Shows(wvw->Id));
+
+    // With text: a matched folder shows only its active macros, and is opened.
+    Search::Run(t.Root(), "wing", wvw38, r);
+    CHECK(r.FolderMatches == 1 && r.Matches.count(w3->Id) == 1);
+    CHECK(r.Shows(sab->Id) && !r.Shows(gors->Id) && r.ShownMacros == 1);
+    CHECK(r.ForcedOpen(w3->Id) && r.ForcedOpen(raids->Id));
+    CHECK(!r.Shows(tag->Id));
+
+    // A matching macro that isn't active here isn't shown.
+    Search::Where pve = wvw38;
+    pve.Mode = GM_PvE;
+    pve.MapId = 15;
+    Search::Run(t.Root(), "tag", pve, r);
+    CHECK(r.Active && r.Visible.empty() && r.MacroMatches == 0);
+    Search::Run(t.Root(), "gorse", pve, r);
+    CHECK(r.MacroMatches == 1 && r.Shows(gors->Id) && r.Shows(raids->Id));
+
+    // No game mode (character select, loading): only macros active everywhere.
+    Search::Where none;
+    none.ActiveOnly = true;
+    Search::Run(t.Root(), "", none, r);
+    CHECK(r.ShownMacros == 1 && r.Shows(sab->Id));
+
+    // Filter off and no text: inactive, the whole tree.
+    Search::Run(t.Root(), "", Search::Where{}, r);
+    CHECK(!r.Active && r.Shows(gors->Id) && r.Shows(empty->Id));
+}
+
 void RunSearchTests()
 {
     TestFold();
     TestFindRange();
     TestRun();
+    TestActiveOnly();
 }

@@ -102,7 +102,8 @@ to the todo list", add it there (don't start building it). Move agreed items int
   which keys are refused (`Refusal`; plain Mouse 3/4/5 are kept on load but never fire:
   `KeepOnLoad`, `Fires`). No Nexus or ImGui dependency. Tested by `tests/HotkeyTests.cpp`.
 - `src/Search.*`: the library's search box: what matches (names, line text, whisper recipients,
-  hotkeys; case and accents ignored) and which tree nodes show. No Nexus or ImGui dependency.
+  hotkeys; case and accents ignored) and which tree nodes show, plus the "only active here" filter (`Where`), also used by the
+  quick menu search. No Nexus or ImGui dependency.
   Tested by `tests/SearchTests.cpp`.
 - `src/Hotkeys.*`: the WndProc hook that reads presses and captures a new hotkey. It only queues
   presses; the render thread (`Ui.cpp`) matches them to macros and starts the sender.

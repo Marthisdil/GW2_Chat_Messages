@@ -183,7 +183,24 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
   works and the results update every frame.
 - **Keys:** Ctrl+F while the library window is focused puts the cursor in the box; Escape in the
   box clears it. It's a text box, so macro hotkeys are ignored while typing in it.
-- Later, maybe (in `docs/todo.md`): an "active here only" filter and a search in the quick menu.
+- **Only active here** (added 2026-11-22): a checkbox under the search box, saved as
+  `active_only` in `settings.json` (off by default). Its label names where you are: "Only active
+  in WvW on Eternal Battlegrounds (38)" (the mode from `GameModeOfMapType`, the map name from the
+  map cache), or "Only active here (no game mode right now ...)" on character select or loading,
+  where only macros active everywhere count. When ticked, only macros that `IsActive` here are
+  shown, with the folders above them opened; folders without one are hidden. With search text
+  too, an active macro shows when it matches or sits in a matching folder (`Search::Where`). It
+  follows map changes live; dragging and Move up/down are off as when searching. The line above
+  the tree says "N macro(s) active here", "No macros are active here.", or the search counts
+  with ", active here".
+- **Quick menu search** (added 2026-11-22): a search box at the top of the quick menu (the pop-up
+  and the Quick Access right-click menu each have their own, cleared whenever the menu closes).
+  With text, the nested menus are replaced by a flat list of the matching macros **active here**
+  (the same matching as the library, always with the filter), each as "Name  (A > B)" with its
+  folders, coloured, hotkey and preview as usual, at most 30 ("...and N more"). **Enter** sends
+  the first one and closes the menu. Only the pop-up opened by its key puts the cursor in the box
+  (you can type at once); in the Quick Access menu you click the box first. Hotkeys don't fire
+  while typing in it (ImGui text input).
 
 ## Character counter
 
@@ -394,4 +411,6 @@ policy and mention the behaviour when registering with Raidcore.
 10. Trash bin (with its setting) and the character counter under the message box. *(done; not
     yet tested in game)*
 11. Search box, importing a whole library, and mouse hotkeys needing a modifier. *(done; not yet
+    tested in game)*
+12. "Only active here" filter in the library and a search in the quick menu. *(done; not yet
     tested in game)*

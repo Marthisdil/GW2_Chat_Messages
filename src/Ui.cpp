@@ -80,6 +80,8 @@ namespace
     // and dragging and Move up/down are off.
     char           s_SearchBuf[128] = {};
     bool           s_SearchFocus    = false; // Ctrl+F: put the cursor in the box next frame
+    bool           s_ActiveOnly     = false; // settings.json "active_only": only macros active here
+    constexpr const char* kActiveOnlySetting = "active_only";
     Search::Result s_Search;
     const ImU32    kSearchHighlight = IM_COL32(255, 215, 0, 80);
 
@@ -1172,7 +1174,6 @@ namespace
     void DrawTree()
     {
         s_DragError.clear();
-        if (s_Search.Active && s_Search.Matches.empty() && !s_Tree.Root().Children.empty()) ImGui::TextDisabled("Nothing matches \"%s\".", Search::Trim(s_SearchBuf).c_str());
         for (auto& child : s_Tree.Root().Children) DrawNode(*child);
         if (!s_Search.Active) DrawTrashBin(); // the bin isn't searched: its items can't be used
 
@@ -1955,6 +1956,19 @@ namespace
         ImGui::EndTooltip();
     }
 
+    // One macro entry: coloured by its first line's channel, its hotkey on the right, the preview
+    // on hover. Clicking sends it (sending doesn't change the tree).
+    void DrawMenuMacro(const Node& n, const char* aLabel, bool aBusy)
+    {
+        const EChannel first = n.Lines.empty() ? EChannel::Current : n.Lines.front().Channel;
+        const std::string keys = Hotkey::Fires(n.Hotkey) ? Hotkey::ToString(n.Hotkey) : std::string(); // an off hotkey isn't shown
+        ImGui::PushStyleColor(ImGuiCol_Text, ChannelColorVec(first));
+        const bool clicked = ImGui::MenuItem(aLabel, keys.empty() ? nullptr : keys.c_str(), false, !aBusy);
+        ImGui::PopStyleColor();
+        if (ImGui::IsItemHovered()) MacroPreviewTooltip(n);
+        if (clicked) SendMacro(n, ESendFrom::Menu);
+    }
+
     void DrawQuickMenuItems(const Node& aFolder, const Here& aHere)
     {
         const bool busy = Sender::IsBusy();
@@ -1979,27 +1993,108 @@ namespace
             }
             else if (IsActiveHere(n, aHere))
             {
-                const EChannel first = n.Lines.empty() ? EChannel::Current : n.Lines.front().Channel;
-                const std::string keys = Hotkey::Fires(n.Hotkey) ? Hotkey::ToString(n.Hotkey) : std::string(); // an off hotkey isn't shown
-                ImGui::PushStyleColor(ImGuiCol_Text, ChannelColorVec(first));
-                const bool clicked = ImGui::MenuItem(n.Name.c_str(), keys.empty() ? nullptr : keys.c_str(), false, !busy);
-                ImGui::PopStyleColor();
-                if (ImGui::IsItemHovered()) MacroPreviewTooltip(n);
-                if (clicked) SendMacro(n, ESendFrom::Menu); // sending doesn't change the tree
+                DrawMenuMacro(n, n.Name.c_str(), busy);
             }
             ImGui::PopID();
         }
     }
 
-    void DrawQuickMenu()
+    // The quick menu's search box. The pop-up and the Quick Access menu each have their own; the
+    // text is cleared whenever the menu wasn't drawn the frame before (it was closed).
+    struct MenuSearch
     {
+        char Buf[128]  = {};
+        int  LastFrame = -2;
+        bool Focus     = false; // put the cursor in the box (the pop-up, when it opens)
+    };
+    MenuSearch     s_PopupSearch;
+    MenuSearch     s_QaSearch;
+    Search::Result s_MenuResult;
+    constexpr size_t kMenuResultsMax = 30;
+
+    // The folders a search result sits in, "A > B" ("" at the top level).
+    std::string MenuPath(const Node& aNode)
+    {
+        const std::string path = PathOf(aNode);
+        const std::string top = "Top level > ";
+        return path.compare(0, top.size(), top) == 0 ? path.substr(top.size()) : std::string();
+    }
+
+    void CollectShownMacros(const Node& aFolder, const Search::Result& aResult, std::vector<const Node*>& aOut)
+    {
+        for (const auto& c : aFolder.Children)
+        {
+            if (!aResult.Shows(c->Id)) continue;
+            if (c->IsMacro()) aOut.push_back(c.get());
+            else CollectShownMacros(*c, aResult, aOut);
+        }
+    }
+
+    // The search results: a flat list of the macros active here that match, with their folders.
+    // Enter sends the first one.
+    void DrawMenuResults(const Here& aHere, const std::string& aQuery, bool aEnter)
+    {
+        Search::Where where;
+        where.ActiveOnly = true;
+        where.Mode       = aHere.Mode;
+        where.MapId      = aHere.MapId;
+        Search::Run(s_Tree.Root(), aQuery, where, s_MenuResult);
+        std::vector<const Node*> found;
+        CollectShownMacros(s_Tree.Root(), s_MenuResult, found);
+        const bool busy = Sender::IsBusy();
+        if (found.empty())
+        {
+            ImGui::TextDisabled("No macro active here matches \"%s\".", Search::Trim(aQuery).c_str());
+            return;
+        }
+        if (busy) ImGui::TextColored(kWarnColor, "Sending...");
+        for (size_t i = 0; i < found.size() && i < kMenuResultsMax; i++)
+        {
+            const Node& n = *found[i];
+            const std::string path = MenuPath(n);
+            const std::string label = path.empty() ? n.Name : n.Name + "  (" + path + ")";
+            ImGui::PushID(static_cast<int>(n.Id ^ (n.Id >> 32)));
+            DrawMenuMacro(n, label.c_str(), busy);
+            ImGui::PopID();
+        }
+        if (found.size() > kMenuResultsMax)
+            ImGui::TextDisabled("...and %zu more: type more to narrow it down.", found.size() - kMenuResultsMax);
+        if (aEnter && !busy)
+        {
+            SendMacro(*found.front(), ESendFrom::Menu);
+            ImGui::CloseCurrentPopup();
+        }
+    }
+
+    void DrawQuickMenu(MenuSearch& aSearch)
+    {
+        const int frame = ImGui::GetFrameCount();
+        if (aSearch.LastFrame != frame - 1 && aSearch.LastFrame != frame) aSearch.Buf[0] = '\0';
+        aSearch.LastFrame = frame;
+
         const Here here = WhereAmI();
         if (!HasActiveMacros(s_Tree.Root(), here))
             ImGui::TextDisabled(s_Tree.Root().Children.empty() ? "No macros yet." : "No macros for this map.");
         else
         {
-            if (Sender::IsBusy()) ImGui::TextColored(kWarnColor, "Sending...");
-            DrawQuickMenuItems(s_Tree.Root(), here);
+            if (aSearch.Focus)
+            {
+                aSearch.Focus = false;
+                ImGui::SetKeyboardFocusHere();
+            }
+            ImGui::SetNextItemWidth(UiFont::Px(220.0f));
+            const bool enter = ImGui::InputTextWithHint("##menusearch", "Search (Enter sends the first)", aSearch.Buf,
+                                                        sizeof(aSearch.Buf), ImGuiInputTextFlags_EnterReturnsTrue);
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Finds the macros active here by name, line text, recipient or hotkey.\n"
+                                  "Enter sends the first one.");
+            const std::string query = aSearch.Buf;
+            if (!Search::Trim(query).empty()) DrawMenuResults(here, query, enter);
+            else
+            {
+                if (Sender::IsBusy()) ImGui::TextColored(kWarnColor, "Sending...");
+                DrawQuickMenuItems(s_Tree.Root(), here);
+            }
         }
         ImGui::Separator();
         if (ImGui::MenuItem(s_ShowMainWindow ? "Hide macro library" : "Open macro library"))
@@ -2012,6 +2107,7 @@ namespace
         {
             s_QuickMenuOpenRequest = false;
             ImGui::OpenPopup(kQuickMenuPopup); // opens at the mouse pointer
+            s_PopupSearch.Focus = true;        // opened by key: you can type straight away
         }
         if (!ImGui::BeginPopup(kQuickMenuPopup))
         {
@@ -2025,7 +2121,7 @@ namespace
         }
         ImGui::TextDisabled("%s", kAddonName);
         ImGui::Separator();
-        DrawQuickMenu();
+        DrawQuickMenu(s_PopupSearch);
         ImGui::EndPopup();
     }
 
@@ -2522,8 +2618,47 @@ namespace
     // Works out the search for this frame. A selected item that's no longer shown is unselected.
     void UpdateSearch()
     {
-        Search::Run(s_Tree.Root(), s_SearchBuf, s_Search);
+        const Here here = WhereAmI();
+        Search::Where where;
+        where.ActiveOnly = s_ActiveOnly;
+        where.Mode       = here.Mode;
+        where.MapId      = here.MapId;
+        Search::Run(s_Tree.Root(), s_SearchBuf, where, s_Search);
         if (s_Search.Active && s_SelectedId && !s_Search.Shows(s_SelectedId)) s_SelectedId = 0;
+    }
+
+    // The filter checkbox says where "here" is: "Only active in WvW on Eternal Battlegrounds (38)".
+    std::string ActiveOnlyLabel()
+    {
+        const Here h = WhereAmI();
+        if (h.Mode == GM_None) return "Only active here (no game mode right now: only macros active everywhere)";
+        return std::string("Only active in ") + ModeName(h.Mode) + " on " + (h.MapId ? MapNames::Label(h.MapId) : std::string("this map"));
+    }
+
+    // At the top of the tree pane: the filter checkbox and what the search and filter found.
+    void DrawSearchSummary()
+    {
+        if (ImGui::Checkbox(ActiveOnlyLabel().c_str(), &s_ActiveOnly))
+        {
+            if (!Storage::SaveSetting(kActiveOnlySetting, s_ActiveOnly)) LogF(LOGL_WARNING, "The \"only active here\" setting couldn't be saved.");
+            UpdateSearch(); // this frame's tree already uses the new choice
+        }
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Shows only the macros your hotkeys and the quick menu would use where you are now\n"
+                              "(see \"Where it's active\" in the editor). It follows you as you change maps.\n"
+                              "While it's on, dragging and Move up/down are off.");
+        if (s_Tree.Root().Children.empty() || !s_Search.Active) return;
+        const std::string text = Search::Trim(s_SearchBuf);
+        if (!text.empty())
+        {
+            if (s_Search.Visible.empty())
+                ImGui::TextDisabled(s_ActiveOnly ? "Nothing active here matches \"%s\"." : "Nothing matches \"%s\".", text.c_str());
+            else
+                ImGui::TextDisabled("Found: %zu folder(s), %zu macro(s)%s", s_Search.FolderMatches, s_Search.MacroMatches,
+                                    s_ActiveOnly ? ", active here" : "");
+        }
+        else if (s_Search.Visible.empty()) ImGui::TextDisabled("No macros are active here.");
+        else ImGui::TextDisabled("%zu macro(s) active here", s_Search.ShownMacros);
     }
 
     void DrawMainWindow()
@@ -2556,13 +2691,10 @@ namespace
         DrawSearchBox(treeWidth);
         ImGui::BeginChild("##tree", ImVec2(treeWidth, 0.0f), true, ImGuiWindowFlags_HorizontalScrollbar);
         ImGui::PushTextWrapPos(0.0f);
+        DrawSearchSummary();
         if (s_Tree.Root().Children.empty())
         {
             ImGui::TextWrapped("Your library is empty. Create a folder or a macro to get started.");
-        }
-        else if (s_Search.Active && !s_Search.Matches.empty())
-        {
-            ImGui::TextDisabled("Found: %zu folder(s), %zu macro(s)", s_Search.FolderMatches, s_Search.MacroMatches);
         }
         DrawTree();
         ImGui::PopTextWrapPos();
@@ -2594,6 +2726,8 @@ void Ui::Init()
         const nlohmann::json settings = Storage::LoadSettings();
         const auto it = settings.find(kTrashSetting);
         s_TrashOn = it == settings.end() || !it->is_boolean() || it->get<bool>(); // on by default
+        const auto active = settings.find(kActiveOnlySetting);
+        s_ActiveOnly = active != settings.end() && active->is_boolean() && active->get<bool>(); // off by default
     }
     s_TrashSelId = 0;
     s_Mumble = static_cast<Mumble::Data*>(g_Api->DataLink_Get(DL_MUMBLE_LINK));
@@ -2669,7 +2803,7 @@ void Ui::ToggleMainWindow() { s_ShowMainWindow = !s_ShowMainWindow; }
 void Ui::RenderQuickAccessMenu()
 {
     UiFont::Push();
-    DrawQuickMenu();
+    DrawQuickMenu(s_QaSearch); // no keyboard focus here: click the box to type
     UiFont::Pop();
 }
 

@@ -186,13 +186,6 @@ To look into (none of this is checked yet):
 - **UI idea:** an "Emote..." picker next to the line's message box (search box + list), which
   fills in `/command`. It could share the pop-up idea of the special character picker.
 
-### More search (added 2026-11-21)
-
-The library's search box is built (see `docs/design.md`, "Search"). Ideas left over from it:
-
-- A filter for "active here only" (the current game mode and map), next to the search box.
-- A search in the quick menu.
-
 ### Publish the wiki (reminder: do this once the repo is public)
 
 The usage docs are written in `docs/wiki/`. A private repo on GitHub's free plan can't have a

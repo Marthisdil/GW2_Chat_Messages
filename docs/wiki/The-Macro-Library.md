@@ -42,6 +42,16 @@ Click **x** next to the box, or press **Escape** in it, to clear the search: the
 back, with the same folders open and closed as before. **Ctrl+F** anywhere in the library window
 puts the cursor in the box. Hotkeys don't fire while you type in it.
 
+### Only what's active here
+
+Under the search box, the checkbox shows only the macros your hotkeys and the quick menu would
+use where you are now. Its label says where that is, for example **Only active in WvW on
+Eternal Battlegrounds (38)** or **Only active in PvE on Queensdale (15)**, and it follows you as
+you change maps. Folders with nothing active are hidden, and the line above the tree says how many
+macros are active here. It works together with the search text, and the addon remembers it.
+Like searching, it turns off dragging and **Move up** / **Move down** while ticked. (See
+[Filters](Filters) for setting where a macro is active.)
+
 <!-- screenshot: search.png (docs/screenshots.md) -->
 > 📷 *Screenshot to come: the library while searching, with a highlighted match.*
 

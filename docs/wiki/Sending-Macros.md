@@ -54,6 +54,15 @@ It lists only the macros that are active where you are, and hides folders with n
 coloured by channel, show their hotkey, and preview their lines when you hover over them. The
 bottom item opens or hides the library.
 
+**Searching the menu:** type in the box at the top to swap the folders for a flat list of the
+macros active here that match (by name, line text, whisper recipient or hotkey), each with its
+folders in brackets. Click one, or press **Enter** to send the first. When you open the menu with
+its key, you can type at once; in the right-click menu, click the box first. The box is empty
+again each time the menu opens.
+
+<!-- screenshot: quick-menu-search.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the quick menu with a search typed and its flat result list.*
+
 <!-- screenshot: quick-menu.png (docs/screenshots.md) -->
 > 📷 *Screenshot to come: the quick menu with a macro's line preview.*
 

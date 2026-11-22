@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Only active here:** a checkbox under the library's search box shows only the macros that are
+  active where you are, with a label that names it (e.g. "Only active in WvW on Eternal
+  Battlegrounds (38)"). It follows map changes and is remembered.
+- **Quick menu search:** a search box at the top of the quick menu lists the matching macros that
+  are active here, with their folders; Enter sends the first. In the pop-up opened by its key you
+  can type straight away.
 - **Search box:** a **Search (Ctrl+F)** box above the library tree finds folders and macros by
   name, by the text of their lines, a whisper's recipient, or their hotkey (`ctrl+f1`), ignoring
   case and accents. The tree shows only the matches (with their folders opened and the match
