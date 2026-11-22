@@ -197,6 +197,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   are read).
 - When a send was refused because you were typing in chat, the addon could press Escape and close
   your chat box. It now only ever closes a chat box it opened itself.
+- An imported file, a whole library or a `macros.json` whose trash bin held a very deeply nested
+  entry could close the game while it was read. It's now read without copying that entry.
 
 ### Documentation
 - The README describes what the addon does, with a quick start.

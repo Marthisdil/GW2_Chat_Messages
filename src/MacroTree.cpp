@@ -149,49 +149,54 @@ namespace MacroTree
             {
                 auto it = aJson.find("children");
                 if (it == aJson.end() || !it->is_array()) return;
-                for (const json& jc : *it)
-                {
-                    if (!jc.is_object()) { Warn("Skipped an entry that isn't a folder or macro."); continue; }
-                    const std::string type = StringField(jc, "type");
-                    ENodeType t;
-                    if (type == "folder") t = ENodeType::Folder;
-                    else if (type == "macro") t = ENodeType::Macro;
-                    else { Warn("Skipped an entry of unknown type \"" + type + "\"."); continue; }
-
-                    if (t == ENodeType::Folder && aLevel + 1 > kMaxParseDepth)
-                    {
-                        Warn("Skipped folders nested too deeply to read.");
-                        continue;
-                    }
-
-                    auto node = std::make_unique<Node>();
-                    node->Type   = t;
-                    node->Parent = &aFolder;
-                    node->Name   = Tree::CleanName(StringField(jc, "name"));
-                    if (node->Name.empty()) node->Name = t == ENodeType::Folder ? "New folder" : "New macro";
-
-                    const uint64_t id = IdFromString(StringField(jc, "id"));
-                    if (id != 0 && SeenIds.insert(id).second) node->Id = id;
-                    else NeedIdNodes.push_back(node.get());
-
-                    if (t == ENodeType::Folder)
-                    {
-                        if (aLevel + 1 > kMaxFolderDepth && !WarnedDepth)
-                        {
-                            Warn("Some folders are nested deeper than " + std::to_string(kMaxFolderDepth) +
-                                 " levels. They were kept, but you can't add more folders inside them.");
-                            WarnedDepth = true;
-                        }
-                        node->Expanded = jc.value("expanded", true);
-                        ParseChildren(jc, *node, aLevel + 1);
-                    }
-                    else
-                    {
-                        ParseMacro(jc, *node);
-                    }
-                    aFolder.Children.push_back(std::move(node));
-                }
+                for (const json& jc : *it) ParseNode(jc, aFolder, aLevel);
                 MakeNamesUnique(aFolder);
+            }
+
+            // Parses one folder or macro json into a new last child of aFolder. aLevel = aFolder's
+            // folder level. Reads jc in place: never copy untrusted json, because a json copy recurses
+            // once per nesting level and a hostile file can nest it deep enough to overflow the stack.
+            void ParseNode(const json& jc, Node& aFolder, int aLevel)
+            {
+                if (!jc.is_object()) { Warn("Skipped an entry that isn't a folder or macro."); return; }
+                const std::string type = StringField(jc, "type");
+                ENodeType t;
+                if (type == "folder") t = ENodeType::Folder;
+                else if (type == "macro") t = ENodeType::Macro;
+                else { Warn("Skipped an entry of unknown type \"" + type + "\"."); return; }
+
+                if (t == ENodeType::Folder && aLevel + 1 > kMaxParseDepth)
+                {
+                    Warn("Skipped folders nested too deeply to read.");
+                    return;
+                }
+
+                auto node = std::make_unique<Node>();
+                node->Type   = t;
+                node->Parent = &aFolder;
+                node->Name   = Tree::CleanName(StringField(jc, "name"));
+                if (node->Name.empty()) node->Name = t == ENodeType::Folder ? "New folder" : "New macro";
+
+                const uint64_t id = IdFromString(StringField(jc, "id"));
+                if (id != 0 && SeenIds.insert(id).second) node->Id = id;
+                else NeedIdNodes.push_back(node.get());
+
+                if (t == ENodeType::Folder)
+                {
+                    if (aLevel + 1 > kMaxFolderDepth && !WarnedDepth)
+                    {
+                        Warn("Some folders are nested deeper than " + std::to_string(kMaxFolderDepth) +
+                             " levels. They were kept, but you can't add more folders inside them.");
+                        WarnedDepth = true;
+                    }
+                    node->Expanded = jc.value("expanded", true);
+                    ParseChildren(jc, *node, aLevel + 1);
+                }
+                else
+                {
+                    ParseMacro(jc, *node);
+                }
+                aFolder.Children.push_back(std::move(node));
             }
 
             void ParseMacro(const json& j, Node& n)
@@ -697,7 +702,7 @@ namespace MacroTree
                 t.DeletedAt = StringField(je, "deleted_at");
                 Node holder;
                 holder.Type = ENodeType::Folder;
-                p.ParseChildren(json{{"children", json::array({*item})}}, holder, static_cast<int>(t.FromIds.size()));
+                p.ParseNode(*item, holder, static_cast<int>(t.FromIds.size())); // in place: no json copy
                 if (holder.Children.empty()) continue;
                 t.Item = std::move(holder.Children.front());
                 t.Item->Parent = nullptr;
