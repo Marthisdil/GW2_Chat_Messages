@@ -252,12 +252,13 @@ namespace
 
     void TestPlanConflicts()
     {
-        // Defaults: macros are kept as both (renamed), folders merge.
+        // Defaults: macros are kept as both (renamed), folders merge, hotkeys aren't kept.
         {
             Tree t;
             MakeLibrary(t);
             Package p = Pkg(kConflicts);
             Options o;
+            CHECK(!o.KeepHotkeys);
             Plan plan = BuildPlan(t, t.Root(), p.Items, o);
             CHECK(plan.Conflicts == 3); // hello, RAIDS, Stack
             CHECK(plan.Items[0].Conflict && plan.Items[0].Outcome == EOutcome::Renamed && plan.Items[0].Name == "hello (2)");
@@ -272,7 +273,24 @@ namespace
             CHECK(raids->Children.size() == 3);
             CHECK(Child(*raids, "Stack", ENodeType::Macro)->Lines[0].Message == "old");
             CHECK(Child(*raids, "Stack (2)", ENodeType::Macro)->Lines[0].Message == "new");
+            CHECK(Child(t.Root(), "hello (2)", ENodeType::Macro)->Hotkey.Empty()); // a shared file's hotkey isn't bound
+        }
+        // Keep hotkeys ticked: the imported hotkey comes along, on a new macro and on a replaced one.
+        {
+            Tree t;
+            MakeLibrary(t);
+            Package p = Pkg(kConflicts);
+            Options o;
+            o.KeepHotkeys = true;
+            Apply(t, t.Root(), BuildPlan(t, t.Root(), p.Items, o), o);
             CHECK(Child(t.Root(), "hello (2)", ENodeType::Macro)->Hotkey == Hotkey::FromString("Ctrl+F2"));
+
+            Tree r;
+            MakeLibrary(r);
+            Node* hello = Child(r.Root(), "Hello", ENodeType::Macro);
+            o.MacroConflict = EChoice::Replace;
+            Apply(r, r.Root(), BuildPlan(r, r.Root(), p.Items, o), o);
+            CHECK(hello->Lines[0].Message == "new hi" && hello->Hotkey == Hotkey::FromString("Ctrl+F2"));
         }
         // Replace keeps the existing item (its place and id) and swaps its contents.
         {

@@ -275,7 +275,7 @@
     "Folders can be nested at most %d deep. Unticked, folders that would go deeper are left out.": "Ordner können höchstens %d tief verschachtelt werden. Ohne Haken werden Ordner, die tiefer gingen, ausgelassen.",
     "Keep hotkeys": "Tastenkürzel behalten",
     "Off by default for someone else's library, so their keys don't clash with yours.": "Für die Bibliothek von jemand anderem standardmäßig aus, damit seine Tasten nicht mit deinen kollidieren.",
-    "Untick this for macros from someone else, so their keys don't clash with yours.": "Entferne den Haken bei Makros von jemand anderem, damit seine Tasten nicht mit deinen kollidieren.",
+    "Off at first, so macros from someone else come without their hotkeys. Tick it for your own exports; the preview then shows each macro's hotkey.": "Anfangs aus, damit Makros von jemand anderem ohne ihre Tastenkürzel kommen. Setze den Haken für deine eigenen Exporte; die Vorschau zeigt dann das Tastenkürzel jedes Makros.",
     "3. Check the preview": "3. Prüfe die Vorschau",
     "%zu new macro(s), %zu new folder(s)": "%zu neue(s) Makro(s), %zu neue(r) Ordner",
     "%zu merged": "%zu zusammengeführt",

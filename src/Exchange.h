@@ -99,7 +99,7 @@ namespace Exchange
         EChoice MacroConflict  = EChoice::Rename;
         EChoice FolderConflict = EChoice::Merge;
         bool    Flatten        = false; // too-deep folders: flatten (true) or leave out (false)
-        bool    KeepHotkeys    = true;
+        bool    KeepHotkeys    = false; // off unless ticked: an imported hotkey sends its macro on that key
         std::map<const Node*, EChoice> PerItem; // overrides, keyed by the package's node
         std::set<const Node*> Unselected;       // unticked in the preview, keyed by the package's node
     };

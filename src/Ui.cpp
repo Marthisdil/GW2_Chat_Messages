@@ -2180,6 +2180,7 @@ namespace
     {
         s_ImportOpt.PerItem.clear(); // keyed by the old package's nodes
         s_ImportOpt.Unselected.clear();
+        s_ImportOpt.KeepHotkeys = false; // every import starts with hotkeys off, even after one that kept them
         if (!aPkg.Ok())
         {
             if (aPkg.Source.empty()) ShowError(T("Opened it in the Import window"), std::string(T("It can't be imported.")) + " " + aPkg.Error);
@@ -2197,7 +2198,7 @@ namespace
     }
 
     // Switches between importing macros and importing a whole library. Each starts with its own
-    // defaults: a library's hotkeys are off (they'd clash with yours) and a taken folder name is
+    // defaults: hotkeys are off for both (see LoadImport), and in a library a taken folder name is
     // renamed, never merged.
     void SetImportLibrary(bool aOn)
     {
@@ -2207,7 +2208,6 @@ namespace
         s_ImportOpt = Exchange::Options{};
         if (aOn)
         {
-            s_ImportOpt.KeepHotkeys    = false;
             s_ImportOpt.FolderConflict = Exchange::EChoice::Rename;
         }
         s_ImportListStale = true;
@@ -2310,7 +2310,10 @@ namespace
             ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth;
             if (!showChildren) flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen | (src.IsMacro() ? ImGuiTreeNodeFlags_Bullet : 0);
             ImGui::PushStyleColor(ImGuiCol_Text, src.IsFolder() ? kFolderColor : ImGui::GetStyleColorVec4(ImGuiCol_Text));
-            const bool open = ImGui::TreeNodeEx("##item", flags, "%s", src.Name.c_str());
+            // A hotkey that comes along is shown as in the library tree, so it can be checked first.
+            const bool showKey = s_ImportOpt.KeepHotkeys && src.IsMacro() && !src.Hotkey.Empty();
+            const bool open = showKey ? ImGui::TreeNodeEx("##item", flags, "%s  [%s]", src.Name.c_str(), Hotkey::ToString(src.Hotkey).c_str())
+                                      : ImGui::TreeNodeEx("##item", flags, "%s", src.Name.c_str());
             ImGui::PopStyleColor();
             if (Exchange::IsPartlySelected(s_ImportOpt, src))
             {
@@ -2489,7 +2492,7 @@ namespace
         ImGui::Checkbox(T("Keep hotkeys"), &s_ImportOpt.KeepHotkeys);
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("%s", s_ImportLibrary ? T("Off by default for someone else's library, so their keys don't clash with yours.")
-                                                    : T("Untick this for macros from someone else, so their keys don't clash with yours."));
+                                                    : T("Off at first, so macros from someone else come without their hotkeys. Tick it for your own exports; the preview then shows each macro's hotkey."));
         for (const std::string& w : s_ImportPkg->Warnings) ImGui::TextColored(kWarnColor, "%s", w.c_str());
 
         // Built every frame against the live library, so the preview is always what Import does.

@@ -275,7 +275,7 @@
     "Folders can be nested at most %d deep. Unticked, folders that would go deeper are left out.": "Les dossiers peuvent être imbriqués sur %d niveaux au plus. Décoché, les dossiers qui iraient plus loin sont exclus.",
     "Keep hotkeys": "Garder les raccourcis",
     "Off by default for someone else's library, so their keys don't clash with yours.": "Désactivé par défaut pour la bibliothèque de quelqu'un d'autre, pour que ses touches n'entrent pas en conflit avec les vôtres.",
-    "Untick this for macros from someone else, so their keys don't clash with yours.": "Décochez ceci pour les macros de quelqu'un d'autre, pour que ses touches n'entrent pas en conflit avec les vôtres.",
+    "Off at first, so macros from someone else come without their hotkeys. Tick it for your own exports; the preview then shows each macro's hotkey.": "Désactivé au départ, pour que les macros de quelqu'un d'autre arrivent sans leurs raccourcis. Cochez-le pour vos propres exports ; l'aperçu montre alors le raccourci de chaque macro.",
     "3. Check the preview": "3. Vérifiez l'aperçu",
     "%zu new macro(s), %zu new folder(s)": "%zu nouvelle(s) macro(s), %zu nouveau(x) dossier(s)",
     "%zu merged": "%zu fusionné(s)",

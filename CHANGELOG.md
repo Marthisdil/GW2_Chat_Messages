@@ -183,6 +183,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   a modifier (e.g. Ctrl+Mouse 4), so a plain dodge or skill button can't send a macro by accident.
   A plain mouse hotkey you set earlier is kept but doesn't fire; the tree and the editor mark it
   so you can change it.
+- **Imported macros come without their hotkeys:** **Keep hotkeys** in the Import window now starts
+  unticked for every import (it was ticked for macros), so a shared file can't bind its macros to
+  keys you press. Tick it for your own exports; the preview then shows each macro's hotkey.
 - The data folder is now `<GW2>\addons\GW2_Chat_Messages\`, named like the DLL (it was
   `Chat Messages`). If you ran an earlier build, move that folder's files across.
 - **Version numbers** are now the date and time the version was set (both UTC) plus the kind of build, like

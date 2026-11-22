@@ -17,7 +17,7 @@ Results so far (keep your notes in `docs\testing results.txt`; it isn't committe
 |---|---|---|
 | A1 | Passed (PR #15 build) | Re-check only the version and build stamp lines with a new build. |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text now wraps (PR #17) and errors open the error window (PR #18). Re-check those two points only, then go on to A3. |
-| A3 to Q | Not run yet | New since the last build: O (trash bin), the counter in A4, J3b/J6 (import checkboxes, trash bin not exported or imported). Newer still: P (search box; P6-P8 the "only active here" filter and the quick menu search), J7 (a whole library), and F2/F3/F7 (mouse buttons now need Ctrl, Alt or Shift). Newest: Q (languages), J8/K6 (text files that aren't UTF-8). |
+| A3 to Q | Not run yet | New since the last build: O (trash bin), the counter in A4, J3b/J6 (import checkboxes, trash bin not exported or imported). Newer still: P (search box; P6-P8 the "only active here" filter and the quick menu search), J7 (a whole library), and F2/F3/F7 (mouse buttons now need Ctrl, Alt or Shift). Newest: Q (languages), J8/K6 (text files that aren't UTF-8), and J2 (**Keep hotkeys** now starts unticked for every import; ticked, the preview shows the hotkeys). |
 
 **Errors since PR #18:** every refusal and error the checks below expect ("refused", "says
 why", "a message") now opens the **error window** instead of a red line under the editor. Click
@@ -281,9 +281,11 @@ and `exports\Say (2).json` appear and the status names the file. **Save as a .tx
 
 **J2. Import with conflicts.** Right-click the `Test` folder > Export > **Copy to the clipboard**.
 Then toolbar **Import...** > **Paste from clipboard**, with `Test`'s parent as the target. The
-preview shows `Test` as "goes into the existing folder" and the macros as conflicts. Set one to
-Replace and one to Skip, untick **Keep hotkeys**, and click **Import selected**. The result matches the
-preview, and the imported macros have no hotkeys.
+preview shows `Test` as "goes into the existing folder" and the macros as conflicts. **Keep
+hotkeys** is unticked and the preview shows no hotkeys. Tick it: each macro with a hotkey shows it
+after its name (`Name  [Ctrl+F1]`). Click **Paste from clipboard** again: **Keep hotkeys** is
+unticked again. Set one macro to Replace and one to Skip, and click **Import selected**. The result
+matches the preview, and the imported macros (the replaced one too) have no hotkeys.
 
 **J3. Undo.** **Undo import**: the library is exactly as before (names, lines, hotkeys, filters).
 
