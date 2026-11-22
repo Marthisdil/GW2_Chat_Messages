@@ -131,3 +131,6 @@ Every save also keeps the previous version as `macros.json.bak` (see
 - A folder import reads at most 2000 .txt files.
 - One import can hold up to 5000 folders and macros.
 - A macro keeps at most 50 lines; longer .txt files are cut, with a warning in the Import window.
+- .txt files are read as UTF-8 (Notepad's default). In a file saved another way (ANSI, say),
+  characters like `ä` or `é` can't be read: they're replaced with `�` (the font may show `?`),
+  with a warning in the Import window. Save the file as UTF-8 and import it again to keep them.

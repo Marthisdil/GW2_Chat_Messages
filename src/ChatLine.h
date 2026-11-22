@@ -45,6 +45,14 @@ namespace ChatLine
     // Length as the game counts it (UTF-16 code units of UTF-8 text).
     size_t Utf16Length(const std::string& aUtf8);
 
+    // Makes raw text from a file or the clipboard valid UTF-8, as a macro's lines must be (they're
+    // saved as JSON): every byte sequence that isn't UTF-8 (a stray byte, a cut-off character, an
+    // overlong form, a surrogate, past U+10FFFF) becomes one U+FFFD replacement character, per
+    // maximal invalid sequence as the Unicode standard recommends. Valid text is left as it is.
+    // Returns true if anything was replaced (e.g. a file saved as Windows-1252: its accented
+    // letters are replaced).
+    bool RepairUtf8(std::string& aText);
+
     // The character counter's colour steps (docs/design.md, "Character counter").
     constexpr size_t kLengthWarnAt  = 150; // yellow from here
     constexpr size_t kLengthAlertAt = 180; // bright red from here

@@ -17,7 +17,7 @@ Results so far (keep your notes in `docs\testing results.txt`; it isn't committe
 |---|---|---|
 | A1 | Passed (PR #15 build) | Re-check only the version and build stamp lines with a new build. |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text now wraps (PR #17) and errors open the error window (PR #18). Re-check those two points only, then go on to A3. |
-| A3 to Q | Not run yet | New since the last build: O (trash bin), the counter in A4, J3b/J6 (import checkboxes, trash bin not exported or imported). Newer still: P (search box; P6-P8 the "only active here" filter and the quick menu search), J7 (a whole library), and F2/F3/F7 (mouse buttons now need Ctrl, Alt or Shift). Newest: Q (languages). |
+| A3 to Q | Not run yet | New since the last build: O (trash bin), the counter in A4, J3b/J6 (import checkboxes, trash bin not exported or imported). Newer still: P (search box; P6-P8 the "only active here" filter and the quick menu search), J7 (a whole library), and F2/F3/F7 (mouse buttons now need Ctrl, Alt or Shift). Newest: Q (languages), J8/K6 (text files that aren't UTF-8). |
 
 **Errors since PR #18:** every refusal and error the checks below expect ("refused", "says
 why", "a message") now opens the **error window** instead of a red line under the editor. Click
@@ -327,6 +327,13 @@ would be 7 deep inside the new folder). Switch back to **Macros**: the list show
 folders again. **Undo import** removes the copies. Close and reopen the Import window: it's on
 **Macros**.
 
+**J8. A file that isn't UTF-8.** In Notepad, write `/s Käse für dich` and **Save as**
+`imports\ansi.txt` with Encoding **ANSI**. Open it in the Import window: a warning says it isn't
+saved as UTF-8, and the preview's macro has `�` (or `?`) where `ä` and `ü` were. Import it,
+then rename any macro: no "couldn't be saved" message. Right-click the imported macro > Export >
+**Save as a .json file** and **Copy to the clipboard**: both work, and the game stays open.
+**Undo import**.
+
 ## K. Text file links
 
 Have Notepad ready. "Within a second" means after you save, not after you switch back.
@@ -348,6 +355,12 @@ file is **not** recreated. Click **Recreate the file**: it's back with `Two`'s l
 
 **K5. Edited while closed.** Close the game, edit `test.txt`, start the game: `Two` has the new
 lines. **Unlink**: the macro and the file both stay; editing either no longer changes the other.
+
+**K6. A file that isn't UTF-8.** Make `links\ansi.txt` in Notepad with `/s Käse`, saved with
+Encoding **ANSI**. Make a new macro `Ansi` in `Test` and link it to `ansi.txt`: it shows `�` (or
+`?`) for `ä`, and the library still saves (no "couldn't be saved" message). Wait a few seconds
+without editing: the file isn't rewritten (Notepad doesn't ask to reload). Edit `Ansi` in the
+addon: the file is rewritten as UTF-8, with `�` for the `ä`. Delete `Ansi`.
 
 ## L. Final checks
 

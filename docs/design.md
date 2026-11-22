@@ -302,6 +302,10 @@ imported. A Replace keeps the existing item's id and place.)*
   exported as raw `.txt`.
 - **Import sources**: our JSON format, a raw `.txt` (becomes one macro), or a folder of `.txt`
   files (sub-folders become folders).
+  - Raw text (`.txt` imports, pasted text and link files) is read as UTF-8. Bytes that aren't
+    UTF-8 (an ANSI file, say) become U+FFFD, with a warning (`ChatLine::RepairUtf8`); they're
+    not guessed from the ANSI code page. So the library always saves as valid JSON. For a link
+    file the repair alone never writes the file back.
 - **Preview step** (always shown):
   - A tree showing the result, with the new folders, new macros and merged folders marked.
   - The user picks the target folder.

@@ -187,6 +187,46 @@ namespace
         o = Sync(st, o.Lines, f.View());
         CHECK(!o.WriteFile);
     }
+
+    void TestNotUtf8()
+    {
+        const std::string bad = "\xEF\xBF\xBD"; // U+FFFD
+        // A file saved as Windows-1252 (ä as one byte): the macro gets U+FFFD in its place, with a warning.
+        FakeFile f;
+        f.Text = "/s K\xE4se\r\n";
+        State st;
+        Outcome o = Sync(st, {}, f.View());
+        CHECK(o.LoadMacro && !o.WriteFile && o.Lines.size() == 1 && o.Lines[0].Message == "K" + bad + "se");
+        CHECK(!o.Warning.empty());
+        std::vector<MacroTree::Line> macro = o.Lines;
+
+        // The repair alone never writes the file back: not on the next sync...
+        o = Sync(st, macro, f.View());
+        CHECK(!o.LoadMacro && !o.WriteFile && f.Reads == 1);
+        // ...nor when the file is touched (read again, same result)...
+        f.Mtime = 200;
+        o = Sync(st, macro, f.View());
+        CHECK(!o.LoadMacro && !o.WriteFile && f.Reads == 2);
+        // ...nor at the next load, when the macro already has the repaired lines.
+        State fresh;
+        o = Sync(fresh, macro, f.View());
+        CHECK(!o.LoadMacro && !o.WriteFile);
+
+        // Edited in the addon: the file is written as usual, as UTF-8.
+        macro = Lines("/s K" + bad + "se\n/p x");
+        o = Sync(st, macro, f.View());
+        CHECK(o.WriteFile && o.Text == "/s K" + bad + "se\r\n/p x\r\n");
+
+        // Both warnings when the file also has too many lines.
+        std::string many = "\xFF\n";
+        for (size_t i = 0; i < MacroTree::kMaxLines + 1; i++) many += "/s line\n";
+        FakeFile g;
+        g.Text = many;
+        State st2;
+        o = Sync(st2, {}, g.View());
+        CHECK(o.Lines.size() == MacroTree::kMaxLines && o.Warning.find("UTF-8") != std::string::npos &&
+              o.Warning.find("more than") != std::string::npos);
+    }
 }
 
 void RunLinkSyncTests()
@@ -198,4 +238,5 @@ void RunLinkSyncTests()
     TestBothChanged();
     TestMissingAndErrors();
     TestTooManyLines();
+    TestNotUtf8();
 }

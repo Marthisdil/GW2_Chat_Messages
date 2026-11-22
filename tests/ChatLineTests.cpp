@@ -146,6 +146,50 @@ static void TestLengthLevels()
     CHECK(LengthLevel(200) == ELengthLevel::Over);
 }
 
+// RepairUtf8 on a copy: the result, and whether anything was replaced.
+static std::string Repaired(std::string s, bool* aChanged = nullptr)
+{
+    const bool changed = RepairUtf8(s);
+    if (aChanged) *aChanged = changed;
+    return s;
+}
+
+static void TestRepairUtf8()
+{
+    const std::string bad = "\xEF\xBF\xBD"; // U+FFFD
+    bool changed = true;
+
+    // Valid UTF-8 is left exactly as it is, including the edges of each range.
+    for (const char* ok : {"", "abc", "a\r\nb\tc", "caf\xC3\xA9", "\xC2\x80", "\xDF\xBF", "\xE0\xA0\x80",
+                           "\xED\x9F\xBF", "\xEE\x80\x80", "\xEF\xBF\xBD", "\xF0\x90\x80\x80", "\xF0\x9F\x98\x80",
+                           "\xF4\x8F\xBF\xBF"})
+    {
+        CHECK(Repaired(ok, &changed) == ok && !changed);
+    }
+
+    // A Windows-1252 file: each accented letter is one byte, and one U+FFFD.
+    CHECK(Repaired("/s K\xE4se f\xFCr dich", &changed) == "/s K" + bad + "se f" + bad + "r dich" && changed);
+    // Stray bytes.
+    CHECK(Repaired("\xFF") == bad);
+    CHECK(Repaired("\x80") == bad);
+    CHECK(Repaired("a\xFE\xFF" "b") == "a" + bad + bad + "b");
+    // Overlong forms, surrogates and past U+10FFFF: one U+FFFD per byte.
+    CHECK(Repaired("\xC0\xAF") == bad + bad);
+    CHECK(Repaired("\xE0\x80\xAF") == bad + bad + bad);
+    CHECK(Repaired("\xF0\x80\x80\x80") == bad + bad + bad + bad);
+    CHECK(Repaired("\xED\xA0\x80") == bad + bad + bad);
+    CHECK(Repaired("\xF4\x90\x80\x80") == bad + bad + bad + bad);
+    CHECK(Repaired("\xF5\x80") == bad + bad);
+    // A cut-off character is one U+FFFD; what follows it is kept.
+    CHECK(Repaired("\xE2\x9C") == bad);
+    CHECK(Repaired("\xE2\x9C" "x\xE2\x9C\x93") == bad + "x\xE2\x9C\x93");
+    CHECK(Repaired("ok \xF0\x9F\x98") == "ok " + bad);
+
+    // The result is valid: repairing it again changes nothing.
+    Repaired(Repaired("\xC3(\xE0\xA0\xF8\x88\x80\x80\x80 \xFF"), &changed);
+    CHECK(!changed);
+}
+
 static void TestColors()
 {
     CHECK(ChannelColor(EChannel::Current) == 0xFFFFFF);
@@ -162,4 +206,5 @@ void RunChatLineTests()
     TestTypedAndLength();
     TestColors();
     TestLengthLevels();
+    TestRepairUtf8();
 }

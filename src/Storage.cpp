@@ -149,7 +149,8 @@ bool Storage::WriteJson(const fs::path& aFile, const nlohmann::json& aJson, bool
     {
         {
             std::ofstream out(tmp, std::ios::binary | std::ios::trunc);
-            out << aJson.dump(2);
+            // Text that isn't UTF-8 is written as U+FFFD, so one bad string can't stop every save.
+            out << aJson.dump(2, ' ', false, nlohmann::json::error_handler_t::replace);
             out.flush();
             if (!out) throw std::runtime_error("write failed");
         }

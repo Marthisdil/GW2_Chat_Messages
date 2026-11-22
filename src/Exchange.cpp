@@ -68,7 +68,11 @@ namespace
     bool AddTextMacro(Tree& aTree, Node* aParent, const std::string& aName, const std::string& aText,
                       std::vector<std::string>& aWarnings)
     {
-        std::vector<Line> lines = ChatLine::ParseRaw(aText);
+        // A file in another encoding (Windows-1252, say) isn't UTF-8: such bytes would make every
+        // save of the library fail, so they're replaced.
+        std::string text = aText;
+        const bool repaired = ChatLine::RepairUtf8(text);
+        std::vector<Line> lines = ChatLine::ParseRaw(text);
         if (lines.empty())
         {
             aWarnings.push_back("\"" + aName + "\" has no lines, so it was left out.");
@@ -89,6 +93,9 @@ namespace
             return false;
         }
         r.Target->Lines = std::move(lines);
+        if (repaired)
+            aWarnings.push_back("\"" + aName + "\" isn't saved as UTF-8, so some of its characters couldn't be read and "
+                                "were replaced. Save it as UTF-8 and import it again to keep them.");
         return true;
     }
 
@@ -442,7 +449,11 @@ namespace Exchange
         return json{{"format", kFormatVersion}, {"root", {{"children", std::move(children)}}}};
     }
 
-    std::string ExportJsonText(const std::vector<const Node*>& aNodes) { return ExportJson(aNodes).dump(2); }
+    std::string ExportJsonText(const std::vector<const Node*>& aNodes)
+    {
+        // Text that isn't UTF-8 is written as U+FFFD instead of throwing.
+        return ExportJson(aNodes).dump(2, ' ', false, json::error_handler_t::replace);
+    }
 
     std::string ExportText(const Node& aMacro) { return ChatLine::SerializeRaw(aMacro.Lines); }
 

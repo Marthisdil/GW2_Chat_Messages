@@ -1,6 +1,7 @@
 #include "ChatLine.h"
 
 #include <cctype>
+#include <utility>
 
 namespace ChatLine
 {
@@ -221,5 +222,46 @@ namespace ChatLine
             units += (c >= 0xF0) ? 2 : 1;       // 4-byte sequences are surrogate pairs in UTF-16
         }
         return units;
+    }
+
+    bool RepairUtf8(std::string& aText)
+    {
+        const auto at = [&aText](size_t k) { return static_cast<unsigned char>(aText[k]); };
+        std::string out;
+        bool repaired = false;
+        size_t i = 0, kept = 0; // aText[kept, i) is valid and not yet copied to out
+        while (i < aText.size())
+        {
+            const unsigned char c = at(i);
+            if (c < 0x80) { i++; continue; }
+            // Well-formed sequences (Unicode Table 3-7): the length, and the second byte's range.
+            size_t len = 0;
+            unsigned char lo = 0x80, hi = 0xBF;
+            if (c >= 0xC2 && c <= 0xDF) len = 2;
+            else if (c == 0xE0) { len = 3; lo = 0xA0; } // no overlong forms
+            else if (c == 0xED) { len = 3; hi = 0x9F; } // no surrogates
+            else if (c >= 0xE1 && c <= 0xEF) len = 3;
+            else if (c == 0xF0) { len = 4; lo = 0x90; } // no overlong forms
+            else if (c == 0xF4) { len = 4; hi = 0x8F; } // nothing past U+10FFFF
+            else if (c >= 0xF1 && c <= 0xF3) len = 4;
+            size_t n = len ? 1 : 0; // bytes that start a well-formed sequence
+            while (n && n < len && i + n < aText.size())
+            {
+                const unsigned char b = at(i + n);
+                if (b < (n == 1 ? lo : 0x80) || b > (n == 1 ? hi : 0xBF)) break;
+                n++;
+            }
+            if (len && n == len) { i += len; continue; }
+            // Not UTF-8: that start (or the one stray byte) becomes one U+FFFD.
+            out.append(aText, kept, i - kept);
+            out += "\xEF\xBF\xBD";
+            i += n ? n : 1;
+            kept = i;
+            repaired = true;
+        }
+        if (!repaired) return false;
+        out.append(aText, kept, std::string::npos);
+        aText = std::move(out);
+        return true;
     }
 }

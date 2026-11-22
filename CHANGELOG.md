@@ -208,6 +208,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Importing a JSON file or pasted text whose `"format"` was `null`, text (`"1"`), a list or an
   object could close the game. It's now refused like any other file that isn't a Chat Messages
   export, and anything else that fails while reading an import is shown as an import error.
+- A `.txt` file not saved as UTF-8 (e.g. ANSI, with `ä` or `é`), imported or linked to a macro,
+  stopped your macros from being saved for the rest of the session, and a `.json` export could
+  close the game. Its characters that can't be read are now replaced with `�` (the font may show
+  `?`), with a warning, and saving and exporting work.
 
 ### Documentation
 - The README describes what the addon does, with a quick start.
