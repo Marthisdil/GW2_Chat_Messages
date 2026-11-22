@@ -198,6 +198,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   of " (2)" fits.
 - Loading a library or an import with many items that have no id (for example a hand-written
   file) no longer freezes the game for many seconds.
+- Importing a file with thousands of macros into one folder (or showing its preview when the
+  names are already there) no longer freezes the game.
 - An unexpected internal error while sending a macro (for example running out of memory, or a
   bad value from a `{json}` page) could close the game. It now fails like any other send: chat is
   closed if the addon opened it, and the error is shown.

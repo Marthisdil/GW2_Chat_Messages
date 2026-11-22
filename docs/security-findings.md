@@ -43,7 +43,7 @@ folder with someone else's file), **Medium** (wrong behaviour reachable with rea
 | [SEC-024](#sec-024) | 2026-11-22 (approx.) | Low | `src/Storage.cpp:98`, `LinkSync.cpp:47`, `Ui.cpp:2401` | A typed name or path with a lone surrogate makes `fs::u8path` throw in the render callback | Open | |
 | [SEC-025](#sec-025) | 2026-11-22 (approx.) | Low | `src/Exchange.cpp` (folder import) | A crafted folder import can hold about 1.5 GB; an out-of-memory error there isn't caught | Open | |
 | [SEC-026](#sec-026) | 2026-11-22 (approx.) | Info | `src/Ui.cpp:1404` (`InputString`) | A C1 control character pasted into the editor stays in the line until the next load | Open | |
-| [SEC-027](#sec-027) | 2026-11-22 22:05 | High | `src/Exchange.cpp` (`ApplyItems`), `src/MacroTree.cpp` (`CheckName`) | Importing many macros into one folder takes quadratic time (20,000: 304 s in the test build): the game freezes | Open | |
+| [SEC-027](#sec-027) | 2026-11-22 22:05 | High | `src/Exchange.cpp` (`ApplyItems`), `src/MacroTree.cpp` (`CheckName`) | Importing many macros into one folder, and its preview on a re-import, took quadratic time: the game freezes | Fixing | `feature/sec-017-018`, commit `1247a73` |
 
 "Build" is the build stamp's commit (shown in the Nexus log and the DLL's Properties). Until a
 release is tagged, it's the PR's commit; the release that first ships a fix is added when it's
@@ -274,7 +274,7 @@ made.
 - **Decision (2026-11-22):** fix. The tree keeps the set of ids in use (filled from the parser's
   ids on load, or once on the first new id), so each new id is one lookup. 50,000 id-less macros
   now load in well under a second (test `TestManyMissingIds`). Importing many items into one
-  folder is still slow for another reason: see SEC-027.
+  folder was also slow for another reason, fixed in the same PR: see SEC-027.
 - **Status:** Fixing in `feature/sec-017-018`, commit `644f9ed`.
 
 ### SEC-018
@@ -365,14 +365,20 @@ made.
   **Severity:** High. **Where:** `src/Exchange.cpp` (`ApplyItems` → `AddNamed`) →
   `src/MacroTree.cpp` (`Tree::Add` → `CheckName`).
 - **Finding:** every imported item is checked against all its new siblings, lower-casing each
-  name again, so importing N macros into one folder costs about N². Measured in the unoptimised
-  test build: 5,000 macros took 19 s and 20,000 took 304 s (reading and planning stay under 2 s).
-  Release is faster but still quadratic, and a 4 MB export can hold about 60,000 macros: clicking
-  Import on a shared file freezes the game. SEC-017's fix removed the id half of this cost, not
-  the name half.
-- **Decision:** open. Likely fix: `Apply` keeps the lower-case names per destination folder (as
-  `BuildPlan` already does) and adds with a name it knows is free, without `CheckName`'s scan.
-- **Status:** Open.
+  name again, so importing N macros into one folder costs about N². One import is capped at 5,000
+  items (`kMaxImportItems`); measured in the unoptimised test build, those 5,000 took 19 s to
+  apply (reading and planning took under 0.5 s). Release is faster but still freezes the game
+  for a while, and the folder can already hold many more items. SEC-017's fix removed the id
+  half of this cost, not the name half.
+  The import preview had the same problem: on every clash `BuildPlan` found the existing item by
+  scanning all its siblings (`Dest::Find`), and the plan is rebuilt every frame while the Import
+  window is open, so re-importing a big file into the same folder froze the game before Import was
+  even clicked.
+- **Decision (2026-11-22):** fix, in the SEC-017/018 PR. `Apply` keeps a name index per
+  destination folder (`NameIndex`) and adds with `Tree::AddKnownFree`, which skips the sibling
+  scan; `Dest` keeps the existing items by lower-case name. Test `TestApplyMany`: 5,000 macros
+  into one folder, again (all renamed), then with Replace.
+- **Status:** Fixing in `feature/sec-017-018`, commit `1247a73`.
 
 ## Tuning decisions (checks turned off)
 
