@@ -1,5 +1,6 @@
 // Standalone tests for src/Placeholders.cpp.
 
+#include <chrono>
 #include <map>
 #include <string>
 #include <vector>
@@ -205,6 +206,22 @@ static void TestHas()
     CHECK(!Placeholders::Uses("{ {time}", "txt"));
     CHECK(!Placeholders::Uses("no braces txt", "txt"));
     CHECK(Placeholders::Uses("{x {txt a}", "txt"));
+    CHECK(Placeholders::Uses("{{txt a}", "txt"));
+    CHECK(Placeholders::Uses("}{txt}", "txt"));
+    CHECK(Placeholders::Uses("{a}}{txt b}", "txt"));
+    CHECK(!Placeholders::Uses("{txt", "txt"));
+    CHECK(!Placeholders::Uses("{txt a {b}", "txt")); // the inner one counts, as in Expand
+    CHECK(HasPlaceholders("{{time}"));
+    CHECK(!HasPlaceholders("{time"));
+    // SEC-028: one pass, not a scan to the next "}" per "{" (run every frame in the preview).
+    {
+        const std::string braces(2 * 1024 * 1024, '{');
+        const auto start = std::chrono::steady_clock::now();
+        CHECK(!Placeholders::Uses(braces, "txt"));
+        CHECK(!HasPlaceholders(braces + "}"));
+        CHECK(Placeholders::Uses(braces + "txt}", "txt"));
+        CHECK(std::chrono::steady_clock::now() - start < std::chrono::seconds(2));
+    }
     CHECK(!HasPlaceholders("plain"));
     CHECK(!List().empty());
 }
