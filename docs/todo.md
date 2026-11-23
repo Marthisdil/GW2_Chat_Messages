@@ -39,32 +39,6 @@ the first release.
   some engines flag it (false positives are common for DLLs that hook a game's window), and
   whether the release waits for the scan or the link is added afterwards.
 
-### Publish the wiki (reminder: do this once the repo is public)
-
-The usage docs are written in `docs/wiki/`. A private repo on GitHub's free plan can't have a
-wiki, so they wait here.
-
-Before making the repo public: the whole commit history becomes public too, including commit
-author names and email addresses. Check you're happy with that.
-
-Your steps (on github.com, in the repo):
-1. **Settings > General**, at the bottom under **Danger Zone**: **Change visibility** >
-   **Make public**, and confirm.
-2. **Settings > General > Features**: tick **Wikis**. Optionally also tick **Restrict editing to
-   collaborators only**, so only you can edit it.
-3. Open the new **Wiki** tab and click **Create the first page**. Leave the title as "Home",
-   type anything in the body, and click **Save page**. (GitHub only creates the wiki's git repo
-   after this first page exists. It will be replaced.)
-4. Tell Claude "the wiki is ready".
-
-Claude's steps:
-1. Clone `https://github.com/Marthisdil/GW2_Chat_Messages.wiki.git` into a temporary folder.
-2. Copy every page from `docs/wiki/` into it (replacing the blank Home page), point the image
-   links (`../images/...`) at the images in the main repo, commit and push.
-3. Check that each page and the sidebar show up and that the links between pages work.
-4. Update the README's Documentation section to link to the wiki, and decide with you whether
-   `docs/wiki/` stays as the source (and gets pushed again after each change) or is removed.
-
 ## 2. Quick wins
 
 All four were built on 2026-11-23 and moved to `docs/design.md`: the remaining messages are

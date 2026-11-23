@@ -99,7 +99,7 @@ that each text keeps its %-codes). Even so, **only use language files from this 
 
 Open an issue. For a bug, the addon's error window has **Copy to clipboard**: paste that in, and
 say what you did and what you expected. The Nexus log (`<GW2>\addons\Nexus\Nexus.log`) helps
-too. The [Safety and troubleshooting](docs/wiki/Safety-and-Troubleshooting.md) page lists common
+too. The [Safety and troubleshooting](https://github.com/Marthisdil/GW2_Chat_Messages/wiki/Safety-and-Troubleshooting) wiki page lists common
 problems.
 
 ## Code
@@ -110,6 +110,6 @@ problems.
 - Building: see [Building from source](README.md#building-from-source). Run
   `tools\run_tests.ps1` before sending a change.
 - Work on a branch and open a pull request against `main`. Keep each pull request to one change,
-  and update `CHANGELOG.md` and the user docs in `docs/wiki/` for anything a user would notice.
+  and update `CHANGELOG.md` and the user docs in `docs/wiki/` (the wiki's source) for anything a user would notice.
 - New text in the UI goes through `T("...")` (or `TX("...")` for a text in a table, and `TR("...")` for a message built in a core module or on a worker thread); then run
   `tools\localization.ps1 -Write` to update `localization/en.json` and the other language files.

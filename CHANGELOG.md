@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **The wiki is online:** the full user documentation is at
+  https://github.com/Marthisdil/GW2_Chat_Messages/wiki (the README links to it).
 - **Map search in the filters:** type part of a map's name (or its id) under **Maps** to find it
   in the GW2 API's full map list, shown with its region, and click it to add it. **Maps you've
   been to** lists the maps you visited lately. A map id the API no longer lists is marked in

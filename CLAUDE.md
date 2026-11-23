@@ -6,11 +6,14 @@ root). Modelled on the Blish HUD module https://github.com/agaertner/bhm-chat-ma
 its `main` branch). **Read `docs/design.md` before feature work**: it holds the decisions, data
 model, import/export rules and the phase plan.
 
-`docs/wiki/` holds the user documentation for the GitHub wiki (flat pages, links written as
-`[text](Page-Name)` without `.md`, `_Sidebar.md`). Update it with every user-visible change. The
-repo is private and its wiki is off, so the pages are pushed to the wiki repo later. Wiki pages
-link images as `../images/name.png`; when publishing, rewrite those to
-`https://raw.githubusercontent.com/Marthisdil/GW2_Chat_Messages/main/docs/images/name.png`.
+`docs/wiki/` is the source of the GitHub wiki (https://github.com/Marthisdil/GW2_Chat_Messages/wiki; flat pages, links
+written as `[text](Page-Name)` without `.md`, `_Sidebar.md`). Update it with every user-visible
+change, in the same PR. After each merge that changes `docs/wiki/`, publish it: clone
+`https://github.com/Marthisdil/GW2_Chat_Messages.wiki.git` (branch `master`), copy the pages in
+(delete a page there that's gone from `docs/wiki/`), commit and push, then check the pages. Wiki
+pages link images as `../images/name.png`; when publishing, rewrite those to
+`https://raw.githubusercontent.com/Marthisdil/GW2_Chat_Messages/main/docs/images/name.png`. Never
+edit the wiki on GitHub directly: the next publish overwrites it.
 
 **Security reviews and `claude-security` scans:** read `docs/security-review.md` first (scope,
 untrusted inputs, patch rules; `vendor/` is out of scope). How to run them (clang-tidy/clangd via
