@@ -54,6 +54,26 @@ on 2026-11-23. What was left out of them is under section 4.
 Re-ranked 2026-11-23 after the starter library: smallest and safest first. "Filters on folders"
 is the owner's new idea and needs its questions settled first.
 
+### Favourites shown everywhere, whatever the filters (added 2026-11-23)
+
+In the quick menu (the pop-up and the right-click menu), the **Favourites** list at the top
+always shows every favourite, wherever you are: a favourite ignores its game mode and map
+filters there. Folders can be favourites too: a favourite folder is always listed under
+Favourites (as a sub-menu), whatever its macros' filters say.
+
+- Today (PR for favourites and recently sent, 2026-11-23) only macros can be favourites, and the
+  Favourites list follows the filters like the rest of the menu.
+- Points to settle:
+  - Does "regardless of filters" also apply to **hotkeys**, or only to the quick menu? (A
+    favourite's hotkey could still follow its filters, so a WvW-only key doesn't fire in PvE.)
+  - A favourite folder: does it show **all** its macros (even ones filtered out here), or only
+    the active ones, with the folder itself always listed?
+  - Should a favourite that isn't active here look different (dimmed, like in the library), so
+    you know it's outside its filter?
+  - Recently sent keeps following the filters (it's not a favourite).
+  - Where folders get the mark: the right-click menu, and a Favourite box in the folder's details.
+    `"favourite"` would then be saved on folders in `macros.json` as well.
+
 ### Filters on folders (added 2026-11-23)
 
 Folder visibility that follows the filter system. What's there already: the quick menu hides a
