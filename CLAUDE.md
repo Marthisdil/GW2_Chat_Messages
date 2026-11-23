@@ -123,8 +123,10 @@ to the todo list", add it there (don't start building it). Move agreed items int
 - `src/Hotkeys.*`: the WndProc hook that reads presses and captures a new hotkey. It only queues
   presses; the render thread (`Ui.cpp`) matches them to macros and starts the sender.
 - `src/Examples.*`: the starter library (the Examples folder added on the first run and by
-  "Add the example macros"); its names and lines are `TR` texts. No Nexus or ImGui dependency.
-  Tested by `tests/ExamplesTests.cpp`.
+  "Add the example macros"); its names and lines are `TR` texts. Its top folder has the reserved
+  id `MacroTree::kReservedExamplesId`, which nothing else may ever get: never hand it out
+  except through `Tree::ClaimReservedId`. No Nexus or ImGui dependency. Tested by
+  `tests/ExamplesTests.cpp`.
 - `src/Cooldown.*`: the hotkey cooldown and the 1-second guard after a send (`Tracker`), per
   macro; only hotkeys wait. No Nexus or ImGui dependency. Tested by `tests/CooldownTests.cpp`.
 - `src/Placeholders.*`: fills in `{time}`, `{random}`, `{map}` and the other placeholders. The

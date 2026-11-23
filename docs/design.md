@@ -185,6 +185,23 @@ Examples
 - `src/Examples.*` builds it (no Nexus or ImGui), tested by `tests/ExamplesTests.cpp`: the shape,
   every line within 199 units with no removed placeholder, a save and load round trip, and the
   "(2)" names. It's an ordinary folder: edit, move or delete it like any other.
+- **A reserved id** (decided by the owner, 2026-11-23), so the addon can always find the
+  Examples folder it made, even after a rename or a language change (for the "ask first,
+  overwrite" idea in `docs/todo.md`). The top Examples folder gets
+  `MacroTree::kReservedExamplesId` (`Examples::kFolderId`, `4558414d504c4531` in
+  `macros.json`), and nothing else can ever hold it:
+  - `Tree::NewId` never returns it (nor 0), so no folder or macro the user or the addon makes
+    gets it. Only `Tree::ClaimReservedId` gives it out, to a folder in the tree, and only while
+    no folder in the tree or the bin has it.
+  - Loading keeps it only on a folder, and only once (like any id); a macro with it, or a second
+    folder, gets a new id with the usual "Gave new ids" warning. A hand-edited or damaged file
+    can't move it onto something else.
+  - Imports and copies always get new ids, so someone else's exported Examples folder comes in
+    as an ordinary folder.
+  - In the trash bin it still counts (a new copy gets an ordinary id), and restoring the folder
+    keeps it. A folder rebuilt by a restore (for an item whose folder is gone) never takes it.
+  - A second copy ("Examples (2)") has an ordinary id.
+  Tested in `tests/ExamplesTests.cpp`.
 
 ## Text size
 

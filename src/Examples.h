@@ -9,8 +9,12 @@
 
 namespace Examples
 {
+    // The top Examples folder's id, reserved so it can be found by id (MacroTree.h).
+    constexpr uint64_t kFolderId = MacroTree::kReservedExamplesId;
+
     // Adds the Examples folder at the top level of aTree, as "Examples (2)" etc. when the name is
-    // taken. Returns the new folder, or nullptr if it couldn't be added.
+    // taken. The first one gets kFolderId; a copy while one with that id exists (in the tree or
+    // the bin) gets an ordinary id. Returns the new folder, or nullptr if it couldn't be added.
     MacroTree::Node* Add(MacroTree::Tree& aTree);
 
     // Lion's Arch, the map the map-filter example is limited to.

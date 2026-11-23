@@ -62,20 +62,11 @@ Examples structure to the library. Change how it behaves:
   when). If the flag is set, the button first asks the user to confirm.
 - If an **Examples** folder already exists in the tree, the prompt asks whether to **overwrite**
   it: the old folder is replaced by a fresh copy. **No merge**, and no more "Examples (2)".
-- **Found by a reserved id (decided by the owner, 2026-11-23),** not by its name, since the user
-  may rename it or switch languages. The top Examples folder always gets one fixed id
-  (`Examples::kFolderId`, a constant in `src/Examples.h`) that nothing else can ever hold:
-  - `Tree::NewId` never returns it (nor 0), so no folder or macro the user or the addon makes
-    can get it.
-  - Loading `macros.json` keeps it only on a folder; a macro (or a second folder) with it gets a
-    new id, like any repeated id today. A hand-edited or damaged file can't steal it.
-  - Imports, duplicates and copies always get new ids (as today), so an exported Examples
-    folder that someone imports, or a copy of it, is an ordinary folder and is never
-    overwritten.
-  - Restoring it from the trash bin keeps the id, so the restored folder is "the" Examples
-    folder again.
-  - Only the folders made before this change (by the starter library PR) have a random id; the
-    first build with this change can't recognise them, so they stay ordinary folders.
+- **Found by its reserved id** (decided by the owner and built with the starter library,
+  2026-11-23; see `docs/design.md`, "Starter library"), not by its name, since the user may
+  rename it or switch languages. The top Examples folder has `Examples::kFolderId`, which no
+  other folder or macro can ever hold, so "the Examples folder exists" is
+  `Tree::Find(Examples::kFolderId)` (or the same id in the trash bin).
 - Points to settle: whether "overwrite" moves the old folder to the trash bin (when that's on)
   so it can be restored; what happens to macros the user added inside it (they go with it, so
   the prompt should say so); and whether the sub-folders need reserved ids too (probably not:

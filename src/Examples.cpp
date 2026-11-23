@@ -36,6 +36,7 @@ namespace Examples
         for (int i = 1; i <= 100 && !root; ++i)
             root = Folder(aTree, nullptr, i == 1 ? base : base + " (" + std::to_string(i) + ")");
         if (!root) return nullptr;
+        aTree.ClaimReservedId(*root); // false for a second copy: it stays an ordinary folder
 
         Macro(aTree, root, TR("Hello"), {Say(EChannel::Say, TR("Hello everyone!"))});
 
