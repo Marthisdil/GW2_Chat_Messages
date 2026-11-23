@@ -179,9 +179,23 @@ Examples
   empty, as before. A library restored from the `.bak` doesn't get examples either, and a
   missing `macros.json` with its `.bak` still there isn't a first run (saving the examples
   would soon overwrite that backup).
-- **Getting them back:** the options page has **Add the example macros**: a new folder at the
-  top level ("Examples (2)" if the name is taken), selected and shown in the library. The
-  user's own macros aren't touched.
+- **Getting them back:** the options page has **Add the example macros** (decided by the owner
+  2026-11-23: ask first, replace, never merge). The button only opens the library; the library
+  window asks, at its own ID level:
+  - **An Examples folder exists** (`Examples::Find`, by the reserved id, so a renamed or moved
+    one counts): "Replace the examples?", with how many folders and macros go and that macros
+    the user added or changed there go too. **Replace** puts a fresh copy in the old one's place
+    (same folder and position; the top level if its sub-folders wouldn't fit within 6 levels).
+    The old folder goes to the trash bin when the bin is on (as an ordinary folder: it gives up
+    the reserved id first, so a restore never brings back a second tracked one), otherwise it's
+    deleted for good, and the prompt says which. No merge and no "Examples (2)" beside it.
+  - **None in the tree, but `"examples_added"` is set** (added at the first run or by the button
+    before): "Add the examples again?". An old one in the trash bin gives up the id to the new
+    one and stays there as an ordinary folder.
+  - **Never added** (a library from before the starter library): added at once, and the setting
+    is set.
+  The new folder is selected and shown, with a status line. `Examples::AddAgain`, `Replace` and
+  `Tree::ReleaseReservedId`, tested in `tests/ExamplesTests.cpp`.
 - `src/Examples.*` builds it (no Nexus or ImGui), tested by `tests/ExamplesTests.cpp`: the shape,
   every line within 199 units with no removed placeholder, a save and load round trip, and the
   "(2)" names. It's an ordinary folder: edit, move or delete it like any other.

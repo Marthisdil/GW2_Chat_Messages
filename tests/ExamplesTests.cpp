@@ -175,9 +175,95 @@ static void TestReservedId()
     }
 }
 
+// "Add the example macros": AddAgain and Replace (never a merge, never a copy beside it).
+static void TestAddAgainAndReplace()
+{
+    {
+        // AddAgain only when there's none in the tree; one in the trash bin gives up the id.
+        Tree t;
+        Node* first = Examples::Add(t);
+        CHECK(Examples::Find(t) == first);
+        CHECK(Examples::AddAgain(t) == nullptr); // one exists: Replace is the way
+        CHECK(first && t.MoveToTrash(*first, "2026-11-23 21:00").Ok);
+        CHECK(Examples::Find(t) == nullptr);
+        Node* again = Examples::AddAgain(t);
+        CHECK(again && again->Id == Examples::kFolderId && Examples::Find(t) == again);
+        CHECK(t.Trash().size() == 1 && t.Trash()[0].Item->Id != Examples::kFolderId);
+        // Restoring the old one now gives an ordinary folder beside the tracked one.
+        CHECK(t.Restore(0, ERestoreTo::Original).Ok);
+        CHECK(Examples::Find(t) == again && t.Root().Children.size() == 2);
+    }
+    {
+        // Replace into the trash bin: same place, same parent, the old one ordinary in the bin,
+        // with the user's own macro still in it.
+        Tree t;
+        t.AddMacro(nullptr, "Before");
+        Node* mine = t.AddFolder(nullptr, "Mine").Target;
+        Node* ex = Examples::Add(t, mine);
+        CHECK(ex && ex->Parent == mine);
+        t.AddMacro(mine, "After");
+        CHECK(t.Rename(*ex, "My examples").Ok);
+        CHECK(t.AddMacro(ex, "My own").Ok);
+        Node* fresh = Examples::Replace(t, *ex, true, "2026-11-23 21:05");
+        CHECK(fresh && fresh->Id == Examples::kFolderId && fresh->Name == "Examples");
+        CHECK(fresh && fresh->Parent == mine && mine->Children.size() == 2 && mine->Children[0].get() == fresh);
+        CHECK(Examples::Find(t) == fresh);
+        CHECK(t.Trash().size() == 1 && t.Trash()[0].Item->Name == "My examples" &&
+              t.Trash()[0].Item->Id != Examples::kFolderId);
+        bool ownKept = false;
+        for (const auto& c : t.Trash()[0].Item->Children) ownKept = ownKept || c->Name == "My own";
+        CHECK(ownKept);
+        // A fresh copy has none of the user's macros: it isn't a merge.
+        bool ownInFresh = false;
+        for (const auto& c : fresh->Children) ownInFresh = ownInFresh || c->Name == "My own";
+        CHECK(!ownInFresh);
+    }
+    {
+        // Replace for good (trash bin off): the old one is gone; the top-level place is kept.
+        Tree t;
+        Node* ex = Examples::Add(t);
+        t.AddFolder(nullptr, "Zeta");
+        CHECK(ex && t.Shift(*ex, 1)); // Examples second
+        Node* fresh = Examples::Replace(t, *ex, false, "");
+        CHECK(fresh && t.Trash().empty() && t.Root().Children.size() == 2);
+        CHECK(t.Root().Children[1].get() == fresh && fresh->Id == Examples::kFolderId);
+    }
+    {
+        // A parent too deep for the Examples sub-folders: the copy goes to the top level.
+        Tree t;
+        Node* f = nullptr;
+        for (int i = 0; i < 5; ++i) f = t.AddFolder(f, "L" + std::to_string(i)).Target;
+        CHECK(f && Tree::FolderLevel(*f) == 5);
+        Node* ex = Examples::Add(t, f);
+        CHECK(ex && ex->Parent == &t.Root());
+        // And Replace of an Examples folder moved in deep keeps everything valid the same way.
+        Node* lvl3 = t.Root().Children[0]->Children[0]->Children[0].get();
+        CHECK(t.Move(*ex, *lvl3, EDrop::Into).Ok);
+        Node* fresh = Examples::Replace(t, *ex, true, "now");
+        CHECK(fresh && fresh->Parent == lvl3);
+    }
+    {
+        // Replace refuses anything but the tracked folder, and changes nothing.
+        Tree t;
+        Node* other = t.AddFolder(nullptr, "Examples").Target;
+        CHECK(other && Examples::Replace(t, *other, true, "now") == nullptr);
+        CHECK(t.Root().Children.size() == 1 && t.Trash().empty());
+    }
+    {
+        // ReleaseReservedId: from the tree, from the bin, and nothing to release.
+        Tree t;
+        CHECK(!t.ReleaseReservedId());
+        Node* ex = Examples::Add(t);
+        CHECK(t.ReleaseReservedId() && ex->Id != Examples::kFolderId && ex->Id != 0 && !t.Find(Examples::kFolderId));
+        CHECK(t.ClaimReservedId(*ex));
+        CHECK(t.MoveToTrash(*ex, "now").Ok && t.ReleaseReservedId() && t.Trash()[0].Item->Id != Examples::kFolderId);
+    }
+}
+
 void RunExamplesTests()
 {
     TestShape();
     TestAddedAgain();
     TestReservedId();
+    TestAddAgainAndReplace();
 }

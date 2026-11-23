@@ -15,7 +15,25 @@ namespace Examples
     // Adds the Examples folder at the top level of aTree, as "Examples (2)" etc. when the name is
     // taken. The first one gets kFolderId; a copy while one with that id exists (in the tree or
     // the bin) gets an ordinary id. Returns the new folder, or nullptr if it couldn't be added.
-    MacroTree::Node* Add(MacroTree::Tree& aTree);
+    // aParent: the folder to add it to (nullptr = the top level); if the Examples folder's own
+    // sub-folders wouldn't fit under it (6 levels), it goes to the top level instead.
+    MacroTree::Node* Add(MacroTree::Tree& aTree, MacroTree::Node* aParent = nullptr);
+
+    // The Examples folder the addon made (by its reserved id), in the tree; nullptr if there's
+    // none (it may be in the trash bin, or deleted).
+    MacroTree::Node* Find(const MacroTree::Tree& aTree);
+
+    // Adds the examples from the "Add the example macros" button: a copy that holds the
+    // reserved id (taken from one in the trash bin, if there is one, which becomes an ordinary
+    // folder there). Call it only when Find() is nullptr; use Replace() otherwise.
+    MacroTree::Node* AddAgain(MacroTree::Tree& aTree);
+
+    // Replaces the Examples folder aOld (Find()) with a fresh copy in the same place. Never
+    // merges: aOld goes, with everything in it (also macros the user added), to the trash bin
+    // when aToTrash (as an ordinary folder, aWhen shown there) or is deleted for good.
+    // Returns the new folder (with the reserved id), or nullptr (aOld isn't the tracked Examples
+    // folder: nothing changes).
+    MacroTree::Node* Replace(MacroTree::Tree& aTree, MacroTree::Node& aOld, bool aToTrash, const std::string& aWhen);
 
     // Lion's Arch, the map the map-filter example is limited to.
     constexpr int kLionsArchMapId = 50;

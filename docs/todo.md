@@ -46,42 +46,23 @@ the first release.
 Built so far (in `docs/design.md`): the remaining messages translated ("Languages"), the filters'
 map search ("Features"), the default-key warning ("Input safety", hotkeys), and the import and
 export folders, ready to open ("Import / export"), Preview next to Send now ("Features"), the
-per-macro hotkey cooldown ("Input safety", hotkeys) and the starter library ("Starter
-library"), all on 2026-11-23. What was left out of them is under section 4.
+per-macro hotkey cooldown ("Input safety", hotkeys), and the starter library with its
+reserved id and "ask first, replace" button ("Starter library"), all on 2026-11-23. What was left out of them is under section 4.
 
-Moved up from section 5 on 2026-11-23, in this order, plus the owner's new "Filters on folders"
-at the end:
-
-### Example macros: ask first, replace instead of adding a copy (added 2026-11-23)
-
-The options page's **Add the example macros** button (built with the starter library) adds the
-Examples structure to the library. Change how it behaves:
-
-- A flag in `settings.json` says whether the examples were ever created, at the first launch or
-  with the button (today's `"examples_added"` already covers both; maybe record which, and
-  when). If the flag is set, the button first asks the user to confirm.
-- If an **Examples** folder already exists in the tree, the prompt asks whether to **overwrite**
-  it: the old folder is replaced by a fresh copy. **No merge**, and no more "Examples (2)".
-- **Found by its reserved id** (decided by the owner and built with the starter library,
-  2026-11-23; see `docs/design.md`, "Starter library"), not by its name, since the user may
-  rename it or switch languages. The top Examples folder has `Examples::kFolderId`, which no
-  other folder or macro can ever hold, so "the Examples folder exists" is
-  `Tree::Find(Examples::kFolderId)` (or the same id in the trash bin).
-- Points to settle: whether "overwrite" moves the old folder to the trash bin (when that's on)
-  so it can be restored; what happens to macros the user added inside it (they go with it, so
-  the prompt should say so); and whether the sub-folders need reserved ids too (probably not:
-  the whole top folder is replaced).
-
-### Favourites and "recently sent" in the quick menu
-
-Pinned macros and the last few sent ones at the top of the quick menu (and the pop-up), so the
-common ones don't need digging through folders.
+Re-ranked 2026-11-23 after the starter library: smallest and safest first. Daily backups and
+favourites came up from section 5; "Filters on folders" is the owner's new idea and needs its
+questions settled first.
 
 ### Daily rolling backups of `macros.json`
 
 Keep the last 7 days (one copy per day) in `<addon>\backups\`, on top of today's single `.bak`
 (which only covers the last save). Points to settle: how many to keep, and a "Restore a backup"
 choice in the Import window.
+
+### Favourites and "recently sent" in the quick menu
+
+Pinned macros and the last few sent ones at the top of the quick menu (and the pop-up), so the
+common ones don't need digging through folders.
 
 ### Filters on folders (added 2026-11-23)
 

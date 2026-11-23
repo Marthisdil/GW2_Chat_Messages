@@ -28,13 +28,19 @@ namespace
 
 namespace Examples
 {
-    Node* Add(Tree& aTree)
+    // Folder levels the Examples folder takes: itself, Filters, In WvW.
+    constexpr int kExamplesHeight = 3;
+
+    Node* Add(Tree& aTree, Node* aParent)
     {
-        // A free top-level name: "Examples", then "Examples (2)", ...
+        if (aParent && (!aParent->IsFolder() || aParent == &aTree.Root() ||
+                        Tree::FolderLevel(*aParent) + kExamplesHeight > MacroTree::kMaxFolderDepth))
+            aParent = nullptr;
+        // A free name: "Examples", then "Examples (2)", ...
         const std::string base = TR("Examples");
         Node* root = nullptr;
         for (int i = 1; i <= 100 && !root; ++i)
-            root = Folder(aTree, nullptr, i == 1 ? base : base + " (" + std::to_string(i) + ")");
+            root = Folder(aTree, aParent, i == 1 ? base : base + " (" + std::to_string(i) + ")");
         if (!root) return nullptr;
         aTree.ClaimReservedId(*root); // false for a second copy: it stays an ordinary folder
 
@@ -61,5 +67,39 @@ namespace Examples
         if (Node* m = Macro(aTree, la, TR("Meet at the bank"), {Say(EChannel::Map, TR("Meet me at the bank in Lion's Arch."))}))
             m->MapIds = {kLionsArchMapId};
         return root;
+    }
+
+    Node* Find(const Tree& aTree)
+    {
+        Node* n = aTree.Find(kFolderId);
+        return n && n->IsFolder() ? n : nullptr;
+    }
+
+    Node* AddAgain(Tree& aTree)
+    {
+        if (Find(aTree)) return nullptr;
+        aTree.ReleaseReservedId(); // one in the trash bin stays there, as an ordinary folder
+        return Add(aTree);
+    }
+
+    Node* Replace(Tree& aTree, Node& aOld, bool aToTrash, const std::string& aWhen)
+    {
+        if (&aOld != Find(aTree) || !aOld.Parent) return nullptr;
+        Node* parent = aOld.Parent == &aTree.Root() ? nullptr : aOld.Parent;
+        size_t index = 0;
+        while (index < aOld.Parent->Children.size() && aOld.Parent->Children[index].get() != &aOld) ++index;
+
+        // Release the id first: the old folder is an ordinary one from now on, in the bin too.
+        aTree.ReleaseReservedId();
+        const MacroTree::Result gone = aToTrash ? aTree.MoveToTrash(aOld, aWhen) : aTree.Delete(aOld);
+        if (!gone.Ok) return nullptr; // can't happen for a folder in the tree; nothing was added
+
+        Node* fresh = Add(aTree, parent);
+        if (!fresh) return nullptr;
+        // Into the old folder's place (Add appends at the end).
+        Node& folder = *fresh->Parent;
+        if (fresh->Parent == (parent ? parent : &aTree.Root()) && index + 1 < folder.Children.size())
+            aTree.Move(*fresh, *folder.Children[index], MacroTree::EDrop::Before);
+        return fresh;
     }
 }
