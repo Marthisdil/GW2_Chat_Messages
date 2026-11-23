@@ -52,6 +52,21 @@ library"), all on 2026-11-23. What was left out of them is under section 4.
 Moved up from section 5 on 2026-11-23, in this order, plus the owner's new "Filters on folders"
 at the end:
 
+### Example macros: ask first, replace instead of adding a copy (added 2026-11-23)
+
+The options page's **Add the example macros** button (built with the starter library) adds the
+Examples structure to the library. Change how it behaves:
+
+- A flag in `settings.json` says whether the examples were ever created, at the first launch or
+  with the button (today's `"examples_added"` already covers both; maybe record which, and
+  when). If the flag is set, the button first asks the user to confirm.
+- If an **Examples** folder already exists in the tree, the prompt asks whether to **overwrite**
+  it: the old folder is replaced by a fresh copy. **No merge**, and no more "Examples (2)".
+- Points to settle: how the existing folder is found (by its name in the current language, or
+  by an id saved when it was created, since the user may rename it or switch languages); whether
+  "overwrite" moves the old folder to the trash bin (when that's on) so it can be restored; and
+  what happens to macros the user added inside it (they go with it, so the prompt should say so).
+
 ### Favourites and "recently sent" in the quick menu
 
 Pinned macros and the last few sent ones at the top of the quick menu (and the pop-up), so the
