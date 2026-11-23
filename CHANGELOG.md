@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Preview:** a button next to **Send now** shows what it would type, line by line, with
+  placeholders filled in and the channel commands added (`/w Name`, then Tab, then the message,
+  for a whisper), without sending anything. It runs the same checks as a real send, and its
+  errors open the error window.
 - **ArenaNet's macro policy:** the addon's options page links to
   [Policy: Macros and Macro Use](https://help.guildwars2.com/hc/en-us/articles/360013762153-Policy-Macros-and-Macro-Use) (and to the repository), under the version and
   build, with a reminder that the addon only sends messages you start and mustn't be used to

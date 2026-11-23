@@ -317,7 +317,8 @@ namespace
         c.Weekday = n > 1 ? Utf8(day, n - 1) : std::string("Today");
         c.AddonVersion = std::string(kAddonName) + " " + kVersionText;
         c.Random = [](long long aMin, long long aMax) {
-            static std::mt19937_64 rng{std::random_device{}()};
+            // One per thread: the sender worker and Preview (render thread) can both roll at once.
+            thread_local std::mt19937_64 rng{std::random_device{}()};
             return std::uniform_int_distribution<long long>(aMin, aMax)(rng);
         };
         c.MapName = [](std::string& aName, std::string& aError) {
@@ -327,28 +328,11 @@ namespace
         return c;
     }
 
-    // Fills in placeholders, then builds the steps. Runs on the worker: {map} may wait on the
-    // network. Returns the error, or "" with aPlan ready.
-    std::string Prepare(std::vector<MacroTree::Line> aLines, SendPlan::Plan& aPlan)
+    // Fills in placeholders, then builds the steps (SendPlan::Prepare). Runs on the worker: {map}
+    // may wait on the network. Returns the error, or "" with aPlan ready.
+    std::string Prepare(const std::vector<MacroTree::Line>& aLines, SendPlan::Plan& aPlan)
     {
-        const Placeholders::Context ctx = PlaceholderContext();
-        std::vector<SendPlan::Origin> origins(aLines.size()); // which bytes came from values
-        for (size_t i = 0; i < aLines.size(); i++)
-        {
-            std::pair<std::string*, std::vector<bool>*> fields[] = {{&aLines[i].Message, &origins[i].Message},
-                                                                     {&aLines[i].WhisperTo, &origins[i].WhisperTo}};
-            for (auto& [field, fromValue] : fields)
-            {
-                if (s_Stop) return TR("Stopped.");
-                Placeholders::Result r = Placeholders::Expand(*field, ctx);
-                if (!r.Error.empty()) return Localization::Fmt(TR("Line %zu: "), static_cast<size_t>(i + 1)) + r.Error;
-                *field     = std::move(r.Text);
-                *fromValue = std::move(r.FromValue);
-            }
-        }
-        // Built from the filled-in text, so the 199-character and control character checks are on
-        // what's really typed, and a value can't start a command (SEC-013).
-        aPlan = SendPlan::Build(aLines, IsCommander(), origins);
+        aPlan = SendPlan::Prepare(aLines, IsCommander(), PlaceholderContext(), [] { return s_Stop.load(); });
         return aPlan.Error;
     }
 
@@ -376,7 +360,7 @@ namespace
             // failed send: the same clean-up as any other failure below.
             try
             {
-                error = Prepare(std::move(lines), plan);
+                error = Prepare(lines, plan);
                 if (error.empty()) error = Run(plan, macro);
             }
             catch (const std::exception& e)
@@ -468,3 +452,22 @@ Sender::Status Sender::GetStatus()
 }
 
 bool Sender::IsBusy() { return s_Busy.load(); }
+
+SendPlan::Plan Sender::Preview(const std::vector<MacroTree::Line>& aLines)
+{
+    Placeholders::Context ctx = PlaceholderContext();
+    // The render thread must never wait on the network: only names already in the cache.
+    ctx.MapName = [](std::string& aName, std::string& aError) {
+        const uint32_t id = s_Mumble ? s_Mumble->Context.MapID : 0;
+        if (id == 0)
+        {
+            aError = TR("you're not on a map right now.");
+            return false;
+        }
+        if (MapNames::Lookup(id, aName)) return true;
+        MapNames::Request(id);
+        aError = TR("the map's name is still being looked up. Try Preview again in a moment.");
+        return false;
+    };
+    return SendPlan::Prepare(aLines, IsCommander(), ctx);
+}

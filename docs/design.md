@@ -121,6 +121,18 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
     still bring in outside text. `Placeholders::Result::FromValue` marks the bytes that came from values.
   - Waypoint and other chat links (`[&BDAEAAA=]`) need no feature: they're typed as text and the
     game turns them into links.
+- **Preview** (built 2026-11-23): a button next to **Send now** shows what it would type, line by
+  line, without sending anything. It goes through `SendPlan::Prepare` (fill in placeholders, then
+  `Build` with their origins), the same function a real send uses, so every check runs (199
+  units, control characters, SEC-013 commands, an empty whisper recipient). `SendPlan::Describe`
+  turns the plan's steps into the text per box: `/s hello`; for a whisper `/w Name`, then Tab,
+  then the message; for a squad broadcast (as commander) just the message. On the render
+  thread `{map}` uses only the map name cache (`Sender::Preview`): an unknown name is requested in
+  the background and the preview says to try again, so the game never waits on the network. An
+  error opens the error window ("Clicked Preview for ... (nothing was sent)"). The preview stays
+  under the button until the macro's lines change, another macro is selected, or **Close
+  preview**. `{random}` and the time are filled in again on the real send, and the preview says
+  so.
 - **`.txt` link file**: optional two-way sync of one macro with a text file in raw format.
   *(Built in phase 7 part 2; `src/LinkSync.*`, unit tested in `tests/LinkSyncTests.cpp`.)*
   - Set in the macro editor ("Text file link"). A path without a drive is relative to

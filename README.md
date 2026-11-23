@@ -30,7 +30,8 @@ chat for you, from a hotkey, a menu or a button.
     The editor warns when a key is one of GW2's default keys (like F1 or Ctrl+T).
   - **Quick menu:** right-click the scroll icon in the Nexus bar, or press a key you choose, to
     pick a macro from nested menus.
-  - **Send now** in the library.
+  - **Send now** in the library. **Preview**, next to it, shows exactly what would be typed
+    (placeholders filled in, channel commands added) without sending anything.
 - **Filters:** limit a macro to PvE, WvW or PvP, and to certain maps. Hotkeys and the quick menu
   only use macros that are active where you are, so one key can do different things in WvW and
   in PvE. Find maps by name (or pick one you've been to); names come from the official GW2 API.
