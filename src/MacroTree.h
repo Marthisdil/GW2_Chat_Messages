@@ -124,7 +124,7 @@ namespace MacroTree
         TopLevel,        // at the top level
     };
 
-    class Tree
+    class Tree // NOLINT(bugprone-exception-escape): SEC-030, accepted (MSVC set move allocates)
     {
     public:
         Tree();

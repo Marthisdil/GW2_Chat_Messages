@@ -39,3 +39,17 @@ jobs:
         with:
           name: GW2_Chat_Messages
           path: build/Release/GW2_Chat_Messages.dll
+
+      # The clang part of the security audit (docs/security-audit.md) on all of src\ and tests\.
+      # It needs the Release build (the build stamp header). LLVM is on the runner image.
+      - name: Clang audit
+        if: matrix.configuration == 'Release'
+        shell: pwsh
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tools\run_audit.ps1 -Tests
+
+      - uses: actions/upload-artifact@v4
+        if: always() && matrix.configuration == 'Release'
+        with:
+          name: clang-audit
+          path: build/audit/
+          if-no-files-found: ignore

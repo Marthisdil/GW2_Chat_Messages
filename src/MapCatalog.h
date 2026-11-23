@@ -32,7 +32,7 @@ namespace MapCatalog
         std::string Folded; // Name folded for searching (Search::Fold)
     };
 
-    struct Cache
+    struct Cache // NOLINT(bugprone-exception-escape): SEC-030, accepted (MSVC set move allocates)
     {
         std::string Lang = "en";                    // the API language the names are in
         std::unordered_map<uint32_t, Map> Maps;     // every map whose name is known

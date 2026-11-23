@@ -45,7 +45,10 @@ $out = Join-Path $root "build\audit"
 New-Item -ItemType Directory -Force $out | Out-Null
 $tidyLog   = Join-Path $out "clang-tidy.txt"
 $clangdLog = Join-Path $out "clangd.txt"
-Set-Content $tidyLog "" ; Set-Content $clangdLog ""
+# Kept in memory and written once at the end: appending per file fails now and then while
+# Dropbox is syncing the log ("Stream was not readable").
+$tidyText   = New-Object System.Text.StringBuilder
+$clangdText = New-Object System.Text.StringBuilder
 
 $tidyFindings = @()
 $clangdErrors = @()
@@ -59,14 +62,17 @@ foreach ($f in $files) {
     Write-Host "[$i/$($files.Count)] $rel"
 
     $t = & $tidy -p $bdir --quiet $f 2>&1 | Out-String
-    Add-Content $tidyLog "===== $rel`r`n$t"
+    [void]$tidyText.Append("===== $rel`r`n$t`r`n")
     $tidyFindings += $t -split "`n" | Where-Object { $_ -match '(warning|error): .*\[([\w.-]+)\]' }
 
     $c = & $clangd "--check=$f" "--compile-commands-dir=$bdir" 2>&1 | Out-String
-    Add-Content $clangdLog "===== $rel`r`n$c"
+    [void]$clangdText.Append("===== $rel`r`n$c`r`n")
     # "tweak:" lines are clangd testing its own refactorings, not problems in the code.
     $clangdErrors += $c -split "`n" | Where-Object { $_ -match '^E\[' -and $_ -notmatch 'tweak:' } | ForEach-Object { "$rel : $_" }
 }
+
+Set-Content $tidyLog $tidyText.ToString()
+Set-Content $clangdLog $clangdText.ToString()
 
 # The same finding is printed once per file that includes the header: count it once.
 $tidyFindings = $tidyFindings | ForEach-Object { $_.Trim() } | Sort-Object -Unique
