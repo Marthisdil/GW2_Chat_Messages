@@ -176,7 +176,9 @@ Examples
   cooldowns: nothing fires until the user sets a key.
 - **Once only:** `settings.json` gets `"examples_added": true` the first time the addon loads
   (also when a library already exists), so a `macros.json` removed on purpose later starts
-  empty, as before. A library restored from the `.bak` doesn't get examples either.
+  empty, as before. A library restored from the `.bak` doesn't get examples either, and a
+  missing `macros.json` with its `.bak` still there isn't a first run (saving the examples
+  would soon overwrite that backup).
 - **Getting them back:** the options page has **Add the example macros**: a new folder at the
   top level ("Examples (2)" if the name is taken), selected and shown in the library. The
   user's own macros aren't touched.

@@ -66,15 +66,16 @@ In the addon folder, `imports\` and `exports\` exist (delete both before startin
 check they're created).
 
 **A1b. Example macros.** Close the game. In the addon folder, rename `macros.json` to
-`macros.keep.json` (if you have one), and in `settings.json` delete the line
+`macros.keep.json` and `macros.json.bak` to `macros.keep.bak` (if you have them), and in `settings.json` delete the line
 `"examples_added": true` (keep the file valid JSON). Start the game: the library has an
 **Examples** folder with Hello, Basics, Placeholders and Filters (Filters has In WvW and In
 Lion's Arch inside), in the addon's language, and no macro has a hotkey. Preview `Two channels`
 and `Roll a die`. In PvE, `Stack on tag` is dimmed (WvW only) and `Meet at the bank` too unless
 you're in Lion's Arch. Delete the Examples folder and restart: it doesn't come back. On the
 addon's page in Nexus options, click **Add the example macros**: the library opens with a new
-Examples folder selected; click it again: "Examples (2)". Then close the game, put
-`macros.keep.json` back as `macros.json`, and start again: your own library, no examples added.
+Examples folder selected; click it again: "Examples (2)". Then close the game, delete
+the new `macros.json` and `macros.json.bak`, put `macros.keep.json` and `macros.keep.bak` back
+under their old names, and start again: your own library, no examples added.
 
 **A2. Building the tree.** In the library:
 - **New folder** (toolbar) → name `Test`. In it, **New folder inside** five times, one inside the

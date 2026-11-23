@@ -41,7 +41,8 @@ namespace Storage
     // Loads the library into aTree. A missing file means an empty library. Never loses data: a file
     // that can't be read is renamed to "macros.json.unreadable-<time>" and the backup is tried
     // instead. aMessages gets what the user should be told (empty when all went well).
-    // Returns true when there was no macros.json at all (a first run, or the user removed it).
+    // Returns true when there was no macros.json and no macros.json.bak at all (a first run, or
+    // the user removed both).
     bool LoadMacros(MacroTree::Tree& aTree, std::vector<std::string>& aMessages);
 
     // Returns false if the file couldn't be written (the reason is logged).

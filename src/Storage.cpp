@@ -199,7 +199,12 @@ bool Storage::LoadMacros(MacroTree::Tree& aTree, std::vector<std::string>& aMess
         for (auto& w : warnings) aMessages.push_back(std::move(w));
         return false;
     case ERead::Missing:
-        return true; // first run, or the user removed the file on purpose
+    {
+        // First run, or the user removed the file on purpose. With a .bak still there it's not
+        // a first run: saving examples would soon overwrite that backup.
+        std::error_code ec;
+        return !fs::exists(WithSuffix(file, ".bak"), ec) && !ec;
+    }
     case ERead::Unreadable:
     {
         // Keep the unreadable file for the user, under a name we will never overwrite.
