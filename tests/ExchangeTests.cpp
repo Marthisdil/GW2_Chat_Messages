@@ -549,6 +549,15 @@ namespace
         CHECK(!FromPath(dir / "missing.txt").Ok());
         CHECK(!FromPath(dir / "Pack" / "Nothing").Ok());
 
+        // SEC-025: a folder holds at most kMaxFolderBytes of text; the rest isn't read.
+        const std::string big = "/s " + std::string(250 * 1024, 'x') + "\r\n";
+        const size_t fit = kMaxFolderBytes / big.size();
+        for (size_t i = 0; i < fit + 3; i++) WriteFile(dir / "Big" / ("f" + std::to_string(1000 + i) + ".txt"), big);
+        Package bigPkg = FromPath(dir / "Big");
+        CHECK(bigPkg.Ok());
+        CHECK(!bigPkg.Items.Root().Children.empty() && bigPkg.Items.Root().Children[0]->Children.size() == fit);
+        CHECK(!bigPkg.Warnings.empty() && bigPkg.Warnings.back() == "Only the first 16 MB of text files were read.");
+
         fs::remove_all(dir, ec);
     }
 

@@ -121,6 +121,8 @@ namespace
         Tree&                     Items;
         std::vector<std::string>& Warnings;
         size_t                    Files = 0;
+        size_t                    Bytes = 0;     // text read so far
+        bool                      Full  = false; // kMaxFolderBytes reached: nothing more is read
         bool                      WarnedCount = false;
         bool                      WarnedDepth = false;
 
@@ -135,6 +137,7 @@ namespace
 
             for (const fs::directory_entry& e : entries)
             {
+                if (Full) return;
                 std::error_code ec2;
                 if (e.is_directory(ec2))
                 {
@@ -169,6 +172,14 @@ namespace
                         Warnings.push_back("\"" + Utf8Name(e.path().filename()) + "\" was left out. " + error);
                         continue;
                     }
+                    if (Bytes + text.size() > Exchange::kMaxFolderBytes)
+                    {
+                        Warnings.push_back("Only the first " + std::to_string(Exchange::kMaxFolderBytes / (1024 * 1024)) +
+                                           " MB of text files were read.");
+                        Full = true;
+                        return;
+                    }
+                    Bytes += text.size();
                     AddTextMacro(Items, aParent, name, text, Warnings);
                 }
             }
@@ -598,7 +609,26 @@ namespace Exchange
         return FromRawText(aName, aText);
     }
 
+    static Package ReadPath(const fs::path& aPath);
+
+    // A folder can hold up to kMaxFolderBytes of text; anything that throws while reading it (out
+    // of memory, say) becomes the package's error instead of leaving the render callback (SEC-025).
     Package FromPath(const fs::path& aPath)
+    {
+        try
+        {
+            return ReadPath(aPath);
+        }
+        catch (const std::exception&)
+        {
+            Package failed; // nothing half-read is kept
+            failed.Source = Utf8Name(aPath.filename());
+            failed.Error  = "It couldn't be read.";
+            return failed;
+        }
+    }
+
+    static Package ReadPath(const fs::path& aPath)
     {
         Package p;
         p.Source = Utf8Name(aPath.filename());

@@ -26,6 +26,7 @@ namespace Exchange
     constexpr size_t kMaxJsonBytes   = 4 * 1024 * 1024; // an export file
     constexpr size_t kMaxTextBytes   = 256 * 1024;      // one .txt macro
     constexpr size_t kMaxFolderFiles = 2000;            // .txt files read from one folder
+    constexpr size_t kMaxFolderBytes = 16 * 1024 * 1024; // their text in all (SEC-025)
     constexpr size_t kMaxImportItems = 5000;            // folders + macros in one import
 
     // --- Export ---------------------------------------------------------------------------------

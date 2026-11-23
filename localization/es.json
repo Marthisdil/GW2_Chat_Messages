@@ -288,6 +288,8 @@
     "Select all": "Seleccionar todo",
     "Deselect all": "Deseleccionar todo",
     "Import selected": "Importar la selección",
+    "Clicked Import selected in the Import window": "Clic en Importar la selección en la ventana de importación",
+    "There wasn't enough memory to import it. Nothing was imported.": "No había memoria suficiente para importarlo. No se importó nada.",
     "Imported %zu item(s) from %s into %s.": "%zu elemento(s) importado(s) de %s en %s.",
     "Nothing ticked would be added or replaced.": "Nada de lo marcado se añadiría ni sustituiría.",
     "Nothing would be added or replaced.": "No se añadiría ni sustituiría nada.",

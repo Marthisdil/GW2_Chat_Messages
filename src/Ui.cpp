@@ -2526,8 +2526,23 @@ namespace
         if (ImGui::Button(T("Import selected")) && canImport)
         {
             s_UndoImport = s_Tree.ToJson();
-            const size_t n = Exchange::Apply(s_Tree, *target, plan, s_ImportOpt);
-            s_UndoText = Fmt(T("Imported %zu item(s) from %s into %s."), n, s_ImportPkg->Source.c_str(), FolderPath(*target).c_str());
+            size_t n = 0;
+            bool applied = true;
+            try { n = Exchange::Apply(s_Tree, *target, plan, s_ImportOpt); }
+            catch (const std::exception&) { applied = false; } // out of memory, say (SEC-025)
+            if (!applied)
+            {
+                // All or nothing: the library goes back to how it was, as Undo import does.
+                std::vector<std::string> ignored;
+                s_Tree.FromJson(*s_UndoImport, &ignored);
+                s_UndoImport.reset();
+                s_SelectedId = 0;
+                s_TrashSelId = 0;
+                ShowError(T("Clicked Import selected in the Import window"),
+                          T("There wasn't enough memory to import it. Nothing was imported."));
+            }
+            else
+                s_UndoText = Fmt(T("Imported %zu item(s) from %s into %s."), n, s_ImportPkg->Source.c_str(), FolderPath(*target).c_str());
             s_RawForId = 0; // a replaced macro's raw text is stale
             CancelCapture();
             MarkDirty();
