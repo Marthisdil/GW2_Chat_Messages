@@ -45,6 +45,10 @@ folder with someone else's file), **Medium** (wrong behaviour reachable with rea
 | [SEC-026](#sec-026) | 2026-11-22 (approx.) | Info | `src/Ui.cpp:1404` (`InputString`) | A C1 control character pasted into the editor stays in the line until the next load | Fixed | PR #38, commit `4716bfe`, build `b76b291` |
 | [SEC-027](#sec-027) | 2026-11-22 22:05 | High | `src/Exchange.cpp` (`ApplyItems`), `src/MacroTree.cpp` (`CheckName`) | Importing many macros into one folder, and its preview on a re-import, took quadratic time: the game freezes | Fixed | PR #35, commit `1247a73`, build `f055144` |
 | [SEC-028](#sec-028) | 2026-11-23 01:14 | High | `src/Placeholders.cpp` (`Uses`, `HasPlaceholders`, `Expand`) | Finding placeholder names took quadratic time on a line full of `{`, every frame in the import preview and the editor: the game freezes | Fixed | PR #39, commit `83be7f6`, build `aa37a53`; `Expand`: PR #40, commit `f225118`, build `ce420d7` |
+| [SEC-029](#sec-029) | 2026-11-23 05:00 | Medium | `src/MapNames.cpp` (`ThreadMain`) | The map-names worker thread had no `try`: an exception there (out of memory, a bad answer) would end the game | Fixed | this PR (`feature/todo-section-2`) |
+| [SEC-030](#sec-030) | 2026-11-23 04:59 | Info | `src/Exchange.h` (`Package`), `src/MacroTree.h` (`Tree`), `src/MapCatalog.h` (`Cache`) | Moving these can throw (MSVC's `std::set` allocates when moved), only when out of memory | Accepted | - |
+| [SEC-031](#sec-031) | 2026-11-23 04:59 | Info | `src/GameKeys.h` (`Bind::Use`) | Field without a default value | Fixed | this PR |
+| [SEC-032](#sec-032) | 2026-11-23 04:59 | Info | `src/Ui.cpp` (`DrawMapPicker`) | `size_t` to `float` without a cast | Fixed | this PR |
 
 "Build" is the build stamp's commit (shown in the Nexus log and the DLL's Properties). Until a
 release is tagged, it's the PR's commit; the release that first ships a fix is added when it's
@@ -450,6 +454,61 @@ made.
   growing in step with the length.
 - **Status:** Fixed for `Uses` and `HasPlaceholders` in PR #39, commit `83be7f6`, first build
   `aa37a53`. `Expand` fixed in PR #40, commit `f225118`, first build `ce420d7`.
+
+### SEC-029
+
+- **Found:** 2026-11-23 05:00 UTC, following up SEC-030 in the quick audit of
+  `feature/todo-section-2` (`tools/run_audit.ps1 -Changed -Tests` and `/security-review`).
+- **Severity:** Medium. **Where:** `src/MapNames.cpp`, `ThreadMain`.
+- **Finding:** the map-names worker thread (single lookups, and since this PR the full map list:
+  about 10 requests, parsing and saving `maps.json`) ran without a `try`. Anything thrown there,
+  out of memory or an unexpected library error, would reach `std::terminate` and close the game,
+  as SEC-002 did for the sender thread. The thread existed before this PR, but this PR gives it
+  much more to do.
+- **Decision (2026-11-23):** fix. Each step (one wait, then one batch or the full list) runs
+  inside `try`; a throw is logged, "loading" is cleared and the queued ids may be asked for
+  again, and the thread carries on.
+- **Status:** Fixed in this PR (`feature/todo-section-2`). Release: not released yet.
+
+### SEC-030
+
+- **Found:** 2026-11-23 04:59 UTC, quick audit of `feature/todo-section-2` (clang-tidy
+  `bugprone-exception-escape`).
+- **Severity:** Info. **Where:** the implicit move constructors of `Exchange::Package`,
+  `MacroTree::Tree` and `MapCatalog::Cache`.
+- **Finding:** each holds a `std::set`, and MSVC's `std::set` allocates a new head node when
+  moved, so the move can throw `bad_alloc`. `Package` and `Tree` were the same on `main`; they
+  show up now because their headers changed.
+- **Decision (2026-11-23):** accept. It only happens when out of memory, like any other
+  allocation; none of these moves is in a `noexcept` function or a callback from the game, and
+  the worker threads that move a `Cache` catch everything (SEC-029).
+- **Status:** Accepted.
+
+### SEC-031
+
+- **Found:** 2026-11-23 04:59 UTC, quick audit of `feature/todo-section-2` (clang-tidy
+  `cppcoreguidelines-pro-type-member-init`).
+- **Severity:** Info. **Where:** `src/GameKeys.h`, `Bind::Use`.
+- **Finding:** the field had no default value. Every entry in the table sets it, so nothing read
+  an uninitialized pointer.
+- **Decision (2026-11-23):** fix: `= nullptr`.
+- **Status:** Fixed in this PR (`feature/todo-section-2`).
+
+### SEC-032
+
+- **Found:** 2026-11-23 04:59 UTC, quick audit of `feature/todo-section-2` (clang-tidy
+  `bugprone-narrowing-conversions`).
+- **Severity:** Info. **Where:** `src/Ui.cpp`, `DrawMapPicker` (the results box height).
+- **Finding:** a `size_t` (at most 6) added to a `float` without a cast. Harmless.
+- **Decision (2026-11-23):** fix with an explicit `static_cast<float>`.
+- **Status:** Fixed in this PR (`feature/todo-section-2`).
+- The same audit's `/security-review` of the branch found nothing else: the GW2 API responses
+  and `maps.json` (ids checked, names at most 200 bytes and `SafeText`, file read up to 4 MB,
+  the request language from a fixed list), map names drawn as `%s` arguments or labels (never as
+  a format string), and `TR()` texts shared with worker threads (freed only after every thread
+  is joined) were all fine. Not a security issue but fixed too: importing a whole library
+  compared an error message's text to choose its own message (`Exchange::FromLibraryFile`); it
+  now uses a flag (`Package::NotOurFormat`).
 
 ## Tuning decisions (checks turned off)
 

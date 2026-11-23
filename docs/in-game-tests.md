@@ -180,6 +180,9 @@ with the mouse over the addon window and press plain Mouse 4: refused, the error
 needs Ctrl, Alt or Shift. **Set...** again and press **Ctrl+Mouse 4**. Is it recorded? Try
 Shift+Mouse 5 and Alt+Mouse 3 (wheel click) too. Then try with the mouse over the game instead of
 the window. Report which work where. Leave `Emote` on Ctrl+Mouse 4.
+Last, **Set...** and click the left mouse button, then **Set...** and Ctrl+right-click: both are
+refused, and the error window says the left and right buttons can't be hotkeys even with Ctrl,
+Alt or Shift, and why. The click itself still does its normal job.
 
 **F3. Using it.** Close the library and press Ctrl+F1, releasing Ctrl quickly: `Say` is sent. Hold
 Ctrl+F1 down for a few seconds: sent once only. Press it twice quickly: sent once. Press the mouse
@@ -205,6 +208,12 @@ and start the game. Nothing in the log or error window complains. The tree shows
 any more: mouse buttons need Ctrl, Alt or Shift". Pressing Mouse 4 sends nothing (and does its
 game action); the quick menu lists `Emote` without a key. **Change...** to Ctrl+Mouse 4: the
 warning goes and it works again.
+
+**F8. GW2's default keys.** On `Fill` (or any spare macro), set **F1**: a yellow note under the
+hotkey says `In GW2's default keys, F1 is "Profession skill 1"`. Set **Ctrl+T**: "Call target".
+Set **Alt+1**: a squad location marker. Set **Ctrl+1**: no default-key note. Set a plain letter
+that isn't a default key (for example **K**): the older "plain letters are usually game keys"
+note shows instead. Clear the hotkey afterwards.
 
 ## G. Quick menu
 
@@ -240,6 +249,23 @@ each: Heart of the Mists, Edge of the Mists, Armistice Bastion, a WvW borderland
 raid, a strike mission, your home instance, a guild hall, a story instance, a PvP match. Note
 any that land in the wrong mode. On a map where no macro is active, the quick menu says "No macros
 for this map."
+
+**H5. Finding a map.** On `Emote`'s **Where it's active**, type `lions` in **Find a map by name or
+id**: "Lion's Arch - ..." is listed with its region and id; click it and it's added. Type `15`:
+Queensdale is found by its id. A map already in the list is greyed out. Type `zzzz`: nothing
+listed, no error. Remove the maps afterwards.
+
+**H6. Maps you've been to.** Visit two or three maps, then open **Maps you've been to**: they're
+listed newest first, marked "(been there)" in the search results too. Picking one adds it.
+Restart the game: the list is still there.
+
+**H7. A map the API doesn't list.** **Add id** `99999`: it's shown in yellow with **(!)**, and
+hovering it says the GW2 API doesn't list that map. Remove it.
+
+**H8. The map list on the options page.** On the addon's page in **Nexus > Options**: "Map list:
+N maps, from (date)." Click **Refresh map list**: it says it's loading, then shows the new date,
+and the game doesn't stutter. Disconnect from the internet and click it again: the old count stays
+and a yellow line says the refresh failed and why. Reconnect.
 
 ## I. Placeholders
 
@@ -278,6 +304,10 @@ and start typing (if "Preparing..." is gone too fast to catch, mark this skipped
 **I8. A damaged map cache.** Close the game. In `maps.json` in the addon folder, change
 the number after `"format":` to `"x"` (with the quotes) and save. Start the game and enter a map: no error, and
 `/s Hello from {map}` still sends the map name (the cache is rebuilt).
+
+**I9. Map names in another language.** Set the addon's language to **Deutsch** (Q2) and wait about
+10 seconds: in Lion's Arch, `/s Hello from {map}` sends `Löwenstein`, and the map search finds
+`löwen`. Switch back to English: after a few seconds the names are English again.
 
 ## J. Import and export
 
@@ -576,6 +606,12 @@ says one text was left out, and that text shows in English. Then break the file 
 `}`) and reload: the error window says the file wasn't loaded and why, and the dropdown falls
 back. Delete `nl.json` and reload afterwards.
 
+**Q8. Messages and key names.** With German on, the hotkey row and the tree show key names in
+German: **Ctrl+Mouse 4** shows as `Ctrl+Maus 4` and Page Up as `Bild auf` (Ctrl, Alt and Shift
+keep their names). Make a duplicate name, send a macro with the Chat key cleared, and import a
+damaged file: each error window message is in German. Searching the library for `maus 4` and for
+`mouse 4` both find the macro with that hotkey. `macros.json` still stores the hotkey in English.
+
 ## Report template
 
 ```
@@ -585,10 +621,10 @@ B1  B2  B3  B4 (what arrived):
 C1  C2 (did /w Name work without Tab?):
 D1  D2  D3  D4  D5  D6
 E1
-F1  F2 (which mouse buttons, where):  F3  F4  F5  F6  F7
+F1  F2 (which mouse buttons, where):  F3  F4  F5  F6  F7  F8
 G1  G2  G3 (where did it appear?):
-H1  H2  H3  H4 (map: mode, map id):
-I1 (date format sent):  I2  I3  I4  I5  I6  I7  I8
+H1  H2  H3  H4 (map: mode, map id):  H5  H6  H7  H8
+I1 (date format sent):  I2  I3  I4  I5  I6  I7  I8  I9
 J1  J2  J3  J3b  J4  J5  J6  J7  J8  J9  J10
 K1  K2  K3  K4  K5  K6
 L1  L2
@@ -596,6 +632,6 @@ M1 (entries and sizes):  M2  M3  M4  M5
 N1 (pasted text):  N2  N3
 O1  O2  O3 (long name too)  O4  O5
 P1  P2  P3  P4 (did Ctrl+F / Escape reach the game?):  P5  P6 (label at character select):  P7 (did typing or Enter reach the game?):  P8
-Q1  Q2  Q3 (anything cut off?):  Q4  Q5  Q6  Q7   Translations that read oddly:
+Q1  Q2  Q3 (anything cut off?):  Q4  Q5  Q6  Q7  Q8   Translations that read oddly:
 Nexus log warnings:
 ```

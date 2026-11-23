@@ -67,69 +67,10 @@ Claude's steps:
 
 ## 2. Quick wins
 
-### Translate the remaining messages (added 2026-11-21)
-
-The multi-language UI (phase 13, `docs/design.md` "Languages") leaves some texts in English:
-messages from the core modules (tree rules, import, sender status, link sync and hotkey errors,
-key names, "Imported library", "From <file>"). They're built off the render thread or in modules
-with no UI dependency, while `T()` is render-thread only. Options: return message ids or codes
-from those modules and translate them in `Ui.cpp`, or a thread-safe lookup.
-
-### Map ids from the game, with a wiki fallback (added 2026-11-20)
-
-Build together with "Refresh map info" (next). Look at ways for the addon to fill in map ids
-(and names) itself, so nobody has to look ids up by hand for the map filter.
-
-- **What the game gives us:** MumbleLink only reports the *current* map id and map type. That's
-  what "Add this map" uses today (PR #7). The game has no API for listing all maps.
-- Options to look at:
-  - **Remember visited maps:** keep a small list of every map id seen in MumbleLink, so the filter
-    can offer "maps you've been to" in a picker.
-  - **Names from the official GW2 API:** `/v2/maps?ids=...` (no API key needed) for the names of
-    known ids, cached on disk (`maps.json`, PR #9; no waypoint or POI data: decided 2026-11-20).
-  - **The full list to search:** `/v2/maps` lists every map id. Fetched once and cached, it would
-    allow a "search by name" picker (e.g. type "Lion's Arch").
-  - **Wiki fallback:** when the API is down or a map is missing from it, look it up on the GW2
-    wiki (its MediaWiki API, or its map id tables). The wiki also knows old and removed maps.
-- Points to settle:
-  - Network use: one request per new map, a one-off full list, or both. Respect the API's rate
-    limits and keep the cache valid across game patches.
-  - Several maps share a name (instances, story versions, festival copies). The picker should show
-    the id and region too.
-  - Works offline: ids still work without names; names just show as "Map 1234".
-
-### Refresh map info
-
-- On the first launch (and maybe after a game build change), check the API/wiki for new or
-  updated map info, instead of only looking up maps as you visit them (PR #9's cache).
-- A button in the settings window to force that check now.
-- To discuss: how to handle a map's name or id changing (renames, maps that are removed or
-  replaced with a new id). Filters store ids, so a rename only changes the label, but a new id
-  would silently stop a filter from matching. Options: keep old names alongside new ones, flag
-  filters that use ids the API no longer knows, or offer to swap to the new id.
-
-### Warn when a hotkey is also a game keybind (added 2026-11-20)
-
-Start with the cheap fallback (a built-in list of default keys); reading the real binds can come
-later. The hotkey editor would warn "Ctrl+F1 is also bound in game to …" (hotkeys never block a
-key, so a shared key does both things).
-
-Options to research:
-- **Fallback (first):** a short built-in list of GW2's default keys (1-0, F1-F4, WASD, Tab, T, ...)
-  to warn about common clashes, clearly labelled as "default keys, yours may differ".
-- **Nexus GameBinds:** Nexus keeps its own table of the game's binds (set in Nexus > Options >
-  Game Keybinds). API v6 only exposes `GameBinds_IsBound` and press/release, not which key a bind
-  uses. Check whether a newer API version adds a getter, or whether we could ask Raidcore for one.
-- **The game's keybind files:** GW2 can save keybind profiles as XML (Options > Control Options
-  > Save, into `Documents\Guild Wars 2\InputBinds\`). We could read the newest one, or one the user
-  picks. A saved profile can be out of date compared with the live settings.
-- **Live settings:** the game keeps its live binds in `Local.dat`, which is binary and
-  undocumented. Probably not worth reading.
-
-Points to settle:
-- Whether the warning shows while picking the key, in the tree, or both.
-- What to do with the game's secondary binds (each action has two).
-- Mouse buttons in the game's binds (Mouse 4/5 are often bound to dodge or skills).
+All four were built on 2026-11-23 and moved to `docs/design.md`: the remaining messages are
+translated ("Languages"), the filters have a map search with the API's full list, visited maps
+and a weekly refresh ("Features", filters and placeholders), and the hotkey editor warns about
+GW2's default keys ("Input safety", hotkeys). What was left out of them is under section 4.
 
 ## 3. Bigger features
 
@@ -228,6 +169,21 @@ Build together with "Fonts for other scripts" (next). The Text size dropdown (bu
 Nexus' fonts cover Latin with accents. Chinese, Korean, Russian, etc. would show `?` boxes. Load a
 font of our own with those glyph ranges (ties in with "More text sizes from a font of our own").
 
+### Brainstorm: more languages that need no new fonts (added 2026-11-23)
+
+Brainstorm a list of languages we could add easily because Nexus' fonts already cover their
+letters (Latin with accents), for example which ones GW2 players are likely to want, and what
+each needs (a translator, or AI with a native speaker to check).
+
+### Brainstorm: languages that need other fonts (added 2026-11-23)
+
+Brainstorm a list of languages that would need fonts of their own (for example Chinese, Korean,
+Japanese, Russian and other Cyrillic, Greek, Arabic or Hebrew), and for each: where to get a font
+with a licence that allows shipping it (Noto, for example), how big it is, how the addon would
+store it (embedded as a resource, since the updater ships only the DLL, or downloaded into the
+addon folder), and how it's loaded (`Fonts_AddFromMemory`, glyph ranges; see "Fonts for other
+scripts" above).
+
 ### Signed language files (added 2026-11-21)
 
 Security signatures on translation files where the checksum is checked to make sure the file
@@ -239,24 +195,41 @@ doesn't pass the test).
   existed at release time); what happens to a translator's own file while they test it (an
   "unsigned, use anyway" switch?); and how the release workflow signs the files.
 
+### Read the player's real keybinds (left from the default-key warning, 2026-11-23)
+
+The hotkey editor only knows GW2's default keys. Reading the player's own binds: a newer Nexus
+API with a getter for its game-bind table (API v6 has none; ask Raidcore?), or the newest saved
+profile in `Documents\Guild Wars 2\InputBinds\` (can be out of date). Also: secondary binds,
+and mouse buttons in the game's binds.
+
+### The GW2 wiki as a map fallback (left from the map picker, 2026-11-23)
+
+Old or removed maps the API doesn't list. The wiki refused automated requests when this was
+tried (HTTP 403), so this needs another way in, or a list built into the addon.
+
 ### More mouse buttons as hotkeys (added 2026-11-20)
 
 Mouse 3/4/5 now need Ctrl, Alt or Shift (built 2026-11-21, see `docs/design.md`, "Hotkeys").
-Still to look at:
+The left and right mouse buttons stay refused, with or without Ctrl, Alt or Shift (decided by the
+owner 2026-11-23, documented in the README and the wiki's Sending Macros page). Still to look at:
 
-- Whether Ctrl/Alt/Shift + left or right click could be allowed safely. In GW2, Shift+click and
-  Ctrl+click already do things (chat links, targeting, ground-target skills), and clicks over
-  addon windows go to ImGui, so this needs careful in-game testing first.
 - Extra mouse buttons beyond 5 (gaming mice usually send them as keyboard keys, which already
   work).
 - Depends on in-game check F2: whether mouse buttons reach our hook at all while the pointer is
   over the addon window.
 
-### Windows file picker for import and export (added 2026-11-20)
+### Import and export folders, ready to open (added 2026-11-23)
 
-Phase 7 uses the `exports\` and `imports\` folders, a typed path and the clipboard, because a
-modal Windows dialog over the game could grab input or hide behind a fullscreen game. Look at
-whether a non-modal file picker (on its own thread, no owner window) works well in game.
+Replaces the Windows file picker idea, which the owner dropped on 2026-11-23: a file dialog over
+the game would be one more thing to get wrong, for little gain.
+
+- The addon creates `<addon>\imports\` and `<addon>\exports\` itself (at load, or the first time
+  the Import window or an export needs them), so the user never has to make them by hand.
+- The Import window has a link that opens the imports folder (an **Open imports folder** button
+  exists today; check it creates the folder first). The export side gets the same: a link that
+  opens the exports folder, shown where exports are made and after an export ("Exported to ...").
+- When this is built: document both folders and the links in the wiki (Import and Export, Files
+  and Data) and the README.
 
 ## 5. New ideas to discuss (suggested 2026-11-23)
 

@@ -5,6 +5,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **Map search in the filters:** type part of a map's name (or its id) under **Maps** to find it
+  in the GW2 API's full map list, shown with its region, and click it to add it. **Maps you've
+  been to** lists the maps you visited lately. A map id the API no longer lists is marked in
+  yellow with **(!)**, because the map may have been removed or replaced in a game update.
+- **Map list on the options page:** how many maps are known and from when, and a **Refresh map
+  list** button. The list is fetched on the first run, once a week, and when you change the
+  language.
+- **Hotkeys that are also GW2 default keys:** the hotkey editor says when a key is one of the
+  game's default keybinds (for example F1 is "Profession skill 1", Ctrl+T is "Call target"),
+  since pressing it does both. Your own keybinds may differ.
+
+### Changed
+- **Everything is translated now:** error messages from the library, imports, sending, link files,
+  placeholders and map lookups, and the key names shown for hotkeys ("Maus 4", "Bild auf"), follow
+  the addon's language. `macros.json` keeps the English key names, so files work in any language.
+- **Map names follow the language** where the GW2 API has them (German, French, Spanish), in the
+  filters and in `{map}`.
+- The left and right mouse buttons stay refused as hotkeys, with or without Ctrl, Alt or Shift:
+  the message now says why, and so do the README and the wiki.
+
 ### Removed
 - **The `{txt}` and `{json}` placeholders** (a line from a text file, a value from a web page).
   A shared or imported macro could use them to type out a file from your PC or to make it fetch

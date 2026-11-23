@@ -23,12 +23,24 @@ Each macro can have its own hotkey. In the macro editor, next to **Hotkey:**, cl
 - Escape cancels. **Clear** removes the hotkey.
 - Not allowed: left and right mouse buttons, Escape, a modifier key on its own, plain Mouse 3/4/5,
   and plain Tab, Enter, Space or Backspace.
+- **Why never the left or right mouse button?** Not even with Ctrl, Alt or Shift. You click them
+  all the time (to move the camera, target, use the UI), and in GW2 Ctrl+click and Shift+click
+  already do things: they put chat links into chat and target or call targets. A macro on them
+  would go off by accident, so the addon refuses them as a safety measure.
 - A plain mouse hotkey set with an older version of the addon is kept but **doesn't work any
   more**: the tree shows it as `[Mouse 4: off, needs Ctrl/Alt/Shift]` and the editor in red.
   Click **Change...** to set a new one.
 - **The key still does its normal job in game.** The addon only listens; it never blocks a key.
   Pick a key you don't use in game. Plain letters and numbers get a warning, because they're
   usually game keys; adding Ctrl, Alt or Shift is safer.
+- **GW2's default keys:** if the hotkey is one of the game's default keybinds, the editor says
+  which, for example `In GW2's default keys, F1 is "Profession skill 1"`, or Ctrl+T is "Call
+  target" and Alt+1 a squad marker. Pressing it would do both. The addon can't read your own
+  keybinds, so it only knows the defaults (from the GW2 wiki, PC with a US keyboard): if you've
+  changed that key in the game, you can ignore the warning.
+
+<!-- screenshot: hotkey-game-key.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the hotkey row with the yellow "In GW2's default keys" note.*
 - Hotkeys don't fire while you're typing in chat or in any text box, or outside gameplay
   (loading screens, character select).
 - A hotkey only sends a macro that's **active where you are** (see [Filters](Filters)). So two

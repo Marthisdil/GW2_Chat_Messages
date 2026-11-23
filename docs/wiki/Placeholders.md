@@ -47,7 +47,8 @@ remove it. Other words in `{ }` are still sent as typed.
 ## `{map}`
 
 The map's name comes from the official GW2 API and is saved on your PC, so each map is only
-looked up once. The addon looks up the map you're on in the background as soon as you arrive.
+looked up once. It's in the addon's language where the API has it (German, French or Spanish;
+English otherwise), so with the addon in German `{map}` sends "Löwenstein". The addon looks up the map you're on in the background as soon as you arrive.
 If you've never been online on that map, `{map}` needs an internet connection.
 
 ## Length

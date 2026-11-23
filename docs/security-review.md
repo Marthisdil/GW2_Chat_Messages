@@ -33,7 +33,11 @@ to scan, where untrusted data comes in, which bug classes matter here, and how p
 3. **The network** (`src/Http.*`, `src/MapNames.*`): only the GW2 API's map names, at an
    address built into the addon (`{json}`, which took an address from a macro, was removed on
    2026-11-23). Responses are untrusted: size cap (`kDefaultMaxBytes`), JSON parsing, and what a
-   map name becomes once typed into chat. `maps.json` is a cache and may be corrupt.
+   map name becomes once typed into chat. `maps.json` is a cache and may be corrupt. Since
+   2026-11-23 it also holds the API's full map list and the visited maps (format 2), parsed by
+   `src/MapCatalog.*`: read up to 4 MB, at most 20,000 maps and 200 visited ids, names and regions
+   at most 200 bytes and passing `Localization::SafeText`; the map list is fetched in batches of
+   200 ids (`/v2/maps?ids=...&lang=` with an `ApiLang` code only).
 4. **Text typed into the game** (`src/ChatLine.*`, `src/SendPlan.*`, `src/Sender.*`): a value
    from a placeholder must not add a newline, an extra Enter, a Tab or a channel
    command it didn't have. Check UTF-8 to UTF-16 conversion and the 199-unit limit.

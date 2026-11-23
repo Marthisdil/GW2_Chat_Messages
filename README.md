@@ -24,13 +24,16 @@ chat for you, from a hotkey, a menu or a button.
   commands work too.
 - **Three ways to send:**
   - **Hotkeys:** give any macro a key, with Ctrl, Alt or Shift if you like. Mouse 3, 4 and 5
-    work too, with Ctrl, Alt or Shift.
+    work too, with Ctrl, Alt or Shift. The left and right mouse buttons can never be hotkeys,
+    not even with Ctrl, Alt or Shift: you click them all the time, and in GW2 Ctrl+click and
+    Shift+click already do things (chat links, targeting), so a macro would go off by accident.
+    The editor warns when a key is one of GW2's default keys (like F1 or Ctrl+T).
   - **Quick menu:** right-click the scroll icon in the Nexus bar, or press a key you choose, to
     pick a macro from nested menus.
   - **Send now** in the library.
 - **Filters:** limit a macro to PvE, WvW or PvP, and to certain maps. Hotkeys and the quick menu
   only use macros that are active where you are, so one key can do different things in WvW and
-  in PvE. Map names come from the official GW2 API.
+  in PvE. Find maps by name (or pick one you've been to); names come from the official GW2 API.
 - **Placeholders:** `{time}`, `{today}`, `{random 1 6}`, `{map}` and more, filled in when the
   message is sent.
 - **Safe input:** it never interferes with normal game controls. Keys go only to the game window,
@@ -47,7 +50,8 @@ chat for you, from a hotkey, a menu or a button.
 - **Text size:** make the addon's text bigger (or smaller) with the fonts Nexus provides; the
   windows resize to match.
 - **Languages:** English, German, French and Spanish, following Nexus' language or your own
-  choice. More languages can be added with a file (see [Contributing](#contributing)).
+  choice. Every message and key name is translated, and map names come in your language where
+  the GW2 API has them. More languages can be added with a file (see [Contributing](#contributing)).
 
 <!-- screenshot: chat-result.png (docs/screenshots.md) -->
 > 📷 *Screenshot to come: a multi-line macro sent to several chat channels.*

@@ -60,3 +60,6 @@ changed gets a new description (and goes back to **Needed** if its picture is ou
 | 22 | `quick-menu-search.png` | The quick menu pop-up (opened by its key) with `say` or another word typed in its search box: the flat result list with each macro's folders in brackets, the mouse over one so its preview shows. | Sending macros | Needed |
 | 23 | `language-options.png` | The addon's page in Nexus > Options with the **Language** dropdown open: **Follow Nexus (...)**, English (US), Deutsch, Español, Français with their percentages. | Languages | Needed |
 | 24 | `library-german.png` | The library window in German (pick **Deutsch**), with a macro selected so the editor shows. | Languages | Needed |
+| 25 | `filter-map-search.png` | **Where it's active** opened with `lion` typed in **Find a map by name or id**: the list of matches ("Lion's Arch - Kryta (50)", one marked "(been there)"), and the **Maps you've been to** dropdown next to it. | Filters | Needed |
+| 26 | `hotkey-game-key.png` | The **Hotkey:** row of a macro set to a GW2 default key (e.g. F1 or Ctrl+T), with the yellow note "In GW2's default keys, F1 is "Profession skill 1"..." under it. | Sending macros | Needed |
+| 27 | `options-map-list.png` | The addon's page in Nexus > Options, scrolled to the map list: "Map list: 1,5xx maps, from ..." and the **Refresh map list** button. | Filters | Needed |
