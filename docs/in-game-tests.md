@@ -130,6 +130,14 @@ as written (including `日本`, if your chat font shows it).
 
 **B3. Right-click.** Right-click `Say` in the tree > **Send now**: same as the button.
 
+**B3b. Preview.** Select `Two` and click **Preview** (next to **Send now**): under the buttons,
+each line with its channel and exactly what would be typed (`/s ...`, `/p ...`); nothing appears
+in chat. Change a line: the preview goes away. Preview a whisper macro: `/w Name`, then "then
+Tab, then:", then the message. Preview `Fill` with `/s {map} {random 1 6}`: the map name and a
+number. Preview a line over the limit once filled in (I4): the error window opens ("Clicked
+Preview for ... (nothing was sent)"), the same message Send now gives. **Close preview** hides
+it. Back in the game, keys and Tab work.
+
 **B4. Leftover text (question).** Open chat yourself, type `leftover`, press Escape (GW2 keeps
 the text). Send `Say`. What arrives: `test 1`, or `leftovertest 1`? We can't clear the box without
 Ctrl+A, so this tells us whether that's needed.

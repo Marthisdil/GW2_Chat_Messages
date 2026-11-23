@@ -45,15 +45,10 @@ the first release.
 
 Built so far (in `docs/design.md`): the remaining messages translated ("Languages"), the filters'
 map search ("Features"), the default-key warning ("Input safety", hotkeys), and the import and
-export folders, ready to open ("Import / export"), all on 2026-11-23. What was left out of them
-is under section 4.
+export folders, ready to open ("Import / export"), and Preview next to Send now ("Features"),
+all on 2026-11-23. What was left out of them is under section 4.
 
 Moved up from section 5 on 2026-11-23, in this order:
-
-### Preview what would be sent
-
-A button in the editor that shows every line exactly as it would be typed (placeholders filled
-in, the channel command added), without sending anything. Errors show the same way as on send.
 
 ### Per-macro cooldown or double-send guard
 

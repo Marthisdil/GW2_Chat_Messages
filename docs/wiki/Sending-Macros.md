@@ -12,6 +12,27 @@ The editor shows the progress ("Preparing...", "Sending line 2 of 3...") and the
 <!-- screenshot: send-status.png (docs/screenshots.md) -->
 > 📷 *Screenshot to come: the status line after Send now.*
 
+### Preview
+
+**Preview**, next to **Send now**, shows what Send now would type, without sending anything:
+
+- each line with its channel, as it goes into the chat box (`/s hello`, `/g3 see you`), with
+  [placeholders](Placeholders) filled in;
+- for a whisper, `/w Name`, then Tab, then the message;
+- for a squad broadcast (when you're the commander), just the message.
+
+It runs the same checks as a real send. If one fails (a line too long once filled in, a whisper
+with no recipient, a placeholder that can't be filled in), the error window says why, exactly as
+Send now would, and nothing is shown.
+
+The preview stays under the buttons until you change the macro's lines, pick another macro or
+click **Close preview**. `{random}` and the time are filled in again when you really send, so
+they can differ. `{map}` only uses map names the addon already knows: the first time on a map,
+the preview may ask you to try again in a moment while the name is looked up.
+
+<!-- screenshot: send-preview.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the preview under Send now.*
+
 ## Hotkeys
 
 Each macro can have its own hotkey. In the macro editor, next to **Hotkey:**, click **Set...**
