@@ -5,7 +5,7 @@ import, link sync). These checks cover what only the game can tell us: whether G
 and text, and whether normal game input is ever disturbed.
 
 The checks are grouped into sessions (A to Q) in the order to run them: each one builds on the
-ones before (the `Test` macros from A3, `Say`'s Ctrl+F1 from F1, `emote.txt` from I8, ...). A
+ones before (the `Test` macros from A3, `Say`'s Ctrl+F1 from F1, `Fill` from I1, ...). A
 whole pass takes a few hours, so spread it over several play sessions. If the text is hard to
 read, do M1 first and pick a bigger size. Session B is the one that matters most: if it fails,
 most of the later sessions can't be run, so report it first.
@@ -249,51 +249,33 @@ Make a macro `Fill` and change its line for each check.
 send it a few times, the roll stays 1-6. Note the date format as sent (question: is the weekday
 in your Windows language, and is the format what you'd want?).
 
-**I2. Text files.** Put `names.txt` with three lines (one with an accent) in
-`<GW2>\addons\GW2_Chat_Messages\`, saved as UTF-8. `{txt names.txt}` sends a random line;
-`{txt names.txt 2}` the second one; accents arrive right. `{txt missing.txt}`: nothing is sent and
-the error window says it wasn't found.
+**I2. Removed placeholders.** `{txt}` and `{json}` were removed. Change `Fill`'s line to
+`/s hello {txt names.txt}`: a red note under the line says they aren't available any more. Click
+**Send now**: nothing is sent, and the error window says `Line 1: {txt} isn't available any
+more: edit this line to remove it.` The same with `{JSON id https://api.guildwars2.com/v2/build}`
+(any case). `/s {txts a}` is sent as typed (only those two names are refused). Hover
+**Placeholders (?)**: neither is in the list.
 
 **I3. Left alone.** `/s {smile} meet at [&BDAEAAA=]`: `{smile}` arrives as typed, and the code
 arrives as a clickable waypoint link.
 
-**I4. Too long once filled in.** Make line 1 of `names.txt` 190 characters long, and send
-`/s {txt names.txt 1} and more`: refused, the error window says it's too long, nothing sent.
+**I4. Too long once filled in.** Make `Fill`'s line 180 characters (paste `1234567890` 18
+times) followed by ` {today}`: the counter shows `~` before the number. **Send now**: refused,
+the error window says it's too long, nothing sent.
 
-**I5. Map name and {json}.** `/s Hello from {map}`: sends the map name, also right after you
-arrive on a map you haven't visited this session. `{json id https://api.guildwars2.com/v2/build}`:
-sends the game build number. `{json nope https://api.guildwars2.com/v2/build}`: nothing is sent;
-the error window says the path wasn't found. `{json id http://127.0.0.1/}` and
-`{json id http://localhost/}`: nothing is sent; the error window says the address leads to this
-PC or a local network. `{json id http://localtest.me/}` (a public name that points to 127.0.0.1):
-the same. *Only if you use a WinHTTP proxy* (`netsh winhttp show proxy` names one): the build
-number still arrives, and the local addresses are still refused, as is
-`{json id http://odd_name.example.com/}` (the error window says the name has characters that
-can't be checked).
+**I5. Map name.** `/s Hello from {map}`: sends the map name, also right after you arrive on a
+map you haven't visited this session.
 
 **I6. Offline.** Close the game, delete `maps.json`, disconnect from the internet, start the game
 (Nexus may complain about updates; that's fine) and enter a map. `{map}` fails, the error window says the API
 "couldn't be reached", and nothing is sent. The game doesn't stutter while it tries. Reconnect.
 
-**I7. Typing while it prepares.** Send the `{json ...build}` macro and, while the status says
-"Preparing...", open chat and start typing. The send stops (error window: "A text box is open") and
+**I7. Typing while it prepares.** Close the game, delete `maps.json`, start it again and, as soon
+as you're on a map, send `/s Hello from {map}`; while the status says "Preparing...", open chat
+and start typing (if "Preparing..." is gone too fast to catch, mark this skipped). The send stops (error window: "A text box is open") and
 **your chat box stays open with your text**. The error window doesn't take your typing away.
 
-**I8. A placeholder can't add a command or a key.** Put `emote.txt` with the one line `/wave` in
-`<GW2>\addons\GW2_Chat_Messages\`.
-- A Current-channel line `{txt emote.txt}`: nothing is sent, and the error window says a
-  placeholder would start a chat command. `/s {txt emote.txt}` and `/g {txt emote.txt}` (typed in
-  a Current-channel line): the same.
-- A line `/wave` (typed yourself) still waves, and `/s waves at {txt emote.txt}` sends
-  `waves at /wave` in Say.
-- Put `tabs.txt` with one line `a`, a Tab, `b` (typed in Notepad), and send `/s {txt tabs.txt}`:
-  `a b` arrives in Say, and nothing else happens (chat doesn't jump to another box or channel).
-- *(question)* Look-alikes: put `slash.txt` with `／g hi` (a fullwidth slash, U+FF0F) and
-  `filler.txt` with `ㅤ/g hi` (U+3164 first), and send each as `{txt ...}` on Current. Note whether
-  either posts to guild chat (the addon only treats `/` and ordinary spaces as commands). If one
-  does, report it: the check has to learn that character.
-
-**I9. A damaged map cache.** Close the game. In `maps.json` in the addon folder, change
+**I8. A damaged map cache.** Close the game. In `maps.json` in the addon folder, change
 the number after `"format":` to `"x"` (with the quotes) and save. Start the game and enter a map: no error, and
 `/s Hello from {map}` still sends the map name (the cache is rebuilt).
 
@@ -375,22 +357,21 @@ PowerShell in the addon folder:
 
 Delete `broken.json` and `braces.txt` afterwards.
 
-**J10. Preview marks.** Give `Say` the hotkey Ctrl+F1. In `Test`, make these macros:
-`Risky` with the line `/s {txt emote.txt}` (the file from I8); `Web` with the line
-`/s {json id https://api.guildwars2.com/v2/build}` and the plain hotkey F8; and `Plain` with
-hotkey Ctrl+F1 too (yes, the same as `Say`) and the line `/s plain`. Export `Test` to the
-clipboard, then delete `Risky` and `Web` and change `Plain`'s hotkey to Ctrl+F2. **Paste from
-clipboard** with `Test`'s parent as the target, and set macros to **Replace**:
-- `Risky` is marked **READS A FILE** and `Web` **READS A WEB PAGE**, and lines above the preview
-  count them.
-- Tick **Keep hotkeys**: `Web` (a new macro) is marked **KEY WITHOUT CTRL/ALT/SHIFT**; it would
+**J10. Preview marks.** Give `Say` the hotkey Ctrl+F1. In `Test`, make these macros: `Old`
+with the line `/s {txt notes.txt}`; `Key` with the line `/s key` and the plain hotkey F8; and
+`Plain` with hotkey Ctrl+F1 too (yes, the same as `Say`) and the line `/s plain`. Export `Test`
+to the clipboard, then delete `Old` and `Key` and change `Plain`'s hotkey to Ctrl+F2. **Paste
+from clipboard** with `Test`'s parent as the target, and set macros to **Replace**:
+- `Old` is marked **REMOVED PLACEHOLDER**, and a line above the preview counts it.
+- Tick **Keep hotkeys**: `Key` (a new macro) is marked **KEY WITHOUT CTRL/ALT/SHIFT**; it would
   keep F8. `Plain` (Ctrl+F1, as `Say` has) is marked **COMES WITHOUT ITS HOTKEY** and **YOUR
   HOTKEY GOES**. Each mark has its line above the preview; hover each mark: a reason shows.
 - **Import selected**: `Plain` has no hotkey now, `Say` keeps Ctrl+F1, and the line with **Undo
-  import** says 1 replaced macro has no hotkey now, or a different one. **Undo import**.
+  import** says 1 replaced macro has no hotkey now, or a different one. Select `Old`: the red
+  note shows under its line, and **Send now** refuses it. **Undo import**.
 - Set macros to **Keep both (rename)** and paste again: `Plain (2)` is marked **YOUR HOTKEY**
-  (it keeps it if imported). Close the window without importing. Delete `Risky`, `Web` and
-  `Plain` if they're still there.
+  (it keeps it if imported). Close the window without importing. Delete `Old`, `Key` and `Plain`
+  if they're still there.
 
 ## K. Text file links
 
@@ -428,7 +409,7 @@ and the chat key all work normally. No key feels stuck.
 
 **L2. Unloading.** Send `Long` and, while it's sending, unload the addon in Nexus > Addons: the
 game doesn't freeze and the unload finishes within about a second. Do the same right after sending
-the `{json ...build}` macro: done within a few seconds. Load the addon again: everything's there.
+`{map}` on a map that isn't looked up yet (delete `maps.json` first): done within a few seconds. Load the addon again: everything's there.
 
 ## M. Text size
 
@@ -607,7 +588,7 @@ E1
 F1  F2 (which mouse buttons, where):  F3  F4  F5  F6  F7
 G1  G2  G3 (where did it appear?):
 H1  H2  H3  H4 (map: mode, map id):
-I1 (date format sent):  I2  I3  I4  I5 (proxy? y/n)  I6  I7  I8 (look-alikes: did either post?):  I9
+I1 (date format sent):  I2  I3  I4  I5  I6  I7  I8
 J1  J2  J3  J3b  J4  J5  J6  J7  J8  J9  J10
 K1  K2  K3  K4  K5  K6
 L1  L2

@@ -775,9 +775,11 @@ static void TestPlanFlags()
     o.FolderConflict = EChoice::Replace;
     o.KeepHotkeys    = true;
     Plan plan = BuildPlan(mine, mine.Root(), p.Items, o);
-    CHECK(ItemNamed(plan.Items, "Txt")->ReadsFile && !ItemNamed(plan.Items, "Txt")->ReadsWeb);
-    CHECK(ItemNamed(plan.Items, "Web")->ReadsWeb && !ItemNamed(plan.Items, "Web")->ReadsFile);
-    CHECK(ItemNamed(plan.Items, "Plain")->ReadsFile); // "{txt}" alone is still {txt}
+    // {txt} and {json} were removed: a macro that still uses one is marked (it won't be sent).
+    CHECK(ItemNamed(plan.Items, "Txt")->UsesRemoved);
+    CHECK(ItemNamed(plan.Items, "Web")->UsesRemoved);                  // in the whisper recipient
+    CHECK(ItemNamed(plan.Items, "Plain")->UsesRemoved);                // "{txt}" alone is still {txt}
+    CHECK(!ItemNamed(plan.Items, "NoMod")->UsesRemoved);
     CHECK(ItemNamed(plan.Items, "NoMod")->HotkeyRisk == EHotkeyRisk::NoModifier);
     CHECK(ItemNamed(plan.Items, "Clash")->HotkeyRisk == EHotkeyRisk::Clash && !ItemNamed(plan.Items, "Clash")->HotkeyCleared);
     const PlanItem* old = ItemNamed(plan.Items, "Old");
@@ -786,7 +788,7 @@ static void TestPlanFlags()
     CHECK(same->Outcome == EOutcome::Replaced && same->HotkeyRisk == EHotkeyRisk::None && !same->HotkeyCleared && !same->LosesOwnHotkey);
     const PlanItem* f = ItemNamed(plan.Items, "F");
     CHECK(f->Outcome == EOutcome::Replaced && f->Children[0].HotkeyRisk == EHotkeyRisk::None); // Inside goes with the folder
-    CHECK(plan.ReadsFile == 2 && plan.ReadsWeb == 1);
+    CHECK(plan.UsesRemoved == 3);
     CHECK(plan.HotkeysNoModifier == 1 && plan.HotkeysClash == 1 && plan.HotkeysCleared == 1);
     CHECK(plan.OwnHotkeysLost == 1 && plan.HotkeysChanged == 1);
 

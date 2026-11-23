@@ -1488,6 +1488,8 @@ namespace
             ImGui::TextColored(kWarnColor, T("Whisper needs a recipient."));
         if (aLine.Message.empty())
             ImGui::TextColored(kWarnColor, T("Empty message."));
+        if (Placeholders::UsesRemoved(aLine.Message) || Placeholders::UsesRemoved(aLine.WhisperTo))
+            ImGui::TextColored(kErrorColor, T("{txt} and {json} aren't available any more: remove them, or this macro won't be sent."));
     }
 
     enum class EEditMode { Lines, Raw };
@@ -1888,9 +1890,7 @@ namespace
                 ImGui::TextDisabled("%s", Localization::Lookup(p.Description));
             }
             ImGui::Separator();
-            ImGui::TextDisabled(T("Text files go in <GW2>\\addons\\GW2_Chat_Messages\\ (or a folder inside it). "
-                                "Use \"quotes\" for names with spaces: {txt \"my lines.txt\"}. "
-                                "Anything else in { } is sent as typed. Chat links like [&BDAEAAA=] work as is."));
+            ImGui::TextDisabled(T("Anything else in { } is sent as typed. Chat links like [&BDAEAAA=] work as is."));
             ImGui::PopTextWrapPos();
             ImGui::EndTooltip();
         }
@@ -2287,15 +2287,13 @@ namespace
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", aWhy);
     }
 
-    // What to look at before importing a macro: placeholders that read files or web pages, and
-    // hotkeys that could fire by accident or clash with the user's own.
+    // What to look at before importing a macro: placeholders that were removed, and hotkeys that
+    // could fire by accident or clash with the user's own.
     void DrawPlanFlags(const Exchange::PlanItem& aItem)
     {
         using Exchange::EHotkeyRisk;
-        if (aItem.ReadsFile)
-            PlanFlag(T("[READS A FILE]"), T("It uses {txt}: when sent, it types a line from a file in your addon folder.\nCheck which file before you send it."));
-        if (aItem.ReadsWeb)
-            PlanFlag(T("[READS A WEB PAGE]"), T("It uses {json}: when sent, it fetches a web page and types a value from it.\nCheck the address before you send it."));
+        if (aItem.UsesRemoved)
+            PlanFlag(T("[REMOVED PLACEHOLDER]"), T("It uses {txt} or {json}, which this addon no longer has.\nIt won't be sent until you edit those out."));
         if (s_ImportOpt.KeepHotkeys && !aItem.HotkeyCleared)
         {
             if (aItem.HotkeyRisk == EHotkeyRisk::NoModifier)
@@ -2541,10 +2539,8 @@ namespace
         ImGui::TextWrapped("%s.", summary.c_str());
         if (plan.Conflicts)
             ImGui::TextColored(kCountNearColor, T("%zu name(s) are already taken (marked NAME TAKEN): choose what happens to each one below."), plan.Conflicts);
-        if (plan.ReadsFile)
-            ImGui::TextColored(kWarnColor, T("%zu macro(s) read a file with {txt} (marked READS A FILE): check them before you send them."), plan.ReadsFile);
-        if (plan.ReadsWeb)
-            ImGui::TextColored(kWarnColor, T("%zu macro(s) read a web page with {json} (marked READS A WEB PAGE): check them before you send them."), plan.ReadsWeb);
+        if (plan.UsesRemoved)
+            ImGui::TextColored(kWarnColor, T("%zu macro(s) use {txt} or {json}, which were removed (marked REMOVED PLACEHOLDER): they won't be sent until you edit those out."), plan.UsesRemoved);
         if (s_ImportOpt.KeepHotkeys && plan.HotkeysNoModifier)
             ImGui::TextColored(kWarnColor, T("%zu hotkey(s) have no Ctrl, Alt or Shift (marked KEY WITHOUT CTRL/ALT/SHIFT): they send their macro whenever you press that key while playing."),
                                plan.HotkeysNoModifier);

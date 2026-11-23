@@ -17,30 +17,7 @@ static Context Ctx()
     c.Weekday = "Friday";
     c.AddonVersion = "Chat Messages v0.1.0";
     c.Random = [](long long lo, long long hi) { return lo + (hi - lo) / 2; }; // deterministic: the middle
-    c.ReadLines = [](const std::string& path, std::vector<std::string>& lines, std::string& err) {
-        static const std::map<std::string, std::vector<std::string>> files = {
-            {"names.txt", {"Alpha", "", "Beta", "  ", "Gamma"}},
-            {"lists\\one.txt", {"Only {time}"}},
-            {"my file.txt", {"spaced"}},
-            {"empty.txt", {"", " "}},
-            {"ctl.txt", {"x\x0By\rz\x08\x08/g hi"}},
-            {"ff.txt", {"a", "\x0C", "b"}}, // a line of only a control character still counts as a line
-        };
-        auto it = files.find(path);
-        if (it == files.end()) { err = "\"" + path + "\" wasn't found."; return false; }
-        lines = it->second;
-        return true;
-    };
     c.MapName = [](std::string& name, std::string&) { name = "Lion's Arch"; return true; };
-    c.FetchUrl = [](const std::string& url, std::string& body, std::string& err) {
-        if (url == "https://example.test/build") { body = R"({"id": 171234, "name": "Line\nbreak", "ok": true, "f": 1.5,
-                                                       "list": [{"name": "first"}, {"name": "second"}], "nothing": null})"; return true; }
-        if (url == "https://example.test/bad") { body = "<html>"; return true; }
-        if (url == "https://example.test/ctl") { body = R"({"motd": "\b\b\u001b/g hi", "mix": "a\u0000b\u007fc\u0085d\u009fe\tf\rg",
-                                                      "text": "café Ā€"})"; return true; }
-        err = "couldn't reach the address.";
-        return false;
-    };
     return c;
 }
 
@@ -83,38 +60,24 @@ static void TestRandom()
     CHECK(X("{random x}").empty());                  // on error nothing is returned
 }
 
-static void TestTxt()
+// {txt} and {json} were removed (owner, 2026-11-23): a line that still has one is refused, so a
+// file name or web address is never typed into chat as it stands.
+static void TestRemoved()
 {
-    CHECK(X("{txt names.txt 1}") == "Alpha");
-    CHECK(X("{txt names.txt 2}") == "Beta");        // blank lines don't count
-    CHECK(X("{txt names.txt 3}") == "Gamma");
-    CHECK(X("{txt names.txt}") == "Beta");          // random among the 3 (middle with this Random)
-    CHECK(X("{txt lists\\one.txt}") == "Only {time}"); // file text isn't expanded again
-    CHECK(X("{txt \"my file.txt\"}") == "spaced");  // quotes keep spaces
-    CHECK(E("{txt names.txt 4}").find("only 3 line") != std::string::npos);
-    CHECK(!E("{txt names.txt 0}").empty());
-    CHECK(!E("{txt missing.txt}").empty());
-    CHECK(!E("{txt empty.txt}").empty());
-    CHECK(!E("{txt}").empty());
-    CHECK(!E("{txt \"open.txt}").empty());          // unclosed quote
-    CHECK(!E("{txt ..\\secret.txt}").empty());      // outside the addon folder
-    CHECK(!E("{txt C:\\Windows\\win.ini}").empty());
-}
-
-static void TestSafePath()
-{
-    CHECK(IsSafeRelativePath("a.txt"));
-    CHECK(IsSafeRelativePath("lists/names.txt"));
-    CHECK(IsSafeRelativePath("lists\\names.txt"));
-    CHECK(!IsSafeRelativePath(""));
-    CHECK(!IsSafeRelativePath("/etc/passwd"));
-    CHECK(!IsSafeRelativePath("\\\\server\\share\\x.txt"));
-    CHECK(!IsSafeRelativePath("C:\\x.txt"));
-    CHECK(!IsSafeRelativePath("a.txt:stream"));
-    CHECK(!IsSafeRelativePath("../x.txt"));
-    CHECK(!IsSafeRelativePath("lists/../../x.txt"));
-    CHECK(!IsSafeRelativePath("lists//x.txt"));
-    CHECK(!IsSafeRelativePath("./x.txt"));
+    CHECK(!E("{txt names.txt}").empty());
+    CHECK(X("{txt names.txt}").empty());
+    CHECK(E("say {TXT a.txt 2} now").find("{txt}") != std::string::npos);
+    CHECK(!E("{json id https://api.guildwars2.com/v2/build}").empty());
+    CHECK(!E("{Json}").empty());
+    CHECK(!E("at {time} {json x y}").empty());           // the whole line, not just that part
+    CHECK(!E("{ {txt a}").empty());                      // the inner one counts, as for any name
+    CHECK(X("{txts a}") == "{txts a}");                  // other names are left as typed
+    CHECK(X("{ txt a}") == "{ txt a}");
+    CHECK(X("{txt") == "{txt");                          // not closed: plain text
+    CHECK(X("txt and json") == "txt and json");
+    CHECK(!HasPlaceholders("{txt a}"));                  // not a placeholder any more
+    for (const Info& i : List())
+        CHECK(std::string(i.Syntax).find("txt") == std::string::npos && std::string(i.Syntax).find("json") == std::string::npos);
 }
 
 static void TestMap()
@@ -129,48 +92,23 @@ static void TestMap()
     CHECK(!Expand("{map}", c).Error.empty());
 }
 
-static void TestJson()
-{
-    CHECK(X("{json id https://example.test/build}") == "171234");
-    CHECK(X("{json name https://example.test/build}") == "Line break"); // newlines become spaces
-    CHECK(X("{json ok https://example.test/build}") == "true");
-    CHECK(X("{json f https://example.test/build}") == "1.5");
-    CHECK(X("{json list.1.name https://example.test/build}") == "second");
-    CHECK(X("{JSON list.0.name HTTPS://example.test/build}").empty()); // the URL is passed as typed
-    CHECK(!E("{json list https://example.test/build}").empty());       // a list isn't one value
-    CHECK(!E("{json nothing https://example.test/build}").empty());    // null
-    CHECK(!E("{json list.5.name https://example.test/build}").empty()); // past the end
-    CHECK(!E("{json missing https://example.test/build}").empty());
-    CHECK(!E("{json id https://example.test/bad}").empty());           // not JSON
-    CHECK(!E("{json id https://example.test/down}").empty());          // download failed
-    CHECK(!E("{json id ftp://example.test/build}").empty());           // http(s) only
-    CHECK(!E("{json id file:///C:/x.json}").empty());
-    CHECK(!E("{json https://example.test/build}").empty());            // missing path
-
-    std::string out, err;
-    CHECK(JsonValue("[1, [2, 3]]", "1.0", out, err) && out == "2");
-    CHECK(JsonValue("{\"a\": {\"b\": \"c\"}}", "a.b", out, err) && out == "c");
-    CHECK(!JsonValue("{\"a\": 1}", "", out, err));
-}
-
 // SEC-013: a value can't press a key (control characters become spaces, from any source), and
 // FromValue marks which bytes came from values so SendPlan can refuse a "/" a value would add.
 static void TestControlCharacters()
 {
-    CHECK(X("{json motd https://example.test/ctl}") == "   /g hi");
-    CHECK(X("{json mix https://example.test/ctl}") == "a b c d e f g");
-    // Other text is kept, including U+00A0 (0xC2 0xA0) and U+0100 (0xC4 0x80), which aren't C1.
-    CHECK(X("{json text https://example.test/ctl}") == "caf\xC3\xA9\xC2\xA0\xC4\x80\xE2\x82\xAC");
-
-    CHECK(X("{txt ctl.txt}") == "x y z  /g hi");
-    // Line numbers and the random pick count lines as before: blank means only spaces and tabs.
-    CHECK(X("{txt ff.txt 3}") == "b");
-    CHECK(X("{txt ff.txt 2}") == " ");                // the \x0C line, as a space
-    CHECK(X("{txt ff.txt}") == " ");                  // random among the 3 (the middle with this Random)
-
     Context c = Ctx();
     c.MapName = [](std::string& name, std::string&) { name = "Lion\x07s\nArch\xC2\x9B"; return true; };
     CHECK(Expand("{map}", c).Text == "Lion s Arch ");
+    c.MapName = [](std::string& name, std::string&) { name = "\b\b\x1b/g hi"; return true; };
+    CHECK(Expand("{map}", c).Text == "   /g hi");
+    c.MapName = [](std::string& name, std::string&) { name = std::string("a\0b\x7f" "c\xC2\x85" "d\xC2\x9F" "e\tf\rg", 15); return true; };
+    CHECK(Expand("{map}", c).Text == "a b c d e f g");
+    // Other text is kept, including U+00A0 (0xC2 0xA0) and U+0100 (0xC4 0x80), which aren't C1.
+    c.MapName = [](std::string& name, std::string&) { name = "caf\xC3\xA9\xC2\xA0\xC4\x80\xE2\x82\xAC"; return true; };
+    CHECK(Expand("{map}", c).Text == "caf\xC3\xA9\xC2\xA0\xC4\x80\xE2\x82\xAC");
+    // A value is never filled in again: a map name with "{time}" in it stays as it is.
+    c.MapName = [](std::string& name, std::string&) { name = "Only {time}"; return true; };
+    CHECK(Expand("{map}", c).Text == "Only {time}");
 
     // The macro's own text is left as it is (SendPlan refuses control characters in it).
     CHECK(X("a\tb {time}") == "a\tb 09:05");
@@ -182,15 +120,14 @@ static void TestFromValue()
     CHECK(r.Text == "/g 09:05!");
     CHECK(r.FromValue == (std::vector<bool>{false, false, false, true, true, true, true, true, false}));
     // Unknown names and plain braces are the user's text.
-    r = Expand("{smile}{txt \"my file.txt\"}", Ctx());
-    CHECK(r.Text == "{smile}spaced");
-    CHECK(r.FromValue == (std::vector<bool>{false, false, false, false, false, false, false,
-                                            true, true, true, true, true, true}));
+    r = Expand("{smile}{min}", Ctx());
+    CHECK(r.Text == "{smile}05");
+    CHECK(r.FromValue == (std::vector<bool>{false, false, false, false, false, false, false, true, true}));
     // No placeholders: nothing from a value.
     r = Expand("/wave", Ctx());
     CHECK(r.FromValue == std::vector<bool>(5, false));
     // A failed placeholder clears both.
-    r = Expand("a {txt missing.txt}", Ctx());
+    r = Expand("a {random x}", Ctx());
     CHECK(!r.Error.empty() && r.Text.empty() && r.FromValue.empty());
 }
 
@@ -199,27 +136,28 @@ static void TestHas()
     CHECK(HasPlaceholders("at {time}"));
     CHECK(HasPlaceholders("{Random 5}"));
     CHECK(!HasPlaceholders("{smile}"));
-    // Uses: by name, in any case, as Expand finds them.
-    CHECK(Placeholders::Uses("say {TXT jokes.txt} now", "txt"));
-    CHECK(Placeholders::Uses("{Json id https://a}", "json"));
-    CHECK(!Placeholders::Uses("{txts a}", "txt"));
-    CHECK(!Placeholders::Uses("{ {time}", "txt"));
-    CHECK(!Placeholders::Uses("no braces txt", "txt"));
-    CHECK(Placeholders::Uses("{x {txt a}", "txt"));
-    CHECK(Placeholders::Uses("{{txt a}", "txt"));
-    CHECK(Placeholders::Uses("}{txt}", "txt"));
-    CHECK(Placeholders::Uses("{a}}{txt b}", "txt"));
-    CHECK(!Placeholders::Uses("{txt", "txt"));
-    CHECK(!Placeholders::Uses("{txt a {b}", "txt")); // the inner one counts, as in Expand
+    // UsesRemoved: {txt} and {json} by name, in any case, as Expand finds them.
+    CHECK(UsesRemoved("say {TXT jokes.txt} now"));
+    CHECK(UsesRemoved("{Json id https://a}"));
+    CHECK(!UsesRemoved("{txts a}"));
+    CHECK(!UsesRemoved("{time} {random}"));
+    CHECK(!UsesRemoved("no braces txt json"));
+    CHECK(UsesRemoved("{x {txt a}"));
+    CHECK(UsesRemoved("{{txt a}"));
+    CHECK(UsesRemoved("}{txt}"));
+    CHECK(UsesRemoved("{a}}{json b}"));
+    CHECK(!UsesRemoved("{txt"));
+    CHECK(!UsesRemoved("{txt a {b}")); // the inner one counts, as in Expand
+    CHECK(!UsesRemoved(""));
     CHECK(HasPlaceholders("{{time}"));
     CHECK(!HasPlaceholders("{time"));
     // SEC-028: one pass, not a scan to the next "}" per "{" (run every frame in the preview).
     {
         const std::string braces(2 * 1024 * 1024, '{');
         const auto start = std::chrono::steady_clock::now();
-        CHECK(!Placeholders::Uses(braces, "txt"));
+        CHECK(!UsesRemoved(braces));
         CHECK(!HasPlaceholders(braces + "}"));
-        CHECK(Placeholders::Uses(braces + "txt}", "txt"));
+        CHECK(UsesRemoved(braces + "txt}"));
         // Expand too (on the sender thread, but a send shouldn't take minutes).
         CHECK(X(braces) == braces);
         CHECK(X(braces + "}") == braces + "}");
@@ -241,10 +179,8 @@ void RunPlaceholderTests()
     TestTime();
     TestUnknownAndPlainText();
     TestRandom();
-    TestTxt();
-    TestSafePath();
+    TestRemoved();
     TestMap();
-    TestJson();
     TestControlCharacters();
     TestFromValue();
     TestHas();

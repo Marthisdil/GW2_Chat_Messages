@@ -89,8 +89,7 @@ them (hover a mark to see why):
 
 | Mark | Means |
 |---|---|
-| **READS A FILE** | It uses `{txt}`: when sent, it types a line from a file in your addon folder. |
-| **READS A WEB PAGE** | It uses `{json}`: when sent, it fetches a web page and types a value from it. |
+| **REMOVED PLACEHOLDER** | It uses `{txt}` or `{json}`, which this addon no longer has (see [Placeholders](Placeholders)). It won't be sent until you edit those out. |
 | **KEY WITHOUT CTRL/ALT/SHIFT** | (Keep hotkeys ticked) Its hotkey is a plain key, so it sends whenever you press that key while playing. |
 | **YOUR HOTKEY** | (Keep hotkeys ticked) One of your macros already has this hotkey, and both can be active at once (their filters overlap): there, the key sends nothing. |
 | **COMES WITHOUT ITS HOTKEY** | It replaces one of yours, and its hotkey is one of the two kinds above, so the hotkey isn't imported. |

@@ -51,7 +51,7 @@ so when it loads the file.
   different line lengths, but the number of `\n` should stay the same.
 - **Keep names as they are:** Nexus, GW2, Chat Messages, `macros.json`, file and folder names
   (`<GW2>\addons\GW2_Chat_Messages\...`), key names (Ctrl, Alt, Shift, Mouse 3, Ctrl+F),
-  `{txt ...}` and the other placeholders, and the Nexus menu names (`Nexus > Options >
+  `{time}` and the other placeholders, and the Nexus menu names (`Nexus > Options >
   Keybinds`).
 - Use the game's own words where your language has them (for example the game's names for
   chat channels and game modes).

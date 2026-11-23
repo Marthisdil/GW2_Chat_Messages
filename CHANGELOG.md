@@ -5,10 +5,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Removed
+- **The `{txt}` and `{json}` placeholders** (a line from a text file, a value from a web page).
+  A shared or imported macro could use them to type out a file from your PC or to make it fetch
+  an address. A line that still has one isn't sent: the editor shows a red note under it, the
+  error window says which placeholder it is, and the Import window marks such macros
+  **REMOVED PLACEHOLDER**. Edit the line to remove it.
+
 ### Added
-- **Import preview marks:** macros that read a file (`{txt}`) or a web page (`{json}`) are marked
-  **READS A FILE** / **READS A WEB PAGE**. With **Keep hotkeys** ticked, a hotkey with no Ctrl,
-  Alt or Shift, or one you already use, is marked too. A line above the preview counts each mark.
+- **Import preview marks:** macros that still use the removed `{txt}` or `{json}` are marked
+  **REMOVED PLACEHOLDER**. With **Keep hotkeys** ticked, a hotkey with no Ctrl, Alt or Shift, or
+  one you already use, is marked too. A line above the preview counts each mark.
   Replace never brings such a hotkey along, and when a replaced macro loses or changes its
   hotkey, the preview marks it and the line after the import says so.
 - **Languages:** the addon's text can be shown in English, German, French or Spanish. By default
@@ -84,9 +91,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Undo import:** after an import, one click puts the library back as it was.
 - **More placeholders:**
   - `{map}` is the name of the map you're on, like "Lion's Arch".
-  - `{json path url}` is one value from a JSON web page, for example
-    `{json id https://api.guildwars2.com/v2/build}`. The path is separated by dots, and numbers
-    pick list entries (`data.0.name`).
 - **Map names in filters:** the map list in "Where it's active" shows names like
   "Queensdale (15)" instead of bare ids.
   - Names come from the official GW2 API (no API key) and are saved in
@@ -95,13 +99,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Placeholders:** type these in a message and they're filled in when it's sent:
   - `{time}` (like 21:05), `{hour}`, `{min}` and `{today}` (like Friday, 20.11.2026).
   - `{random}` (0 to 100), `{random max}` and `{random min max}`.
-  - `{txt file}` sends a random line from a text file, and `{txt file 3}` sends its third line.
-    Text files go in `<GW2>\addons\GW2_Chat_Messages\` (or a folder inside it). Use quotes for
-    names with spaces: `{txt "my lines.txt"}`.
   - `{nexus}` is this addon's name and version.
   - Anything else in `{ }` is sent exactly as typed.
-  - If a placeholder can't be filled in (for example the file is missing), nothing is sent and
-    you're told why.
+  - If a placeholder can't be filled in (for example a wrong number in `{random}`), nothing is
+    sent and you're told why.
   - Hover **Placeholders (?)** in the macro editor for the list. Lines with placeholders show
     their length as approximate ("~"), and the real length is checked when sending.
 - **Filters:** choose where each macro is active, under "Where it's active" in the macro editor.
@@ -215,15 +216,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Names crafted to slow down the check for duplicate names no longer freeze the game.
   - A control character pasted into a message or recipient box (such as U+0085) becomes a space
     right away, as a newline or tab already did.
-- **`{json}` only reaches the internet:** an address that leads to this PC or your local network
-  (`localhost`, `127.0.0.1`, `192.168.x.x`, `10.x.x.x` and the like, also after a redirect) is now
-  refused before anything is sent, and the macro isn't sent. A shared or imported macro could
-  otherwise read a device on your network and type the answer into chat. It also works behind a
-  Windows (WinHTTP) proxy: then the addon looks the address up itself first, and if it can't (or
-  the name has characters other than letters, digits, `-` and `.`), that `{json}` is refused.
-- A placeholder value (`{json}`, `{txt}`, `{map}`) could type control characters (Backspace,
-  Escape, Tab...) into chat, or put a `/` where chat reads a command and so pick a channel or
-  command the macro didn't name, even after one you wrote (`/g {json}` with the value `/w Name`).
+- A placeholder value (such as `{map}`) could type control characters (Backspace, Escape,
+  Tab...) into chat, or put a `/` where chat reads a command and so pick a channel or command the
+  macro didn't name, even after one you wrote (`/g {map}` with a value starting `/w Name`).
   Control characters in a value now become spaces, and a macro isn't sent if a line's own text has
   one, or if a placeholder would start a command.
 - Restoring from the trash bin, or importing next to an item with the same name, no longer
@@ -234,7 +229,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Importing a file with thousands of macros into one folder (or showing its preview when the
   names are already there) no longer freezes the game.
 - An unexpected internal error while sending a macro (for example running out of memory, or a
-  bad value from a `{json}` page) could close the game. It now fails like any other send: chat is
+  bad placeholder value) could close the game. It now fails like any other send: chat is
   closed if the addon opened it, and the error is shown.
 - A damaged map-name cache (`maps.json`) entry is now skipped more strictly (only whole map ids
   are read).

@@ -9,7 +9,6 @@ when it loads.
 | `macros.json.bak` | The previous version of `macros.json`, kept on every save. |
 | `settings.json` | Addon settings: the text size, the language and whether the trash bin is on. Safe to delete (back to the defaults). |
 | `maps.json` | Map names from the GW2 API, so they're only looked up once. Safe to delete. |
-| your `.txt` files | Text files for the `{txt}` placeholder. |
 | `exports\` | Files saved by Export. |
 | `imports\` | Put files here to see them in the Import window. |
 | `links\` | Text files linked to macros (when you give just a file name). |
@@ -37,5 +36,6 @@ Copy the whole `GW2_Chat_Messages` folder, or use **Export all** and import the 
 
 The addon only goes online for:
 
-- map names, from `https://api.guildwars2.com/v2/maps` (no API key, nothing about you is sent),
-- `{json}` placeholders, to the address you wrote in the macro.
+- map names, from `https://api.guildwars2.com/v2/maps` (no API key, nothing about you is sent).
+
+No macro can make it go anywhere else.

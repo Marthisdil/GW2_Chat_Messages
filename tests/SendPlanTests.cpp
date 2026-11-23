@@ -174,13 +174,13 @@ static void TestPlaceholderCommand()
     // Allowed: the user's own commands, values after them that don't start with "/", and a "/"
     // later in the text.
     CHECK(line1(EChannel::Current, "/wave", 5).Error.empty());              // no value at all
-    CHECK(line1(EChannel::Current, "/wave", 1).Error.empty());              // "/{txt emotes.txt}": the user's "/"
+    CHECK(line1(EChannel::Current, "/wave", 1).Error.empty());              // "/{map}": the user's "/"
     CHECK(line1(EChannel::Current, " /wave", 6).Error.empty());
     CHECK(line1(EChannel::Current, "/g 09:05", 3).Error.empty());           // "/g {time}"
     CHECK(line1(EChannel::Current, "/g /wave", 8).Error.empty());           // two of the user's commands
     p = line1(EChannel::Say, "/shrug 09:05", 7);
     CHECK(p.Error.empty() && p.Steps[2].Text == "/s /shrug 09:05");
-    CHECK(line1(EChannel::Current, "at 09:05 /g", 3).Error.empty());        // "at {time} {json}"
+    CHECK(line1(EChannel::Current, "at 09:05 /g", 3).Error.empty());        // "at {time} {map}"
     CHECK(line1(EChannel::Current, "/g hi /w x", 6).Error.empty());         // after the message started
     CHECK(line1(EChannel::Current, "/g hi /w x", 3).Error.empty());
     CHECK(line1(EChannel::Current, "  ", 0).Error.empty());                 // no "/" at all

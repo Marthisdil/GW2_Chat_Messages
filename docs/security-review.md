@@ -26,18 +26,16 @@ to scan, where untrusted data comes in, which bug classes matter here, and how p
    `Exchange.h` (`kMaxJsonBytes`, `kMaxTextBytes`, `kMaxFolderFiles`, `kMaxImportItems`). Link
    file paths and the trash bin must never come in through an import.
 2. **File paths:**
-   - `{txt file}` (`src/Placeholders.*`) may only read inside the addon folder: no `..`, no
-     absolute paths, no drive letters, no tricks with `\\?\`, UNC paths, short names or links.
    - Link files (`src/LinkSync.*`): the user may type an absolute path (allowed), but no path may
      come from an imported file.
    - `exports\`, `imports\`, `links\` and the atomic writes in `src/Storage.*` (temp + rename,
      `.bak`): names built from macro or folder names must stay inside their folder.
-3. **The network** (`src/Http.*`, `src/MapNames.*`, `{json path url}`): the URL comes from a
-   macro the user wrote (or imported). Responses are untrusted: size cap (`kDefaultMaxBytes`),
-   JSON parsing, and what the value becomes once typed into chat. `maps.json` is a cache and
-   may be corrupt.
+3. **The network** (`src/Http.*`, `src/MapNames.*`): only the GW2 API's map names, at an
+   address built into the addon (`{json}`, which took an address from a macro, was removed on
+   2026-11-23). Responses are untrusted: size cap (`kDefaultMaxBytes`), JSON parsing, and what a
+   map name becomes once typed into chat. `maps.json` is a cache and may be corrupt.
 4. **Text typed into the game** (`src/ChatLine.*`, `src/SendPlan.*`, `src/Sender.*`): a value
-   from a placeholder or a file must not add a newline, an extra Enter, a Tab or a channel
+   from a placeholder must not add a newline, an extra Enter, a Tab or a channel
    command it didn't have. Check UTF-8 to UTF-16 conversion and the 199-unit limit.
 5. **Language files** (`src/Localization.*`, `src/Languages.*`): `.json` files in
    `<addon>\localization\`, likely written by other people and passed around. Their texts are

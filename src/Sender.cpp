@@ -11,19 +11,13 @@
 #include <utility>
 #include <thread>
 
-#include <filesystem>
-#include <fstream>
-#include <iterator>
 #include <random>
 
 #include "Globals.h"
-#include "Http.h"
 #include "MapNames.h"
 #include "Mumble.h"
 #include "Placeholders.h"
 #include "SendPlan.h"
-#include "PathText.h"
-#include "Storage.h"
 
 namespace
 {
@@ -298,8 +292,6 @@ namespace
 
     // --- Placeholders: the outside world for Placeholders::Expand -------------------------------
 
-    constexpr uintmax_t kMaxTextFileBytes = 1024 * 1024; // {txt} files: plenty for chat lines
-
     std::string Utf8(const wchar_t* aText, int aLen)
     {
         const int n = WideCharToMultiByte(CP_UTF8, 0, aText, aLen, nullptr, 0, nullptr, nullptr);
@@ -307,39 +299,6 @@ namespace
         std::string s(static_cast<size_t>(n), '\0');
         WideCharToMultiByte(CP_UTF8, 0, aText, aLen, s.data(), n, nullptr, nullptr);
         return s;
-    }
-
-    bool ReadAddonTextFile(const std::string& aRelPath, std::vector<std::string>& aLines, std::string& aError)
-    {
-        const std::filesystem::path dir = Storage::AddonDir();
-        if (dir.empty()) { aError = "the addon folder isn't available."; return false; }
-        const std::filesystem::path file = dir / PathText::FromUtf8(aRelPath);
-        std::error_code ec;
-        if (!std::filesystem::is_regular_file(file, ec))
-        {
-            aError = "\"" + aRelPath + "\" wasn't found in <GW2>\\addons\\GW2_Chat_Messages\\.";
-            return false;
-        }
-        if (std::filesystem::file_size(file, ec) > kMaxTextFileBytes || ec)
-        {
-            aError = "\"" + aRelPath + "\" is too big (over 1 MB).";
-            return false;
-        }
-        std::ifstream in(file, std::ios::binary);
-        std::string data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-        if (!in && !in.eof()) { aError = "\"" + aRelPath + "\" couldn't be read."; return false; }
-        if (data.size() >= 3 && data.compare(0, 3, "\xEF\xBB\xBF") == 0) data.erase(0, 3); // UTF-8 BOM
-        size_t start = 0;
-        while (start <= data.size())
-        {
-            size_t end = data.find('\n', start);
-            if (end == std::string::npos) end = data.size();
-            std::string line = data.substr(start, end - start);
-            if (!line.empty() && line.back() == '\r') line.pop_back();
-            aLines.push_back(std::move(line));
-            start = end + 1;
-        }
-        return true;
     }
 
     Placeholders::Context PlaceholderContext()
@@ -360,27 +319,15 @@ namespace
             static std::mt19937_64 rng{std::random_device{}()};
             return std::uniform_int_distribution<long long>(aMin, aMax)(rng);
         };
-        c.ReadLines = ReadAddonTextFile;
         c.MapName = [](std::string& aName, std::string& aError) {
             const uint32_t id = s_Mumble ? s_Mumble->Context.MapID : 0;
             return MapNames::Get(id, aName, aError);
         };
-        c.FetchUrl = [](const std::string& aUrl, std::string& aBody, std::string& aError) {
-            // The address may come from someone else's import: never this PC or the local network.
-            const Http::Response r = Http::GetPublic(aUrl);
-            if (!r.Ok())
-            {
-                aError = r.Error.empty() ? "the download failed." : r.Error;
-                return false;
-            }
-            aBody = r.Body;
-            return true;
-        };
         return c;
     }
 
-    // Fills in placeholders, then builds the steps. Runs on the worker: {map} and {json} may wait
-    // on the network. Returns the error, or "" with aPlan ready.
+    // Fills in placeholders, then builds the steps. Runs on the worker: {map} may wait on the
+    // network. Returns the error, or "" with aPlan ready.
     std::string Prepare(std::vector<MacroTree::Line> aLines, SendPlan::Plan& aPlan)
     {
         const Placeholders::Context ctx = PlaceholderContext();
@@ -472,7 +419,7 @@ void Sender::Shutdown()
 {
     s_Stop = true;
     s_JobCv.notify_all();
-    // Bounded: every wait in the worker times out (game steps ~1 s, a {map}/{json} download ~3 s per stage).
+    // Bounded: every wait in the worker times out (game steps ~1 s, a {map} download ~3 s per stage).
     if (s_Thread.joinable()) s_Thread.join();
     g_Api->WndProc_Deregister(OnWndProc);
     {

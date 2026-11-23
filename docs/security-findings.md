@@ -241,6 +241,9 @@ made.
   is refused for its name. With a dead proxy: "couldn't connect". Not checked: a redirect through
   a proxy, and a bypass-list host (in-game check I5).
 - **Status:** Fixed in PR #37, commits `9f7d407` and `07fcc1a`; first build `1c64321`.
+- **Later (2026-11-23, owner):** `{json}` was removed altogether (branch `feature/remove-txt-json`,
+  commit `b606a93`), and with it `Http::GetPublic` and `src/NetAddress.*`: no macro can make the
+  addon fetch an address now. A line that still has `{json}` is refused. The finding stays Fixed.
 
 ### SEC-013
 
@@ -261,6 +264,9 @@ made.
   refused. Tests: `TestControlCharacters`, `TestFromValue` (placeholders), `TestControlCharacters`,
   `TestPlaceholderCommand` (send plan); in-game check I8.
 - **Status:** Fixed in PR #36, commit `727675a`; first build `15aba71`.
+- **Later (2026-11-23, owner):** `{txt}` and `{json}` were removed (branch
+  `feature/remove-txt-json`, commit `b606a93`). The guard stays: `{map}` and `{today}` still bring
+  outside text into a line.
 
 ### SEC-014
 
