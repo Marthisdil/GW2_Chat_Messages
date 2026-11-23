@@ -35,14 +35,14 @@ folder with someone else's file), **Medium** (wrong behaviour reachable with rea
 | [SEC-016](#sec-016) | 2026-11-22 01:59 | Medium | `src/Exchange.cpp:350` (`CopyMacro`) | Imported macros kept their hotkeys by default | Fixed | PR #33 (merged via #34), commit `11e0ab7`, build `1dcd3c0` |
 | [SEC-017](#sec-017) | 2026-11-22 (approx.) | High | `src/MacroTree.cpp` (`Tree::FromJson`, `NewId`) | Giving ids to many id-less imported nodes takes quadratic time: the game freezes | Fixed | PR #35, commit `644f9ed`, build `f055144` |
 | [SEC-018](#sec-018) | 2026-11-22 (approx.) | High | `src/Exchange.cpp:179`, `src/MacroTree.cpp:414` (`FreeName`) | Rename (import) and trash Restore loop forever on a taken name of 99-100 bytes | Fixed | PR #35, commit `644f9ed`, build `f055144` |
-| [SEC-019](#sec-019) | 2026-11-22 (approx.) | Low | `src/MacroTree.cpp` (`MakeNamesUnique`, after SEC-009) | Names crafted to share a hash bucket still cost about 13 s | Fixing | `feature/sec-019-026`, commit `5d1d31f` |
-| [SEC-020](#sec-020) | 2026-11-22 (approx.) | Low | `src/Exchange.cpp:65` (`Utf8Name`) | `path::u8string()` throws on a file name with an unpaired surrogate, outside any `try` | Fixing | `feature/sec-019-026`, commit `7bc9411` |
-| [SEC-021](#sec-021) | 2026-11-22 (approx.) | Low | `src/MapNames.cpp:51` (`LoadFile`) | `json::value()` on `maps.json` throws on a wrongly typed value | Fixing | `feature/sec-019-026`, commit `92381e8` |
-| [SEC-022](#sec-022) | 2026-11-22 (approx.) | Low | `src/Ui.cpp:2471` (import preview) | Every import warning is drawn each frame; a crafted file can have about 2 million | Fixing | `feature/sec-019-026`, commit `82e86e0` |
-| [SEC-023](#sec-023) | 2026-11-22 (approx.) | Low | `src/Ui.cpp:1636` (link files, after SEC-014) | A repaired non-UTF-8 link file can grow past the 256 KB limit and stop syncing | Fixing | `feature/sec-019-026`, commit `973b231` |
-| [SEC-024](#sec-024) | 2026-11-22 (approx.) | Low | `src/Storage.cpp:98`, `LinkSync.cpp:47`, `Ui.cpp:2401` | A typed name or path with a lone surrogate makes `fs::u8path` throw in the render callback | Fixing | `feature/sec-019-026`, commit `7bc9411` |
-| [SEC-025](#sec-025) | 2026-11-22 (approx.) | Low | `src/Exchange.cpp` (folder import) | A crafted folder import can hold about 1.5 GB; an out-of-memory error there isn't caught | Fixing | `feature/sec-019-026`, commit `7afa630` |
-| [SEC-026](#sec-026) | 2026-11-22 (approx.) | Info | `src/Ui.cpp:1404` (`InputString`) | A C1 control character pasted into the editor stays in the line until the next load | Fixing | `feature/sec-019-026`, commit `4716bfe` |
+| [SEC-019](#sec-019) | 2026-11-22 (approx.) | Low | `src/MacroTree.cpp` (`MakeNamesUnique`, after SEC-009) | Names crafted to share a hash bucket still cost about 13 s | Fixed | PR #38, commit `5d1d31f`, build `b76b291` |
+| [SEC-020](#sec-020) | 2026-11-22 (approx.) | Low | `src/Exchange.cpp:65` (`Utf8Name`) | `path::u8string()` throws on a file name with an unpaired surrogate, outside any `try` | Fixed | PR #38, commit `7bc9411`, build `b76b291` |
+| [SEC-021](#sec-021) | 2026-11-22 (approx.) | Low | `src/MapNames.cpp:51` (`LoadFile`) | `json::value()` on `maps.json` throws on a wrongly typed value | Fixed | PR #38, commit `92381e8`, build `b76b291` |
+| [SEC-022](#sec-022) | 2026-11-22 (approx.) | Low | `src/Ui.cpp:2471` (import preview) | Every import warning is drawn each frame; a crafted file can have about 2 million | Fixed | PR #38, commit `82e86e0`, build `b76b291` |
+| [SEC-023](#sec-023) | 2026-11-22 (approx.) | Low | `src/Ui.cpp:1636` (link files, after SEC-014) | A repaired non-UTF-8 link file can grow past the 256 KB limit and stop syncing | Fixed | PR #38, commit `973b231`, build `b76b291` |
+| [SEC-024](#sec-024) | 2026-11-22 (approx.) | Low | `src/Storage.cpp:98`, `LinkSync.cpp:47`, `Ui.cpp:2401` | A typed name or path with a lone surrogate makes `fs::u8path` throw in the render callback | Fixed | PR #38, commit `7bc9411`, build `b76b291` |
+| [SEC-025](#sec-025) | 2026-11-22 (approx.) | Low | `src/Exchange.cpp` (folder import) | A crafted folder import can hold about 1.5 GB; an out-of-memory error there isn't caught | Fixed | PR #38, commit `7afa630`, build `b76b291` |
+| [SEC-026](#sec-026) | 2026-11-22 (approx.) | Info | `src/Ui.cpp:1404` (`InputString`) | A C1 control character pasted into the editor stays in the line until the next load | Fixed | PR #38, commit `4716bfe`, build `b76b291` |
 | [SEC-027](#sec-027) | 2026-11-22 22:05 | High | `src/Exchange.cpp` (`ApplyItems`), `src/MacroTree.cpp` (`CheckName`) | Importing many macros into one folder, and its preview on a re-import, took quadratic time: the game freezes | Fixed | PR #35, commit `1247a73`, build `f055144` |
 
 "Build" is the build stamp's commit (shown in the Nexus log and the DLL's Properties). Until a
@@ -329,7 +329,7 @@ made.
 - **Finding:** with SEC-009's hash sets, 32,768 names crafted to share one bucket (3.7 MB) still
   take about 13 s (the old code: about 217 s). `std::set` would bound it at N log N.
 - **Decision (2026-11-22, the owner):** fix them in a batch (PR 3), one commit per finding. Ordered `std::set`/`std::map` for the names and ids read from files: `MakeNamesUnique`, the parser's `SeenIds` and the tree's `m_UsedIds`, and the import's `Dest` and `NameIndex` maps (from SEC-027), so crafted hash collisions can't slow them. Language-file keys must already be known English texts, so those sets stay hashed.
-- **Status:** Fixing in `feature/sec-019-026`, commit `5d1d31f`.
+- **Status:** Fixed in PR #38, commit `5d1d31f`; first build `b76b291`.
 
 ### SEC-020
 
@@ -340,7 +340,7 @@ made.
   surrogate, outside any `try`. A file `a\xD800.json` in `imports\` would throw every frame.
   Getting such a name onto the disk is not verified.
 - **Decision (2026-11-22, the owner):** fix them in a batch (PR 3), one commit per finding. New `src/PathText.*` converts paths to and from UTF-8 without throwing (a bad sequence becomes U+FFFD); every `u8string()` (also in log lines inside `catch` blocks) uses it. Tested by `tests/PathTextTests.cpp`.
-- **Status:** Fixing in `feature/sec-019-026`, commit `7bc9411`.
+- **Status:** Fixed in PR #38, commit `7bc9411`; first build `b76b291`.
 
 ### SEC-021
 
@@ -349,7 +349,7 @@ made.
 - **Finding:** `j.value("format", 0)` and `j.value("lang", "")` throw on a wrongly typed
   `maps.json`, outside any `try`. Local file only.
 - **Decision (2026-11-22, the owner):** fix them in a batch (PR 3), one commit per finding. `format` and `lang` are read with `find` plus a type check; a wrongly typed cache is thrown away and rebuilt. No other `json::value()` call is left.
-- **Status:** Fixing in `feature/sec-019-026`, commit `92381e8`.
+- **Status:** Fixed in PR #38, commit `92381e8`; first build `b76b291`.
 
 ### SEC-022
 
@@ -358,7 +358,7 @@ made.
 - **Finding:** every warning is drawn each frame; a crafted 4 MB file can produce about 2 million
   (for example non-object entries). Older than the audited changes.
 - **Decision (2026-11-22, the owner):** fix them in a batch (PR 3), one commit per finding. At most `kMaxWarnings` (200) are kept: the tree parser counts the rest while reading (so memory stays small too), and the folder reader is cut the same way; the last line says how many more there were. Test `TestWarningsCapped`.
-- **Status:** Fixing in `feature/sec-019-026`, commit `82e86e0`.
+- **Status:** Fixed in PR #38, commit `82e86e0`; first build `b76b291`.
 
 ### SEC-023
 
@@ -368,7 +368,7 @@ made.
   edit it's written back that size, past the 256 KB read limit, so the link stops syncing; a
   `.txt` export of it can't be imported again.
 - **Decision (2026-11-22, the owner):** fix them in a batch (PR 3), one commit per finding. A link file over 256 KB once repaired is refused (the editor says why), a macro whose file text would be over 256 KB isn't written to its link (a warning, tried again after the next edit), and a `.txt` import over its limit once repaired is left out. Tests in `LinkSyncTests` and `ExchangeTests`. A typed macro over 256 KB can still be exported as `.txt` and then not imported; accepted, as no chat macro needs that much.
-- **Status:** Fixing in `feature/sec-019-026`, commit `973b231`.
+- **Status:** Fixed in PR #38, commit `973b231`; first build `b76b291`.
 
 ### SEC-024
 
@@ -378,7 +378,7 @@ made.
 - **Finding:** ImGui 1.80 passes a lone surrogate `WM_CHAR` into a text box, and `fs::u8path`
   then throws in the render callback. Needs a crafted keypress or a faulty input method.
 - **Decision (2026-11-22, the owner):** fix them in a batch (PR 3), one commit per finding. Fixed with SEC-020: every `fs::u8path` uses `PathText::FromUtf8` (an encoded surrogate from ImGui becomes U+FFFD).
-- **Status:** Fixing in `feature/sec-019-026`, commit `7bc9411`.
+- **Status:** Fixed in PR #38, commit `7bc9411`; first build `b76b291`.
 
 ### SEC-025
 
@@ -387,7 +387,7 @@ made.
 - **Finding:** 2,000 files of 256 KB can hold about 1.5 GB after repair; a `bad_alloc` in
   `FromPath` or `Apply` on the render thread isn't caught. Needs a crafted 512 MB folder.
 - **Decision (2026-11-22, the owner):** fix them in a batch (PR 3), one commit per finding. A folder import reads at most `kMaxFolderBytes` (16 MB) of text, `FromPath` turns anything thrown into the package's error, and if `Apply` throws, the library is put back from the Undo import copy and the error window says nothing was imported. With SEC-023 each file stays within 256 KB after repair.
-- **Status:** Fixing in `feature/sec-019-026`, commit `7afa630`.
+- **Status:** Fixed in PR #38, commit `7afa630`; first build `b76b291`.
 
 ### SEC-026
 
@@ -397,7 +397,7 @@ made.
   so a pasted U+0085 stays in the line (and is typed) until the library is next loaded. Needs the
   user's own paste. Fix: use `ChatLine::ControlsToSpaces` there.
 - **Decision (2026-11-22, the owner):** fix them in a batch (PR 3), one commit per finding. `InputString` uses `ChatLine::ControlsToSpaces`.
-- **Status:** Fixing in `feature/sec-019-026`, commit `4716bfe`.
+- **Status:** Fixed in PR #38, commit `4716bfe`; first build `b76b291`.
 
 ### SEC-027
 
