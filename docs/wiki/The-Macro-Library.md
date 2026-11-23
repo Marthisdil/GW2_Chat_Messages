@@ -37,9 +37,18 @@ Examples
 - The examples are in the addon's language at the time, and none has a hotkey.
 - They're only added once. If you delete them, or start over by removing `macros.json`, they
   don't come back by themselves.
-- To get them back, click **Add the example macros** on the addon's page in Nexus options. It
-  adds a new Examples folder (named "Examples (2)" if you still have one) and leaves your own
-  macros alone.
+- To get them back, click **Add the example macros** on the addon's page in Nexus options. The
+  library opens and:
+  - **If you still have the Examples folder** (even renamed or moved), it asks whether to
+    **replace** it with a fresh copy, in the same place. The old folder goes to the trash bin
+    (or, with the trash bin off, is deleted for good), with everything in it, including macros
+    you added or changed there. The two are never merged.
+  - **If you had the examples before** but deleted them, it asks whether to add them again.
+  - Otherwise it adds them at once.
+  Your other macros are never changed.
+
+<!-- screenshot: examples-replace.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the "Replace the examples?" prompt.*
 
 <!-- screenshot: starter-library.png (docs/screenshots.md) -->
 > 📷 *Screenshot to come: the library on a first run, with the Examples folder open.*

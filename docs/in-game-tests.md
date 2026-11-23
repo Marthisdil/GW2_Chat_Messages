@@ -72,8 +72,15 @@ check they're created).
 Lion's Arch inside), in the addon's language, and no macro has a hotkey. Preview `Two channels`
 and `Roll a die`. In PvE, `Stack on tag` is dimmed (WvW only) and `Meet at the bank` too unless
 you're in Lion's Arch. Delete the Examples folder and restart: it doesn't come back. On the
-addon's page in Nexus options, click **Add the example macros**: the library opens with a new
-Examples folder selected; click it again: "Examples (2)". Then close the game, delete
+addon's page in Nexus options, click **Add the example macros**: the library opens and asks "Add
+the examples again?" (they were added before); **Add**: a new Examples folder, selected. Rename it
+to `Mine`, move it into another folder, and add a macro of your own inside it. Click the button
+again: "Replace the examples?" names `Mine`, counts its folders and macros (yours included) and
+says the old one goes to the trash bin. **Cancel**: nothing changes. Again, **Replace**: a fresh
+Examples folder in `Mine`'s place (same folder), and `Mine` with your macro is in the trash bin.
+No "Examples (2)" anywhere. Restore `Mine` from the bin: it comes back beside the new one; click
+the button: the prompt names the new Examples folder, not `Mine`. Turn the trash bin off in the
+options: the prompt says the old folder is deleted for good. Then close the game, delete
 the new `macros.json` and `macros.json.bak`, put `macros.keep.json` and `macros.keep.bak` back
 under their old names, and start again: your own library, no examples added.
 
