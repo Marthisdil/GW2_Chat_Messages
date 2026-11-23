@@ -20,7 +20,7 @@ The version is a date (`YYYY.MM.DD.HHMM.Channel`), so "major" and "minor" are de
 
 | Kind | What it is | What happens |
 |---|---|---|
-| **Major release** | The first release; any **Beta** or **Rel** release; a channel change (Dev to Beta, Beta to Rel); or a Dev release that adds or changes a way untrusted data comes in (imports, `{txt}`, link files, the network, `{json}`) or the input path (`Sender`, `SendPlan`, `Hotkeys`) | **The full audit runs before the release, without asking.** The release waits until the findings are fixed or accepted by the owner. |
+| **Major release** | The first release; any **Beta** or **Rel** release; a channel change (Dev to Beta, Beta to Rel); or a Dev release that adds or changes a way untrusted data comes in (imports, link files, the network, placeholders) or the input path (`Sender`, `SendPlan`, `Hotkeys`) | **The full audit runs before the release, without asking.** The release waits until the findings are fixed or accepted by the owner. |
 | **Minor release** | Any other release (a tagged Dev build) | Claude **asks** before the release: full audit, quick audit since the last release tag, or skip. |
 | **Lesser change** | A pull request that changes code (`src/`, `tests/`, `tools/`, the `.vcxproj`, CI); docs-only PRs don't count | Claude **asks** when it opens the PR: quick audit of this PR, or skip. |
 

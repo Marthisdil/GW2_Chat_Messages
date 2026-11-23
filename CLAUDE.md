@@ -107,17 +107,14 @@ to the todo list", add it there (don't start building it). Move agreed items int
   Tested by `tests/SearchTests.cpp`.
 - `src/Hotkeys.*`: the WndProc hook that reads presses and captures a new hotkey. It only queues
   presses; the render thread (`Ui.cpp`) matches them to macros and starts the sender.
-- `src/Placeholders.*`: fills in `{time}`, `{random}`, `{txt}` and the other placeholders. The clock,
-  random numbers and file reads come in through a `Context`. No Nexus or ImGui dependency. Tested
-  by `tests/PlaceholderTests.cpp`. `{txt}` may only read files inside the addon folder.
-- `src/Http.*`: a small blocking WinHTTP GET (worker threads only). `src/MapNames.*`: GW2 API map
-  names cached in `maps.json`, looked up on a background thread. Link `winhttp.lib` and `ws2_32.lib`.
-  `{json}` uses `Http::GetPublic`, which refuses servers on this PC or a local network (a status
-  callback checks the connection's real address before every request; behind a WinHTTP proxy it
-  looks the target and every redirect up itself, `GetAddrInfoW`, sends only plain host names, and
-  lets a local connection through only if it's the proxy's own address); the address rule is
-  `src/NetAddress.*`, with no Nexus, ImGui or windows.h dependency, tested by
-  `tests/NetAddressTests.cpp`.
+- `src/Placeholders.*`: fills in `{time}`, `{random}`, `{map}` and the other placeholders. The
+  clock, random numbers and the map name come in through a `Context`. No Nexus or ImGui
+  dependency. Tested by `tests/PlaceholderTests.cpp`. `{txt}` and `{json}` were removed
+  (2026-11-23): a line that still uses one is refused, never sent as typed (`UsesRemoved`). Don't
+  add a placeholder that reads files or fetches an address written in a macro.
+- `src/Http.*`: a small blocking WinHTTP GET (worker threads only), only for addresses built into
+  the addon. `src/MapNames.*`: GW2 API map names cached in `maps.json`, looked up on a background
+  thread. Link `winhttp.lib`.
 - `src/PathText.*`: paths to and from UTF-8 without throwing (a bad sequence becomes U+FFFD).
   Never call `path::u8string()`, `path::string()` or `fs::u8path()`: use `PathText::Utf8` and
   `PathText::FromUtf8`. No Nexus, ImGui or windows.h dependency. Tested by

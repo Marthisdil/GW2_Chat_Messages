@@ -31,8 +31,8 @@ chat for you, from a hotkey, a menu or a button.
 - **Filters:** limit a macro to PvE, WvW or PvP, and to certain maps. Hotkeys and the quick menu
   only use macros that are active where you are, so one key can do different things in WvW and
   in PvE. Map names come from the official GW2 API.
-- **Placeholders:** `{time}`, `{today}`, `{random 1 6}`, `{map}`, a random line from a text file
-  (`{txt jokes.txt}`), a value from a JSON web page, and more, filled in when the message is sent.
+- **Placeholders:** `{time}`, `{today}`, `{random 1 6}`, `{map}` and more, filled in when the
+  message is sent.
 - **Safe input:** it never interferes with normal game controls. Keys go only to the game window,
   chat opens with your own Chat key, your Tab, Shift and Ctrl are never pressed or released for
   you, and a macro won't fire while you're typing.

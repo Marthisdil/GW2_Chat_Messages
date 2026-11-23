@@ -69,41 +69,34 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
   - Built (`src/Placeholders.*`, unit tested in `tests/PlaceholderTests.cpp`): `{time}` (21:05),
     `{hour}`, `{min}`, `{today}` ("Friday, 20.11.2026", weekday in the Windows language),
     `{random}` (0-100), `{random max}` (0-max), `{random min max}` (inclusive, swapped if
-    reversed), `{txt file}` (a random non-blank line), `{txt file line}` (1-based), and `{nexus}`
-    (bhm's `{blish}`: "Chat Messages 2026.11.21.1412.Dev").
-  - Also built: `{map}` (the current map's name) and `{json path url}` (one value from a JSON
-    page: dot-separated path, numbers index arrays, like bhm; objects, lists and null are refused;
-    http/https only, at most 512 KB, 3 s timeouts). Only public internet servers
-    (`Http::GetPublic`, `src/NetAddress.*`): this PC, private, link-local and CGNAT addresses are
-    refused on the real address of the connection before every request (new, reused keep-alive
-    and redirect hops alike), before anything is sent. Behind a WinHTTP proxy (the netsh setting
-    `Http::Get` uses too) that address is the proxy's, so the addon looks the target's name up
-    itself first, and every redirect's, and refuses any local result; a name it can't look up, or
-    one with characters other than letters, digits, `-` and `.` (IP literals aside), is refused.
-    The real connection is still checked there: a local address passes only if it is the proxy's
-    own, so a bypass-list host gets the no-proxy check. Accepted limit (owner, 2026-11-22): a DNS
-    server that answers us with a public address and the proxy with a local one.
+    reversed), and `{nexus}` (bhm's `{blish}`: "Chat Messages 2026.11.21.1412.Dev").
+  - Also built: `{map}` (the current map's name).
+  - **Removed (owner, 2026-11-23): `{txt file}` and `{json path url}`.** A shared or imported macro
+    could use them to type out a file from the addon folder or to make the PC fetch an address
+    (SEC-012, SEC-013). A line that still has one is refused when sent (`Expand` gives an error;
+    nothing is typed, and it's never sent as plain text), the editor shows a red note under it,
+    and the import preview marks the macro REMOVED PLACEHOLDER (`Placeholders::UsesRemoved`).
+    `Http::GetPublic` and `src/NetAddress.*` went with `{json}`; `Http::Get` stays for map names,
+    with an address built into the addon.
   - Map names: `src/MapNames.*` asks `https://api.guildwars2.com/v2/maps?ids=...&lang=en` (no API
     key) and caches the names in `<GW2>\addons\GW2_Chat_Messages\maps.json`. The current map is
     looked up in the background whenever it changes; ids the API doesn't know aren't asked again
     for 5 minutes. A bad cache file is just rebuilt. The filter editor shows names instead of ids.
     English only until the multi-language UI (docs/todo.md).
-  - Syntax: `{name arg arg}`, case-insensitive, `"quotes"` for arguments with spaces.
+  - Syntax: `{name arg arg}`, case-insensitive, arguments separated by spaces.
   - Differences from bhm, on purpose: an unknown `{word}` is sent as typed (bhm drops the whole
     line), and a known placeholder that fails stops the whole macro with a message (bhm silently
     drops that line).
-  - `{txt}` files must be inside `<GW2>\addons\GW2_Chat_Messages\` (relative path, no `..`, no
-    drive), at most 1 MB, UTF-8. This keeps an imported macro from typing out other files.
-  - Filled in on the sender's worker thread (`{map}` and `{json}` may wait on the network), before
-    the plan is built, so the 199-unit check uses the real text and nothing is typed if a
-    placeholder fails. The status shows "Preparing..." meanwhile. Text from a file isn't
-    expanded again. The editor shows "~" on lengths of lines with placeholders.
+  - Filled in on the sender's worker thread (`{map}` may wait on the network), before the plan is
+    built, so the 199-unit check uses the real text and nothing is typed if a placeholder fails.
+    The status shows "Preparing..." meanwhile. A value isn't expanded again. The editor shows "~" on lengths of lines with placeholders.
   - A value can't add a key or a command (SEC-013). Its control characters (C0, DEL, C1) become
     spaces. `SendPlan::Build` refuses typed text with any control character, and a "/" that came
     from a value where chat reads a command: at the start of a box we type into (after any kind of
     space, even after our own `/s `), or right after a command word and its spaces. The game reads
-    commands as the text arrives and a channel command empties the box, so in `/g {json}` a value
-    `/w Name` would whisper. `Placeholders::Result::FromValue` marks the bytes that came from values.
+    commands as the text arrives and a channel command empties the box, so in `/g {map}` a value
+    `/w Name` would whisper. Kept after `{txt}`/`{json}` were removed: `{map}` and `{today}`
+    still bring in outside text. `Placeholders::Result::FromValue` marks the bytes that came from values.
   - Waypoint and other chat links (`[&BDAEAAA=]`) need no feature: they're typed as text and the
     game turns them into links.
 - **`.txt` link file**: optional two-way sync of one macro with a text file in raw format.
@@ -340,9 +333,9 @@ keeps the existing item's id and place.)*
     per item or for all items.
   - Depth violations are flagged. Those items are blocked, or flattened to the deepest allowed
     level if the user chooses that.
-  - **Flags** (added 2026-11-23, `PlanItem` and `Plan` counts): imported macros that use `{txt}`
-    or `{json}` (`Placeholders::Uses`, the same name parsing as `Expand`) in a message or
-    whisper recipient; with Keep hotkeys ticked, hotkeys with no Ctrl/Alt/Shift
+  - **Flags** (added 2026-11-23, `PlanItem` and `Plan` counts): imported macros that still use
+    the removed `{txt}` or `{json}` (`Placeholders::UsesRemoved`, the same name parsing as
+    `Expand`) in a message or whisper recipient, marked REMOVED PLACEHOLDER (they won't send); with Keep hotkeys ticked, hotkeys with no Ctrl/Alt/Shift
     (`EHotkeyRisk::NoModifier`) or equal to one of the user's library hotkeys where both can be
     active (`Clash`, `FiltersOverlap` as in the editor, since such a key sends nothing; not the
     macro being replaced, nor anything inside a folder being replaced). **Replace never brings
