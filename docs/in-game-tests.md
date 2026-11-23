@@ -5,9 +5,10 @@ import, link sync). These checks cover what only the game can tell us: whether G
 and text, and whether normal game input is ever disturbed.
 
 The checks are grouped into sessions (A to Q) in the order to run them: each one builds on the
-ones before. A whole pass takes about an hour. If the text is hard to read, do M1 first and
-pick a bigger size. Session B is the one that matters most: if it
-fails, most of the later sessions can't be run, so report it first.
+ones before (the `Test` macros from A3, `Say`'s Ctrl+F1 from F1, `emote.txt` from I8, ...). A
+whole pass takes a few hours, so spread it over several play sessions. If the text is hard to
+read, do M1 first and pick a bigger size. Session B is the one that matters most: if it fails,
+most of the later sessions can't be run, so report it first.
 
 ## Progress
 
@@ -15,15 +16,9 @@ Results so far (keep your notes in `docs\testing results.txt`; it isn't committe
 
 | Session | State | Notes |
 |---|---|---|
-| A1 | Passed (PR #15 build) | Re-check only the version and build stamp lines with a new build. |
-| A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text now wraps (PR #17) and errors open the error window (PR #18). Re-check those two points only, then go on to A3. |
-| A3 to Q | Not run yet | New since the last build: O (trash bin), the counter in A4, J3b/J6 (import checkboxes, trash bin not exported or imported). Newer still: P (search box; P6-P8 the "only active here" filter and the quick menu search), J7 (a whole library), and F2/F3/F7 (mouse buttons now need Ctrl, Alt or Shift). Newest: Q (languages), J8/K6 (text files that aren't UTF-8), and J2 (**Keep hotkeys** now starts unticked for every import; ticked, the preview shows the hotkeys), O3's long name, I8 (a placeholder can't add a command or a key) and I5 (`{json}` refuses local addresses). Newer: I9 (a damaged `maps.json`) and J9 (a file with thousands of warnings). Newest: J10 (the import preview's marks; Replace drops a clashing hotkey). |
-
-**Errors since PR #18:** every refusal and error the checks below expect ("refused", "says
-why", "a message") now opens the **error window** instead of a red line under the editor. Click
-**OK** to close it before the next step. Where a check asks for the exact message, use **Copy to
-clipboard** and paste it into your notes. Errors from a hotkey or the quick menu also show the
-Nexus alert, as before.
+| A1 | Passed (PR #15 build) | Re-check with the current build: the log and the options page show its version and build stamp. |
+| A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text wraps and errors open the error window. Re-check those two points only (marked *Re-check* in A2), then go on to A3. |
+| A3 to Q | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build. |
 
 ## How to report
 
@@ -35,6 +30,10 @@ For every check, write **pass**, **fail** or **skipped**, and for a fail (or any
 - the Nexus log lines mentioning `Chat Messages` (Nexus > Log; filter by "Chat Messages");
 - for anything visual, a screenshot (save it anywhere, not in `docs\images\`, which is for the
   README and wiki pictures).
+
+Every refusal and error the checks expect ("refused", "says why", "a message") opens the
+**error window**. Click **OK** to close it before the next step. Errors from a hotkey or the quick
+menu also show a Nexus alert.
 
 Checks marked **(question)** have no right answer yet: they decide how a feature will work, so
 describe what you saw even if nothing went wrong. A copy-paste template is at the end.
@@ -66,7 +65,8 @@ library key. Nexus > Options > Addons > Chat Messages shows the version, the bui
   "levels deep" message: "New folder inside" isn't offered there, so select the deepest folder
   and click **New folder** in the toolbar. A macro inside the deepest folder is allowed.
 - A second folder or macro called `test` (any case) in the same folder is refused ("There is
-  already a ...") in the error window (session N). *Re-check: the error isn't cut off.*
+  already a ..."). *Re-check: the error opens in a window and isn't cut off* (N1 looks at that
+  window in detail).
 - Rename (right-click > Rename), Move up / Move down, **Sort contents A-Z**, Expand all / Collapse
   all: each does what it says.
 - Drag a macro into another folder, and drag a folder into a folder: both move. Dragging a folder
@@ -308,8 +308,9 @@ Then toolbar **Import...** > **Paste from clipboard**, with `Test`'s parent as t
 preview shows `Test` as "goes into the existing folder" and the macros as conflicts. **Keep
 hotkeys** is unticked and the preview shows no hotkeys. Tick it: each macro with a hotkey shows it
 after its name (`Name  [Ctrl+F1]`). Click **Paste from clipboard** again: **Keep hotkeys** is
-unticked again. Set one macro to Replace and one to Skip, and click **Import selected**. The result
-matches the preview, and the imported macros (the replaced one too) have no hotkeys.
+unticked again. Set `Say` to Replace (it's marked **YOUR HOTKEY GOES**: it has Ctrl+F1 from F1,
+and the copy comes without it) and one other macro to Skip, and click **Import selected**. The
+result matches the preview, and the imported macros (`Say` too) have no hotkeys.
 
 **J3. Undo.** **Undo import**: the library is exactly as before (names, lines, hotkeys, filters).
 
@@ -360,24 +361,36 @@ then rename any macro: no "couldn't be saved" message. Right-click the imported 
 **Save as a .json file** and **Copy to the clipboard**: both work, and the game stays open.
 **Undo import**.
 
-**J9. Many warnings.** In PowerShell, make a file with 5000 broken entries:
-`'{"format":1,"root":{"children":[' + ((1..5000 | % { '1' }) -join ',') + ']}}' | Set-Content -Encoding ascii imports\broken.json`
-(run it in the addon folder). Open it in the Import window: it lists 200 warnings, then
-"...and 4800 more problem(s) like these.", and says there's nothing to import. The game doesn't
-slow down while the window is open. Close it and delete `broken.json`.
+**J9. Crafted files.** Two files made to slow the game down; neither should. Run these in
+PowerShell in the addon folder:
+- 5000 broken entries:
+  `'{"format":1,"root":{"children":[' + ((1..5000 | % { '1' }) -join ',') + ']}}' | Set-Content -Encoding ascii imports\broken.json`.
+  Open it in the Import window: it lists 200 warnings, then "...and 4800 more problem(s) like
+  these.", and says there's nothing to import. The game doesn't slow down while the window is
+  open. Close it.
+- A line full of `{`: `'/s ' + ('{' * 200000) | Set-Content -Encoding ascii imports\braces.txt`.
+  Open it in the Import window and leave the preview up for a few seconds: no stutter. Import it,
+  select the macro so the editor shows it: still no stutter. **Send now**: refused at once as
+  too long. Delete the macro.
 
-**J10. Preview marks.** Give `Say` the hotkey Ctrl+F1. Make a macro `Risky` in `Test` with the
-line `/s {txt emote.txt}`, and a macro `Plain` with hotkey Ctrl+F1 too (yes, the same) and the
-line `/s plain`. Export `Test` to the clipboard, then delete `Risky` and change `Plain`'s hotkey to
-Ctrl+F2. **Paste from clipboard** with `Test`'s parent as the target, and set macros to
-**Replace**:
-- `Risky` is marked **READS A FILE**, and a line above the preview counts it.
-- Tick **Keep hotkeys**: `Plain` (Ctrl+F1, as `Say` has) is marked **COMES WITHOUT ITS HOTKEY**
-  and **YOUR HOTKEY GOES**, with their lines above the preview. Hover each mark: a reason shows.
+Delete `broken.json` and `braces.txt` afterwards.
+
+**J10. Preview marks.** Give `Say` the hotkey Ctrl+F1. In `Test`, make these macros:
+`Risky` with the line `/s {txt emote.txt}` (the file from I8); `Web` with the line
+`/s {json id https://api.guildwars2.com/v2/build}` and the plain hotkey F8; and `Plain` with
+hotkey Ctrl+F1 too (yes, the same as `Say`) and the line `/s plain`. Export `Test` to the
+clipboard, then delete `Risky` and `Web` and change `Plain`'s hotkey to Ctrl+F2. **Paste from
+clipboard** with `Test`'s parent as the target, and set macros to **Replace**:
+- `Risky` is marked **READS A FILE** and `Web` **READS A WEB PAGE**, and lines above the preview
+  count them.
+- Tick **Keep hotkeys**: `Web` (a new macro) is marked **KEY WITHOUT CTRL/ALT/SHIFT**; it would
+  keep F8. `Plain` (Ctrl+F1, as `Say` has) is marked **COMES WITHOUT ITS HOTKEY** and **YOUR
+  HOTKEY GOES**. Each mark has its line above the preview; hover each mark: a reason shows.
 - **Import selected**: `Plain` has no hotkey now, `Say` keeps Ctrl+F1, and the line with **Undo
   import** says 1 replaced macro has no hotkey now, or a different one. **Undo import**.
 - Set macros to **Keep both (rename)** and paste again: `Plain (2)` is marked **YOUR HOTKEY**
-  (it keeps it if imported). Close the window without importing.
+  (it keeps it if imported). Close the window without importing. Delete `Risky`, `Web` and
+  `Plain` if they're still there.
 
 ## K. Text file links
 
@@ -581,11 +594,12 @@ it: that one text is in Dutch, the rest in English.
 says one text was left out, and that text shows in English. Then break the file (delete the last
 `}`) and reload: the error window says the file wasn't loaded and why, and the dropdown falls
 back. Delete `nl.json` and reload afterwards.
+
 ## Report template
 
 ```
 Build: (stamp from the log)   Nexus version:   Game language:
-A1  A2  A3  A4  A5  A6
+A1  A2 (both re-checks)  A3  A4 (yellow/red easy to see?):  A5  A6
 B1  B2  B3  B4 (what arrived):
 C1  C2 (did /w Name work without Tab?):
 D1  D2  D3  D4  D5  D6
@@ -593,13 +607,14 @@ E1
 F1  F2 (which mouse buttons, where):  F3  F4  F5  F6  F7
 G1  G2  G3 (where did it appear?):
 H1  H2  H3  H4 (map: mode, map id):
-I1 (date format sent):  I2  I3  I4  I5  I6  I7
-J1  J2  J3  J3b  J4  J5  J6  J7
-K1  K2  K3  K4  K5
+I1 (date format sent):  I2  I3  I4  I5 (proxy? y/n)  I6  I7  I8 (look-alikes: did either post?):  I9
+J1  J2  J3  J3b  J4  J5  J6  J7  J8  J9  J10
+K1  K2  K3  K4  K5  K6
 L1  L2
 M1 (entries and sizes):  M2  M3  M4  M5
 N1 (pasted text):  N2  N3
-O1  O2  O3  O4  O5   A4 colours easy to see?
+O1  O2  O3 (long name too)  O4  O5
 P1  P2  P3  P4 (did Ctrl+F / Escape reach the game?):  P5  P6 (label at character select):  P7 (did typing or Enter reach the game?):  P8
+Q1  Q2  Q3 (anything cut off?):  Q4  Q5  Q6  Q7   Translations that read oddly:
 Nexus log warnings:
 ```
