@@ -134,8 +134,7 @@ namespace Exchange
         EChoice               Choice = EChoice::Rename; // the choice used (when Conflict)
         std::vector<PlanItem> Children;       // folders: what happens inside
         // Macros that are imported (new, renamed or replacing), for the preview's flags:
-        bool        ReadsFile = false;        // a line uses {txt} (reads a file in the addon folder)
-        bool        ReadsWeb  = false;        // a line uses {json} (fetches a web page)
+        bool        UsesRemoved = false;      // a line uses {txt} or {json}, which were removed: it isn't sent
         EHotkeyRisk HotkeyRisk = EHotkeyRisk::None; // its hotkey, whether or not Keep hotkeys is ticked
         // Replace with Keep hotkeys ticked and a risky hotkey: the macro comes without it.
         bool        HotkeyCleared = false;
@@ -151,15 +150,15 @@ namespace Exchange
         size_t Conflicts = 0;
         // Counts of the PlanItem flags above, over the macros that are imported. HotkeysNoModifier
         // and HotkeysClash count only hotkeys that aren't cleared (they come along if kept).
-        size_t ReadsFile = 0, ReadsWeb = 0, HotkeysNoModifier = 0, HotkeysClash = 0, HotkeysCleared = 0, OwnHotkeysLost = 0;
+        size_t UsesRemoved = 0, HotkeysNoModifier = 0, HotkeysClash = 0, HotkeysCleared = 0, OwnHotkeysLost = 0;
         size_t HotkeysChanged = 0; // replaced macros with HotkeyCleared or LosesOwnHotkey (the notice after Import)
 
         size_t Changes() const { return NewFolders + NewMacros + Replaced; }
     };
 
     // What importing aPackage into aTarget (a folder of aTree) would do. Changes nothing.
-    // Imported macros are flagged when they read files or web pages, or when their hotkey has no
-    // modifier or is one aTree already uses. Replace never brings such a hotkey, even with Keep
+    // Imported macros are flagged when they use a removed placeholder ({txt}, {json}), or when their
+    // hotkey has no modifier or is one aTree already uses. Replace never brings such a hotkey, even with Keep
     // hotkeys ticked (HotkeyCleared); other new macros only show the flag.
     Plan BuildPlan(const Tree& aTree, const Node& aTarget, const Tree& aPackage, const Options& aOptions);
 

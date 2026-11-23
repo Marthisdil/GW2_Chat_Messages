@@ -15,7 +15,6 @@ void RunErrorReportTests();
 void RunTrashTests();
 void RunSearchTests();
 void RunLocalizationTests();
-void RunNetAddressTests();
 void RunPathTextTests();
 
 int main()
@@ -33,7 +32,6 @@ int main()
     RunTrashTests();
     RunSearchTests();
     RunLocalizationTests();
-    RunNetAddressTests();
     RunPathTextTests();
     std::printf("%d checks, %d failures\n", g_TestChecks, g_TestFailures);
     return g_TestFailures == 0 ? 0 : 1;

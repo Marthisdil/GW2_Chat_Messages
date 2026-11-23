@@ -243,10 +243,10 @@ namespace
         }
     }
 
-    bool MacroUses(const Node& aMacro, const char* aName)
+    bool UsesRemoved(const Node& aMacro)
     {
         for (const Line& l : aMacro.Lines)
-            if (Placeholders::Uses(l.Message, aName) || Placeholders::Uses(l.WhisperTo, aName)) return true;
+            if (Placeholders::UsesRemoved(l.Message) || Placeholders::UsesRemoved(l.WhisperTo)) return true;
         return false;
     }
 
@@ -270,10 +270,8 @@ namespace
         void Flag(const Node& aSrc, Exchange::PlanItem& aItem, const Node* aReplaced)
         {
             using Exchange::EHotkeyRisk;
-            aItem.ReadsFile = MacroUses(aSrc, "txt");
-            aItem.ReadsWeb  = MacroUses(aSrc, "json");
-            if (aItem.ReadsFile) Out.ReadsFile++;
-            if (aItem.ReadsWeb) Out.ReadsWeb++;
+            aItem.UsesRemoved = UsesRemoved(aSrc);
+            if (aItem.UsesRemoved) Out.UsesRemoved++;
             if (!aSrc.Hotkey.Empty())
             {
                 if (!aSrc.Hotkey.HasModifier()) aItem.HotkeyRisk = EHotkeyRisk::NoModifier;
