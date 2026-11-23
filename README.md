@@ -74,8 +74,9 @@ Your macros are saved in `<GW2>\addons\GW2_Chat_Messages\macros.json`.
 
 ## Documentation
 
-Full usage documentation is being written for the project wiki. Until the wiki is online, the
-pages are in [docs/wiki/](docs/wiki/Home.md).
+Full usage documentation is in the [wiki](https://github.com/Marthisdil/GW2_Chat_Messages/wiki): installation, the macro
+library, editing and sending macros, filters, placeholders, import and export, languages, files
+and troubleshooting.
 
 ## Building from source
 
