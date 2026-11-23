@@ -11,3 +11,4 @@
 - [Languages](Languages)
 - [Files and data](Files-and-Data)
 - [Safety and troubleshooting](Safety-and-Troubleshooting)
+- [ArenaNet's policies](ArenaNet-Policies)

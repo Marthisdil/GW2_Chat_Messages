@@ -23,6 +23,8 @@ constexpr uint16_t    kVersionBuild    = CHATMSG_VER_DAY;
 constexpr uint16_t    kVersionRevision = CHATMSG_VER_TIME;
 constexpr const char* kVersionText     = CHATMSG_VER_TEXT;
 constexpr const char*  kRepositoryUrl   = "https://github.com/Marthisdil/GW2_Chat_Messages";
+// ArenaNet's macro policy, linked from the options page and the docs (README, wiki).
+constexpr const char*  kMacroPolicyUrl  = "https://help.guildwars2.com/hc/en-us/articles/360013762153-Policy-Macros-and-Macro-Use";
 
 // printf-style wrapper around the Nexus logger. Safe to call from any thread
 // while the addon is loaded.

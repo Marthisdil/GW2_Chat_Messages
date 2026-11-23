@@ -5,8 +5,13 @@ preview first. Your library only changes when you click **Import selected**, and
 
 ## Export
 
-Exports go to `<GW2>\addons\GW2_Chat_Messages\exports\`. An existing file is never overwritten: a
+Exports go to `<GW2>\addons\GW2_Chat_Messages\exports\`. The addon creates this folder (and
+`imports\`) when it loads, so you never have to make it. An existing file is never overwritten: a
 second export of the same name is saved as `Name (2).json`.
+
+- **Exports folder** (in the library's toolbar) opens the exports folder in Windows Explorer.
+- After an export, the message under the toolbar ("Exported to ...") has an **Open exports
+  folder** button.
 
 - **Export all** (in the library's toolbar) saves your whole library as
   `Chat Messages library.json`.

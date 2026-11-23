@@ -6,6 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **ArenaNet's macro policy:** the addon's options page links to
+  [Policy: Macros and Macro Use](https://help.guildwars2.com/hc/en-us/articles/360013762153-Policy-Macros-and-Macro-Use) (and to the repository), under the version and
+  build, with a reminder that the addon only sends messages you start and mustn't be used to
+  automate gameplay. The README has a "Macro use and ArenaNet's policy" section, and the wiki an
+  [ArenaNet's policies](https://github.com/Marthisdil/GW2_Chat_Messages/wiki/ArenaNet-Policies)
+  page with the disclaimer.
+- **Import and export folders, ready to use:** `imports\` and `exports\` are created when the
+  addon loads. **Exports folder** in the toolbar opens the exports folder, and so does **Open
+  exports folder** in the "Exported to ..." message.
 - **The wiki is online:** the full user documentation is at
   https://github.com/Marthisdil/GW2_Chat_Messages/wiki (the README links to it).
 - **Map search in the filters:** type part of a map's name (or its id) under **Maps** to find it

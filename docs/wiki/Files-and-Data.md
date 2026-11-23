@@ -9,8 +9,8 @@ when it loads.
 | `macros.json.bak` | The previous version of `macros.json`, kept on every save. |
 | `settings.json` | Addon settings: the text size, the language and whether the trash bin is on. Safe to delete (back to the defaults). |
 | `maps.json` | Map names and regions from the GW2 API (in the addon's language), the API's full list of map ids for the map search, and the maps you've been to. Safe to delete: it's fetched again (only the "Maps you've been to" list starts over). |
-| `exports\` | Files saved by Export. |
-| `imports\` | Put files here to see them in the Import window. |
+| `exports\` | Files saved by Export. Created when the addon loads; **Exports folder** in the toolbar opens it. |
+| `imports\` | Put files here to see them in the Import window. Created when the addon loads; **Open imports folder** in the Import window opens it. |
 | `links\` | Text files linked to macros (when you give just a file name). |
 | `localization\` | Extra language files (see [Languages](Languages)). |
 

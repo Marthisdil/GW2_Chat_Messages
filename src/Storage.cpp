@@ -1,5 +1,6 @@
 #include "Storage.h"
 
+#include <cstring>
 #include <ctime>
 #include <fstream>
 #include <sstream>
@@ -141,6 +142,13 @@ void Storage::OpenFolder(const fs::path& aDir)
 {
     if (aDir.empty()) return;
     ShellExecuteW(nullptr, L"open", aDir.wstring().c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+}
+
+void Storage::OpenWebPage(const char* aUrl)
+{
+    if (!aUrl || std::strncmp(aUrl, "https://", 8) != 0) return;
+    const std::wstring url = PathText::FromUtf8(aUrl).wstring();
+    ShellExecuteW(nullptr, L"open", url.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 }
 
 bool Storage::WriteJson(const fs::path& aFile, const nlohmann::json& aJson, bool aKeepBackup)

@@ -79,6 +79,7 @@ namespace
     // Short-lived status line (e.g. why a move was refused).
     std::string s_Status; // good news only; errors open the error window (ShowError)
     double      s_StatusUntil = 0.0;
+    bool        s_StatusExport = false; // the status is "Exported to ...": offer the exports folder
 
     uint64_t s_SelectedId = 0;
 
@@ -150,10 +151,11 @@ namespace
     }
 
     // Good news ("Exported to ..."), shown for a few seconds under the toolbar.
-    void SetInfo(const std::string& aText)
+    void SetInfo(const std::string& aText, bool aExported = false)
     {
-        s_Status      = aText;
-        s_StatusUntil = ImGui::GetTime() + kStatusShowSec;
+        s_Status       = aText;
+        s_StatusUntil  = ImGui::GetTime() + kStatusShowSec;
+        s_StatusExport = aExported;
     }
 
     // --- Where the player is (for filters) ------------------------------------------------------
@@ -787,7 +789,7 @@ namespace
         const bool made = MakeExportText(aNodes, aAsText, text);
         const std::filesystem::path file = Storage::FreeFile(dir, Exchange::FileNameFor(aName, aAsText ? ".txt" : ".json"));
         if (made && Storage::WriteText(file, text))
-            SetInfo(WithTrashNote(Fmt(T("Exported to %s."), ("<GW2>\\addons\\GW2_Chat_Messages\\exports\\" + PathText::Utf8(file.filename())).c_str())));
+            SetInfo(WithTrashNote(Fmt(T("Exported to %s."), ("<GW2>\\addons\\GW2_Chat_Messages\\exports\\" + PathText::Utf8(file.filename())).c_str())), true);
         else ShowError(Fmt(T("Exported \"%s\" as a %s file"), aName.c_str(), aAsText ? ".txt" : ".json"),
                        T("The export couldn't be written. Check the Nexus log."));
     }
@@ -2764,6 +2766,10 @@ namespace
             ImGui::SetTooltip(T("Saves your whole library to the exports folder.\nRight-click a folder or macro to export just that.%s%s"),
                               note.empty() ? "" : "\n", note.c_str());
         }
+        row.Next(UiFont::ButtonWidth(T("Exports folder")));
+        if (ImGui::Button(T("Exports folder"))) Storage::OpenFolder(Storage::ExportsDir());
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip(T("Opens <GW2>\\addons\\GW2_Chat_Messages\\exports\\, where exports are saved."));
         row.Next(UiFont::ComboWidth(T("Text size")));
         UiFont::DrawCombo(T("Text size"));
         if (ImGui::IsItemHovered())
@@ -2775,7 +2781,11 @@ namespace
     {
         if (s_SaveFailed) // stays until a save works (the error window said why)
             ImGui::TextColored(kErrorColor, T("Your macros couldn't be saved. Check the Nexus log. Retrying..."));
-        if (!s_Status.empty() && ImGui::GetTime() < s_StatusUntil) ImGui::TextWrapped("%s", s_Status.c_str());
+        if (!s_Status.empty() && ImGui::GetTime() < s_StatusUntil)
+        {
+            ImGui::TextWrapped("%s", s_Status.c_str());
+            if (s_StatusExport && ImGui::SmallButton(T("Open exports folder"))) Storage::OpenFolder(Storage::ExportsDir());
+        }
         DrawUndoImport();
     }
 
@@ -2922,6 +2932,23 @@ namespace
         return label;
     }
 
+    // A clickable web link (ImGui 1.80 has none): underlined text in the link colour, the hand
+    // cursor on hover, the address in a tooltip. Only for the addon's built-in addresses.
+    void DrawLink(const char* aLabel, const char* aUrl)
+    {
+        const ImVec4 colour = ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered);
+        ImGui::TextColored(colour, "%s", aLabel);
+        const ImVec2 min = ImGui::GetItemRectMin();
+        const ImVec2 max = ImGui::GetItemRectMax();
+        ImGui::GetWindowDrawList()->AddLine(ImVec2(min.x, max.y), max, ImGui::GetColorU32(colour));
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+            ImGui::SetTooltip("%s", aUrl);
+        }
+        if (ImGui::IsItemClicked()) Storage::OpenWebPage(aUrl);
+    }
+
     // The options page's map list: when the GW2 API's list was last fetched, and a button to do
     // it again now (it's also fetched on the first run, weekly, and when the language changes).
     void DrawMapListOptions()
@@ -3019,6 +3046,9 @@ void Ui::Init()
         s_ActiveOnly = active != settings.end() && active->is_boolean() && active->get<bool>(); // off by default
     }
     s_TrashSelId = 0;
+    // The imports and exports folders exist from the start, so there's never one to make by hand.
+    if (Storage::ImportsDir().empty() || Storage::ExportsDir().empty())
+        LogF(LOGL_WARNING, "The imports and exports folders couldn't be created.");
     s_Mumble = static_cast<Mumble::Data*>(g_Api->DataLink_Get(DL_MUMBLE_LINK));
     s_LoadMessages.clear();
     Storage::LoadMacros(s_Tree, s_LoadMessages);
@@ -3067,6 +3097,9 @@ void Ui::RenderOptions()
 {
     ImGui::Text(T("Chat Messages %s"), kVersionText);
     ImGui::TextDisabled(T("Build %s"), BuildStamp::Text());
+    DrawLink(T("Chat Messages on GitHub"), kRepositoryUrl);
+    DrawLink(T("ArenaNet's macro policy"), kMacroPolicyUrl);
+    ImGui::TextDisabled(T("This addon only sends chat messages you start yourself. Don't use it to automate gameplay."));
     ImGui::TextDisabled(T("Your macros are saved in <GW2>\\addons\\GW2_Chat_Messages\\macros.json."));
     if (ImGui::Button(T("Open macro library"))) s_ShowMainWindow = true;
     ImGui::Spacing();
