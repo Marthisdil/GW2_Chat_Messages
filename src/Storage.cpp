@@ -183,13 +183,13 @@ bool Storage::WriteJson(const fs::path& aFile, const nlohmann::json& aJson, bool
     }
 }
 
-void Storage::LoadMacros(MacroTree::Tree& aTree, std::vector<std::string>& aMessages)
+bool Storage::LoadMacros(MacroTree::Tree& aTree, std::vector<std::string>& aMessages)
 {
     const fs::path file = LibraryFile();
     if (file.empty())
     {
         aMessages.push_back(TR("The addon folder isn't available, so macros can't be loaded or saved."));
-        return;
+        return false;
     }
 
     std::vector<std::string> warnings;
@@ -197,9 +197,9 @@ void Storage::LoadMacros(MacroTree::Tree& aTree, std::vector<std::string>& aMess
     {
     case ERead::Ok:
         for (auto& w : warnings) aMessages.push_back(std::move(w));
-        return;
+        return false;
     case ERead::Missing:
-        return; // first run, or the user removed the file on purpose: start empty
+        return true; // first run, or the user removed the file on purpose
     case ERead::Unreadable:
     {
         // Keep the unreadable file for the user, under a name we will never overwrite.
@@ -222,6 +222,7 @@ void Storage::LoadMacros(MacroTree::Tree& aTree, std::vector<std::string>& aMess
                                                  "last save may be missing."), PathText::Utf8(backup.filename()).c_str()));
         for (auto& w : warnings) aMessages.push_back(std::move(w));
     }
+    return false;
 }
 
 bool Storage::SaveMacros(const MacroTree::Tree& aTree)
