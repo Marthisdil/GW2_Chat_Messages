@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "MacroTree.h"
+#include "SendPlan.h"
 
 namespace Sender
 {
@@ -37,4 +38,9 @@ namespace Sender
 
     Status GetStatus();
     bool   IsBusy();
+
+    // What Send now would type, without sending anything (render thread). Placeholders are filled
+    // in now, and every check of a real send runs. {map} only uses map names already known: an
+    // unknown one is looked up in the background and the plan says to try again.
+    SendPlan::Plan Preview(const std::vector<MacroTree::Line>& aLines);
 }

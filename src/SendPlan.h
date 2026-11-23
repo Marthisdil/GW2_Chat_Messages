@@ -4,10 +4,12 @@
 // No Nexus, ImGui or Windows dependency, so the sequence is unit-tested (tests/SendPlanTests.cpp).
 // The rules behind each step are in docs/design.md, "Input safety".
 
+#include <functional>
 #include <string>
 #include <vector>
 
 #include "MacroTree.h"
+#include "Placeholders.h"
 
 namespace SendPlan
 {
@@ -59,4 +61,25 @@ namespace SendPlan
     // aOrigins: empty, or one per line.
     Plan Build(const std::vector<MacroTree::Line>& aLines, bool aIsCommander,
                const std::vector<Origin>& aOrigins = {});
+
+    // Fills in the placeholders of every line's message and whisper recipient, then Build()s the
+    // plan from the filled-in text with their origins. This is everything a send does before it
+    // touches the game, so Send now and Preview go through the same checks. On a placeholder
+    // error, Plan::Error is "Line N: <error>" and there are no steps. aStop (optional) is asked
+    // before each field; when it says true, Plan::Error is "Stopped.".
+    Plan Prepare(const std::vector<MacroTree::Line>& aLines, bool aIsCommander,
+                 const Placeholders::Context& aContext, const std::function<bool()>& aStop = {});
+
+    // What a plan types, line by line, for the preview: the text in the chat box as the game gets
+    // it. Plans with an Error have no lines.
+    struct Typed
+    {
+        size_t             Line = 0;              // index of the macro line
+        MacroTree::EChannel Channel = MacroTree::EChannel::Current;
+        bool               Broadcast = false;     // sent in the squad broadcast box
+        std::string        Text;                  // what's typed before Enter (whispers: "/w Name")
+        std::string        AfterTab;              // whispers: the message, typed after Tab
+        bool               Tab = false;           // a Tab is pressed between Text and AfterTab
+    };
+    std::vector<Typed> Describe(const Plan& aPlan, const std::vector<MacroTree::Line>& aLines);
 }

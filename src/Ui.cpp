@@ -36,6 +36,7 @@
 #include "Mumble.h"
 #include "Placeholders.h"
 #include "Search.h"
+#include "SendPlan.h"
 #include "Sender.h"
 #include "PathText.h"
 #include "Storage.h"
@@ -708,6 +709,81 @@ namespace
         if (active) ImGui::TextDisabled(T("Active here (%s, %s)."), ModeName(here.Mode), where.c_str());
         else ImGui::TextColored(kWarnColor, T("Not active here (%s, %s)."), ModeName(here.Mode), where.c_str());
         ImGui::Unindent();
+    }
+
+    // --- Preview: what Send now would type, without sending ---------------------------------------
+
+    struct PreviewState
+    {
+        uint64_t                     MacroId = 0; // 0: no preview shown
+        std::vector<Line>            Lines;       // the lines it was made from: an edit hides it
+        std::vector<SendPlan::Typed> Typed;
+        bool                         HasPlaceholders = false;
+    };
+    PreviewState s_Preview;
+
+    bool SameLines(const std::vector<Line>& a, const std::vector<Line>& b)
+    {
+        if (a.size() != b.size()) return false;
+        for (size_t i = 0; i < a.size(); i++)
+            if (a[i].Channel != b[i].Channel || a[i].Message != b[i].Message || a[i].WhisperTo != b[i].WhisperTo ||
+                a[i].SquadBroadcast != b[i].SquadBroadcast) return false;
+        return true;
+    }
+
+    void MakePreview(const Node& aMacro)
+    {
+        s_Preview = {};
+        const SendPlan::Plan plan = Sender::Preview(aMacro.Lines);
+        if (!plan.Error.empty())
+        {
+            ShowError(Fmt(T("Clicked Preview for \"%s\" (nothing was sent)"), aMacro.Name.c_str()), plan.Error);
+            return;
+        }
+        s_Preview.MacroId = aMacro.Id;
+        s_Preview.Lines   = aMacro.Lines;
+        s_Preview.Typed   = SendPlan::Describe(plan, aMacro.Lines);
+        for (const Line& l : aMacro.Lines)
+            if (Placeholders::HasPlaceholders(l.Message) || Placeholders::HasPlaceholders(l.WhisperTo))
+                s_Preview.HasPlaceholders = true;
+    }
+
+    // Under Send now while it matches the macro's current lines; gone after an edit or Close.
+    void DrawPreview(const Node& aMacro)
+    {
+        if (s_Preview.MacroId != aMacro.Id) return;
+        if (!SameLines(s_Preview.Lines, aMacro.Lines))
+        {
+            s_Preview = {};
+            return;
+        }
+        ImGui::BeginGroup();
+        ImGui::TextDisabled(T("Preview: what Send now would type (nothing was sent)"));
+        ImGui::Indent();
+        for (const SendPlan::Typed& t : s_Preview.Typed)
+        {
+            const ImVec4 colour = ChannelColorVec(t.Channel);
+            const std::string label = t.Broadcast ? std::string(T("Squad broadcast"))
+                                                  : std::string(Localization::Lookup(ChannelLabel(t.Channel)));
+            ImGui::TextDisabled(T("Line %zu, %s:"), t.Line + 1, label.c_str());
+            ImGui::Indent();
+            ImGui::PushStyleColor(ImGuiCol_Text, colour);
+            ImGui::TextWrapped("%s", t.Text.c_str());
+            if (t.Tab)
+            {
+                ImGui::PopStyleColor();
+                ImGui::TextDisabled("%s", T("then Tab, then:"));
+                ImGui::PushStyleColor(ImGuiCol_Text, colour);
+                ImGui::TextWrapped("%s", t.AfterTab.c_str());
+            }
+            ImGui::PopStyleColor();
+            ImGui::Unindent();
+        }
+        if (s_Preview.HasPlaceholders)
+            ImGui::TextDisabled(T("Placeholders are filled in again when it's sent ({random} and the time can differ)."));
+        ImGui::Unindent();
+        if (ImGui::SmallButton(T("Close preview"))) s_Preview = {};
+        ImGui::EndGroup();
     }
 
     void DrawSendStatus()
@@ -1949,7 +2025,13 @@ namespace
             ImGui::SetTooltip(T("Types each line into its chat channel and sends it.\n"
                               "Needs your Chat key set in Nexus > Options > Game Keybinds."));
         ImGui::SameLine();
+        if (ImGui::Button(T("Preview"))) MakePreview(aMacro);
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip(T("Shows what Send now would type, with placeholders filled in,\n"
+                              "and runs the same checks. Nothing is sent."));
+        ImGui::SameLine();
         DrawSendStatus();
+        DrawPreview(aMacro);
         DrawHotkeyRow(aMacro);
         DrawFilters(aMacro);
         DrawLinkFile(aMacro);
@@ -3074,6 +3156,7 @@ void Ui::Shutdown()
     s_UndoImport.reset();
     s_LinkStates.clear();
     s_LinkProblems.clear();
+    s_Preview = {};
 }
 
 void Ui::Render()

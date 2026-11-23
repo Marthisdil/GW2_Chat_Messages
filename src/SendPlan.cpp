@@ -190,4 +190,60 @@ namespace SendPlan
         if (plan.LinesToSend == 0) plan.Error = TR("There's nothing to send: every line is empty.");
         return plan;
     }
+
+    Plan Prepare(const std::vector<Line>& aLines, bool aIsCommander, const Placeholders::Context& aContext,
+                 const std::function<bool()>& aStop)
+    {
+        std::vector<Line> lines = aLines;
+        std::vector<Origin> origins(lines.size()); // which bytes came from values
+        for (size_t i = 0; i < lines.size(); i++)
+        {
+            std::pair<std::string*, std::vector<bool>*> fields[] = {{&lines[i].Message, &origins[i].Message},
+                                                                     {&lines[i].WhisperTo, &origins[i].WhisperTo}};
+            for (auto& [field, fromValue] : fields)
+            {
+                Plan stopped;
+                if (aStop && aStop())
+                {
+                    stopped.Error = TR("Stopped.");
+                    return stopped;
+                }
+                Placeholders::Result r = Placeholders::Expand(*field, aContext);
+                if (!r.Error.empty())
+                {
+                    stopped.Error = Localization::Fmt(TR("Line %zu: "), static_cast<size_t>(i + 1)) + r.Error;
+                    return stopped;
+                }
+                *field     = std::move(r.Text);
+                *fromValue = std::move(r.FromValue);
+            }
+        }
+        // Built from the filled-in text, so the 199-character and control character checks are on
+        // what's really typed, and a value can't start a command (SEC-013).
+        return Build(lines, aIsCommander, origins);
+    }
+
+    std::vector<Typed> Describe(const Plan& aPlan, const std::vector<Line>& aLines)
+    {
+        std::vector<Typed> out;
+        if (!aPlan.Error.empty()) return out;
+        for (const Step& s : aPlan.Steps)
+        {
+            if (s.Type == EStep::OpenChat || s.Type == EStep::OpenSquadBroadcast)
+            {
+                Typed t;
+                t.Line      = s.Line;
+                t.Channel   = s.Line < aLines.size() ? aLines[s.Line].Channel : EChannel::Current;
+                t.Broadcast = s.Type == EStep::OpenSquadBroadcast;
+                out.push_back(std::move(t));
+            }
+            else if (out.empty())
+                continue; // every line starts by opening chat; nothing to attach this to
+            else if (s.Type == EStep::KeyTab)
+                out.back().Tab = true;
+            else if (s.Type == EStep::Type)
+                (out.back().Tab ? out.back().AfterTab : out.back().Text) += s.Text;
+        }
+        return out;
+    }
 }

@@ -194,6 +194,60 @@ static void TestPlaceholderCommand()
     CHECK(refused(Build({L(EChannel::Say, "a"), L(EChannel::Say, "b")}, false, {O(V("a", 1))})));
 }
 
+static Placeholders::Context PreviewCtx()
+{
+    Placeholders::Context c;
+    c.Year = 2026; c.Month = 11; c.Day = 23; c.Hour = 9; c.Minute = 5;
+    c.Random = [](long long aMin, long long) { return aMin; };
+    c.MapName = [](std::string& aName, std::string&) { aName = "Lion's Arch"; return true; };
+    return c;
+}
+
+static void TestPrepare()
+{
+    // Placeholders are filled in, then the plan is built from what's really typed.
+    Plan p = Prepare({L(EChannel::Map, "LF1M at {map}"), L(EChannel::Whisper, "roll {random 3 9}", "Some Name")}, false, PreviewCtx());
+    CHECK(p.Error.empty() && p.LinesToSend == 2);
+    std::vector<Typed> t = Describe(p, {L(EChannel::Map, "x"), L(EChannel::Whisper, "y", "z")});
+    CHECK(t.size() == 2);
+    CHECK(t[0].Line == 0 && t[0].Channel == EChannel::Map && t[0].Text == "/m LF1M at Lion's Arch" && !t[0].Tab && t[0].AfterTab.empty());
+    CHECK(t[1].Line == 1 && t[1].Channel == EChannel::Whisper && t[1].Text == "/w Some Name" && t[1].Tab && t[1].AfterTab == "roll 3");
+
+    // A placeholder that can't be filled in: nothing to show, and the error names the line.
+    Placeholders::Context bad = PreviewCtx();
+    bad.MapName = [](std::string&, std::string& aErr) { aErr = "not yet."; return false; };
+    p = Prepare({L(EChannel::Say, "ok"), L(EChannel::Say, "at {map}")}, false, bad);
+    CHECK(p.Steps.empty() && p.Error.find("Line 2: ") == 0);
+    CHECK(Describe(p, {}).empty());
+
+    // A value that would start a command is refused, the same as on a real send (SEC-013).
+    Placeholders::Context slash = PreviewCtx();
+    slash.MapName = [](std::string& aName, std::string&) { aName = "/g hi"; return true; };
+    p = Prepare({L(EChannel::Current, "{map}")}, false, slash);
+    CHECK(!p.Error.empty() && p.Steps.empty());
+
+    // Too long once filled in.
+    Placeholders::Context longName = PreviewCtx();
+    longName.MapName = [](std::string& aName, std::string&) { aName = std::string(200, 'a'); return true; };
+    p = Prepare({L(EChannel::Say, "at {map}")}, false, longName);
+    CHECK(p.Error.find("Line 1: ") == 0);
+
+    // Stopping.
+    p = Prepare({L(EChannel::Say, "hi")}, false, PreviewCtx(), [] { return true; });
+    CHECK(!p.Error.empty() && p.Steps.empty());
+
+    // Squad broadcast (as commander), empty lines skipped, and no placeholders at all.
+    const std::vector<Line> lines{L(EChannel::Squad, "stack", "", true), L(EChannel::Say, ""), L(EChannel::Current, "/wave")};
+    p = Prepare(lines, true, PreviewCtx());
+    t = Describe(p, lines);
+    CHECK(t.size() == 2);
+    CHECK(t[0].Broadcast && t[0].Channel == EChannel::Squad && t[0].Text == "stack");
+    CHECK(t[1].Line == 2 && !t[1].Broadcast && t[1].Text == "/wave");
+    // Not commander: the same line goes to squad chat.
+    t = Describe(Prepare(lines, false, PreviewCtx()), lines);
+    CHECK(!t.empty() && !t[0].Broadcast && t[0].Text == "/d stack");
+}
+
 void RunSendPlanTests()
 {
     TestSimpleLine();
@@ -203,4 +257,5 @@ void RunSendPlanTests()
     TestEmptyAndTooLong();
     TestControlCharacters();
     TestPlaceholderCommand();
+    TestPrepare();
 }
