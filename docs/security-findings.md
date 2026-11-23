@@ -44,7 +44,7 @@ folder with someone else's file), **Medium** (wrong behaviour reachable with rea
 | [SEC-025](#sec-025) | 2026-11-22 (approx.) | Low | `src/Exchange.cpp` (folder import) | A crafted folder import can hold about 1.5 GB; an out-of-memory error there isn't caught | Fixed | PR #38, commit `7afa630`, build `b76b291` |
 | [SEC-026](#sec-026) | 2026-11-22 (approx.) | Info | `src/Ui.cpp:1404` (`InputString`) | A C1 control character pasted into the editor stays in the line until the next load | Fixed | PR #38, commit `4716bfe`, build `b76b291` |
 | [SEC-027](#sec-027) | 2026-11-22 22:05 | High | `src/Exchange.cpp` (`ApplyItems`), `src/MacroTree.cpp` (`CheckName`) | Importing many macros into one folder, and its preview on a re-import, took quadratic time: the game freezes | Fixed | PR #35, commit `1247a73`, build `f055144` |
-| [SEC-028](#sec-028) | 2026-11-23 01:14 | High | `src/Placeholders.cpp` (`Uses`, `HasPlaceholders`) | Finding placeholder names took quadratic time on a line full of `{`, every frame in the import preview and the editor: the game freezes | Fixing | `feature/import-flags`, commit `83be7f6` |
+| [SEC-028](#sec-028) | 2026-11-23 01:14 | High | `src/Placeholders.cpp` (`Uses`, `HasPlaceholders`, `Expand`) | Finding placeholder names took quadratic time on a line full of `{`, every frame in the import preview and the editor: the game freezes | Fixed (`Expand`: fixing) | PR #39, commit `83be7f6`, build `aa37a53`; `Expand`: `feature/expand-one-pass`, commit `f225118` |
 
 "Build" is the build stamp's commit (shown in the Nexus log and the DLL's Properties). Until a
 release is tagged, it's the PR's commit; the release that first ships a fix is added when it's
@@ -437,7 +437,13 @@ made.
   (`AnyName`) finds the same names as `NameAt` (a `{` whose first `}` comes before any other
   `{`). Tests: edge cases matching `Expand`, and 2 MB of `{` under 2 s in the test build.
   `Expand` is left as it is (worker thread, not a freeze); open for the owner to revisit.
-- **Status:** Fixing in `feature/import-flags`, commit `83be7f6`.
+- **Decision (2026-11-23, owner):** fix `Expand` too. `NameAt` now carries the first `}` it
+  found forward (the `{` it's asked about only moves forward), and `Expand` copies a run of `{`
+  in one go (only the last can start a placeholder). Same output; tests add 2 MB of `{` through
+  `Expand` and cases for the carried `}`. Timed in an optimized build: 2 MB in about 0.15 s,
+  growing in step with the length.
+- **Status:** Fixed for `Uses` and `HasPlaceholders` in PR #39, commit `83be7f6`, first build
+  `aa37a53`. `Expand`: fixing in `feature/expand-one-pass`, commit `f225118`.
 
 ## Tuning decisions (checks turned off)
 
