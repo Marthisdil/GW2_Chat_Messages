@@ -17,7 +17,7 @@ Results so far (keep your notes in `docs\testing results.txt`; it isn't committe
 |---|---|---|
 | A1 | Passed (PR #15 build) | Re-check only the version and build stamp lines with a new build. |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text now wraps (PR #17) and errors open the error window (PR #18). Re-check those two points only, then go on to A3. |
-| A3 to Q | Not run yet | New since the last build: O (trash bin), the counter in A4, J3b/J6 (import checkboxes, trash bin not exported or imported). Newer still: P (search box; P6-P8 the "only active here" filter and the quick menu search), J7 (a whole library), and F2/F3/F7 (mouse buttons now need Ctrl, Alt or Shift). Newest: Q (languages), J8/K6 (text files that aren't UTF-8), and J2 (**Keep hotkeys** now starts unticked for every import; ticked, the preview shows the hotkeys), O3's long name, I8 (a placeholder can't add a command or a key) and I5 (`{json}` refuses local addresses). |
+| A3 to Q | Not run yet | New since the last build: O (trash bin), the counter in A4, J3b/J6 (import checkboxes, trash bin not exported or imported). Newer still: P (search box; P6-P8 the "only active here" filter and the quick menu search), J7 (a whole library), and F2/F3/F7 (mouse buttons now need Ctrl, Alt or Shift). Newest: Q (languages), J8/K6 (text files that aren't UTF-8), and J2 (**Keep hotkeys** now starts unticked for every import; ticked, the preview shows the hotkeys), O3's long name, I8 (a placeholder can't add a command or a key) and I5 (`{json}` refuses local addresses). Newer: I9 (a damaged `maps.json`) and J9 (a file with thousands of warnings). |
 
 **Errors since PR #18:** every refusal and error the checks below expect ("refused", "says
 why", "a message") now opens the **error window** instead of a red line under the editor. Click
@@ -293,6 +293,10 @@ can't be checked).
   either posts to guild chat (the addon only treats `/` and ordinary spaces as commands). If one
   does, report it: the check has to learn that character.
 
+**I9. A damaged map cache.** Close the game. In `maps.json` in the addon folder, change
+the number after `"format":` to `"x"` (with the quotes) and save. Start the game and enter a map: no error, and
+`/s Hello from {map}` still sends the map name (the cache is rebuilt).
+
 ## J. Import and export
 
 **J1. Export.** Right-click `Say` > Export > **Save as a .json file**, twice: `exports\Say.json`
@@ -355,6 +359,12 @@ saved as UTF-8, and the preview's macro has `�` (or `?`) where `ä` and `ü` w
 then rename any macro: no "couldn't be saved" message. Right-click the imported macro > Export >
 **Save as a .json file** and **Copy to the clipboard**: both work, and the game stays open.
 **Undo import**.
+
+**J9. Many warnings.** In PowerShell, make a file with 5000 broken entries:
+`'{"format":1,"root":{"children":[' + ((1..5000 | % { '1' }) -join ',') + ']}}' | Set-Content -Encoding ascii imports\broken.json`
+(run it in the addon folder). Open it in the Import window: it lists 200 warnings, then
+"...and 4800 more problem(s) like these.", and says there's nothing to import. The game doesn't
+slow down while the window is open. Close it and delete `broken.json`.
 
 ## K. Text file links
 

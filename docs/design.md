@@ -323,7 +323,16 @@ keeps the existing item's id and place.)*
   - Raw text (`.txt` imports, pasted text and link files) is read as UTF-8. Bytes that aren't
     UTF-8 (an ANSI file, say) become U+FFFD, with a warning (`ChatLine::RepairUtf8`); they're
     not guessed from the ANSI code page. So the library always saves as valid JSON. For a link
-    file the repair alone never writes the file back.
+    file the repair alone never writes the file back. Text over its limit once repaired (each
+    byte becomes three) is refused: a `.txt` import is left out, a link file isn't read, and a
+    macro whose file text would be over 256 KB isn't written to its link (a warning) (SEC-023).
+  - A folder import reads at most 2000 `.txt` files and 16 MB of text (`kMaxFolderBytes`,
+    SEC-025). Anything that throws while reading becomes the package's error; if `Apply` throws
+    (out of memory), the library is put back from the copy made for Undo import and the error
+    window says nothing was imported.
+  - At most 200 warnings (`kMaxWarnings`) are kept from one file, then "...and N more problem(s)
+    like these." (SEC-022). File names and typed paths go through `PathText`, which never
+    throws (SEC-020, SEC-024).
 - **Preview step** (always shown):
   - A tree showing the result, with the new folders, new macros and merged folders marked.
   - The user picks the target folder.

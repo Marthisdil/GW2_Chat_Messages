@@ -102,7 +102,8 @@ can hold up to 50 lines for one macro, and at most 256 KB.
 Save the file as UTF-8 (Notepad's default). In a file saved another way (ANSI, say), characters
 like `ä` or `é` can't be read: the macro gets `�` in their place (the font may show `?`). The file
 itself is left as it is until you edit the macro in the addon, which writes it back as UTF-8, with
-the `�`.
+the `�`. Each `�` takes three bytes, so a file that would be over 256 KB that way isn't read (the
+editor says why). A macro too big for its file isn't written to it either; the editor says so.
 
 Two macros can't be linked to the same file. Links aren't included in exports.
 

@@ -193,6 +193,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Properties > Details tab shows it as File version and Product version.
 
 ### Fixed
+- Hardening against crafted import files and odd file names:
+  - A file or folder name Windows allows but UTF-8 can't hold, or such a character typed into a
+    path or file name box, no longer ends the addon's frame with an error; it shows as `�`.
+  - A damaged `maps.json` (wrongly typed values) is rebuilt instead of causing an error.
+  - The Import window lists at most 200 warnings for one file (a crafted file could have
+    millions, all drawn every frame), then counts the rest.
+  - A folder import reads at most 16 MB of text. If the game runs out of memory while importing,
+    nothing is imported and the error window says so.
+  - Text that isn't UTF-8 grows when its characters are replaced. A `.txt` import or link file
+    that would be over 256 KB that way is refused, and a macro too big for its link file isn't
+    written to it, so a link no longer stops syncing.
+  - Names crafted to slow down the check for duplicate names no longer freeze the game.
+  - A control character pasted into a message or recipient box (such as U+0085) becomes a space
+    right away, as a newline or tab already did.
 - **`{json}` only reaches the internet:** an address that leads to this PC or your local network
   (`localhost`, `127.0.0.1`, `192.168.x.x`, `10.x.x.x` and the like, also after a redirect) is now
   refused before anything is sent, and the macro isn't sent. A shared or imported macro could
