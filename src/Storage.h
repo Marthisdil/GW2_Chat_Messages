@@ -29,6 +29,10 @@ namespace Storage
     bool WriteText(const std::filesystem::path& aFile, const std::string& aText);
     // Opens a folder in Windows Explorer (only ever on a click).
     void OpenFolder(const std::filesystem::path& aDir);
+    // Opens one of the addon's built-in web addresses (Globals.h) in the browser, only ever on a
+    // click. Anything that isn't an https:// address is refused. Never pass an address from a
+    // macro, a file or the network.
+    void OpenWebPage(const char* aUrl);
 
     // Writes via a temporary file and rename so a crash can't leave a half-written file.
     // With aKeepBackup, the previous file is first copied to "<file>.bak".
