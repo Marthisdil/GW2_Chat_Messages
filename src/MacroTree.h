@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
-#include <unordered_set>
+#include <set>
 #include <vector>
 
 #include <nlohmann/json_fwd.hpp>
@@ -186,7 +186,7 @@ namespace MacroTree
         std::vector<TrashItem> m_Trash;
         // Every id in the tree or the bin (plus some since deleted, which is harmless), filled on the
         // first NewId, so a new id is one lookup instead of a walk over the whole tree (SEC-017).
-        mutable std::unordered_set<uint64_t> m_UsedIds;
+        mutable std::set<uint64_t> m_UsedIds;
         mutable bool                         m_UsedIdsReady = false;
 
         uint64_t NewId() const;

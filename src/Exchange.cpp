@@ -6,7 +6,6 @@
 #include <cctype>
 #include <fstream>
 #include <set>
-#include <unordered_map>
 
 #include <nlohmann/json.hpp>
 
@@ -169,7 +168,7 @@ namespace
         std::set<std::string> Folders, Macros; // lower-case names already there or planned
         // The existing items by lower-case name: a clash is one lookup, not a scan of every sibling
         // (SEC-027; the plan is rebuilt every frame while the Import window is open).
-        std::unordered_map<std::string, const Node*> OldFolders, OldMacros;
+        std::map<std::string, const Node*> OldFolders, OldMacros;
 
         Dest(const Node* aExisting, int aLevel) : Existing(aExisting), Level(aLevel)
         {
@@ -354,13 +353,13 @@ namespace
     // macros into one folder took 304 s in the test build).
     struct NameIndex
     {
-        std::unordered_map<std::string, Node*> Folders, Macros;
+        std::map<std::string, Node*> Folders, Macros;
 
         explicit NameIndex(Node& aFolder)
         {
             for (auto& c : aFolder.Children) Of(c->Type).emplace(Lower(c->Name), c.get());
         }
-        std::unordered_map<std::string, Node*>& Of(ENodeType aType) { return aType == ENodeType::Folder ? Folders : Macros; }
+        std::map<std::string, Node*>& Of(ENodeType aType) { return aType == ENodeType::Folder ? Folders : Macros; }
         Node* Find(ENodeType aType, const std::string& aName)
         {
             auto& names = Of(aType);

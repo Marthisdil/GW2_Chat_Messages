@@ -7,8 +7,8 @@
 #include <cctype>
 #include <cstdio>
 #include <random>
-#include <unordered_map>
-#include <unordered_set>
+#include <map>
+#include <set>
 
 #include <nlohmann/json.hpp>
 
@@ -139,7 +139,7 @@ namespace MacroTree
 
         struct Parser
         {
-            std::unordered_set<uint64_t> SeenIds;
+            std::set<uint64_t> SeenIds;
             std::vector<Node*>           NeedIdNodes; // given ids after parsing, so fresh ids can't collide
             std::vector<std::string>*    Warnings = nullptr;
             bool                         WarnedDepth = false;
@@ -252,14 +252,16 @@ namespace MacroTree
             // Two siblings of the same type with the same name: rename the later one "Name (2)" etc.
             // The first free number is picked, skipping names any sibling (earlier or later) holds.
             // Lookups use sets, and each name remembers the next number to try, so a file with
-            // thousands of copies of one name takes linear time, not a rescan per candidate.
+            // thousands of copies of one name takes N log N time, not a rescan per candidate.
+            // Ordered sets, not hash sets: names crafted to share one hash bucket can't slow them
+            // down (SEC-019).
             void MakeNamesUnique(Node& aFolder)
             {
                 // Per type (0 = folder, 1 = macro), lower case: every name a sibling holds (a renamed
                 // sibling's old name stays taken: the earlier sibling it repeated still holds it), the
                 // names of the siblings before the current one, and the next number to try per name.
-                std::unordered_set<std::string>      taken[2], earlier[2];
-                std::unordered_map<std::string, int> next[2];
+                std::set<std::string>      taken[2], earlier[2];
+                std::map<std::string, int> next[2];
                 int                                  cutNext[2] = {2, 2};
                 for (const auto& c : aFolder.Children) taken[c->IsFolder() ? 0 : 1].insert(Lower(c->Name));
 
@@ -403,7 +405,7 @@ namespace MacroTree
 
     namespace
     {
-        void CollectIds(const Node& aNode, std::unordered_set<uint64_t>& aOut)
+        void CollectIds(const Node& aNode, std::set<uint64_t>& aOut)
         {
             for (const auto& c : aNode.Children)
             {
