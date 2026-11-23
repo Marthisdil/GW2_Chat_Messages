@@ -3,7 +3,9 @@
 Select a macro in the library to edit it on the right. Changes are saved automatically.
 
 A macro has a **title**, one or more **lines**, an optional **hotkey** (see
-[Sending macros](Sending-Macros)) and **where it's active** (see [Filters](Filters)).
+[Sending macros](Sending-Macros)), a **Favourite** box (favourites are at the top of the
+[quick menu](Sending-Macros#favourites-and-recently-sent)) and **where it's active** (see
+[Filters](Filters)).
 
 ## Lines
 

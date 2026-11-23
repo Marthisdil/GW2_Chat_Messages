@@ -558,13 +558,14 @@ namespace Exchange
         {
             if (!n) continue;
             json j = MacroTree::NodeToJson(*n);
-            // Link files are paths on this PC; they mean nothing elsewhere.
+            // Link files are paths on this PC; they mean nothing elsewhere. Favourites are your own.
             std::vector<json*> stack{&j};
             while (!stack.empty())
             {
                 json* cur = stack.back();
                 stack.pop_back();
                 cur->erase("link_file");
+                cur->erase("favourite");
                 auto it = cur->find("children");
                 if (it != cur->end() && it->is_array())
                     for (json& c : *it) stack.push_back(&c);

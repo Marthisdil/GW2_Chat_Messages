@@ -411,6 +411,21 @@ Examples
   follows map changes live; dragging and Move up/down are off as when searching. The line above
   the tree says "N macro(s) active here", "No macros are active here.", or the search counts
   with ", active here".
+- **Favourites and recently sent** (built 2026-11-23 from the todo list): the quick menu (both
+  the pop-up and the Quick Access menu) lists, above the folders, **Favourites** (macros marked
+  as favourite, in tree order) and **Recently sent** (the last sent, newest first, without the
+  favourites), only the ones active here, each as "Name  (A > B)" like search results. Both are
+  hidden while the menu's search box has text. Rules in `src/QuickLists.*` (no Nexus or ImGui,
+  tested in `tests/QuickListsTests.cpp`).
+  - **Favourite:** `"favourite": true` on a macro in `macros.json` (left out when false; any
+    other value is dropped with a warning). Set by the editor's **Favourite** box or the tree's
+    right-click **Favourite** (a check mark; a queued action). The tree shows `  *` after the
+    name. Exports leave it out, and imports never set it (a replaced macro keeps its own).
+  - **Recently sent:** every send that starts (hotkey, quick menu, Send now) moves the macro to
+    the front; at most 10 ids are kept, in `settings.json` `"recently_sent"` (16-digit hex ids,
+    like `macros.json`). Ids that are gone or in the trash bin are skipped. The General tab's
+    **Recently sent in the quick menu** sets how many show, 0-10 (`"recent_count"`, 5 by
+    default), with **Clear the list**.
 - **Quick menu search** (added 2026-11-22): a search box at the top of the quick menu (the pop-up
   and the Quick Access right-click menu each have their own, cleared whenever the menu closes).
   With text, the nested menus are replaced by a flat list of the matching macros **active here**

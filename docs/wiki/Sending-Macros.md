@@ -108,6 +108,25 @@ It lists only the macros that are active where you are, and hides folders with n
 coloured by channel, show their hotkey, and preview their lines when you hover over them. The
 bottom item opens or hides the library.
 
+### Favourites and recently sent
+
+Above the folders, the quick menu lists:
+
+- **Favourites:** the macros you marked as a favourite, in library order. Mark one with the
+  **Favourite** box in its editor, or right-click it in the library > **Favourite** (click again to
+  unmark it). Favourites have a `*` after their name in the library.
+- **Recently sent:** the macros you sent last, newest first, from anywhere (a hotkey, the quick
+  menu or Send now). A favourite isn't listed here again. It shows 5 by default; set 0 to 10, or
+  **Clear the list**, on the addon's options page (General tab), under **Recently sent in the quick
+  menu**. The list is kept when you restart the game.
+
+Both lists only show macros that are active where you are, each with its folders in brackets.
+Deleted macros drop out. A macro you export or import isn't a favourite on the other side:
+favourites are your own.
+
+<!-- screenshot: quick-menu-favourites.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the quick menu with Favourites and Recently sent above the folders.*
+
 **Searching the menu:** type in the box at the top to swap the folders for a flat list of the
 macros active here that match (by name, line text, whisper recipient or hotkey), each with its
 folders in brackets. Click one, or press **Enter** to send the first. When you open the menu with

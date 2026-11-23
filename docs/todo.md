@@ -47,17 +47,12 @@ Built so far (in `docs/design.md`): the remaining messages translated ("Language
 map search ("Features"), the default-key warning ("Input safety", hotkeys), and the import and
 export folders, ready to open ("Import / export"), Preview next to Send now ("Features"), the
 per-macro hotkey cooldown ("Input safety", hotkeys), and the starter library with its
-reserved id and "ask first, replace" button ("Starter library"), and backups on a schedule with
-a Restore tab ("Backups"), all on 2026-11-23. What was left out of them is under section 4.
+reserved id and "ask first, replace" button ("Starter library"), backups on a schedule with
+a Restore tab ("Backups"), and favourites and recently sent in the quick menu ("Features"), all
+on 2026-11-23. What was left out of them is under section 4.
 
-Re-ranked 2026-11-23 after the starter library: smallest and safest first. Favourites came up
-from section 5; "Filters on folders" is the owner's new idea and needs its questions settled
-first.
-
-### Favourites and "recently sent" in the quick menu
-
-Pinned macros and the last few sent ones at the top of the quick menu (and the pop-up), so the
-common ones don't need digging through folders.
+Re-ranked 2026-11-23 after the starter library: smallest and safest first. "Filters on folders"
+is the owner's new idea and needs its questions settled first.
 
 ### Filters on folders (added 2026-11-23)
 
@@ -263,3 +258,30 @@ wiki's ArenaNet's policies page): it's about gameplay (skills, farming, bots, pl
 away) and asks that each macro is a single action you start again. A countdown is still one
 press sending chat lines once, but it runs on its own for several seconds, so decide with
 care (and say so when registering with Raidcore).
+
+### More ideas (suggested 2026-11-23, not ranked yet)
+
+- **Duplicate a macro:** right-click > **Duplicate** makes "Name (2)" next to it, with the same
+  lines and filters but no hotkey (a hotkey must stay unique). Quick to build; handy for
+  variants of one callout.
+- **Notes on a macro:** a free-text note that's never sent (what it's for, when to use it),
+  shown in the editor and in the quick menu's hover preview.
+- **Ask before sending to a big channel:** a per-macro "ask first" box, so a macro for Map,
+  Squad broadcast or Guild shows a small Yes/No before it types anything. Guards against a wrong
+  click in the quick menu. Points to settle: whether hotkeys skip it, and where the question
+  shows (a Nexus alert can't take a click).
+- **Your own text values:** placeholders you define once on the options page, like
+  `{v:guild}` = "[TAG] My Guild" or `{v:raid}` = "Wing 4", used in many macros and changed in one
+  place. Text only, never files or addresses (the SEC-013 mask applies, as for `{map}`).
+- **Split a long line:** when a line is over 199 characters, offer to split it into two lines on
+  the same channel at a word break, instead of only showing it in red.
+- **Send to another channel once:** right-click a macro in the quick menu > "Send to..." with a
+  channel list, so a Say macro can go to Party once without editing it. Whisper lines keep their
+  recipient.
+- **Keyboard use of the quick menu pop-up:** up/down arrows to move through the search results
+  and Enter to send the highlighted one (today Enter sends the first). Must never let the keys
+  reach the game.
+- **Undo for edits:** Ctrl+Z in the library for the last few changes (rename, move, delete, line
+  edits), like Undo import but for everyday edits. Bigger; needs a snapshot or change list.
+- **Favourites in your own order:** drag favourites into an order of their own in the quick
+  menu, instead of library order (the first version uses library order).
