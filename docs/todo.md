@@ -4,8 +4,9 @@ A place to collect ideas, brainstorming and possible features before they are de
 Items here are **not decided**. Once an item is agreed, move it into `docs/design.md` (or a PR)
 and remove it here.
 
-The sections are in priority order (ranked 2026-11-23): release blockers first, then quick wins,
-bigger features, later items, and new ideas still to discuss.
+The sections are in priority order (ranked 2026-11-23, updated the same day after the security
+scan plan): release blockers first, then quick wins, bigger features, later items, and new ideas
+still to discuss. Within each section, items are in priority order too.
 
 ## 1. Before a first public release
 
@@ -14,6 +15,11 @@ bigger features, later items, and new ideas still to discuss.
 Work through `docs/in-game-tests.md` (A1 passed, A2 mostly; the rest is still to do). Session B,
 whether the game takes the addon's keys and text, matters most: everything else depends on it.
 
+### Whispers without Tab
+
+Find a way to send whispers that needs no Tab key (Tab is the riskiest key the sender presses).
+Test in game during session B.
+
 ### ArenaNet's macro policy
 
 Check ArenaNet's current macro policy before the first public release, and mention the
@@ -21,10 +27,13 @@ multi-line sending when registering the addon with Raidcore. Several lines from 
 exactly what the policy is about; if it calls for one line per press or a forced delay, it's
 cheaper to know before the release. Also decides "Timed lines" (section 5).
 
-### Whispers without Tab
+### Full security scan for the first release (added 2026-11-23)
 
-Find a way to send whispers that needs no Tab key (Tab is the riskiest key the sender presses).
-Test in game during session B.
+The first release needs a whole-repository claude-security scan of areas A-D (untrusted files,
+input path, network, everything else), one area per session, as `docs/security-audit.md` ("The
+full audit") describes. Start well before the release date, A and B first, and log each scan
+with its usage in the Scan log (`docs/security-findings.md`). The release waits until every area
+is covered and its findings are fixed or accepted.
 
 ### VirusTotal scan for every released DLL (added 2026-11-21)
 
@@ -41,10 +50,24 @@ the first release.
 
 ## 2. Quick wins
 
-All four were built on 2026-11-23 and moved to `docs/design.md`: the remaining messages are
+The first four were built on 2026-11-23 and moved to `docs/design.md`: the remaining messages are
 translated ("Languages"), the filters have a map search with the API's full list, visited maps
 and a weekly refresh ("Features", filters and placeholders), and the hotkey editor warns about
 GW2's default keys ("Input safety", hotkeys). What was left out of them is under section 4.
+The folders item below moved here from section 4.
+
+### Import and export folders, ready to open (added 2026-11-23)
+
+Replaces the Windows file picker idea, which the owner dropped on 2026-11-23: a file dialog over
+the game would be one more thing to get wrong, for little gain.
+
+- The addon creates `<addon>\imports\` and `<addon>\exports\` itself (at load, or the first time
+  the Import window or an export needs them), so the user never has to make them by hand.
+- The Import window has a link that opens the imports folder (an **Open imports folder** button
+  exists today; check it creates the folder first). The export side gets the same: a link that
+  opens the exports folder, shown where exports are made and after an export ("Exported to ...").
+- When this is built: document both folders and the links in the wiki (Import and Export, Files
+  and Data) and the README.
 
 ## 3. Bigger features
 
@@ -192,20 +215,29 @@ owner 2026-11-23, documented in the README and the wiki's Sending Macros page). 
 - Depends on in-game check F2: whether mouse buttons reach our hook at all while the pointer is
   over the addon window.
 
-### Import and export folders, ready to open (added 2026-11-23)
-
-Replaces the Windows file picker idea, which the owner dropped on 2026-11-23: a file dialog over
-the game would be one more thing to get wrong, for little gain.
-
-- The addon creates `<addon>\imports\` and `<addon>\exports\` itself (at load, or the first time
-  the Import window or an export needs them), so the user never has to make them by hand.
-- The Import window has a link that opens the imports folder (an **Open imports folder** button
-  exists today; check it creates the folder first). The export side gets the same: a link that
-  opens the exports folder, shown where exports are made and after an export ("Exported to ...").
-- When this is built: document both folders and the links in the wiki (Import and Export, Files
-  and Data) and the README.
-
 ## 5. New ideas to discuss (suggested 2026-11-23)
+
+Ranked 2026-11-23: low risk and most use first. Timed lines is last because it waits on the
+macro policy check (section 1).
+
+### Preview what would be sent
+
+A button in the editor that shows every line exactly as it would be typed (placeholders filled
+in, the channel command added), without sending anything. Errors show the same way as on send.
+
+### Per-macro cooldown or double-send guard
+
+A minimum time between two sends of the same macro (and maybe a global one), so a held,
+bouncing or repeated hotkey can't spam chat or run into the game's chat flood limit.
+
+- Points to settle: default value (off, or a second or two), whether the quick menu and Send now
+  obey it too, and what the user sees when a press is ignored.
+
+### Daily rolling backups of `macros.json`
+
+Keep the last 7 days (one copy per day) in `<addon>\backups\`, on top of today's single `.bak`
+(which only covers the last save). Points to settle: how many to keep, and a "Restore a backup"
+choice in the Import window.
 
 ### A random pick inside the macro: `{pick a|b|c}`
 
@@ -215,6 +247,11 @@ part of `{txt}` (a random line) with no file reading: every choice is written in
 - Points to settle: the separator (`|`), how to write a literal `|`, whether empty choices are
   allowed, and a limit on the number of choices. The chosen text is a value, so the SEC-013
   mask applies (it can't start a command), and the length check uses the longest choice.
+
+### Favourites and "recently sent" in the quick menu
+
+Pinned macros and the last few sent ones at the top of the quick menu (and the pop-up), so the
+common ones don't need digging through folders.
 
 ### Character placeholders: `{name}`, `{profession}`, `{spec}`
 
@@ -233,41 +270,17 @@ filters, from MumbleLink's identity.
   aren't logged in; whether it applies to hotkeys, the quick menu and the library dimming like
   the other filters.
 
-### Preview what would be sent
-
-A button in the editor that shows every line exactly as it would be typed (placeholders filled
-in, the channel command added), without sending anything. Errors show the same way as on send.
-
-### Per-macro cooldown or double-send guard
-
-A minimum time between two sends of the same macro (and maybe a global one), so a held,
-bouncing or repeated hotkey can't spam chat or run into the game's chat flood limit.
-
-- Points to settle: default value (off, or a second or two), whether the quick menu and Send now
-  obey it too, and what the user sees when a press is ignored.
-
-### Favourites and "recently sent" in the quick menu
-
-Pinned macros and the last few sent ones at the top of the quick menu (and the pop-up), so the
-common ones don't need digging through folders.
-
-### Copy to clipboard as a fallback
-
-When a send is refused (game not focused, a text box already open...), offer "Copy the text"
-so the user can paste it themselves. The sender itself still never uses the clipboard; this is
-only a user action, and only for one line at a time (or all lines joined).
-
 ### A starter library on first run
 
 When there's no `macros.json` yet, create an "Examples" folder showing lines, a whisper,
 placeholders and filters. Helps new users and makes good screenshots. Points to settle: whether
 it's in every language, and a way to get it back later (Import from a built-in file).
 
-### Daily rolling backups of `macros.json`
+### Copy to clipboard as a fallback
 
-Keep the last 7 days (one copy per day) in `<addon>\backups\`, on top of today's single `.bak`
-(which only covers the last save). Points to settle: how many to keep, and a "Restore a backup"
-choice in the Import window.
+When a send is refused (game not focused, a text box already open...), offer "Copy the text"
+so the user can paste it themselves. The sender itself still never uses the clipboard; this is
+only a user action, and only for one line at a time (or all lines joined).
 
 ### Timed lines ("Pull in 5... 4... 3...")
 
