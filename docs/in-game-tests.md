@@ -366,6 +366,19 @@ then rename any macro: no "couldn't be saved" message. Right-click the imported 
 "...and 4800 more problem(s) like these.", and says there's nothing to import. The game doesn't
 slow down while the window is open. Close it and delete `broken.json`.
 
+**J10. Preview marks.** Give `Say` the hotkey Ctrl+F1. Make a macro `Risky` in `Test` with the
+line `/s {txt emote.txt}`, and a macro `Plain` with hotkey Ctrl+F1 too (yes, the same) and the
+line `/s plain`. Export `Test` to the clipboard, then delete `Risky` and change `Plain`'s hotkey to
+Ctrl+F2. **Paste from clipboard** with `Test`'s parent as the target, and set macros to
+**Replace**:
+- `Risky` is marked **READS A FILE**, and a line above the preview counts it.
+- Tick **Keep hotkeys**: `Plain` (Ctrl+F1, as `Say` has) is marked **COMES WITHOUT ITS HOTKEY**
+  and **YOUR HOTKEY GOES**, with their lines above the preview. Hover each mark: a reason shows.
+- **Import selected**: `Plain` has no hotkey now, `Say` keeps Ctrl+F1, and the line with **Undo
+  import** says 1 replaced macro has no hotkey now, or a different one. **Undo import**.
+- Set macros to **Keep both (rename)** and paste again: `Plain (2)` is marked **YOUR HOTKEY**
+  (it keeps it if imported). Close the window without importing.
+
 ## K. Text file links
 
 Have Notepad ready. "Within a second" means after you save, not after you switch back.

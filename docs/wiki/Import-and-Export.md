@@ -60,7 +60,8 @@ Pick it in one of these ways:
     shortened so " (2)" fits in the 100-character limit).
   - **Skip**: the existing macro stays, the new one is left out.
   - **Replace**: the existing macro keeps its place, but gets the new lines and filters, and the
-    new hotkey if **Keep hotkeys** is ticked (otherwise no hotkey).
+    new hotkey if **Keep hotkeys** is ticked (otherwise no hotkey). A new hotkey with no Ctrl, Alt
+    or Shift, or one another of your macros already has, is never brought along by Replace.
 - **When a folder's name is taken**:
   - **Merge** (the default): the new folder's contents go into the existing folder, with the
     rules above for anything inside.
@@ -82,6 +83,22 @@ out** or **not selected**. A summary line counts them.
 
 Each item whose name is already taken is marked **NAME TAKEN** and has its own choice box, so you
 can decide one by one: for example replace one macro and keep both of another.
+
+**Things to check first** are marked after the item, with a line above the preview that counts
+them (hover a mark to see why):
+
+| Mark | Means |
+|---|---|
+| **READS A FILE** | It uses `{txt}`: when sent, it types a line from a file in your addon folder. |
+| **READS A WEB PAGE** | It uses `{json}`: when sent, it fetches a web page and types a value from it. |
+| **KEY WITHOUT CTRL/ALT/SHIFT** | (Keep hotkeys ticked) Its hotkey is a plain key, so it sends whenever you press that key while playing. |
+| **YOUR HOTKEY** | (Keep hotkeys ticked) One of your macros already has this hotkey, and both can be active at once (their filters overlap): there, the key sends nothing. |
+| **COMES WITHOUT ITS HOTKEY** | It replaces one of yours, and its hotkey is one of the two kinds above, so the hotkey isn't imported. |
+| **YOUR HOTKEY GOES** | The macro it replaces has a hotkey of its own, which is removed. |
+
+A new macro (not replacing one) keeps a marked hotkey if **Keep hotkeys** is ticked: change it in
+the editor, or untick the macro. After **Import selected**, the line with **Undo import** also
+says how many replaced macros now have no hotkey or a different one.
 
 **Choose what to import:** every item has a checkbox, and everything is ticked at first.
 

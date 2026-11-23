@@ -340,6 +340,16 @@ keeps the existing item's id and place.)*
     per item or for all items.
   - Depth violations are flagged. Those items are blocked, or flattened to the deepest allowed
     level if the user chooses that.
+  - **Flags** (added 2026-11-23, `PlanItem` and `Plan` counts): imported macros that use `{txt}`
+    or `{json}` (`Placeholders::Uses`, the same name parsing as `Expand`) in a message or
+    whisper recipient; with Keep hotkeys ticked, hotkeys with no Ctrl/Alt/Shift
+    (`EHotkeyRisk::NoModifier`) or equal to one of the user's library hotkeys where both can be
+    active (`Clash`, `FiltersOverlap` as in the editor, since such a key sends nothing; not the
+    macro being replaced, nor anything inside a folder being replaced). **Replace never brings
+    a risky hotkey** (`HotkeyCleared`, owner 2026-11-23: only on a clash, not always); a replaced
+    macro losing its own hotkey is shown too (`LosesOwnHotkey`). New macros keep a flagged
+    hotkey (only marked). Each flag has a row mark with a tooltip and a counting line above the
+    preview; after Import, the undo line counts the replaced macros whose hotkey changed.
   - Nothing is written until the user clicks **Import**. Import can be undone once (the `.bak`
     file).
   - **Choosing items** (added 2026-11-21): every row has a checkbox, all ticked at first.
