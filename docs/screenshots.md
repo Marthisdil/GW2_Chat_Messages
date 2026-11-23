@@ -45,7 +45,7 @@ changed gets a new description (and goes back to **Needed** if its picture is ou
 | 11 | `filters.png` | **Where it's active** opened: game modes ticked, two or three maps listed by name, and the "Active here" line. | Filters | Needed |
 | 12 | `placeholders-tooltip.png` | The tooltip from hovering **Placeholders (?)** in the editor. | Placeholders | Needed |
 | 13 | `export-menu.png` | Right-click a macro > **Export** submenu open. | Import and export | Needed |
-| 14 | `import-window.png` | The Import window with something loaded: the target folder, the options, **Select all / Deselect all**, and the preview with its checkboxes (one item unticked), at least one **NAME TAKEN** item and its choice box. | Import and export | Needed |
+| 14 | `import-window.png` | The Import window with something loaded: the target folder, the options, **Select all / Deselect all**, and the preview with its checkboxes (one item unticked), at least one **NAME TAKEN** item and its choice box, a macro marked **READS A FILE**, and (with **Keep hotkeys** ticked) one marked **YOUR HOTKEY** with its notice above the preview. | Import and export | Needed |
 | 15 | `send-alert.png` | A Nexus alert on screen from a hotkey that couldn't send, with the error window it also opens. Easiest: give two macros that are both active here the same hotkey, then press it with the library closed. | Safety and troubleshooting | Needed |
 | 16 | `link-file.png` | A macro's **Text file link** section opened, with a file linked ("In step") and the Open file / Open folder / Unlink buttons. | Editing macros | Needed |
 | 17 | `text-size.png` | The library window at the biggest text size, with the **Text size** dropdown (end of the toolbar) open. | The macro library | Needed |

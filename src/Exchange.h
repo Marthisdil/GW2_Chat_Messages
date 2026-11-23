@@ -116,6 +116,15 @@ namespace Exchange
     // Whether a folder has both ticked and unticked items inside (shown as "some").
     bool   IsPartlySelected(const Options& aOptions, const Node& aFolder);
 
+    // Why an imported macro's hotkey is flagged in the preview.
+    enum class EHotkeyRisk : uint8_t
+    {
+        None,
+        NoModifier, // no Ctrl, Alt or Shift: it fires on a key used while playing
+        Clash,      // one of the user's own hotkeys (not the macro it replaces), where both can be
+                    // active (FiltersOverlap): there the key would send nothing
+    };
+
     struct PlanItem
     {
         const Node*           Src = nullptr;  // the package's node
@@ -124,6 +133,14 @@ namespace Exchange
         bool                  Conflict = false; // an item of that name was already there
         EChoice               Choice = EChoice::Rename; // the choice used (when Conflict)
         std::vector<PlanItem> Children;       // folders: what happens inside
+        // Macros that are imported (new, renamed or replacing), for the preview's flags:
+        bool        ReadsFile = false;        // a line uses {txt} (reads a file in the addon folder)
+        bool        ReadsWeb  = false;        // a line uses {json} (fetches a web page)
+        EHotkeyRisk HotkeyRisk = EHotkeyRisk::None; // its hotkey, whether or not Keep hotkeys is ticked
+        // Replace with Keep hotkeys ticked and a risky hotkey: the macro comes without it.
+        bool        HotkeyCleared = false;
+        // Replace where the existing macro had a hotkey of its own, which goes.
+        bool        LosesOwnHotkey = false;
     };
 
     struct Plan
@@ -132,11 +149,18 @@ namespace Exchange
         size_t NewFolders = 0, NewMacros = 0, Merged = 0, Renamed = 0, Replaced = 0, Skipped = 0, TooDeep = 0;
         size_t NotSelected = 0; // folders and macros unticked in the preview
         size_t Conflicts = 0;
+        // Counts of the PlanItem flags above, over the macros that are imported. HotkeysNoModifier
+        // and HotkeysClash count only hotkeys that aren't cleared (they come along if kept).
+        size_t ReadsFile = 0, ReadsWeb = 0, HotkeysNoModifier = 0, HotkeysClash = 0, HotkeysCleared = 0, OwnHotkeysLost = 0;
+        size_t HotkeysChanged = 0; // replaced macros with HotkeyCleared or LosesOwnHotkey (the notice after Import)
 
         size_t Changes() const { return NewFolders + NewMacros + Replaced; }
     };
 
     // What importing aPackage into aTarget (a folder of aTree) would do. Changes nothing.
+    // Imported macros are flagged when they read files or web pages, or when their hotkey has no
+    // modifier or is one aTree already uses. Replace never brings such a hotkey, even with Keep
+    // hotkeys ticked (HotkeyCleared); other new macros only show the flag.
     Plan BuildPlan(const Tree& aTree, const Node& aTarget, const Tree& aPackage, const Options& aOptions);
 
     // Imports by the plan (built from the same tree, target and package, unchanged since).

@@ -6,6 +6,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Import preview marks:** macros that read a file (`{txt}`) or a web page (`{json}`) are marked
+  **READS A FILE** / **READS A WEB PAGE**. With **Keep hotkeys** ticked, a hotkey with no Ctrl,
+  Alt or Shift, or one you already use, is marked too. A line above the preview counts each mark.
+  Replace never brings such a hotkey along, and when a replaced macro loses or changes its
+  hotkey, the preview marks it and the line after the import says so.
 - **Languages:** the addon's text can be shown in English, German, French or Spanish. By default
   it follows Nexus' language; a **Language** dropdown on the options page picks one instead.
   The keybind names and the icon's tooltip follow Nexus' language too. More languages can be
@@ -193,6 +198,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Properties > Details tab shows it as File version and Product version.
 
 ### Fixed
+- A macro line with a huge number of `{` (from an imported file) no longer freezes the game while
+  the Import window shows it or the editor has it open.
 - Hardening against crafted import files and odd file names:
   - A file or folder name Windows allows but UTF-8 can't hold, or such a character typed into a
     path or file name box, no longer ends the addon's frame with an error; it shows as `�`.

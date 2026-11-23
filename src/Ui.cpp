@@ -2279,6 +2279,36 @@ namespace
         return changed;
     }
 
+    // One flag after a preview row, with its reason on hover.
+    void PlanFlag(const char* aText, const char* aWhy)
+    {
+        ImGui::SameLine();
+        ImGui::TextColored(kWarnColor, "%s", aText);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", aWhy);
+    }
+
+    // What to look at before importing a macro: placeholders that read files or web pages, and
+    // hotkeys that could fire by accident or clash with the user's own.
+    void DrawPlanFlags(const Exchange::PlanItem& aItem)
+    {
+        using Exchange::EHotkeyRisk;
+        if (aItem.ReadsFile)
+            PlanFlag(T("[READS A FILE]"), T("It uses {txt}: when sent, it types a line from a file in your addon folder.\nCheck which file before you send it."));
+        if (aItem.ReadsWeb)
+            PlanFlag(T("[READS A WEB PAGE]"), T("It uses {json}: when sent, it fetches a web page and types a value from it.\nCheck the address before you send it."));
+        if (s_ImportOpt.KeepHotkeys && !aItem.HotkeyCleared)
+        {
+            if (aItem.HotkeyRisk == EHotkeyRisk::NoModifier)
+                PlanFlag(T("[KEY WITHOUT CTRL/ALT/SHIFT]"), T("Its hotkey has no Ctrl, Alt or Shift, so it sends the macro whenever you press that key while playing."));
+            else if (aItem.HotkeyRisk == EHotkeyRisk::Clash)
+                PlanFlag(T("[YOUR HOTKEY]"), T("One of your macros already has this hotkey, and both can be active at once: there, the key would send nothing."));
+        }
+        if (aItem.HotkeyCleared)
+            PlanFlag(T("[COMES WITHOUT ITS HOTKEY]"), T("It replaces one of yours, and its hotkey has no Ctrl, Alt or Shift or is already yours, so it isn't imported."));
+        if (aItem.LosesOwnHotkey)
+            PlanFlag(T("[YOUR HOTKEY GOES]"), T("The macro it replaces has a hotkey, which is removed. Set one again in the editor if you want it."));
+    }
+
     void DrawPlanItems(const std::vector<Exchange::PlanItem>& aItems)
     {
         using Exchange::EOutcome;
@@ -2328,6 +2358,7 @@ namespace
             }
             ImGui::SameLine();
             ImGui::TextColored(color, "(%s)", tag.c_str());
+            DrawPlanFlags(item);
             if (item.Conflict && item.Outcome != EOutcome::NotSelected)
             {
                 ImGui::SameLine();
@@ -2510,6 +2541,20 @@ namespace
         ImGui::TextWrapped("%s.", summary.c_str());
         if (plan.Conflicts)
             ImGui::TextColored(kCountNearColor, T("%zu name(s) are already taken (marked NAME TAKEN): choose what happens to each one below."), plan.Conflicts);
+        if (plan.ReadsFile)
+            ImGui::TextColored(kWarnColor, T("%zu macro(s) read a file with {txt} (marked READS A FILE): check them before you send them."), plan.ReadsFile);
+        if (plan.ReadsWeb)
+            ImGui::TextColored(kWarnColor, T("%zu macro(s) read a web page with {json} (marked READS A WEB PAGE): check them before you send them."), plan.ReadsWeb);
+        if (s_ImportOpt.KeepHotkeys && plan.HotkeysNoModifier)
+            ImGui::TextColored(kWarnColor, T("%zu hotkey(s) have no Ctrl, Alt or Shift (marked KEY WITHOUT CTRL/ALT/SHIFT): they send their macro whenever you press that key while playing."),
+                               plan.HotkeysNoModifier);
+        if (s_ImportOpt.KeepHotkeys && plan.HotkeysClash)
+            ImGui::TextColored(kWarnColor, T("%zu hotkey(s) are already yours (marked YOUR HOTKEY): where both macros can be active, that key would send nothing."),
+                               plan.HotkeysClash);
+        if (plan.HotkeysCleared)
+            ImGui::TextColored(kWarnColor, T("%zu replacing macro(s) come without their hotkey (marked COMES WITHOUT ITS HOTKEY): it has no Ctrl, Alt or Shift, or is already yours."), plan.HotkeysCleared);
+        if (plan.OwnHotkeysLost)
+            ImGui::TextColored(kWarnColor, T("%zu of your macros lose their hotkey when replaced (marked YOUR HOTKEY GOES)."), plan.OwnHotkeysLost);
         ImGui::TextDisabled(T("Tick what to import. A folder's tick brings everything inside it."));
         UiFont::Row selRow;
         if (ImGui::SmallButton(T("Select all"))) Exchange::SelectAll(s_ImportOpt, s_ImportPkg->Items, true);
@@ -2542,7 +2587,11 @@ namespace
                           T("There wasn't enough memory to import it. Nothing was imported."));
             }
             else
+            {
                 s_UndoText = Fmt(T("Imported %zu item(s) from %s into %s."), n, s_ImportPkg->Source.c_str(), FolderPath(*target).c_str());
+                if (plan.HotkeysChanged)
+                    s_UndoText += " " + Fmt(T("%zu replaced macro(s) have no hotkey now, or a different one: check them in the editor."), plan.HotkeysChanged);
+            }
             s_RawForId = 0; // a replaced macro's raw text is stale
             CancelCapture();
             MarkDirty();

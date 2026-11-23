@@ -226,15 +226,39 @@ Placeholders::Result Placeholders::Expand(const std::string& aText, const Contex
     return r;
 }
 
+namespace
+{
+    // Whether aMatch(name) holds for a placeholder name in aText, as Expand finds them (NameAt: a
+    // "{" whose first "}" comes before any other "{"; the name is its first word, lower case). One
+    // pass: calling NameAt for every "{" scanned to the next "}" each time, quadratic on a line full
+    // of "{", and the import preview and the editor run this every frame (SEC-028).
+    template <class Match>
+    bool AnyName(const std::string& aText, Match aMatch)
+    {
+        size_t open = std::string::npos; // the last "{" not yet closed
+        for (size_t i = 0; i < aText.size(); i++)
+        {
+            if (aText[i] == '{') open = i;
+            else if (aText[i] == '}' && open != std::string::npos)
+            {
+                size_t end = open + 1;
+                while (end < i && aText[end] != ' ') end++;
+                if (aMatch(Lower(aText.substr(open + 1, end - open - 1)))) return true;
+                open = std::string::npos;
+            }
+        }
+        return false;
+    }
+}
+
 bool Placeholders::HasPlaceholders(const std::string& aText)
 {
-    for (size_t open = aText.find('{'); open != std::string::npos; open = aText.find('{', open + 1))
-    {
-        size_t close = 0;
-        const std::string name = NameAt(aText, open, close);
-        if (!name.empty() && IsKnown(name)) return true;
-    }
-    return false;
+    return AnyName(aText, [](const std::string& aName) { return !aName.empty() && IsKnown(aName); });
+}
+
+bool Placeholders::Uses(const std::string& aText, const std::string& aName)
+{
+    return AnyName(aText, [&aName](const std::string& aFound) { return aFound == aName; });
 }
 
 bool Placeholders::JsonValue(const std::string& aJson, const std::string& aPath, std::string& aOut, std::string& aError)

@@ -17,7 +17,7 @@ Results so far (keep your notes in `docs\testing results.txt`; it isn't committe
 |---|---|---|
 | A1 | Passed (PR #15 build) | Re-check only the version and build stamp lines with a new build. |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text now wraps (PR #17) and errors open the error window (PR #18). Re-check those two points only, then go on to A3. |
-| A3 to Q | Not run yet | New since the last build: O (trash bin), the counter in A4, J3b/J6 (import checkboxes, trash bin not exported or imported). Newer still: P (search box; P6-P8 the "only active here" filter and the quick menu search), J7 (a whole library), and F2/F3/F7 (mouse buttons now need Ctrl, Alt or Shift). Newest: Q (languages), J8/K6 (text files that aren't UTF-8), and J2 (**Keep hotkeys** now starts unticked for every import; ticked, the preview shows the hotkeys), O3's long name, I8 (a placeholder can't add a command or a key) and I5 (`{json}` refuses local addresses). Newer: I9 (a damaged `maps.json`) and J9 (a file with thousands of warnings). |
+| A3 to Q | Not run yet | New since the last build: O (trash bin), the counter in A4, J3b/J6 (import checkboxes, trash bin not exported or imported). Newer still: P (search box; P6-P8 the "only active here" filter and the quick menu search), J7 (a whole library), and F2/F3/F7 (mouse buttons now need Ctrl, Alt or Shift). Newest: Q (languages), J8/K6 (text files that aren't UTF-8), and J2 (**Keep hotkeys** now starts unticked for every import; ticked, the preview shows the hotkeys), O3's long name, I8 (a placeholder can't add a command or a key) and I5 (`{json}` refuses local addresses). Newer: I9 (a damaged `maps.json`) and J9 (a file with thousands of warnings). Newest: J10 (the import preview's marks; Replace drops a clashing hotkey). |
 
 **Errors since PR #18:** every refusal and error the checks below expect ("refused", "says
 why", "a message") now opens the **error window** instead of a red line under the editor. Click
@@ -365,6 +365,19 @@ then rename any macro: no "couldn't be saved" message. Right-click the imported 
 (run it in the addon folder). Open it in the Import window: it lists 200 warnings, then
 "...and 4800 more problem(s) like these.", and says there's nothing to import. The game doesn't
 slow down while the window is open. Close it and delete `broken.json`.
+
+**J10. Preview marks.** Give `Say` the hotkey Ctrl+F1. Make a macro `Risky` in `Test` with the
+line `/s {txt emote.txt}`, and a macro `Plain` with hotkey Ctrl+F1 too (yes, the same) and the
+line `/s plain`. Export `Test` to the clipboard, then delete `Risky` and change `Plain`'s hotkey to
+Ctrl+F2. **Paste from clipboard** with `Test`'s parent as the target, and set macros to
+**Replace**:
+- `Risky` is marked **READS A FILE**, and a line above the preview counts it.
+- Tick **Keep hotkeys**: `Plain` (Ctrl+F1, as `Say` has) is marked **COMES WITHOUT ITS HOTKEY**
+  and **YOUR HOTKEY GOES**, with their lines above the preview. Hover each mark: a reason shows.
+- **Import selected**: `Plain` has no hotkey now, `Say` keeps Ctrl+F1, and the line with **Undo
+  import** says 1 replaced macro has no hotkey now, or a different one. **Undo import**.
+- Set macros to **Keep both (rename)** and paste again: `Plain (2)` is marked **YOUR HOTKEY**
+  (it keeps it if imported). Close the window without importing.
 
 ## K. Text file links
 
