@@ -1424,9 +1424,9 @@ namespace
         aFlags |= ImGuiInputTextFlags_CallbackResize;
         const bool changed = ImGui::InputTextWithHint(aLabel, aHint, aStr.data(), aStr.capacity() + 1, aFlags,
                                                       StringResizeCallback, &aStr);
-        if (changed) // a pasted newline would split the message; chat messages are one line
-            for (char& c : aStr)
-                if (c == '\n' || c == '\r' || c == '\t') c = ' ';
+        // A pasted newline would split the message (chat messages are one line), and ImGui lets
+        // other control characters through, C1 ones like U+0085 too: all become spaces (SEC-026).
+        if (changed) aStr = ChatLine::ControlsToSpaces(aStr);
         return changed;
     }
 
