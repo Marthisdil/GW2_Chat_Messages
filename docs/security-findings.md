@@ -483,7 +483,9 @@ made.
 - **Decision (2026-11-23):** accept. It only happens when out of memory, like any other
   allocation; none of these moves is in a `noexcept` function or a callback from the game, and
   the worker threads that move a `Cache` catch everything (SEC-029).
-- **Status:** Accepted.
+- **Status:** Accepted. Since 2026-11-23 each of the three has a
+  `// NOLINT(bugprone-exception-escape): SEC-030` (`feature/security-scan-plan`), so CI's clang
+  audit stays clean.
 
 ### SEC-031
 
@@ -512,6 +514,21 @@ made.
   is joined) were all fine. Not a security issue but fixed too: importing a whole library
   compared an error message's text to choose its own message (`Exchange::FromLibraryFile`); it
   now uses a flag (`Package::NotOurFormat`).
+
+## Scan log
+
+Every claude-security scan, for planning the next one ([security-audit.md](security-audit.md),
+"The full audit"). Areas: **A** untrusted files, **B** input path, **C** network, **D**
+everything else. **Usage** is the session's tokens and the share of the Pro plan's usage window
+(`/usage` before and after), and how long it ran. The clang part isn't logged here: CI runs it
+on every push.
+
+| Date (UTC) | Area | Kind | Commit | Effort | Usage | Findings |
+|---|---|---|---|---|---|---|
+| 2026-11-22 01:59 | A-D (before the split) | whole | `028549c` | medium | not recorded | SEC-008 to SEC-026 |
+
+The first release needs a whole-repository scan of every area, so the 2026-11-22 scan doesn't
+cover it: it ran before `{txt}`/`{json}` were removed and before PR #45.
 
 ## Tuning decisions (checks turned off)
 

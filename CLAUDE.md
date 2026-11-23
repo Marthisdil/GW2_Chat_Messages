@@ -26,8 +26,13 @@ Record every finding in `docs/security-findings.md` (next `SEC-` id; found date/
 what, severity, decision, status; when fixed, the PR, commit and first build; when released,
 the version). Never delete a finding: close it as Accepted or Not a bug with the reason.
 **When:** before a **major release** (first release, any Beta/Rel, a channel change, or a Dev
-release that changes an untrusted input or the input path: see that doc's table) run the full
-audit without asking, and hold the release until findings are fixed or accepted by the user.
+release that changes an untrusted input or the input path: see that doc's table) the full
+audit is required: a whole-repository scan for the first release and a channel change, a
+changes-only scan per area otherwise. It's split into areas A-D, one per session (Pro plan):
+when a release is mentioned, read the Scan log in `docs/security-findings.md` and propose the
+schedule without asking whether to scan; log each scan there with its usage (`/usage` before
+and after). Hold the release until every area is covered and findings are fixed or accepted by
+the user. CI runs the clang part (`run_audit.ps1 -Tests`) on every push; keep it clean.
 Before a **minor release** (any other tagged release), ask: full audit, quick audit since the
 last tag, or skip. When opening a PR that changes code (not docs-only), ask: quick audit of
 this PR, or skip.
