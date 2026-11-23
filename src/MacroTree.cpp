@@ -479,6 +479,20 @@ namespace MacroTree
         return true;
     }
 
+    bool Tree::ReleaseReservedId()
+    {
+        Node* holder = Find(kReservedExamplesId);
+        for (TrashItem& t : m_Trash)
+        {
+            if (holder) break;
+            if (t.Item->Id == kReservedExamplesId) holder = t.Item.get();
+            else holder = FindIn(*t.Item, kReservedExamplesId);
+        }
+        if (!holder) return false;
+        holder->Id = NewId(); // NewId never returns the reserved id
+        return true;
+    }
+
     bool Tree::IdInUse(uint64_t aId) const
     {
         if (Find(aId)) return true;

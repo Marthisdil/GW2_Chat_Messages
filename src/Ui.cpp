@@ -56,10 +56,14 @@ namespace
     constexpr char kDeletePopup[]  = TX("Delete?###chatmsg_delete");
     constexpr char kRestorePopup[] = TX("Restore?###chatmsg_restore");
     constexpr char kPurgePopup[]   = TX("Delete permanently?###chatmsg_purge");
+    constexpr char kExamplesReplacePopup[] = TX("Replace the examples?###chatmsg_examples_replace");
+    constexpr char kExamplesAgainPopup[]   = TX("Add the examples again?###chatmsg_examples_again");
     constexpr const char* kTrashSetting    = "trash_bin";
     // settings.json "examples_added": the starter library was added (or a library already
     // existed), so a macros.json removed later on purpose doesn't bring the examples back.
     constexpr const char* kExamplesSetting = "examples_added";
+    bool s_ExamplesAdded   = false; // that setting
+    bool s_ExamplesRequest = false; // "Add the example macros" was clicked: the library window asks
     constexpr double      kSaveDelaySec    = 0.75; // batch quick edits (e.g. several expands) into one write
     constexpr double      kStatusShowSec   = 6.0;
 
@@ -1622,6 +1626,105 @@ namespace
         ImGui::EndPopup();
     }
 
+    // --- Example macros (the options page's button; docs/design.md, "Starter library") ---------
+    // The button only opens the library and sets s_ExamplesRequest; the library window asks here,
+    // at its own ID level: replace the Examples folder if there is one (never a merge, never a
+    // copy beside it), add them again if they were added before, or just add them.
+
+    void NoteExamplesAdded()
+    {
+        if (s_ExamplesAdded) return;
+        s_ExamplesAdded = true;
+        if (!Storage::SaveSetting(kExamplesSetting, true)) LogF(LOGL_WARNING, "The \"examples added\" setting couldn't be saved.");
+    }
+
+    void ShowNewExamples(Node& aFolder, const std::string& aInfo)
+    {
+        s_SelectedId = aFolder.Id;
+        for (Node* p = aFolder.Parent; p; p = p->Parent) p->Expanded = true;
+        MarkDirty();
+        NoteExamplesAdded();
+        SetInfo(aInfo);
+    }
+
+    void AddExamplesNow()
+    {
+        if (Node* ex = Examples::AddAgain(s_Tree)) ShowNewExamples(*ex, T("Added the example macros in a new Examples folder."));
+        else ShowError(T("Clicked \"Add the example macros\""), T("The examples couldn't be added: there are too many folders named \"Examples\"."));
+    }
+
+    void HandleExamplesRequest()
+    {
+        if (!s_ExamplesRequest) return;
+        s_ExamplesRequest = false;
+        if (Examples::Find(s_Tree)) ImGui::OpenPopup(kExamplesReplacePopup);
+        else if (s_ExamplesAdded) ImGui::OpenPopup(kExamplesAgainPopup);
+        else AddExamplesNow();
+    }
+
+    void DrawExamplesReplacePopup()
+    {
+        ImGui::SetNextWindowSize(ImVec2(Px(420.0f), 0.0f), ImGuiCond_Always);
+        if (!ImGui::BeginPopupModal(T(kExamplesReplacePopup), nullptr, ImGuiWindowFlags_NoResize)) return;
+        Node* old = Examples::Find(s_Tree);
+        if (!old)
+        {
+            ImGui::CloseCurrentPopup();
+            ImGui::EndPopup();
+            return;
+        }
+        ImGui::PushTextWrapPos(0.0f);
+        ImGui::TextWrapped(T("You already have the Examples folder (now called \"%s\"). Replace it with a fresh copy "
+                           "of the example macros?"), old->Name.c_str());
+        size_t folders = 0, macros = 0;
+        Tree::CountDescendants(*old, &folders, &macros);
+        if (s_TrashOn)
+            ImGui::TextColored(kWarnColor, T("The old folder goes to the trash bin with everything in it (%zu folder(s) and "
+                                           "%zu macro(s)), also any macros you added or changed there. You can restore it "
+                                           "from the bin."), folders, macros);
+        else
+            ImGui::TextColored(kWarnColor, T("The old folder is deleted for good with everything in it (%zu folder(s) and "
+                                           "%zu macro(s)), also any macros you added or changed there. This can't be "
+                                           "undone."), folders, macros);
+        ImGui::TextDisabled(T("The old and the new folder can't be merged."));
+
+        if (ImGui::Button(T("Replace"), Px(100.0f, 0.0f)))
+        {
+            if (Node* sel = s_Tree.Find(s_SelectedId))
+                if (sel == old || Tree::IsAncestorOf(*old, *sel)) s_SelectedId = 0;
+            const bool toTrash = s_TrashOn;
+            if (Node* fresh = Examples::Replace(s_Tree, *old, toTrash, NowText().substr(0, 16)))
+                ShowNewExamples(*fresh, toTrash ? T("Replaced the Examples folder with a fresh copy. The old one is in the trash bin.")
+                                                : T("Replaced the Examples folder with a fresh copy."));
+            else
+                ShowError(T("Clicked Replace for the example macros"), T("The Examples folder couldn't be replaced. Nothing was changed."));
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button(T("Cancel"), Px(100.0f, 0.0f))) ImGui::CloseCurrentPopup();
+        ImGui::PopTextWrapPos();
+        ImGui::EndPopup();
+    }
+
+    void DrawExamplesAgainPopup()
+    {
+        ImGui::SetNextWindowSize(ImVec2(Px(420.0f), 0.0f), ImGuiCond_Always);
+        if (!ImGui::BeginPopupModal(T(kExamplesAgainPopup), nullptr, ImGuiWindowFlags_NoResize)) return;
+        ImGui::PushTextWrapPos(0.0f);
+        ImGui::TextWrapped(T("The example macros were added before (when the addon first started, or with this button), "
+                           "and there's no Examples folder now. Add a new one?"));
+        ImGui::TextDisabled(T("Your own macros aren't changed."));
+        if (ImGui::Button(T("Add"), Px(100.0f, 0.0f)))
+        {
+            AddExamplesNow();
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button(T("Cancel"), Px(100.0f, 0.0f))) ImGui::CloseCurrentPopup();
+        ImGui::PopTextWrapPos();
+        ImGui::EndPopup();
+    }
+
     // --- Macro editor -------------------------------------------------------------------------
 
     constexpr size_t kMaxLinesPerMacro = kMaxLines; // MacroTree.h
@@ -3055,6 +3158,9 @@ namespace
         DrawDeletePopup();
         DrawRestorePopup();
         DrawPurgePopup();
+        HandleExamplesRequest();
+        DrawExamplesReplacePopup();
+        DrawExamplesAgainPopup();
 
         ImGui::PopTextWrapPos();
         ImGui::End();
@@ -3179,7 +3285,6 @@ namespace
 void Ui::Init()
 {
     UiFont::Init();
-    bool examplesAdded = false;
     {
         const nlohmann::json settings = Storage::LoadSettings();
         const auto it = settings.find(kTrashSetting);
@@ -3187,7 +3292,7 @@ void Ui::Init()
         const auto active = settings.find(kActiveOnlySetting);
         s_ActiveOnly = active != settings.end() && active->is_boolean() && active->get<bool>(); // off by default
         const auto examples = settings.find(kExamplesSetting);
-        examplesAdded = examples != settings.end() && examples->is_boolean() && examples->get<bool>();
+        s_ExamplesAdded = examples != settings.end() && examples->is_boolean() && examples->get<bool>();
     }
     s_TrashSelId = 0;
     // The imports and exports folders exist from the start, so there's never one to make by hand.
@@ -3199,13 +3304,15 @@ void Ui::Init()
     // The starter library, once: on the first run (no macros.json yet). A library that already
     // exists counts too, so removing macros.json later starts empty, as before.
     bool saveExamples = false;
-    if (!examplesAdded && !Storage::AddonDir().empty())
+    s_ExamplesRequest = false;
+    if (!s_ExamplesAdded && !Storage::AddonDir().empty())
     {
         if (noLibrary && s_Tree.Root().Children.empty() && Examples::Add(s_Tree))
         {
             saveExamples = true;
             LogF(LOGL_INFO, "First run: added the example macros.");
         }
+        s_ExamplesAdded = true;
         if (!Storage::SaveSetting(kExamplesSetting, true)) LogF(LOGL_WARNING, "The \"examples added\" setting couldn't be saved.");
     }
     for (const std::string& m : s_LoadMessages)
@@ -3233,6 +3340,7 @@ void Ui::Shutdown()
     s_LinkProblems.clear();
     s_Preview = {};
     s_Cooldowns.Clear();
+    s_ExamplesRequest = false;
 }
 
 void Ui::Render()
@@ -3264,18 +3372,14 @@ void Ui::RenderOptions()
     ImGui::SameLine();
     if (ImGui::Button(T("Add the example macros")))
     {
-        if (Node* ex = Examples::Add(s_Tree))
-        {
-            s_SelectedId     = ex->Id;
-            s_ShowMainWindow = true;
-            MarkDirty();
-        }
-        else ShowError(T("Clicked \"Add the example macros\""), T("The examples couldn't be added: there are too many folders named \"Examples\"."));
+        s_ShowMainWindow  = true; // the library asks first (replace, or add again) and shows them
+        s_ExamplesRequest = true;
     }
     if (ImGui::IsItemHovered())
-        ImGui::SetTooltip(T("Adds a new \"Examples\" folder at the top of the library, with macros that show\n"
-                          "several lines, channels, a whisper, placeholders and filters. Your own macros\n"
-                          "aren't changed. The examples have no hotkeys."));
+        ImGui::SetTooltip(T("Adds an \"Examples\" folder to the library, with macros that show several lines,\n"
+                          "channels, a whisper, placeholders and filters. If you already have it, the library\n"
+                          "asks whether to replace it with a fresh copy. Your own macros aren't changed.\n"
+                          "The examples have no hotkeys."));
     ImGui::Spacing();
     UiFont::DrawCombo(T("Text size"));
     ImGui::TextDisabled(T("The size of the text in this addon's windows (not this page)."));

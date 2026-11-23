@@ -195,6 +195,9 @@ namespace MacroTree
         // Gives aFolder the reserved Examples id. False (and nothing changes) if aFolder isn't a
         // folder in the tree, or a folder in the tree or the bin already has it.
         bool ClaimReservedId(Node& aFolder);
+        // Gives whatever holds the reserved Examples id (in the tree or the bin) an ordinary new
+        // id, so it becomes an ordinary folder. False if nothing holds it.
+        bool ReleaseReservedId();
         // aName + " (n)", with aName cut short (never inside a UTF-8 sequence) so all of " (n)" fits.
         // Every n gives a different name, so a loop over n always ends.
         static std::string NumberedName(const std::string& aName, int aN);
