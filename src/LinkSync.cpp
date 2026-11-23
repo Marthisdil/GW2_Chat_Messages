@@ -92,8 +92,17 @@ namespace LinkSync
             // Not UTF-8 (saved as Windows-1252, say): those bytes are replaced, the same way on
             // every read, so the file isn't written back for it (only when the macro is edited).
             if (ChatLine::RepairUtf8(text))
+            {
+                // Each replaced byte takes three: written back, it would be past the read limit and
+                // the link would stop syncing (SEC-023).
+                if (text.size() > kMaxFileBytes)
+                {
+                    out.Error = "it isn't saved as UTF-8, and with its characters replaced it's over 256 KB.";
+                    return out;
+                }
                 out.Warning = "The file isn't saved as UTF-8, so some of its characters couldn't be read and were replaced. "
                               "Save it as UTF-8 to keep them.";
+            }
             std::vector<Line> lines = ChatLine::ParseRaw(text);
             if (lines.size() > MacroTree::kMaxLines)
             {
@@ -122,8 +131,14 @@ namespace LinkSync
         // The file is as last agreed: if the macro was edited in the addon, write it out.
         if (macroText != aState.Text)
         {
+            std::string text = FileText(aMacroLines);
+            if (text.size() > kMaxFileBytes) // it couldn't be read back (SEC-023): tried again after each edit
+            {
+                out.Warning = "The macro is too big for its link file (over 256 KB), so the file wasn't updated.";
+                return out;
+            }
             out.WriteFile = true;
-            out.Text = FileText(aMacroLines);
+            out.Text = std::move(text);
             aState.Text = macroText;
         }
         return out;

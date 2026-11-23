@@ -137,6 +137,34 @@ namespace
         CHECK(o.LoadMacro && !o.WriteFile && o.Lines[0].Message == "from notepad");
     }
 
+    // SEC-023: what couldn't be read back stays out of the link both ways.
+    void TestTooBig()
+    {
+        // 100 KB of Windows-1252 bytes: under the read limit, but 300 KB once each byte is replaced.
+        FakeFile f;
+        f.Text = "/s " + std::string(100 * 1024, '\xE9') + "\r\n";
+        State st;
+        Outcome o = Sync(st, Lines("/s a"), f.View());
+        CHECK(!o.Error.empty() && !o.LoadMacro && !o.WriteFile && !st.Known);
+
+        // A little of it is fine: replaced, with a warning.
+        f.Text = "/s caf\xE9\r\n";
+        o = Sync(st, Lines("/s a"), f.View());
+        CHECK(o.Error.empty() && o.LoadMacro && !o.Warning.empty());
+
+        // A macro bigger than the limit isn't written (it couldn't be read back), and is tried
+        // again after the next edit.
+        FakeFile g;
+        g.Text = "/s a\n";
+        State gs;
+        Sync(gs, Lines("/s a"), g.View());
+        const std::vector<MacroTree::Line> big = Lines("/s " + std::string(kMaxFileBytes, 'x'));
+        o = Sync(gs, big, g.View());
+        CHECK(!o.WriteFile && !o.Warning.empty() && gs.Text == "/s a");
+        o = Sync(gs, Lines("/s b"), g.View());
+        CHECK(o.WriteFile && o.Warning.empty() && gs.Text == "/s b");
+    }
+
     void TestMissingAndErrors()
     {
         FakeFile f;
@@ -258,6 +286,7 @@ void RunLinkSyncTests()
     TestFirstSync();
     TestSteadyState();
     TestBothChanged();
+    TestTooBig();
     TestMissingAndErrors();
     TestControlCharacters();
     TestTooManyLines();

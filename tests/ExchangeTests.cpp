@@ -155,6 +155,9 @@ namespace
         CHECK(FromRawText("Utf8", "/s K\xC3\xA4se").Warnings.empty());
         // Pasted text goes the same way.
         CHECK(FromText("Pasted", "/s \xFF").Items.Root().Children[0]->Lines[0].Message == bad);
+        // SEC-023/025: under the size limit, but over it once each byte is replaced: left out.
+        Package huge = FromRawText("Huge", "/s " + std::string(100 * 1024, '\xE9'));
+        CHECK(!huge.Ok() && huge.Error.find("too big") != std::string::npos);
 
         // Text that isn't UTF-8 from anywhere else still exports, as U+FFFD, instead of throwing.
         Tree t;

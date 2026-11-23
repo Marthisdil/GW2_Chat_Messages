@@ -83,6 +83,12 @@ namespace
         // save of the library fail, so they're replaced.
         std::string text = aText;
         const bool repaired = ChatLine::RepairUtf8(text);
+        if (repaired && text.size() > Exchange::kMaxTextBytes) // each replaced byte takes three (SEC-023, SEC-025)
+        {
+            aWarnings.push_back("\"" + aName + "\" isn't saved as UTF-8, and with its characters replaced it's over " +
+                                std::to_string(Exchange::kMaxTextBytes / 1024) + " KB, so it was left out.");
+            return false;
+        }
         std::vector<Line> lines = ChatLine::ParseRaw(text);
         if (lines.empty())
         {
@@ -575,7 +581,9 @@ namespace Exchange
         std::vector<std::string> warnings;
         if (!AddTextMacro(p.Items, nullptr, aName, aText, warnings))
         {
-            p.Error = "It has no lines to send.";
+            p.Error = !warnings.empty() && warnings.back().find(" KB, so it was left out.") != std::string::npos
+                          ? "It isn't saved as UTF-8, and with its characters replaced it's too big."
+                          : "It has no lines to send.";
             return p;
         }
         p.Warnings = std::move(warnings);
