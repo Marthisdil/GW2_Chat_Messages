@@ -73,7 +73,11 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
     (bhm's `{blish}`: "Chat Messages 2026.11.21.1412.Dev").
   - Also built: `{map}` (the current map's name) and `{json path url}` (one value from a JSON
     page: dot-separated path, numbers index arrays, like bhm; objects, lists and null are refused;
-    http/https only, at most 512 KB, 3 s timeouts).
+    http/https only, at most 512 KB, 3 s timeouts). Only public internet servers
+    (`Http::GetPublic`, `src/NetAddress.*`): this PC, private, link-local and CGNAT addresses are
+    refused on the real address of the connection before every request (new, reused keep-alive
+    and redirect hops alike), before anything is sent. Behind a WinHTTP proxy that address is
+    the proxy's, so a proxy on this PC or the LAN refuses every `{json}` (known limit).
   - Map names: `src/MapNames.*` asks `https://api.guildwars2.com/v2/maps?ids=...&lang=en` (no API
     key) and caches the names in `<GW2>\addons\GW2_Chat_Messages\maps.json`. The current map is
     looked up in the background whenever it changes; ids the API doesn't know aren't asked again

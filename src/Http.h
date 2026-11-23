@@ -23,4 +23,16 @@ namespace Http
 
     // aUrl must start with http:// or https://. Bodies over aMaxBytes are refused.
     Response Get(const std::string& aUrl, int aTimeoutMs = kDefaultTimeoutMs, size_t aMaxBytes = kDefaultMaxBytes);
+
+    // Get for an address written in a macro ({json}), which may come from someone else's import:
+    // it only talks to public internet addresses (NetAddress), never to this PC or a local
+    // network (SEC-012). It uses the same proxy as Get (WinHTTP's default setting), pinned for
+    // the request:
+    //  - no proxy: the address of the connection WinHTTP really uses is checked before every
+    //    request (redirects and reused keep-alive connections too), so a name that resolves to
+    //    127.0.0.1 or a LAN address, even only on a second lookup, is refused before it is sent;
+    //  - a proxy: the connection is the proxy's, so the target's name is looked up first, and
+    //    every redirect's, and any local address refuses it. A name that can't be looked up is
+    //    refused. Accepted limit: a DNS server that tells the proxy something else.
+    Response GetPublic(const std::string& aUrl, int aTimeoutMs = kDefaultTimeoutMs, size_t aMaxBytes = kDefaultMaxBytes);
 }

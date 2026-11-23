@@ -33,7 +33,9 @@ namespace Placeholders
         std::function<bool(const std::string& aRelPath, std::vector<std::string>& aLines, std::string& aError)> ReadLines;
         // The current map's name. May block briefly (a cached GW2 API lookup).
         std::function<bool(std::string& aName, std::string& aError)> MapName;
-        // Downloads aUrl (http/https only, already checked). May block briefly.
+        // Downloads aUrl (http/https only, already checked). May block briefly. The URL may come
+        // from an imported macro, so it must refuse servers on this PC or a local network
+        // (Sender uses Http::GetPublic).
         std::function<bool(const std::string& aUrl, std::string& aBody, std::string& aError)> FetchUrl;
     };
 

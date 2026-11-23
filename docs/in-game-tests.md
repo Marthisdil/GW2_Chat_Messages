@@ -263,7 +263,9 @@ arrives as a clickable waypoint link.
 **I5. Map name and {json}.** `/s Hello from {map}`: sends the map name, also right after you
 arrive on a map you haven't visited this session. `{json id https://api.guildwars2.com/v2/build}`:
 sends the game build number. `{json nope https://api.guildwars2.com/v2/build}`: nothing is sent;
-the error window says the path wasn't found.
+the error window says the path wasn't found. `{json id http://127.0.0.1/}` and
+`{json id http://localhost/}`: nothing is sent; the error window says the address leads to this
+PC or a local network.
 
 **I6. Offline.** Close the game, delete `maps.json`, disconnect from the internet, start the game
 (Nexus may complain about updates; that's fine) and enter a map. `{map}` fails, the error window says the API

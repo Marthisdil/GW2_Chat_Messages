@@ -112,6 +112,10 @@ to the todo list", add it there (don't start building it). Move agreed items int
   by `tests/PlaceholderTests.cpp`. `{txt}` may only read files inside the addon folder.
 - `src/Http.*`: a small blocking WinHTTP GET (worker threads only). `src/MapNames.*`: GW2 API map
   names cached in `maps.json`, looked up on a background thread. Link `winhttp.lib`.
+  `{json}` uses `Http::GetPublic`, which refuses servers on this PC or a local network (a status
+  callback checks the connection's real address before every request); the address rule is
+  `src/NetAddress.*`, with no Nexus, ImGui or windows.h dependency, tested by
+  `tests/NetAddressTests.cpp`.
 - `src/Exchange.*`: import and export: the export format, reading .json/.txt/folders into a
   package, the import preview (`BuildPlan`) and `Apply`. No Nexus or ImGui dependency. Tested by
   `tests/ExchangeTests.cpp`. Exports go to `<addon>\exports\`; the Import window lists
