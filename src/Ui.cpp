@@ -2932,8 +2932,6 @@ namespace
         return label;
     }
 
-    // The options page's map list: when the GW2 API's list was last fetched, and a button to do
-    // it again now (it's also fetched on the first run, weekly, and when the language changes).
     // A clickable web link (ImGui 1.80 has none): underlined text in the link colour, the hand
     // cursor on hover, the address in a tooltip. Only for the addon's built-in addresses.
     void DrawLink(const char* aLabel, const char* aUrl)
@@ -2951,6 +2949,8 @@ namespace
         if (ImGui::IsItemClicked()) Storage::OpenWebPage(aUrl);
     }
 
+    // The options page's map list: when the GW2 API's list was last fetched, and a button to do
+    // it again now (it's also fetched on the first run, weekly, and when the language changes).
     void DrawMapListOptions()
     {
         const MapNames::State st = MapNames::GetState();
