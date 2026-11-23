@@ -66,6 +66,7 @@ namespace MacroTree
         std::vector<int>  MapIds;
         std::string       LinkFile;
         Hotkey::Combo     Hotkey;   // empty = none
+        int               CooldownSec = 0; // hotkey cooldown, 0 = off, at most Cooldown::kMaxSec
 
         bool IsFolder() const { return Type == ENodeType::Folder; }
         bool IsMacro() const  { return Type == ENodeType::Macro; }

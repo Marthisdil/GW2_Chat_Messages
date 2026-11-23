@@ -6,6 +6,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Hotkey cooldown:** each macro can have a cooldown (0 to 600 seconds, off by default). Its
+  hotkey then waits that long after the macro was last sent; the first ignored press shows one
+  alert, and the editor shows the time left. Send now and the quick menu always send. And every
+  hotkey now ignores presses for 1 second after its macro was sent, so a double press can't send
+  it twice.
 - **Preview:** a button next to **Send now** shows what it would type, line by line, with
   placeholders filled in and the channel commands added (`/w Name`, then Tab, then the message,
   for a whisper), without sending anything. It runs the same checks as a real send, and its

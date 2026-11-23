@@ -25,6 +25,7 @@
 
 #include "BuildStamp.h"
 #include "ChatLine.h"
+#include "Cooldown.h"
 #include "ErrorReport.h"
 #include "Exchange.h"
 #include "GameKeys.h"
@@ -328,6 +329,10 @@ namespace
     enum class ESendFrom { Window, Hotkey, Menu };
     bool s_SendAlertOnFail = false; // for the current/last send
 
+    // The last send of each macro, for hotkey cooldowns and the 1 s guard (Cooldown.h). Sends from
+    // anywhere count, but only hotkeys wait: Send now and the quick menu always send.
+    Cooldown::Tracker s_Cooldowns;
+
     // A short Nexus on-screen alert: the only feedback a hotkey has when the library is closed.
     void Alert(const std::string& aText)
     {
@@ -339,6 +344,18 @@ namespace
     {
         const bool alert = aFrom != ESendFrom::Window;
         if (aFrom == ESendFrom::Hotkey && Sender::IsBusy()) return; // one macro at a time; extra presses are ignored
+        if (aFrom == ESendFrom::Hotkey)
+        {
+            // Still cooling down: the 1 s guard alone is silent; a macro's own cooldown shows one
+            // alert, on the first ignored press.
+            const Cooldown::Wait wait = s_Cooldowns.ForHotkey(aMacro.Id, aMacro.CooldownSec, ImGui::GetTime());
+            if (wait.Seconds > 0.0)
+            {
+                if (wait.ByCooldown && s_Cooldowns.TakeAlert(aMacro.Id))
+                    Alert(Fmt(T("%s: cooldown, wait %d s."), aMacro.Name.c_str(), Cooldown::WholeSeconds(wait.Seconds)));
+                return;
+            }
+        }
         const std::string name = "\"" + aMacro.Name + "\"";
         const std::string action = aFrom == ESendFrom::Hotkey ? Fmt(T("Pressed the hotkey %s to send %s"), Hotkey::Display(aMacro.Hotkey).c_str(), name.c_str())
                                  : aFrom == ESendFrom::Menu   ? Fmt(T("Sent %s from the quick menu"), name.c_str())
@@ -346,6 +363,7 @@ namespace
         std::string error;
         if (Sender::Start(aMacro.Id, aMacro.Lines, error))
         {
+            s_Cooldowns.Started(aMacro.Id, ImGui::GetTime());
             s_SendAlertOnFail = alert;
             s_SendAction      = action;
             return;
@@ -360,6 +378,8 @@ namespace
         const Sender::Status st = Sender::GetStatus();
         if (st.Seq == s_SendSeenSeq) return;
         s_SendSeenSeq = st.Seq;
+        if (st.State == Sender::EState::Done || st.State == Sender::EState::Failed)
+            s_Cooldowns.Ended(st.MacroId, ImGui::GetTime(), st.State == Sender::EState::Done);
         if (st.State == Sender::EState::Done)
         {
             s_SendNote      = st.Message;
@@ -514,6 +534,40 @@ namespace
                 ImGui::TextColored(kWarnColor, T("Plain letters, numbers and keys like Space are usually game keys. "
                                                "Adding Ctrl, Alt or Shift is safer."));
             }
+        }
+    }
+
+    // Cooldown: how long the hotkey waits before sending this macro again (0 = off).
+    void DrawCooldownRow(Node& aMacro)
+    {
+        UiFont::Row row;
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted(T("Cooldown:"));
+        row.Next(Px(70.0f));
+        ImGui::SetNextItemWidth(Px(70.0f));
+        int sec = aMacro.CooldownSec;
+        if (ImGui::InputInt("##cooldown", &sec, 0, 0))
+        {
+            sec = std::clamp(sec, 0, Cooldown::kMaxSec);
+            if (sec != aMacro.CooldownSec)
+            {
+                aMacro.CooldownSec = sec;
+                MarkDirty();
+            }
+        }
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip(T("Seconds the hotkey waits before it sends this macro again (0 = off, at most 600).\n"
+                              "Presses during the cooldown are ignored; the first one shows an alert.\n"
+                              "Send now and the quick menu always send, but they start the cooldown too.\n"
+                              "Even with 0, a hotkey ignores presses for 1 second after its macro was sent."));
+        row.Next(UiFont::TextWidth(T("seconds")));
+        ImGui::TextDisabled(T("seconds"));
+        const Cooldown::Wait wait = s_Cooldowns.ForHotkey(aMacro.Id, aMacro.CooldownSec, ImGui::GetTime());
+        if (wait.ByCooldown)
+        {
+            const std::string left = Fmt(T("(%d s left)"), Cooldown::WholeSeconds(wait.Seconds));
+            row.Next(UiFont::TextWidth(left.c_str()));
+            ImGui::TextColored(kWarnColor, "%s", left.c_str());
         }
     }
 
@@ -2033,6 +2087,7 @@ namespace
         DrawSendStatus();
         DrawPreview(aMacro);
         DrawHotkeyRow(aMacro);
+        DrawCooldownRow(aMacro);
         DrawFilters(aMacro);
         DrawLinkFile(aMacro);
         ImGui::Separator();
@@ -3157,6 +3212,7 @@ void Ui::Shutdown()
     s_LinkStates.clear();
     s_LinkProblems.clear();
     s_Preview = {};
+    s_Cooldowns.Clear();
 }
 
 void Ui::Render()

@@ -122,6 +122,8 @@ to the todo list", add it there (don't start building it). Move agreed items int
   Tested by `tests/SearchTests.cpp`.
 - `src/Hotkeys.*`: the WndProc hook that reads presses and captures a new hotkey. It only queues
   presses; the render thread (`Ui.cpp`) matches them to macros and starts the sender.
+- `src/Cooldown.*`: the hotkey cooldown and the 1-second guard after a send (`Tracker`), per
+  macro; only hotkeys wait. No Nexus or ImGui dependency. Tested by `tests/CooldownTests.cpp`.
 - `src/Placeholders.*`: fills in `{time}`, `{random}`, `{map}` and the other placeholders. The
   clock, random numbers and the map name come in through a `Context`. No Nexus or ImGui
   dependency. Tested by `tests/PlaceholderTests.cpp`. `{txt}` and `{json}` were removed
@@ -219,6 +221,11 @@ to the todo list", add it there (don't start building it). Move agreed items int
   new PNG from `docs\images\` into its placeholders in README.md and `docs/wiki/` and marks its
   row in `docs/screenshots.md` "Captured". Tell the user what was captured, and ask about any file
   it lists as "Not in the list". Captured images go into the current branch's PR.
+- **In-game tests and screenshots, after every build or update** (owner, 2026-11-23): check
+  what the build changed against `docs/in-game-tests.md` and `docs/screenshots.md`, and update
+  both lists if a check or a screenshot is missing or out of date (in the branch's PR; on
+  `main`, in a small docs PR). In the build or cleanup report, name the in-game checks that
+  are new or need re-running with this build, and the screenshots still needed for it.
 - **Screenshot list and in-game tests, with every change:** in the same PR, add a row to
   `docs/screenshots.md` (plus a placeholder `<!-- screenshot: name.png (docs/screenshots.md) -->`
   and a "Screenshot to come" line) for each new screen, and rewrite any row whose screen changed

@@ -45,18 +45,10 @@ the first release.
 
 Built so far (in `docs/design.md`): the remaining messages translated ("Languages"), the filters'
 map search ("Features"), the default-key warning ("Input safety", hotkeys), and the import and
-export folders, ready to open ("Import / export"), and Preview next to Send now ("Features"),
-all on 2026-11-23. What was left out of them is under section 4.
+export folders, ready to open ("Import / export"), Preview next to Send now ("Features") and
+the per-macro hotkey cooldown ("Input safety", hotkeys), all on 2026-11-23. What was left out of them is under section 4.
 
 Moved up from section 5 on 2026-11-23, in this order:
-
-### Per-macro cooldown or double-send guard
-
-A minimum time between two sends of the same macro (and maybe a global one), so a held,
-bouncing or repeated hotkey can't spam chat or run into the game's chat flood limit.
-
-- Points to settle: default value (off, or a second or two), whether the quick menu and Send now
-  obey it too, and what the user sees when a press is ignored.
 
 ### Favourites and "recently sent" in the quick menu
 

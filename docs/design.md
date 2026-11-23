@@ -503,6 +503,19 @@ Rules this addon follows:
     (`WantTextInput`), and outside gameplay.
   - The window thread only queues the press. The render thread matches it against the tree and
     starts the sender. A hotkey set on more than one macro sends nothing and shows an alert.
+  - **Cooldown** (built 2026-11-23 from the todo list): each macro has a cooldown, 0 to 600
+    whole seconds, **off (0) by default**, saved as `"cooldown"` in `macros.json` only when it's
+    on (exported and imported with the macro). Longer values are cut to 600 and anything else is
+    dropped on load, each with a warning. It counts from the **start** of the macro's last send,
+    from anywhere, but **only the hotkey waits**: Send now and the quick menu always send (the
+    user chose them on purpose). On top of that, a **1 second guard** after any send of the macro
+    ends stops a bounce or a second press from sending it twice, cooldown or not. A press that's
+    ignored by the cooldown shows **one** Nexus alert per cooldown ("Say: cooldown, wait 3 s."),
+    later presses are silent; the guard alone is always silent. A failed send starts no cooldown,
+    only the guard. The editor has a **Cooldown:** box under the hotkey row and shows "(N s left)"
+    while it runs. Rules in `src/Cooldown.*` (no Nexus or ImGui, tested by
+    `tests/CooldownTests.cpp`); times are `ImGui::GetTime()` and aren't saved (a reload clears
+    them).
   - A hotkey send that fails shows a Nexus alert, since the library window may be closed.
   - Only the addon's own window keybinds (show/hide the library, open the quick menu) stay Nexus
     InputBinds (`"(null)"`).

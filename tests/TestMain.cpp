@@ -18,6 +18,7 @@ void RunLocalizationTests();
 void RunPathTextTests();
 void RunGameKeysTests();
 void RunMapCatalogTests();
+void RunCooldownTests();
 
 int main()
 {
@@ -37,6 +38,7 @@ int main()
     RunPathTextTests();
     RunGameKeysTests();
     RunMapCatalogTests();
+    RunCooldownTests();
     std::printf("%d checks, %d failures\n", g_TestChecks, g_TestFailures);
     return g_TestFailures == 0 ? 0 : 1;
 }
