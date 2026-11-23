@@ -75,6 +75,27 @@ Each macro can have its own hotkey. In the macro editor, next to **Hotkey:**, cl
 <!-- screenshot: hotkey-set.png (docs/screenshots.md) -->
 > 📷 *Screenshot to come: a macro's hotkey row.*
 
+### Cooldown
+
+Under the hotkey, **Cooldown:** sets how many seconds the hotkey waits before it sends that
+macro again: 0 (off, the default) up to 600 (10 minutes).
+
+- It counts from when the macro was last sent, **from anywhere**: a hotkey, the quick menu or
+  **Send now**.
+- **Only the hotkey waits.** Send now and the quick menu always send, because you picked the
+  macro on purpose.
+- The first press during the cooldown shows one Nexus alert, for example `Say: cooldown, wait
+  3 s.`; more presses during the same cooldown are ignored without an alert.
+- While it runs, the editor shows how long is left, for example `(12 s left)`.
+- If the send failed, there's no cooldown, so you can try again.
+- Even with no cooldown, a hotkey ignores presses for **1 second** after its macro was sent, so
+  a bouncing key or a double press doesn't send it twice.
+- The cooldown is saved with the macro and comes along in exports. The time left isn't saved:
+  after a reload, the hotkey works at once.
+
+<!-- screenshot: hotkey-cooldown.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the Cooldown row with "(12 s left)".*
+
 ## Quick menu
 
 The quick menu shows your library as nested menus, so you can pick a macro with the mouse.

@@ -18,7 +18,7 @@ Results so far (keep your notes in `docs\testing results.txt`; it isn't committe
 |---|---|---|
 | A1 | Passed (PR #15 build) | Re-check with the current build: the log and the options page show its version and build stamp, and the two links and the folders are new (A1's last part). |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text wraps and errors open the error window. Re-check those two points only (marked *Re-check* in A2), then go on to A3. |
-| A3 to Q | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build. |
+| A3 to Q | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (F9, the hotkey cooldown, is the newest). |
 
 ## How to report
 
@@ -228,6 +228,15 @@ hotkey says `In GW2's default keys, F1 is "Profession skill 1"`. Set **Ctrl+T**:
 Set **Alt+1**: a squad location marker. Set **Ctrl+1**: no default-key note. Set a plain letter
 that isn't a default key (for example **K**): the older "plain letters are usually game keys"
 note shows instead. Clear the hotkey afterwards.
+
+**F9. Cooldown.** On `Say` (Ctrl+F1), set **Cooldown:** to `10`. Close the library and press
+Ctrl+F1: `Say` is sent. Press it again at once: nothing is sent and one Nexus alert says
+`Say: cooldown, wait N s.` Press it a few more times: still nothing, and no more alerts. Open the
+library: the row shows `(N s left)`, counting down. During the cooldown, **Send now** and the
+quick menu send `Say` anyway (and start the cooldown again). After 10 seconds Ctrl+F1 works
+again. Set the cooldown to `0`: press Ctrl+F1 twice within a second: sent once only, no alert;
+after a second it sends again. Type `9999` in the box: it becomes `600`. Reload the addon: the
+cooldown is still set (and the hotkey works at once). Set it back to `0`.
 
 ## G. Quick menu
 
