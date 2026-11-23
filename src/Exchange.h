@@ -42,7 +42,7 @@ namespace Exchange
 
     // --- Reading a source -----------------------------------------------------------------------
 
-    struct Package
+    struct Package // NOLINT(bugprone-exception-escape): SEC-030, accepted (MSVC set move allocates)
     {
         Tree                     Items;   // what was read, at its top level
         std::string              Error;   // set if nothing could be read
