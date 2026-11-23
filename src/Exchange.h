@@ -121,7 +121,8 @@ namespace Exchange
     {
         None,
         NoModifier, // no Ctrl, Alt or Shift: it fires on a key used while playing
-        Clash,      // the same as one of the user's own hotkeys (other than the macro it replaces)
+        Clash,      // one of the user's own hotkeys (not the macro it replaces), where both can be
+                    // active (FiltersOverlap): there the key would send nothing
     };
 
     struct PlanItem

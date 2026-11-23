@@ -810,6 +810,23 @@ static void TestPlanFlags()
     o2.KeepHotkeys = true;
     plan2 = BuildPlan(mine2, mine2.Root(), p2.Items, o2);
     CHECK(!plan2.Items[0].HotkeyCleared && !plan2.Items[0].LosesOwnHotkey && plan2.HotkeysChanged == 0);
+
+    // A shared hotkey only clashes where both macros can be active (as in the editor).
+    Tree mine3;
+    Node* wvw = AddM(mine3, nullptr, "WvW call", "a");
+    wvw->Hotkey    = Key(kF1, true);
+    wvw->GameModes = GM_WvW;
+    Package p3;
+    Node* pve = AddM(p3.Items, nullptr, "PvE call", "a");
+    pve->Hotkey    = Key(kF1, true);
+    pve->GameModes = GM_PvE;
+    Node* any = AddM(p3.Items, nullptr, "Any call", "a");
+    any->Hotkey = Key(kF1, true);
+    Options o3;
+    o3.KeepHotkeys = true;
+    Plan plan3 = BuildPlan(mine3, mine3.Root(), p3.Items, o3);
+    CHECK(ItemNamed(plan3.Items, "PvE call")->HotkeyRisk == EHotkeyRisk::None);
+    CHECK(ItemNamed(plan3.Items, "Any call")->HotkeyRisk == EHotkeyRisk::Clash);
 }
 
 // SEC-022: a file with thousands of bad entries lists kMaxWarnings of them, then a count.

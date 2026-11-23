@@ -2301,7 +2301,7 @@ namespace
             if (aItem.HotkeyRisk == EHotkeyRisk::NoModifier)
                 PlanFlag(T("[KEY WITHOUT CTRL/ALT/SHIFT]"), T("Its hotkey has no Ctrl, Alt or Shift, so it sends the macro whenever you press that key while playing."));
             else if (aItem.HotkeyRisk == EHotkeyRisk::Clash)
-                PlanFlag(T("[YOUR HOTKEY]"), T("One of your macros already has this hotkey: both would be sent on that key."));
+                PlanFlag(T("[YOUR HOTKEY]"), T("One of your macros already has this hotkey, and both can be active at once: there, the key would send nothing."));
         }
         if (aItem.HotkeyCleared)
             PlanFlag(T("[COMES WITHOUT ITS HOTKEY]"), T("It replaces one of yours, and its hotkey has no Ctrl, Alt or Shift or is already yours, so it isn't imported."));
@@ -2549,7 +2549,7 @@ namespace
             ImGui::TextColored(kWarnColor, T("%zu hotkey(s) have no Ctrl, Alt or Shift (marked KEY WITHOUT CTRL/ALT/SHIFT): they send their macro whenever you press that key while playing."),
                                plan.HotkeysNoModifier);
         if (s_ImportOpt.KeepHotkeys && plan.HotkeysClash)
-            ImGui::TextColored(kWarnColor, T("%zu hotkey(s) are already yours (marked YOUR HOTKEY): both macros would be sent on that key."),
+            ImGui::TextColored(kWarnColor, T("%zu hotkey(s) are already yours (marked YOUR HOTKEY): where both macros can be active, that key would send nothing."),
                                plan.HotkeysClash);
         if (plan.HotkeysCleared)
             ImGui::TextColored(kWarnColor, T("%zu replacing macro(s) come without their hotkey (marked COMES WITHOUT ITS HOTKEY): it has no Ctrl, Alt or Shift, or is already yours."), plan.HotkeysCleared);

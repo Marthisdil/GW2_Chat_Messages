@@ -282,7 +282,12 @@ namespace
                     auto it = Mine.find(aSrc.Hotkey.Pack());
                     if (it != Mine.end())
                         for (const Node* owner : it->second)
-                            if (owner != aReplaced && !Gone.count(owner)) { aItem.HotkeyRisk = EHotkeyRisk::Clash; break; }
+                            // As in the editor: a shared hotkey only clashes where both can be active.
+                            if (owner != aReplaced && !Gone.count(owner) && MacroTree::FiltersOverlap(aSrc, *owner))
+                            {
+                                aItem.HotkeyRisk = EHotkeyRisk::Clash;
+                                break;
+                            }
                 }
             }
             // Replace: a risky hotkey isn't brought along, even with Keep hotkeys (owner, 2026-11-23).
