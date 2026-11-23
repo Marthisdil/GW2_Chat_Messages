@@ -477,6 +477,7 @@ namespace
         aDst.MapIds    = aSrc.MapIds;
         aDst.LinkFile.clear();
         aDst.Hotkey    = aKeepHotkey ? aSrc.Hotkey : Hotkey::Combo();
+        aDst.CooldownSec = aSrc.CooldownSec;
     }
 
     // Adds a folder or macro, with "Name (2)" if the plan's name is taken after all.

@@ -1,6 +1,7 @@
 #include "MacroTree.h"
 
 #include "ChatLine.h"
+#include "Cooldown.h"
 #include "Localization.h"
 
 #include <algorithm>
@@ -127,6 +128,7 @@ namespace MacroTree
                 j["map_ids"]    = n.MapIds;
                 if (!n.LinkFile.empty()) j["link_file"] = n.LinkFile;
                 if (!n.Hotkey.Empty()) j["hotkey"] = Hotkey::ToString(n.Hotkey);
+                if (n.CooldownSec > 0) j["cooldown"] = n.CooldownSec;
             }
             return j;
         }
@@ -253,6 +255,27 @@ namespace MacroTree
                     const Hotkey::Combo c = Hotkey::FromString(hk);
                     if (Hotkey::KeepOnLoad(c)) n.Hotkey = c; // an old plain mouse hotkey is kept, but never fires
                     else Warn(Localization::Fmt(TR("Macro \"%s\": hotkey \"%s\" isn't valid and was removed."), n.Name.c_str(), hk.c_str()));
+                }
+                // Whole seconds, 0 to Cooldown::kMaxSec. Longer is cut to the maximum; anything
+                // else (negative, a fraction, text) is dropped, so the macro has no cooldown.
+                auto cd = j.find("cooldown");
+                if (cd != j.end())
+                {
+                    // Parsed text gives unsigned numbers; a json built in memory (ToJson) signed ones.
+                    if (cd->is_number_unsigned() || (cd->is_number_integer() && cd->get<int64_t>() >= 0))
+                    {
+                        const uint64_t v = cd->is_number_unsigned() ? cd->get<uint64_t>()
+                                                                     : static_cast<uint64_t>(cd->get<int64_t>());
+                        if (v > static_cast<uint64_t>(Cooldown::kMaxSec))
+                        {
+                            n.CooldownSec = Cooldown::kMaxSec;
+                            Warn(Localization::Fmt(TR("Macro \"%s\": its cooldown was longer than %d seconds and was cut to %d."),
+                                                   n.Name.c_str(), Cooldown::kMaxSec, Cooldown::kMaxSec));
+                        }
+                        else n.CooldownSec = static_cast<int>(v);
+                    }
+                    else Warn(Localization::Fmt(TR("Macro \"%s\": its cooldown isn't a whole number of seconds and was removed."),
+                                                n.Name.c_str()));
                 }
             }
 

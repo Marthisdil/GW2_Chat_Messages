@@ -177,6 +177,7 @@ static void TestJsonRoundTrip()
     m->GameModes = GM_WvW;
     m->MapIds = {38, 95};
     m->LinkFile = "calls.txt";
+    m->CooldownSec = 30;
 
     const json j = t.ToJson();
     Tree u;
@@ -191,6 +192,10 @@ static void TestJsonRoundTrip()
     CHECK(m2 && m2->Lines[0].Channel == EChannel::Squad && m2->Lines[0].SquadBroadcast);
     CHECK(m2 && m2->Lines[1].WhisperTo == "Some Name");
     CHECK(m2 && m2->Parent && !m2->Parent->Expanded);
+    CHECK(m2 && m2->CooldownSec == 30);
+    CHECK(j.dump().find("\"cooldown\":30") != std::string::npos);
+    m->CooldownSec = 0; // off: not written at all
+    CHECK(t.ToJson().dump().find("cooldown") == std::string::npos);
     CHECK(m2 && m2->Parent->Parent && m2->Parent->Parent->Parent == &u.Root());
 }
 
@@ -411,6 +416,29 @@ static void TestJsonFormat()
     }
 }
 
+// "cooldown": whole seconds, 0 to Cooldown::kMaxSec. Longer is cut with a warning; anything else
+// is dropped with a warning. Missing is 0 (off).
+static void TestJsonCooldown()
+{
+    struct Case { const char* Value; int Expect; size_t Warnings; };
+    const Case cases[] = {
+        {nullptr, 0, 0}, {"0", 0, 0}, {"5", 5, 0}, {"600", 600, 0}, {"601", 600, 1},
+        {"18446744073709551615", 600, 1}, {"-1", 0, 1}, {"2.5", 0, 1}, {"\"10\"", 0, 1},
+        {"null", 0, 1}, {"true", 0, 1}, {"[5]", 0, 1}, {"{}", 0, 1},
+    };
+    for (const Case& c : cases)
+    {
+        std::string text = R"({"format":1,"root":{"children":[{"type":"macro","id":"00000000000000aa","name":"M")";
+        if (c.Value) text += std::string(R"(,"cooldown":)") + c.Value;
+        text += "}]}}";
+        Tree t;
+        std::vector<std::string> w;
+        CHECK(t.FromJson(json::parse(text), &w));
+        CHECK(t.Root().Children.size() == 1 && t.Root().Children[0]->CooldownSec == c.Expect);
+        CHECK(w.size() == c.Warnings);
+    }
+}
+
 static void TestJsonControlCharacters()
 {
     // A file (an import, or a hand-edited macros.json) can't bring control characters into a
@@ -513,6 +541,7 @@ void RunMacroTreeTests()
     TestJsonDamaged();
     TestDuplicateNames();
     TestJsonFormat();
+    TestJsonCooldown();
     TestJsonControlCharacters();
     TestChannels();
     TestManyMissingIds();
