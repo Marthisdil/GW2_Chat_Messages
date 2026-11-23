@@ -27,6 +27,7 @@
 #include "ChatLine.h"
 #include "Cooldown.h"
 #include "ErrorReport.h"
+#include "Examples.h"
 #include "Exchange.h"
 #include "GameKeys.h"
 #include "Globals.h"
@@ -56,6 +57,9 @@ namespace
     constexpr char kRestorePopup[] = TX("Restore?###chatmsg_restore");
     constexpr char kPurgePopup[]   = TX("Delete permanently?###chatmsg_purge");
     constexpr const char* kTrashSetting    = "trash_bin";
+    // settings.json "examples_added": the starter library was added (or a library already
+    // existed), so a macros.json removed later on purpose doesn't bring the examples back.
+    constexpr const char* kExamplesSetting = "examples_added";
     constexpr double      kSaveDelaySec    = 0.75; // batch quick edits (e.g. several expands) into one write
     constexpr double      kStatusShowSec   = 6.0;
 
@@ -3175,12 +3179,15 @@ namespace
 void Ui::Init()
 {
     UiFont::Init();
+    bool examplesAdded = false;
     {
         const nlohmann::json settings = Storage::LoadSettings();
         const auto it = settings.find(kTrashSetting);
         s_TrashOn = it == settings.end() || !it->is_boolean() || it->get<bool>(); // on by default
         const auto active = settings.find(kActiveOnlySetting);
         s_ActiveOnly = active != settings.end() && active->is_boolean() && active->get<bool>(); // off by default
+        const auto examples = settings.find(kExamplesSetting);
+        examplesAdded = examples != settings.end() && examples->is_boolean() && examples->get<bool>();
     }
     s_TrashSelId = 0;
     // The imports and exports folders exist from the start, so there's never one to make by hand.
@@ -3188,7 +3195,19 @@ void Ui::Init()
         LogF(LOGL_WARNING, "The imports and exports folders couldn't be created.");
     s_Mumble = static_cast<Mumble::Data*>(g_Api->DataLink_Get(DL_MUMBLE_LINK));
     s_LoadMessages.clear();
-    Storage::LoadMacros(s_Tree, s_LoadMessages);
+    const bool noLibrary = Storage::LoadMacros(s_Tree, s_LoadMessages);
+    // The starter library, once: on the first run (no macros.json yet). A library that already
+    // exists counts too, so removing macros.json later starts empty, as before.
+    bool saveExamples = false;
+    if (!examplesAdded && !Storage::AddonDir().empty())
+    {
+        if (noLibrary && s_Tree.Root().Children.empty() && Examples::Add(s_Tree))
+        {
+            saveExamples = true;
+            LogF(LOGL_INFO, "First run: added the example macros.");
+        }
+        if (!Storage::SaveSetting(kExamplesSetting, true)) LogF(LOGL_WARNING, "The \"examples added\" setting couldn't be saved.");
+    }
     for (const std::string& m : s_LoadMessages)
     {
         LogF(LOGL_WARNING, "%s", m.c_str());
@@ -3197,6 +3216,7 @@ void Ui::Init()
     s_LoadMessages.clear();
     ShowLanguageProblems();
     s_Dirty = false;
+    if (saveExamples) MarkDirty(); // saved like any edit
 }
 
 void Ui::Shutdown()
@@ -3241,6 +3261,21 @@ void Ui::RenderOptions()
     ImGui::TextDisabled(T("This addon only sends chat messages you start yourself. Don't use it to automate gameplay."));
     ImGui::TextDisabled(T("Your macros are saved in <GW2>\\addons\\GW2_Chat_Messages\\macros.json."));
     if (ImGui::Button(T("Open macro library"))) s_ShowMainWindow = true;
+    ImGui::SameLine();
+    if (ImGui::Button(T("Add the example macros")))
+    {
+        if (Node* ex = Examples::Add(s_Tree))
+        {
+            s_SelectedId     = ex->Id;
+            s_ShowMainWindow = true;
+            MarkDirty();
+        }
+        else ShowError(T("Clicked \"Add the example macros\""), T("The examples couldn't be added: there are too many folders named \"Examples\"."));
+    }
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip(T("Adds a new \"Examples\" folder at the top of the library, with macros that show\n"
+                          "several lines, channels, a whisper, placeholders and filters. Your own macros\n"
+                          "aren't changed. The examples have no hotkeys."));
     ImGui::Spacing();
     UiFont::DrawCombo(T("Text size"));
     ImGui::TextDisabled(T("The size of the text in this addon's windows (not this page)."));

@@ -29,6 +29,12 @@ namespace MacroTree
     const char* NewIdsFormat();
     bool IsNewIdsWarning(const std::string& aWarning);
 
+    // The id reserved for the starter library's top Examples folder (src/Examples.*), so it can be
+    // found again after a rename or a language change. Nothing else can ever hold it: NewId never
+    // returns it, loading keeps it only on one folder (a macro with it gets a new id), and
+    // imports and copies always get new ids. Only ClaimReservedId gives it out.
+    constexpr uint64_t kReservedExamplesId = 0x4558414D504C4531ull; // "EXAMPLE1"
+
     enum class ENodeType : uint8_t { Folder, Macro };
 
     enum class EChannel : uint8_t
@@ -185,6 +191,10 @@ namespace MacroTree
         bool FromJson(const nlohmann::json& aJson, std::vector<std::string>* aWarnings = nullptr);
 
         static std::string CleanName(const std::string& aName); // trims spaces, cuts to kMaxNameLength
+
+        // Gives aFolder the reserved Examples id. False (and nothing changes) if aFolder isn't a
+        // folder in the tree, or a folder in the tree or the bin already has it.
+        bool ClaimReservedId(Node& aFolder);
         // aName + " (n)", with aName cut short (never inside a UTF-8 sequence) so all of " (n)" fits.
         // Every n gives a different name, so a loop over n always ends.
         static std::string NumberedName(const std::string& aName, int aN);

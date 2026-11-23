@@ -18,7 +18,7 @@ Results so far (keep your notes in `docs\testing results.txt`; it isn't committe
 |---|---|---|
 | A1 | Passed (PR #15 build) | Re-check with the current build: the log and the options page show its version and build stamp, and the two links and the folders are new (A1's last part). |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text wraps and errors open the error window. Re-check those two points only (marked *Re-check* in A2), then go on to A3. |
-| A3 to Q | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (F9, the hotkey cooldown, is the newest). |
+| A3 to Q | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (A1b, the example macros, and F9, the hotkey cooldown, are the newest). |
 
 ## How to report
 
@@ -64,6 +64,18 @@ page in your browser (the repository; ArenaNet's "Policy: Macros and Macro Use")
 game, keys and Tab work. The line under them says the addon only sends messages you start.
 In the addon folder, `imports\` and `exports\` exist (delete both before starting the game to
 check they're created).
+
+**A1b. Example macros.** Close the game. In the addon folder, rename `macros.json` to
+`macros.keep.json` and `macros.json.bak` to `macros.keep.bak` (if you have them), and in `settings.json` delete the line
+`"examples_added": true` (keep the file valid JSON). Start the game: the library has an
+**Examples** folder with Hello, Basics, Placeholders and Filters (Filters has In WvW and In
+Lion's Arch inside), in the addon's language, and no macro has a hotkey. Preview `Two channels`
+and `Roll a die`. In PvE, `Stack on tag` is dimmed (WvW only) and `Meet at the bank` too unless
+you're in Lion's Arch. Delete the Examples folder and restart: it doesn't come back. On the
+addon's page in Nexus options, click **Add the example macros**: the library opens with a new
+Examples folder selected; click it again: "Examples (2)". Then close the game, delete
+the new `macros.json` and `macros.json.bak`, put `macros.keep.json` and `macros.keep.bak` back
+under their old names, and start again: your own library, no examples added.
 
 **A2. Building the tree.** In the library:
 - **New folder** (toolbar) → name `Test`. In it, **New folder inside** five times, one inside the

@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Example macros:** on the first run, the library starts with an **Examples** folder (with
+  nested folders) showing several lines and channels, a whisper, an emote, placeholders and
+  filters, in the addon's language and with no hotkeys. **Add the example macros** on the
+  options page adds them again at any time; your own macros aren't changed.
 - **Hotkey cooldown:** each macro can have a cooldown (0 to 600 seconds, off by default). Its
   hotkey then waits that long after the macro was last sent; the first ignored press shows one
   alert, and the editor shows the time left. Send now and the quick menu always send. And every

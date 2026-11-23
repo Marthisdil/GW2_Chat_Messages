@@ -148,6 +148,61 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
     50 are used and the file's extra lines are kept until the macro is edited.
   - The sync state is in memory only. Unload does a last sync.
 
+## Starter library
+
+Built 2026-11-23 (todo section 2). On the **first run** (no `macros.json` yet), the library starts
+with an **Examples** folder, with nested folders, so new users see what a macro can do:
+
+```
+Examples
+├── Hello                      Say: "Hello everyone!"
+├── Basics
+│   ├── Two channels           Say, then Party
+│   ├── Whisper a friend       a whisper to "Friend Name"
+│   └── Wave                   an emote
+├── Placeholders
+│   ├── Roll a die             {random 1 6}
+│   ├── Time check             {time}
+│   └── Where am I             {map}
+└── Filters
+    ├── In WvW
+    │   └── Stack on tag       squad (broadcast as commander), WvW only
+    └── In Lion's Arch
+        └── Meet at the bank   map chat, only in Lion's Arch
+```
+
+- **In the addon's language** at the moment it's added (names and lines are `TR` texts, so
+  de/fr/es get their own; map names in the lines are written per language). No hotkeys and no
+  cooldowns: nothing fires until the user sets a key.
+- **Once only:** `settings.json` gets `"examples_added": true` the first time the addon loads
+  (also when a library already exists), so a `macros.json` removed on purpose later starts
+  empty, as before. A library restored from the `.bak` doesn't get examples either, and a
+  missing `macros.json` with its `.bak` still there isn't a first run (saving the examples
+  would soon overwrite that backup).
+- **Getting them back:** the options page has **Add the example macros**: a new folder at the
+  top level ("Examples (2)" if the name is taken), selected and shown in the library. The
+  user's own macros aren't touched.
+- `src/Examples.*` builds it (no Nexus or ImGui), tested by `tests/ExamplesTests.cpp`: the shape,
+  every line within 199 units with no removed placeholder, a save and load round trip, and the
+  "(2)" names. It's an ordinary folder: edit, move or delete it like any other.
+- **A reserved id** (decided by the owner, 2026-11-23), so the addon can always find the
+  Examples folder it made, even after a rename or a language change (for the "ask first,
+  overwrite" idea in `docs/todo.md`). The top Examples folder gets
+  `MacroTree::kReservedExamplesId` (`Examples::kFolderId`, `4558414d504c4531` in
+  `macros.json`), and nothing else can ever hold it:
+  - `Tree::NewId` never returns it (nor 0), so no folder or macro the user or the addon makes
+    gets it. Only `Tree::ClaimReservedId` gives it out, to a folder in the tree, and only while
+    no folder in the tree or the bin has it.
+  - Loading keeps it only on a folder, and only once (like any id); a macro with it, or a second
+    folder, gets a new id with the usual "Gave new ids" warning. A hand-edited or damaged file
+    can't move it onto something else.
+  - Imports and copies always get new ids, so someone else's exported Examples folder comes in
+    as an ordinary folder.
+  - In the trash bin it still counts (a new copy gets an ordinary id), and restoring the folder
+    keeps it. A folder rebuilt by a restore (for an item whose folder is gone) never takes it.
+  - A second copy ("Examples (2)") has an ordinary id.
+  Tested in `tests/ExamplesTests.cpp`.
+
 ## Text size
 
 *(Built 2026-11-21; `src/TextSize.*` (rules, unit tested in `tests/TextSizeTests.cpp`) and

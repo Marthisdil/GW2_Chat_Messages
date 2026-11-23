@@ -189,7 +189,9 @@ namespace MacroTree
                 if (node->Name.empty()) node->Name = t == ENodeType::Folder ? TR("New folder") : TR("New macro");
 
                 const uint64_t id = IdFromString(StringField(jc, "id"));
-                if (id != 0 && SeenIds.insert(id).second) node->Id = id;
+                // The reserved Examples id is kept only on a folder (and only once, like any id).
+                const bool allowed = id != 0 && (id != kReservedExamplesId || t == ENodeType::Folder);
+                if (allowed && SeenIds.insert(id).second) node->Id = id;
                 else NeedIdNodes.push_back(node.get());
 
                 if (t == ENodeType::Folder)
@@ -464,8 +466,17 @@ namespace MacroTree
         for (;;)
         {
             const uint64_t id = rng();
-            if (id != 0 && m_UsedIds.insert(id).second) return id;
+            if (id != 0 && id != kReservedExamplesId && m_UsedIds.insert(id).second) return id;
         }
+    }
+
+    bool Tree::ClaimReservedId(Node& aFolder)
+    {
+        if (!aFolder.IsFolder() || &aFolder == m_Root.get() || Find(aFolder.Id) != &aFolder) return false;
+        if (IdInUse(kReservedExamplesId)) return false;
+        aFolder.Id = kReservedExamplesId;
+        if (m_UsedIdsReady) m_UsedIds.insert(kReservedExamplesId);
+        return true;
     }
 
     bool Tree::IdInUse(uint64_t aId) const
@@ -703,7 +714,10 @@ namespace MacroTree
                 if (!next)
                 {
                     auto folder = std::make_unique<Node>();
-                    folder->Id       = t.FromIds[i] == 0 || IdInUse(t.FromIds[i]) ? NewId() : t.FromIds[i];
+                    // A folder rebuilt for a restore never takes the reserved Examples id: it isn't
+                    // the Examples folder, only a place for the restored item.
+                    folder->Id       = t.FromIds[i] == 0 || t.FromIds[i] == kReservedExamplesId || IdInUse(t.FromIds[i])
+                                           ? NewId() : t.FromIds[i];
                     if (m_UsedIdsReady) m_UsedIds.insert(folder->Id); // an old id back in use
                     folder->Type     = ENodeType::Folder;
                     folder->Name     = want;
