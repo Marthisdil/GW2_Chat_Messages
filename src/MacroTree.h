@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
-#include <unordered_set>
+#include <set>
 #include <vector>
 
 #include <nlohmann/json_fwd.hpp>
@@ -21,6 +21,10 @@ namespace MacroTree
     constexpr size_t kMaxNameLength = 100; // bytes of UTF-8, same as bhm-chat-macros' title limit
     constexpr int kFormatVersion = 1;
     constexpr size_t kMaxLines = 50; // lines in one macro
+    // Problems listed from one file (FromJson, an import); the rest are only counted, so a crafted
+    // file can't fill memory or the preview with millions of lines (SEC-022).
+    constexpr size_t kMaxWarnings = 200;
+    std::string MoreWarnings(size_t aCount); // "...and 12 more problems like these."
 
     enum class ENodeType : uint8_t { Folder, Macro };
 
@@ -186,7 +190,7 @@ namespace MacroTree
         std::vector<TrashItem> m_Trash;
         // Every id in the tree or the bin (plus some since deleted, which is harmless), filled on the
         // first NewId, so a new id is one lookup instead of a walk over the whole tree (SEC-017).
-        mutable std::unordered_set<uint64_t> m_UsedIds;
+        mutable std::set<uint64_t> m_UsedIds;
         mutable bool                         m_UsedIdsReady = false;
 
         uint64_t NewId() const;

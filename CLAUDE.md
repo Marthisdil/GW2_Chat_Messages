@@ -118,6 +118,10 @@ to the todo list", add it there (don't start building it). Move agreed items int
   lets a local connection through only if it's the proxy's own address); the address rule is
   `src/NetAddress.*`, with no Nexus, ImGui or windows.h dependency, tested by
   `tests/NetAddressTests.cpp`.
+- `src/PathText.*`: paths to and from UTF-8 without throwing (a bad sequence becomes U+FFFD).
+  Never call `path::u8string()`, `path::string()` or `fs::u8path()`: use `PathText::Utf8` and
+  `PathText::FromUtf8`. No Nexus, ImGui or windows.h dependency. Tested by
+  `tests/PathTextTests.cpp`.
 - `src/Exchange.*`: import and export: the export format, reading .json/.txt/folders into a
   package, the import preview (`BuildPlan`) and `Apply`. No Nexus or ImGui dependency. Tested by
   `tests/ExchangeTests.cpp`. Exports go to `<addon>\exports\`; the Import window lists

@@ -294,6 +294,8 @@
     "Select all": "",
     "Deselect all": "",
     "Import selected": "",
+    "Clicked Import selected in the Import window": "",
+    "There wasn't enough memory to import it. Nothing was imported.": "",
     "Imported %zu item(s) from %s into %s.": "",
     "Nothing ticked would be added or replaced.": "",
     "Nothing would be added or replaced.": "",

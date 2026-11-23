@@ -6,11 +6,11 @@
 #include <cctype>
 #include <fstream>
 #include <set>
-#include <unordered_map>
 
 #include <nlohmann/json.hpp>
 
 #include "ChatLine.h"
+#include "PathText.h"
 
 namespace fs = std::filesystem;
 using nlohmann::json;
@@ -36,6 +36,16 @@ namespace
     }
 
     // Checks what a source gave: something there, and not too much.
+    // The preview draws every warning each frame (SEC-022): list at most kMaxWarnings. JSON is
+    // capped while it's read (Tree::FromJson); a folder of up to kMaxFolderFiles files is cut here.
+    void CapWarnings(std::vector<std::string>& aWarnings)
+    {
+        if (aWarnings.size() <= kMaxWarnings + 1) return;
+        const size_t more = aWarnings.size() - kMaxWarnings;
+        aWarnings.resize(kMaxWarnings);
+        aWarnings.push_back(MoreWarnings(more));
+    }
+
     void Finish(Exchange::Package& aPkg)
     {
         if (!aPkg.Ok()) return;
@@ -63,7 +73,7 @@ namespace
         return true;
     }
 
-    std::string Utf8Name(const fs::path& aPath) { return aPath.u8string(); } // std::string in C++17
+    std::string Utf8Name(const fs::path& aPath) { return PathText::Utf8(aPath); } // std::string in C++17
 
     // A macro from raw text; false (with a warning) if the text has no lines.
     bool AddTextMacro(Tree& aTree, Node* aParent, const std::string& aName, const std::string& aText,
@@ -73,6 +83,12 @@ namespace
         // save of the library fail, so they're replaced.
         std::string text = aText;
         const bool repaired = ChatLine::RepairUtf8(text);
+        if (repaired && text.size() > Exchange::kMaxTextBytes) // each replaced byte takes three (SEC-023, SEC-025)
+        {
+            aWarnings.push_back("\"" + aName + "\" isn't saved as UTF-8, and with its characters replaced it's over " +
+                                std::to_string(Exchange::kMaxTextBytes / 1024) + " KB, so it was left out.");
+            return false;
+        }
         std::vector<Line> lines = ChatLine::ParseRaw(text);
         if (lines.empty())
         {
@@ -105,6 +121,8 @@ namespace
         Tree&                     Items;
         std::vector<std::string>& Warnings;
         size_t                    Files = 0;
+        size_t                    Bytes = 0;     // text read so far
+        bool                      Full  = false; // kMaxFolderBytes reached: nothing more is read
         bool                      WarnedCount = false;
         bool                      WarnedDepth = false;
 
@@ -119,6 +137,7 @@ namespace
 
             for (const fs::directory_entry& e : entries)
             {
+                if (Full) return;
                 std::error_code ec2;
                 if (e.is_directory(ec2))
                 {
@@ -153,6 +172,14 @@ namespace
                         Warnings.push_back("\"" + Utf8Name(e.path().filename()) + "\" was left out. " + error);
                         continue;
                     }
+                    if (Bytes + text.size() > Exchange::kMaxFolderBytes)
+                    {
+                        Warnings.push_back("Only the first " + std::to_string(Exchange::kMaxFolderBytes / (1024 * 1024)) +
+                                           " MB of text files were read.");
+                        Full = true;
+                        return;
+                    }
+                    Bytes += text.size();
                     AddTextMacro(Items, aParent, name, text, Warnings);
                 }
             }
@@ -169,7 +196,7 @@ namespace
         std::set<std::string> Folders, Macros; // lower-case names already there or planned
         // The existing items by lower-case name: a clash is one lookup, not a scan of every sibling
         // (SEC-027; the plan is rebuilt every frame while the Import window is open).
-        std::unordered_map<std::string, const Node*> OldFolders, OldMacros;
+        std::map<std::string, const Node*> OldFolders, OldMacros;
 
         Dest(const Node* aExisting, int aLevel) : Existing(aExisting), Level(aLevel)
         {
@@ -354,13 +381,13 @@ namespace
     // macros into one folder took 304 s in the test build).
     struct NameIndex
     {
-        std::unordered_map<std::string, Node*> Folders, Macros;
+        std::map<std::string, Node*> Folders, Macros;
 
         explicit NameIndex(Node& aFolder)
         {
             for (auto& c : aFolder.Children) Of(c->Type).emplace(Lower(c->Name), c.get());
         }
-        std::unordered_map<std::string, Node*>& Of(ENodeType aType) { return aType == ENodeType::Folder ? Folders : Macros; }
+        std::map<std::string, Node*>& Of(ENodeType aType) { return aType == ENodeType::Folder ? Folders : Macros; }
         Node* Find(ENodeType aType, const std::string& aName)
         {
             auto& names = Of(aType);
@@ -565,7 +592,9 @@ namespace Exchange
         std::vector<std::string> warnings;
         if (!AddTextMacro(p.Items, nullptr, aName, aText, warnings))
         {
-            p.Error = "It has no lines to send.";
+            p.Error = !warnings.empty() && warnings.back().find(" KB, so it was left out.") != std::string::npos
+                          ? "It isn't saved as UTF-8, and with its characters replaced it's too big."
+                          : "It has no lines to send.";
             return p;
         }
         p.Warnings = std::move(warnings);
@@ -580,7 +609,26 @@ namespace Exchange
         return FromRawText(aName, aText);
     }
 
+    static Package ReadPath(const fs::path& aPath);
+
+    // A folder can hold up to kMaxFolderBytes of text; anything that throws while reading it (out
+    // of memory, say) becomes the package's error instead of leaving the render callback (SEC-025).
     Package FromPath(const fs::path& aPath)
+    {
+        try
+        {
+            return ReadPath(aPath);
+        }
+        catch (const std::exception&)
+        {
+            Package failed; // nothing half-read is kept
+            failed.Source = Utf8Name(aPath.filename());
+            failed.Error  = "It couldn't be read.";
+            return failed;
+        }
+    }
+
+    static Package ReadPath(const fs::path& aPath)
     {
         Package p;
         p.Source = Utf8Name(aPath.filename());
@@ -591,6 +639,7 @@ namespace Exchange
             Node* top = r.Ok ? r.Target : nullptr;
             FolderReader reader{p.Items, p.Warnings};
             reader.Read(aPath, top, 1);
+            CapWarnings(p.Warnings);
             if (top && top->Children.empty()) p.Items.Delete(*top);
             if (Tree::CountDescendants(p.Items.Root()) == 0)
                 p.Error = "No .txt files with lines were found in it.";

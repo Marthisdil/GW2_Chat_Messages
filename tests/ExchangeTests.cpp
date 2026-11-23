@@ -155,6 +155,9 @@ namespace
         CHECK(FromRawText("Utf8", "/s K\xC3\xA4se").Warnings.empty());
         // Pasted text goes the same way.
         CHECK(FromText("Pasted", "/s \xFF").Items.Root().Children[0]->Lines[0].Message == bad);
+        // SEC-023/025: under the size limit, but over it once each byte is replaced: left out.
+        Package huge = FromRawText("Huge", "/s " + std::string(100 * 1024, '\xE9'));
+        CHECK(!huge.Ok() && huge.Error.find("too big") != std::string::npos);
 
         // Text that isn't UTF-8 from anywhere else still exports, as U+FFFD, instead of throwing.
         Tree t;
@@ -546,6 +549,15 @@ namespace
         CHECK(!FromPath(dir / "missing.txt").Ok());
         CHECK(!FromPath(dir / "Pack" / "Nothing").Ok());
 
+        // SEC-025: a folder holds at most kMaxFolderBytes of text; the rest isn't read.
+        const std::string big = "/s " + std::string(250 * 1024, 'x') + "\r\n";
+        const size_t fit = kMaxFolderBytes / big.size();
+        for (size_t i = 0; i < fit + 3; i++) WriteFile(dir / "Big" / ("f" + std::to_string(1000 + i) + ".txt"), big);
+        Package bigPkg = FromPath(dir / "Big");
+        CHECK(bigPkg.Ok());
+        CHECK(!bigPkg.Items.Root().Children.empty() && bigPkg.Items.Root().Children[0]->Children.size() == fit);
+        CHECK(!bigPkg.Warnings.empty() && bigPkg.Warnings.back() == "Only the first 16 MB of text files were read.");
+
         fs::remove_all(dir, ec);
     }
 
@@ -718,8 +730,32 @@ namespace
     }
 }
 
+// SEC-022: a file with thousands of bad entries lists kMaxWarnings of them, then a count.
+static void TestWarningsCapped()
+{
+    std::string json = "{\"format\":1,\"root\":{\"children\":[";
+    for (int i = 0; i < 5000; i++) json += i ? ",1" : "1";
+    json += "]}}";
+    Package p = FromJsonText(json);
+    CHECK(p.Warnings.size() == MacroTree::kMaxWarnings + 1);
+    CHECK(p.Warnings.front() == "Skipped an entry that isn't a folder or macro.");
+    CHECK(p.Warnings.back() == "...and 4800 more problem(s) like these.");
+
+    // A few problems are all listed, with no count.
+    Package few = FromJsonText("{\"format\":1,\"root\":{\"children\":[1,2,3]}}");
+    CHECK(few.Warnings.size() == 3);
+    CHECK(few.Warnings.back().find("more problem") == std::string::npos);
+
+    // Tree::FromJson on its own (loading macros.json) is capped the same way.
+    std::vector<std::string> warnings;
+    Tree t;
+    CHECK(t.FromJson(nlohmann::json::parse(json), &warnings));
+    CHECK(warnings.size() == MacroTree::kMaxWarnings + 1);
+}
+
 void RunExchangeTests()
 {
+    TestWarningsCapped();
     TestFileNames();
     TestExport();
     TestReadText();
