@@ -39,6 +39,27 @@ the first release.
   some engines flag it (false positives are common for DLLs that hook a game's window), and
   whether the release waits for the scan or the link is added afterwards.
 
+### A plan for security scans on a Pro plan (added 2026-11-23)
+
+Claude to draft a plan, with suggestions, for how security scans fit the way we work. The quick
+audit with each code PR (`run_audit.ps1 -Changed -Tests` plus `/security-review`) works well. The
+full audit (a `claude-security` scan of the whole repository) takes a long time and a lot of the
+Pro plan's usage, so it needs planning before a major release (`docs/security-audit.md` says it
+runs then without asking).
+
+- Ideas to start from:
+  - scan one area at a time (imports, network and `maps.json`, the sender, language files), spread
+    over several sessions or days, each recorded in `docs/security-findings.md` with the commit it
+    ran on;
+  - a lower effort level for the full scan, with a deeper one only for the highest-risk areas;
+  - run the clang-tidy/clangd part of the full audit (`tools\run_audit.ps1` without `-Changed`) on
+    its own, since it costs no plan usage;
+  - for a major release, only the parts changed since the last full scan, if that scan's commit is
+    recorded;
+  - start the full scan well ahead of a planned release (when usage has reset), not on release day.
+- Points to settle: what counts as "full" for a major release after this; whether
+  `docs/security-audit.md`'s rule for major releases changes; and where the scan schedule is kept.
+
 ## 2. Quick wins
 
 All four were built on 2026-11-23 and moved to `docs/design.md`: the remaining messages are

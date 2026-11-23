@@ -6,11 +6,15 @@ root). Modelled on the Blish HUD module https://github.com/agaertner/bhm-chat-ma
 its `main` branch). **Read `docs/design.md` before feature work**: it holds the decisions, data
 model, import/export rules and the phase plan.
 
+**Wiki, with every change:** a user-visible change updates the right `docs/wiki/` pages in the
+same PR (a new page also goes into `_Sidebar.md` and gets a link from `Home.md`), and the PR
+description says which pages changed, or "Wiki: no change". After the merge, the cleanup
+publishes them (below).
 `docs/wiki/` is the source of the GitHub wiki (https://github.com/Marthisdil/GW2_Chat_Messages/wiki; flat pages, links
-written as `[text](Page-Name)` without `.md`, `_Sidebar.md`). Update it with every user-visible
-change, in the same PR. After each merge that changes `docs/wiki/`, publish it: clone
+written as `[text](Page-Name)` without `.md`, `_Sidebar.md`). To publish: clone
 `https://github.com/Marthisdil/GW2_Chat_Messages.wiki.git` (branch `master`), copy the pages in
-(delete a page there that's gone from `docs/wiki/`), commit and push, then check the pages. Wiki
+(delete a page there that's gone from `docs/wiki/`), commit as `Publish the wiki from docs/wiki
+at <short sha of main>` and push, then check the pages, the sidebar and their links. Wiki
 pages link images as `../images/name.png`; when publishing, rewrite those to
 `https://raw.githubusercontent.com/Marthisdil/GW2_Chat_Messages/main/docs/images/name.png`. Never
 edit the wiki on GitHub directly: the next publish overwrites it.
@@ -237,6 +241,10 @@ to the todo list", add it there (don't start building it). Move agreed items int
 - Update `CHANGELOG.md` for every user-visible change.
 - Do not commit build output (`.dll`, `.pdb`, `.obj`, `.exe`, ...).
 - README keeps an "AI Disclosure" section as its last section; prose is first person singular ("I").
+- **Wiki at every merge cleanup:** the wiki repo's last commit message ends with the main commit
+  it was published from (`Publish the wiki from docs/wiki at <sha>`). If
+  `git diff --quiet <sha> HEAD -- docs/wiki` shows changes, publish `docs/wiki/` (steps at the
+  top), check the changed pages on GitHub, and say so in the cleanup report.
 - After each merge and cleanup, ask the user whether to build or update the restore package
   (`C:\Dropbox\~ Github\GW2_Chat_Messages_restore_v<version>_<sha>.zip`). If they say yes, build it
   and test-restore it before doing anything else.
