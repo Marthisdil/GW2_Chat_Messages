@@ -108,6 +108,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)tools\compile_
     <ClCompile Include="src\Localization.cpp" />
     <ClCompile Include="src\Search.cpp" />
     <ClCompile Include="src\Cooldown.cpp" />
+    <ClCompile Include="src\Backups.cpp" />
     <ClCompile Include="src\Examples.cpp" />
     <ClCompile Include="src\TextSize.cpp" />
     <ClCompile Include="src\UiFont.cpp" />
@@ -136,6 +137,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)tools\compile_
     <ClInclude Include="src\Localization.h" />
     <ClInclude Include="src\Search.h" />
     <ClInclude Include="src\Cooldown.h" />
+    <ClInclude Include="src\Backups.h" />
     <ClInclude Include="src\Examples.h" />
     <ClInclude Include="src\TextSize.h" />
     <ClInclude Include="src\UiFont.h" />

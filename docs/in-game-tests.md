@@ -4,7 +4,7 @@ The unit tests cover the rules (tree, raw text, send plan, hotkeys, filters, pla
 import, link sync). These checks cover what only the game can tell us: whether GW2 takes our keys
 and text, and whether normal game input is ever disturbed.
 
-The checks are grouped into sessions (A to Q) in the order to run them: each one builds on the
+The checks are grouped into sessions (A to R) in the order to run them: each one builds on the
 ones before (the `Test` macros from A3, `Say`'s Ctrl+F1 from F1, `Fill` from I1, ...). A
 whole pass takes a few hours, so spread it over several play sessions. If the text is hard to
 read, do M1 first and pick a bigger size. Session B is the one that matters most: if it fails,
@@ -18,7 +18,7 @@ Results so far (keep your notes in `docs\testing results.txt`; it isn't committe
 |---|---|---|
 | A1 | Passed (PR #15 build) | Re-check with the current build: the log and the options page show its version and build stamp, and the two links and the folders are new (A1's last part). |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text wraps and errors open the error window. Re-check those two points only (marked *Re-check* in A2), then go on to A3. |
-| A3 to Q | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (A1b, the example macros, and F9, the hotkey cooldown, are the newest). |
+| A3 to R | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (R, backups and restore, is the newest; A1b, the example macros, and F9, the hotkey cooldown, came just before). |
 
 ## How to report
 
@@ -534,7 +534,7 @@ is cut off.
 
 ## O. Trash bin
 
-Turn on (if you turned it off) Nexus > Options > Addons > Chat Messages > **Use a trash bin for
+Turn on (if you turned it off) Nexus > Options > Addons > Chat Messages > General > **Use a trash bin for
 deleted folders and macros**, and read its description. Make a scratch folder `Bin test` with a
 sub-folder `Sub` and a macro `Junk` (one line) inside `Sub`.
 
@@ -615,7 +615,7 @@ results.
 
 ## Q. Languages
 
-Languages are on the addon's page in **Nexus > Options**, under **Text size**. The German, French
+Languages are on the addon's page in **Nexus > Options** (the **General** tab), under **Text size**. The German, French
 and Spanish texts were made by AI: if you speak one of them, note any text that reads oddly.
 
 **Q1. Following Nexus.** The **Language** dropdown shows **Follow Nexus (English (US))**. In
@@ -656,6 +656,50 @@ keep their names). Make a duplicate name, send a macro with the Chat key cleared
 damaged file: each error window message is in German. Searching the library for `maus 4` and for
 `mouse 4` both find the macro with that hotkey. `macros.json` still stores the hotkey in English.
 
+## R. Backups and restore
+
+Open the addon's page in **Nexus > Options**. Keep a UTC clock at hand (search "UTC time" on the
+web) to compare the times.
+
+**R1. The tabs.** The page has **General**, **Backups** and **Restore** tabs. General has
+everything that was on the page before (the buttons, text size, language, trash bin, map list);
+the version, build and links stay above the tabs. `<GW2>\addons\GW2_Chat_Messages\backups\`
+exists.
+
+**R2. The safety copy (backups off).** With **Make backups of my macros** unticked (the default)
+and a library that isn't empty, play for a minute: `backups\` has one
+`macros_safety_<date>_<time>_UTC.json`, with the current UTC date and time. The Backups tab says
+backups are off, explains the weekly safety copy (4 kept), and shows "Last safety copy: ... UTC".
+No message or alert appeared in game.
+
+**R3. Backups on.** Tick **Make backups of my macros**, set **Back up every** 1 **hour(s)** and
+**Copies to keep** 2. Within a minute a `macros_backup_..._UTC.json` appears and "Last backup"
+shows it. Click **Back up now** three times, a few seconds apart: "Backed up as ..." each time,
+and the folder keeps only the 2 newest backups (the safety copy is still there). Try out-of-range
+values: **every** 0 becomes 1, 100 hours becomes 48, then switch to **month(s)**: it shows 12.
+**Keep** 0 becomes 1 and 60 becomes 50. Set it back to 1 hour, keep 2, and restart the game: the
+settings are kept.
+
+**R4. Only when changed** (optional, takes an hour). With hourly backups on, change nothing for
+just over an hour: no new backup. Then rename a macro: a new backup appears within a minute.
+
+**R5. Restore.** On the Restore tab, the list is newest first, with the date and time (UTC),
+folder and macro counts that match the library at that time, and the type (Backup or Safety
+copy); hovering a date shows the file name. Rename a macro and delete another, then click
+**Restore...** on a backup from before: it asks, with the date, time and counts. Click
+**Restore**: the library window opens with the old library, and "Restored the backup from ..."
+with **Undo restore** above the tree. Click **Undo restore**: your changes are back. Restore
+again and restart the game: the library is still the restored one.
+
+**R6. Other files in the folder.** Put a `notes.txt` into `backups\`, and a text file named
+`macros_backup_2020-01-01_00-00-00_UTC.json` containing just `{`. Click **Refresh**: `notes.txt`
+isn't listed, and the 2020 row shows **Can't be read** (hover: why) with no Restore button. Make
+more backups than you keep: `notes.txt` is never deleted. Delete both files afterwards.
+
+**R7. A linked macro.** With a macro linked to a `.txt` file (session K), edit the file, then
+restore a backup from before the edit: the macro shows the file's text, and the file isn't
+changed.
+
 ## Report template
 
 ```
@@ -677,5 +721,6 @@ N1 (pasted text):  N2  N3
 O1  O2  O3 (long name too)  O4  O5
 P1  P2  P3  P4 (did Ctrl+F / Escape reach the game?):  P5  P6 (label at character select):  P7 (did typing or Enter reach the game?):  P8
 Q1  Q2  Q3 (anything cut off?):  Q4  Q5  Q6  Q7  Q8   Translations that read oddly:
+R1  R2  R3  R4  R5  R6  R7
 Nexus log warnings:
 ```

@@ -11,6 +11,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "Backups.h"
 #include "Globals.h"
 #include "Localization.h"
 #include "MacroTree.h"
@@ -58,6 +59,22 @@ namespace
         }
     }
 
+    // Text that isn't UTF-8 is written as U+FFFD, so one bad string can't stop every save.
+    std::string Dump(const nlohmann::json& aJson)
+    {
+        return aJson.dump(2, ' ', false, nlohmann::json::error_handler_t::replace);
+    }
+
+    // The path of a backup in the backups folder, or empty when aName isn't a backup's name.
+    fs::path BackupFile(const std::string& aName)
+    {
+        Backups::EKind kind;
+        std::time_t when = 0;
+        if (!Backups::ParseFileName(aName, kind, when)) return {};
+        const fs::path dir = Storage::BackupsDir();
+        return dir.empty() ? dir : dir / PathText::FromUtf8(aName);
+    }
+
     std::string TimeStamp()
     {
         std::time_t now = std::time(nullptr);
@@ -95,6 +112,7 @@ namespace
 fs::path Storage::ExportsDir() { return SubDir("exports"); }
 fs::path Storage::ImportsDir() { return SubDir("imports"); }
 fs::path Storage::LocalizationDir() { return SubDir("localization"); }
+fs::path Storage::BackupsDir() { return SubDir("backups"); }
 
 fs::path Storage::FreeFile(const fs::path& aDir, const std::string& aFileName)
 {
@@ -159,8 +177,7 @@ bool Storage::WriteJson(const fs::path& aFile, const nlohmann::json& aJson, bool
     {
         {
             std::ofstream out(tmp, std::ios::binary | std::ios::trunc);
-            // Text that isn't UTF-8 is written as U+FFFD, so one bad string can't stop every save.
-            out << aJson.dump(2, ' ', false, nlohmann::json::error_handler_t::replace);
+            out << Dump(aJson);
             out.flush();
             if (!out) throw std::runtime_error("write failed");
         }
@@ -233,6 +250,89 @@ bool Storage::LoadMacros(MacroTree::Tree& aTree, std::vector<std::string>& aMess
 bool Storage::SaveMacros(const MacroTree::Tree& aTree)
 {
     return WriteJson(LibraryFile(), aTree.ToJson(), true);
+}
+
+std::string Storage::LibraryText(const MacroTree::Tree& aTree) { return Dump(aTree.ToJson()); }
+
+std::vector<std::string> Storage::BackupNames()
+{
+    std::vector<std::string> names;
+    const fs::path dir = BackupsDir();
+    if (dir.empty()) return names;
+    std::error_code ec;
+    for (fs::directory_iterator it(dir, ec), end; !ec && it != end; it.increment(ec))
+    {
+        std::error_code fec;
+        if (it->is_regular_file(fec)) names.push_back(PathText::Utf8(it->path().filename()));
+        if (names.size() >= 10000) break; // a folder full of other files: stop looking
+    }
+    return names;
+}
+
+bool Storage::WriteBackup(const std::string& aName, const std::string& aText)
+{
+    const fs::path file = BackupFile(aName);
+    std::error_code ec;
+    if (file.empty() || fs::exists(file, ec)) return false;
+    return WriteText(file, aText);
+}
+
+bool Storage::DeleteBackup(const std::string& aName)
+{
+    const fs::path file = BackupFile(aName);
+    if (file.empty()) return false;
+    std::error_code ec;
+    if (!fs::remove(file, ec) || ec)
+    {
+        LogF(LOGL_WARNING, "Could not delete the old backup %s: %s", aName.c_str(), ec ? ec.message().c_str() : "it's gone");
+        return false;
+    }
+    return true;
+}
+
+bool Storage::ReadBackupText(const std::string& aName, std::string& aText)
+{
+    aText.clear();
+    const fs::path file = BackupFile(aName);
+    if (file.empty()) return false;
+    std::error_code ec;
+    const auto size = fs::file_size(file, ec);
+    if (ec || size > kMaxBackupBytes) return false;
+    std::ifstream in(file, std::ios::binary);
+    if (!in) return false;
+    aText.resize(static_cast<size_t>(size));
+    in.read(aText.data(), static_cast<std::streamsize>(aText.size()));
+    aText.resize(static_cast<size_t>(in.gcount()));
+    return !in.bad();
+}
+
+bool Storage::ReadBackup(const std::string& aName, MacroTree::Tree& aTree, std::string& aError)
+{
+    std::string text;
+    if (!ReadBackupText(aName, text))
+    {
+        aError = Localization::Fmt(TR("The file couldn't be read, or it's bigger than %zu MB."),
+                                   static_cast<size_t>(kMaxBackupBytes / (1024 * 1024)));
+        return false;
+    }
+    try
+    {
+        const nlohmann::json j = nlohmann::json::parse(text);
+        MacroTree::Tree tree;
+        std::vector<std::string> warnings;
+        if (!tree.FromJson(j, &warnings))
+        {
+            aError = TR("The file isn't a macro library.");
+            return false;
+        }
+        aTree = std::move(tree);
+        return true;
+    }
+    catch (const std::exception&)
+    {
+        aError = TR("The file isn't a macro library.");
+        return false;
+    }
 }
 
 nlohmann::json Storage::LoadSettings()

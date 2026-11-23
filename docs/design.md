@@ -31,7 +31,7 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
 - The 6-folder limit is checked on create, move and import. If moving a folder would push any of
   its descendants past level 6, the move is refused and the UI explains why.
 - Storage is `<GW2>\addons\GW2_Chat_Messages\macros.json`, written via a temp file and then renamed.
-  A `macros.json.bak` of the previous version is kept.
+  A `macros.json.bak` of the previous version is kept, and backups on a schedule (see "Backups").
 - Messages are limited to 199 characters each, after placeholders are filled in. This is the same
   limit bhm uses. The editor shows a live character count.
 
@@ -338,6 +338,46 @@ Examples
   be undone").
 - No size or age limit: items stay until restored or deleted.
 - Undo import puts the bin back as it was before the import too (the whole library is restored).
+
+## Backups
+
+*(Built 2026-11-23 from the todo item "Daily rolling backups", widened by the owner. Rules in
+`src/Backups.*` (schedule, file names, which copies go, the setting), tested in
+`tests/BackupsTests.cpp`; files in `Storage` (`BackupNames`, `WriteBackup`, `DeleteBackup`,
+`ReadBackup`); UI in `Ui.cpp`.)*
+
+- **Options page tabs:** **General** (everything from before), **Backups**, **Restore**.
+- **Setting** (`settings.json` `"backups"`: `enabled`, `unit` `hours|days|weeks|months`,
+  `every`, `keep`). Off by default; when turned on: every 1 day, keep 7. `every` is 1-48 hours,
+  1-30 days, 1-8 weeks or 1-12 months; `keep` 1-50. Anything out of range is brought into range,
+  anything unreadable falls back to the default.
+- **Where:** `<addon>\backups\`, created at load. File names carry the time in UTC:
+  `macros_backup_YYYY-MM-DD_HH-MM-SS_UTC.json`, and `macros_safety_..._UTC.json` for the safety
+  copies. Only names of exactly that form are backups: nothing else in the folder is listed,
+  read or deleted, and a name is checked before every read or delete.
+- **Content:** the library as `macros.json` would be written (with the trash bin), from memory,
+  so unsaved edits are in it too. Written via a temp file and rename; an existing name is never
+  overwritten.
+- **When:** the render thread looks once a minute. Due when there's no copy of that kind yet, or
+  the newest is `every` units old (months are calendar months in UTC, clamped to the month's last
+  day). A copy dated in the future (clock changed) waits. An empty library, or one identical to
+  the newest copy of that kind, isn't copied; it's looked at again after the next change. A
+  failed write is retried after an hour (logged).
+- **Off:** a safety copy once a week, the last 4 kept, without any message. The two kinds are
+  pruned separately: turning backups off or on never deletes the other kind.
+- **Keeping:** after each new copy, the oldest of the same kind beyond `keep` are deleted (never
+  the one just made).
+- **Back up now:** a backup at once, even if unchanged; counts toward `keep`. A second one in the
+  same second is refused (error window).
+- **Restore tab:** every backup and safety copy, newest first: Date (UTC), Time (UTC), Folders,
+  Macros (the tree, not the trash bin), Type, and **Restore...**. Hovering the date shows the file
+  name. The files are read a few per frame (at most 32 MB each); one that can't be read shows
+  "Can't be read" with the reason, and no button. **Refresh** reads the folder again.
+- **Restore:** a pop-up asks first (date, time, counts; "the trash bin too"). The file is read
+  and checked into a new tree before anything changes; then the whole library is replaced, the
+  library window opens, and **Undo restore** (the Undo import bar) puts the old one back until
+  the game closes. Link files sync as at a start (the file wins), so a restore never writes old
+  lines into a linked `.txt`.
 
 ## Search
 

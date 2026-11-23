@@ -10,6 +10,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <map>
 #include <memory>
 #include <unordered_map>
 #include <optional>
@@ -23,6 +24,7 @@
 #include "Languages.h"
 #include "Localization.h"
 
+#include "Backups.h"
 #include "BuildStamp.h"
 #include "ChatLine.h"
 #include "Cooldown.h"
@@ -82,6 +84,7 @@ namespace
     // Saving
     bool   s_Dirty      = false;
     double s_SaveAt     = 0.0;
+    uint64_t s_TreeGen  = 0; // counts the library's changes (MarkDirty), for the backups
     bool   s_SaveFailed = false;
 
     // Messages from loading, shown until dismissed.
@@ -141,6 +144,7 @@ namespace
     {
         s_Dirty  = true;
         s_SaveAt = ImGui::GetTime() + kSaveDelaySec;
+        ++s_TreeGen;
     }
 
     // Opens the error window: aAction is what the user did, in their words ("Clicked Export all").
@@ -2512,6 +2516,7 @@ namespace
 
     std::optional<nlohmann::json> s_UndoImport; // the library before the last import
     std::string                   s_UndoText;
+    bool                          s_UndoIsRestore = false; // from a backup (Restore tab), not an import
 
     void LoadImport(Exchange::Package aPkg, bool aPasted = false)
     {
@@ -2903,6 +2908,7 @@ namespace
         if (ImGui::Button(T("Import selected")) && canImport)
         {
             s_UndoImport = s_Tree.ToJson();
+            s_UndoIsRestore = false;
             size_t n = 0;
             bool applied = true;
             try { n = Exchange::Apply(s_Tree, *target, plan, s_ImportOpt); }
@@ -2946,7 +2952,7 @@ namespace
         if (!s_UndoImport) return;
         ImGui::TextWrapped("%s", s_UndoText.c_str());
         UiFont::Row row;
-        if (ImGui::SmallButton(T("Undo import")))
+        if (ImGui::SmallButton(s_UndoIsRestore ? T("Undo restore") : T("Undo import")))
         {
             std::vector<std::string> ignored;
             s_Tree.FromJson(*s_UndoImport, &ignored);
@@ -2956,11 +2962,12 @@ namespace
             s_RawForId   = 0;
             CancelCapture();
             MarkDirty();
-            SetInfo(T("The import was undone."));
+            SetInfo(s_UndoIsRestore ? T("The restore was undone.") : T("The import was undone."));
             return;
         }
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip(T("Puts your library back as it was before the import.\nChanges you made since then are undone too."));
+            ImGui::SetTooltip("%s", s_UndoIsRestore ? T("Puts your library back as it was before the restore.\nChanges you made since then are undone too.")
+                                                    : T("Puts your library back as it was before the import.\nChanges you made since then are undone too."));
         row.Next(UiFont::ButtonWidth(T("Dismiss##undo")));
         if (ImGui::SmallButton(T("Dismiss##undo"))) s_UndoImport.reset();
         ImGui::Separator();
@@ -3282,6 +3289,333 @@ namespace
     }
 }
 
+// --- Backups (docs/design.md, "Backups") ---------------------------------------------------------
+
+namespace
+{
+    constexpr const char* kBackupsSetting  = "backups";
+    constexpr double      kBackupCheckSec  = 60.0;   // how often the schedule is looked at
+    constexpr double      kBackupRetrySec  = 3600.0; // after a backup couldn't be written
+    constexpr int         kParsePerFrame   = 4;      // backups read per frame for the Restore tab
+    constexpr char kRestoreBackupPopup[] = TX("Restore this backup?###chatmsg_restore_backup");
+    constexpr const char* kUnitLabels[] = {TX("hour(s)"), TX("day(s)"), TX("week(s)"), TX("month(s)")};
+
+    Backups::Settings        s_Backup;
+    std::vector<std::string> s_BackupNames;             // files in the backups folder
+    double                   s_BackupCheckAt = 0.0;     // ImGui time of the next look at the schedule
+    uint64_t                 s_BackupSkipGen = ~0ull;   // the library was unchanged (or empty) at this edit
+    Backups::EKind           s_BackupSkipKind = Backups::EKind::Backup;
+    std::string              s_BackupInfo;              // "Backed up as ..." under the button
+
+    // What the Restore tab shows for one backup (read once per file name).
+    struct BackupInfo
+    {
+        bool        Ok = false;
+        size_t      Folders = 0, Macros = 0;
+        std::string Error;
+    };
+    std::map<std::string, BackupInfo> s_BackupInfos;
+    std::string s_RestoreName;          // the backup the Restore? popup is about
+    bool        s_RestoreOpenRequest = false;
+
+    enum class EBackup { Made, Unchanged, Failed };
+
+    void RefreshBackupNames() { s_BackupNames = Storage::BackupNames(); }
+
+    // Writes a backup of the library as it is now, then deletes the oldest of that kind beyond
+    // aKeep. Without aForce, nothing is written when the newest one of that kind is the same.
+    EBackup MakeBackup(Backups::EKind aKind, int aKeep, bool aForce, std::string* aName = nullptr)
+    {
+        if (Storage::BackupsDir().empty()) return EBackup::Failed;
+        RefreshBackupNames();
+        const std::string text = Storage::LibraryText(s_Tree);
+        if (!aForce)
+        {
+            const std::time_t newest = Backups::Newest(s_BackupNames, aKind);
+            std::string old;
+            if (newest != 0 && Storage::ReadBackupText(Backups::FileName(aKind, newest), old) && old == text)
+                return EBackup::Unchanged;
+        }
+        const std::string name = Backups::FileName(aKind, std::time(nullptr));
+        if (!Storage::WriteBackup(name, text))
+        {
+            LogF(LOGL_WARNING, "The backup %s couldn't be written.", name.c_str());
+            return EBackup::Failed;
+        }
+        LogF(LOGL_INFO, "Backed up the macros as %s.", name.c_str());
+        if (aName) *aName = name;
+        RefreshBackupNames();
+        for (const std::string& old : Backups::ToDelete(s_BackupNames, aKind, aKeep))
+        {
+            if (old == name) continue; // never the one just made (a clock set back)
+            if (Storage::DeleteBackup(old)) s_BackupInfos.erase(old);
+        }
+        RefreshBackupNames();
+        return EBackup::Made;
+    }
+
+    // Once a minute: the user's schedule, or the weekly safety copy while backups are off.
+    void CheckBackups()
+    {
+        if (ImGui::GetTime() < s_BackupCheckAt) return;
+        s_BackupCheckAt = ImGui::GetTime() + kBackupCheckSec;
+        if (Storage::AddonDir().empty()) return;
+        const Backups::EKind kind = Backups::Kind(s_Backup);
+        if (s_TreeGen == s_BackupSkipGen && kind == s_BackupSkipKind) return; // nothing new to back up
+        RefreshBackupNames();
+        if (!Backups::IsDue(Backups::Newest(s_BackupNames, kind), std::time(nullptr), Backups::UnitInEffect(s_Backup),
+                            Backups::EveryInEffect(s_Backup)))
+            return;
+        if (s_Tree.Root().Children.empty() && s_Tree.Trash().empty())
+        {
+            s_BackupSkipGen = s_TreeGen; // an empty library isn't worth a copy
+            s_BackupSkipKind = kind;
+            return;
+        }
+        switch (MakeBackup(kind, Backups::KeepInEffect(s_Backup), false))
+        {
+        case EBackup::Made: break;
+        case EBackup::Unchanged:
+            s_BackupSkipGen  = s_TreeGen; // look again after the next change
+            s_BackupSkipKind = kind;
+            break;
+        case EBackup::Failed: s_BackupCheckAt = ImGui::GetTime() + kBackupRetrySec; break;
+        }
+    }
+
+    void SaveBackupSettings()
+    {
+        s_Backup = Backups::Clamped(s_Backup);
+        if (!Storage::SaveSetting(kBackupsSetting, Backups::ToJson(s_Backup)))
+            LogF(LOGL_WARNING, "The backup settings couldn't be saved.");
+        s_BackupCheckAt = 0.0; // look at the new schedule now
+        s_BackupSkipGen = ~0ull;
+    }
+
+    std::string ExampleBackupName() { return Backups::FileName(Backups::EKind::Backup, std::time(nullptr)); }
+
+    void DrawBackupOptions()
+    {
+        if (ImGui::Checkbox(T("Make backups of my macros"), &s_Backup.Enabled)) SaveBackupSettings();
+
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted(T("Back up every"));
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(Px(90.0f));
+        int every = s_Backup.Every;
+        if (ImGui::InputInt("##backup_every", &every, 1, 1) && every != s_Backup.Every)
+        {
+            s_Backup.Every = every;
+            SaveBackupSettings();
+        }
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(Px(140.0f));
+        const int unit = static_cast<int>(s_Backup.Unit);
+        if (ImGui::BeginCombo("##backup_unit", Localization::Lookup(kUnitLabels[unit])))
+        {
+            for (int i = 0; i < static_cast<int>(Backups::EUnit::Count); ++i)
+                if (ImGui::Selectable(Localization::Lookup(kUnitLabels[i]), i == unit) && i != unit)
+                {
+                    s_Backup.Unit = static_cast<Backups::EUnit>(i);
+                    SaveBackupSettings(); // brings "every" into the new unit's range
+                }
+            ImGui::EndCombo();
+        }
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip(T("Up to 48 hours, 30 days, 8 weeks or 12 months."));
+
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted(T("Copies to keep"));
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(Px(90.0f));
+        int keep = s_Backup.Keep;
+        if (ImGui::InputInt("##backup_keep", &keep, 1, 5) && keep != s_Backup.Keep)
+        {
+            s_Backup.Keep = keep;
+            SaveBackupSettings();
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip(T("1 to 50."));
+        ImGui::Spacing();
+
+        ImGui::TextWrapped(T("Backups go into <GW2>\\addons\\GW2_Chat_Messages\\backups\\. Each file is named with the "
+                             "date and time of the backup in UTC, for example %s."), ExampleBackupName().c_str());
+        ImGui::TextWrapped(T("A backup is only made when your macros changed since the last one. When there are more "
+                             "copies than you keep, the oldest are deleted."));
+        if (!s_Backup.Enabled)
+            ImGui::TextColored(kWarnColor, "%s", T("Backups are off."));
+        if (!s_Backup.Enabled)
+            ImGui::TextWrapped(T("While backups are off, the addon still quietly makes a safety copy of your macros once "
+                                 "a week, in case macros.json is ever damaged. It keeps the last 4 and deletes the oldest "
+                                 "when it makes a new one. They're on the Restore tab too."));
+
+        const Backups::EKind kind = Backups::Kind(s_Backup);
+        const std::time_t newest = Backups::Newest(s_BackupNames, kind);
+        if (newest == 0) ImGui::TextDisabled("%s", kind == Backups::EKind::Backup ? T("No backup yet.") : T("No safety copy yet."));
+        else
+            ImGui::TextDisabled(kind == Backups::EKind::Backup ? T("Last backup: %s at %s UTC.") : T("Last safety copy: %s at %s UTC."),
+                                Backups::DateText(newest).c_str(), Backups::TimeText(newest).c_str());
+
+        UiFont::Row row;
+        if (ImGui::Button(T("Back up now")))
+        {
+            std::string name;
+            if (MakeBackup(Backups::EKind::Backup, Backups::Clamped(s_Backup).Keep, true, &name) == EBackup::Made)
+                s_BackupInfo = Fmt(T("Backed up as %s."), name.c_str());
+            else
+            {
+                s_BackupInfo.clear();
+                ShowError(T("Clicked Back up now in the addon's options"),
+                          T("The backup couldn't be written (one may have been made this second already). Check the Nexus log."));
+            }
+        }
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip(T("Makes a backup now, even if nothing changed. It counts as one of the copies you keep."));
+        row.Next(UiFont::ButtonWidth(T("Open the backups folder")));
+        if (ImGui::Button(T("Open the backups folder"))) Storage::OpenFolder(Storage::BackupsDir());
+        if (!s_BackupInfo.empty()) ImGui::TextWrapped("%s", s_BackupInfo.c_str());
+    }
+
+    void RestoreBackup(const std::string& aName)
+    {
+        const char* action = T("Clicked Restore on the Restore tab of the addon's options");
+        Backups::EKind kind;
+        std::time_t when = 0;
+        MacroTree::Tree tree;
+        std::string error;
+        if (!Backups::ParseFileName(aName, kind, when) || !Storage::ReadBackup(aName, tree, error))
+        {
+            ShowError(action, Fmt(T("The backup %s couldn't be restored: %s"), aName.c_str(), error.c_str()));
+            return;
+        }
+        CloseImport();
+        s_UndoImport    = s_Tree.ToJson();
+        s_UndoIsRestore = true;
+        s_UndoText      = Fmt(T("Restored the backup from %s at %s UTC."), Backups::DateText(when).c_str(), Backups::TimeText(when).c_str());
+        s_Tree       = std::move(tree);
+        // Linked macros sync again as at a start: a link file that exists wins, so a restore never
+        // writes old lines into the user's .txt files.
+        s_LinkStates.clear();
+        s_LinkProblems.clear();
+        s_SelectedId = 0;
+        s_TrashSelId = 0;
+        s_RawForId   = 0;
+        CancelCapture();
+        MarkDirty();
+        s_ShowMainWindow = true;
+    }
+
+    void DrawRestoreBackupPopup()
+    {
+        if (s_RestoreOpenRequest)
+        {
+            ImGui::OpenPopup(Localization::Lookup(kRestoreBackupPopup));
+            s_RestoreOpenRequest = false;
+        }
+        if (!ImGui::BeginPopupModal(Localization::Lookup(kRestoreBackupPopup), nullptr, ImGuiWindowFlags_AlwaysAutoResize)) return;
+        ImGui::PushTextWrapPos(Px(420.0f));
+        Backups::EKind kind;
+        std::time_t when = 0;
+        const auto info = s_BackupInfos.find(s_RestoreName);
+        if (Backups::ParseFileName(s_RestoreName, kind, when) && info != s_BackupInfos.end() && info->second.Ok)
+        {
+            ImGui::TextWrapped(T("Replace your whole library with the backup from %s at %s UTC (%zu folder(s), %zu macro(s))?"),
+                               Backups::DateText(when).c_str(), Backups::TimeText(when).c_str(), info->second.Folders, info->second.Macros);
+            ImGui::TextWrapped(T("Every folder and macro you have now is replaced, and so is the trash bin. Until the game "
+                                 "closes, Undo restore in the library window puts your library back as it is now."));
+            if (ImGui::Button(T("Restore"))) { RestoreBackup(s_RestoreName); ImGui::CloseCurrentPopup(); }
+            ImGui::SameLine();
+        }
+        if (ImGui::Button(T("Cancel"))) ImGui::CloseCurrentPopup();
+        ImGui::PopTextWrapPos();
+        ImGui::EndPopup();
+    }
+
+    void DrawRestoreOptions()
+    {
+        ImGui::TextWrapped(T("Your backups and safety copies, newest first. Restore replaces your whole library with the "
+                             "one in the backup."));
+        UiFont::Row row;
+        if (ImGui::Button(T("Refresh")))
+        {
+            s_BackupInfos.clear();
+            RefreshBackupNames();
+        }
+        row.Next(UiFont::ButtonWidth(T("Open the backups folder")));
+        if (ImGui::Button(T("Open the backups folder"))) Storage::OpenFolder(Storage::BackupsDir());
+
+        struct Row { std::string Name; Backups::EKind Kind; std::time_t When; };
+        std::vector<Row> rows;
+        for (const std::string& n : s_BackupNames)
+        {
+            Row r{n, Backups::EKind::Backup, 0};
+            if (Backups::ParseFileName(n, r.Kind, r.When)) rows.push_back(std::move(r));
+        }
+        std::sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) { return a.When != b.When ? a.When > b.When : a.Name > b.Name; });
+        if (rows.empty())
+        {
+            ImGui::TextDisabled("%s", T("There are no backups yet."));
+            return;
+        }
+
+        // A few files are read per frame, so a long list never stalls the game.
+        int parsed = 0;
+        for (const Row& r : rows)
+        {
+            if (parsed >= kParsePerFrame) break;
+            if (s_BackupInfos.count(r.Name)) continue;
+            BackupInfo bi;
+            MacroTree::Tree tree;
+            bi.Ok = Storage::ReadBackup(r.Name, tree, bi.Error);
+            if (bi.Ok) Tree::CountDescendants(tree.Root(), &bi.Folders, &bi.Macros);
+            s_BackupInfos[r.Name] = std::move(bi);
+            ++parsed;
+        }
+
+        const ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit;
+        if (ImGui::BeginTable("##backups", 6, flags))
+        {
+            ImGui::TableSetupColumn(T("Date (UTC)"));
+            ImGui::TableSetupColumn(T("Time (UTC)"));
+            ImGui::TableSetupColumn(T("Folders"));
+            ImGui::TableSetupColumn(T("Macros"));
+            ImGui::TableSetupColumn(T("Type"));
+            ImGui::TableSetupColumn("##restore");
+            ImGui::TableHeadersRow();
+            for (const Row& r : rows)
+            {
+                ImGui::PushID(r.Name.c_str());
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted(Backups::DateText(r.When).c_str());
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", r.Name.c_str());
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted(Backups::TimeText(r.When).c_str());
+                const auto it = s_BackupInfos.find(r.Name);
+                ImGui::TableNextColumn();
+                if (it == s_BackupInfos.end()) ImGui::TextDisabled("...");
+                else if (it->second.Ok) ImGui::Text("%zu", it->second.Folders);
+                else
+                {
+                    ImGui::TextColored(kWarnColor, "%s", T("Can't be read"));
+                    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", it->second.Error.c_str());
+                }
+                ImGui::TableNextColumn();
+                if (it != s_BackupInfos.end() && it->second.Ok) ImGui::Text("%zu", it->second.Macros);
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted(r.Kind == Backups::EKind::Backup ? T("Backup") : T("Safety copy"));
+                ImGui::TableNextColumn();
+                if (it != s_BackupInfos.end() && it->second.Ok && ImGui::SmallButton(T("Restore...")))
+                {
+                    s_RestoreName = r.Name;
+                    s_RestoreOpenRequest = true; // opened below, outside the table's ID level
+                }
+                ImGui::PopID();
+            }
+            ImGui::EndTable();
+        }
+    }
+}
+
 void Ui::Init()
 {
     UiFont::Init();
@@ -3293,11 +3627,18 @@ void Ui::Init()
         s_ActiveOnly = active != settings.end() && active->is_boolean() && active->get<bool>(); // off by default
         const auto examples = settings.find(kExamplesSetting);
         s_ExamplesAdded = examples != settings.end() && examples->is_boolean() && examples->get<bool>();
+        const auto backups = settings.find(kBackupsSetting);
+        s_Backup = backups != settings.end() ? Backups::FromJson(*backups) : Backups::Settings{};
     }
     s_TrashSelId = 0;
     // The imports and exports folders exist from the start, so there's never one to make by hand.
-    if (Storage::ImportsDir().empty() || Storage::ExportsDir().empty())
-        LogF(LOGL_WARNING, "The imports and exports folders couldn't be created.");
+    if (Storage::ImportsDir().empty() || Storage::ExportsDir().empty() || Storage::BackupsDir().empty())
+        LogF(LOGL_WARNING, "The imports, exports and backups folders couldn't be created.");
+    RefreshBackupNames();
+    s_BackupCheckAt = 0.0;
+    s_BackupSkipGen = ~0ull;
+    s_BackupInfos.clear();
+    s_BackupInfo.clear();
     s_Mumble = static_cast<Mumble::Data*>(g_Api->DataLink_Get(DL_MUMBLE_LINK));
     s_LoadMessages.clear();
     const bool noLibrary = Storage::LoadMacros(s_Tree, s_LoadMessages);
@@ -3341,6 +3682,11 @@ void Ui::Shutdown()
     s_Preview = {};
     s_Cooldowns.Clear();
     s_ExamplesRequest = false;
+    s_BackupNames.clear();
+    s_BackupInfos.clear();
+    s_RestoreName.clear();
+    s_RestoreOpenRequest = false;
+    s_UndoIsRestore = false;
 }
 
 void Ui::Render()
@@ -3358,6 +3704,7 @@ void Ui::Render()
     DrawErrorWindow();
     UiFont::Pop();
     if (s_Dirty && ImGui::GetTime() >= s_SaveAt) SaveNow();
+    CheckBackups();
 }
 
 void Ui::RenderOptions()
@@ -3367,41 +3714,58 @@ void Ui::RenderOptions()
     DrawLink(T("Chat Messages on GitHub"), kRepositoryUrl);
     DrawLink(T("ArenaNet's macro policy"), kMacroPolicyUrl);
     ImGui::TextDisabled(T("This addon only sends chat messages you start yourself. Don't use it to automate gameplay."));
-    ImGui::TextDisabled(T("Your macros are saved in <GW2>\\addons\\GW2_Chat_Messages\\macros.json."));
-    if (ImGui::Button(T("Open macro library"))) s_ShowMainWindow = true;
-    ImGui::SameLine();
-    if (ImGui::Button(T("Add the example macros")))
+    if (!ImGui::BeginTabBar("##chatmsg_options")) return;
+    if (ImGui::BeginTabItem(T("General###chatmsg_tab_general")))
     {
-        s_ShowMainWindow  = true; // the library asks first (replace, or add again) and shows them
-        s_ExamplesRequest = true;
+        ImGui::TextDisabled(T("Your macros are saved in <GW2>\\addons\\GW2_Chat_Messages\\macros.json."));
+        if (ImGui::Button(T("Open macro library"))) s_ShowMainWindow = true;
+        ImGui::SameLine();
+        if (ImGui::Button(T("Add the example macros")))
+        {
+            s_ShowMainWindow  = true; // the library asks first (replace, or add again) and shows them
+            s_ExamplesRequest = true;
+        }
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip(T("Adds an \"Examples\" folder to the library, with macros that show several lines,\n"
+                              "channels, a whisper, placeholders and filters. If you already have it, the library\n"
+                              "asks whether to replace it with a fresh copy. Your own macros aren't changed.\n"
+                              "The examples have no hotkeys."));
+        ImGui::Spacing();
+        UiFont::DrawCombo(T("Text size"));
+        ImGui::TextDisabled(T("The size of the text in this addon's windows (not this page)."));
+        ImGui::Spacing();
+        DrawLanguageOptions();
+        ImGui::Spacing();
+        if (ImGui::Checkbox(T("Use a trash bin for deleted folders and macros"), &s_TrashOn))
+        {
+            if (!Storage::SaveSetting(kTrashSetting, s_TrashOn)) LogF(LOGL_WARNING, "The trash bin setting couldn't be saved.");
+        }
+        ImGui::TextWrapped(T("On: Delete moves a folder or macro to the Trash bin at the bottom of the library, "
+                           "with no question asked. From there you can restore it (back where it was, or at the top "
+                           "level if its folder is gone) or delete it for good. Items in the bin can't be sent or "
+                           "used by a hotkey. They stay until you empty the bin. "
+                           "Off: Delete asks first and removes the item for good. Items already in the bin stay "
+                           "there, and the bin stays visible, until you empty it."));
+        if (!s_Tree.Trash().empty()) ImGui::TextDisabled(T("The trash bin holds %zu item(s)."), s_Tree.Trash().size());
+        ImGui::Spacing();
+        DrawMapListOptions();
+        ImGui::Spacing();
+        ImGui::TextWrapped(T("Quick menu: right-click the scroll icon in the Nexus bar, or set a key for "
+                           "\"Open Chat Messages quick menu\" in Nexus > Options > Keybinds."));
+        ImGui::EndTabItem();
     }
-    if (ImGui::IsItemHovered())
-        ImGui::SetTooltip(T("Adds an \"Examples\" folder to the library, with macros that show several lines,\n"
-                          "channels, a whisper, placeholders and filters. If you already have it, the library\n"
-                          "asks whether to replace it with a fresh copy. Your own macros aren't changed.\n"
-                          "The examples have no hotkeys."));
-    ImGui::Spacing();
-    UiFont::DrawCombo(T("Text size"));
-    ImGui::TextDisabled(T("The size of the text in this addon's windows (not this page)."));
-    ImGui::Spacing();
-    DrawLanguageOptions();
-    ImGui::Spacing();
-    if (ImGui::Checkbox(T("Use a trash bin for deleted folders and macros"), &s_TrashOn))
+    if (ImGui::BeginTabItem(T("Backups###chatmsg_tab_backups")))
     {
-        if (!Storage::SaveSetting(kTrashSetting, s_TrashOn)) LogF(LOGL_WARNING, "The trash bin setting couldn't be saved.");
+        DrawBackupOptions();
+        ImGui::EndTabItem();
     }
-    ImGui::TextWrapped(T("On: Delete moves a folder or macro to the Trash bin at the bottom of the library, "
-                       "with no question asked. From there you can restore it (back where it was, or at the top "
-                       "level if its folder is gone) or delete it for good. Items in the bin can't be sent or "
-                       "used by a hotkey. They stay until you empty the bin. "
-                       "Off: Delete asks first and removes the item for good. Items already in the bin stay "
-                       "there, and the bin stays visible, until you empty it."));
-    if (!s_Tree.Trash().empty()) ImGui::TextDisabled(T("The trash bin holds %zu item(s)."), s_Tree.Trash().size());
-    ImGui::Spacing();
-    DrawMapListOptions();
-    ImGui::Spacing();
-    ImGui::TextWrapped(T("Quick menu: right-click the scroll icon in the Nexus bar, or set a key for "
-                       "\"Open Chat Messages quick menu\" in Nexus > Options > Keybinds."));
+    if (ImGui::BeginTabItem(T("Restore###chatmsg_tab_restore")))
+    {
+        DrawRestoreOptions();
+        ImGui::EndTabItem();
+    }
+    ImGui::EndTabBar();
+    DrawRestoreBackupPopup();
 }
 
 void Ui::ToggleMainWindow() { s_ShowMainWindow = !s_ShowMainWindow; }

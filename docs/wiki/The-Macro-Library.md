@@ -133,7 +133,7 @@ The trash bin is never exported, and isn't imported from someone else's `macros.
 - **Delete permanently...** removes one item for good. Right-click the bin > **Empty trash
   bin...** removes everything in it. Both ask first and can't be undone.
 - Items stay in the bin until you restore them or empty it.
-- To turn the bin off: Nexus > Options > Addons > Chat Messages, untick **Use a trash bin for
+- To turn the bin off: Nexus > Options > Addons > Chat Messages, **General** tab, untick **Use a trash bin for
   deleted folders and macros**. Delete then asks first and removes items for good. Anything
   already in the bin stays there until you empty it.
 

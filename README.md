@@ -48,6 +48,9 @@ chat for you, from a hotkey, a menu or a button.
   and the macro follows, edit the macro and the file follows.
 - **Trash bin:** deleted folders and macros can be restored, until you empty the bin (can be
   turned off).
+- **Backups:** copies of your library every few hours, days, weeks or months, as many as you
+  choose, named with the date and time in UTC; a weekly safety copy if you leave them off. The
+  Restore tab puts one back (with undo).
 - **Text size:** make the addon's text bigger (or smaller) with the fonts Nexus provides; the
   windows resize to match.
 - **Languages:** English, German, French and Spanish, following Nexus' language or your own
@@ -95,7 +98,7 @@ your own risk and are responsible for following ArenaNet's rules. More in the wi
 ## Documentation
 
 Full usage documentation is in the [wiki](https://github.com/Marthisdil/GW2_Chat_Messages/wiki): installation, the macro
-library, editing and sending macros, filters, placeholders, import and export, languages, files,
+library, editing and sending macros, filters, placeholders, import and export, languages, files, backups,
 troubleshooting and ArenaNet's policies.
 
 ## Building from source

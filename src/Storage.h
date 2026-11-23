@@ -14,6 +14,7 @@ namespace MacroTree { class Tree; }
 //   <GW2>\addons\GW2_Chat_Messages\settings.json      addon settings (the text size)
 //   <GW2>\addons\GW2_Chat_Messages\exports\           files written by Export
 //   <GW2>\addons\GW2_Chat_Messages\imports\           files listed in the Import window
+//   <GW2>\addons\GW2_Chat_Messages\backups\           copies of the library (docs/design.md, "Backups")
 //   <GW2>\addons\GW2_Chat_Messages\localization\      language files you add (docs/design.md, "Languages")
 // The folder comes from Nexus' Paths_GetAddonDirectory(). Nexus does not create it, so we do.
 namespace Storage
@@ -22,6 +23,7 @@ namespace Storage
     std::filesystem::path ExportsDir(); // <addon>\exports, created on first call (empty if unavailable)
     std::filesystem::path ImportsDir(); // <addon>\imports, the same
     std::filesystem::path LocalizationDir(); // <addon>\localization (language files), the same
+    std::filesystem::path BackupsDir(); // <addon>\backups, the same
 
     // A path in aDir for aFileName that doesn't exist yet: "name.json", else "name (2).json"...
     std::filesystem::path FreeFile(const std::filesystem::path& aDir, const std::string& aFileName);
@@ -47,6 +49,20 @@ namespace Storage
 
     // Returns false if the file couldn't be written (the reason is logged).
     bool SaveMacros(const MacroTree::Tree& aTree);
+
+    // The library as it's written to macros.json (and to a backup).
+    std::string LibraryText(const MacroTree::Tree& aTree);
+
+    // Backups (Backups.h). aName is always a file name that Backups::ParseFileName accepts;
+    // anything else is refused, so these never touch another file.
+    constexpr size_t kMaxBackupBytes = 32 * 1024 * 1024;
+    std::vector<std::string> BackupNames(); // the names of the files in the backups folder
+    bool WriteBackup(const std::string& aName, const std::string& aText); // false if it exists already
+    bool DeleteBackup(const std::string& aName);
+    // The file's text (at most kMaxBackupBytes). False if it can't be read.
+    bool ReadBackupText(const std::string& aName, std::string& aText);
+    // Reads a backup into aTree; aTree is only changed on success. aError says why not.
+    bool ReadBackup(const std::string& aName, MacroTree::Tree& aTree, std::string& aError);
 
     // settings.json as an object; an empty object if it's missing or can't be read (logged).
     nlohmann::json LoadSettings();

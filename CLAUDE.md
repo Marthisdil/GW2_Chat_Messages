@@ -127,6 +127,12 @@ to the todo list", add it there (don't start building it). Move agreed items int
   id `MacroTree::kReservedExamplesId`, which nothing else may ever get: never hand it out
   except through `Tree::ClaimReservedId`. No Nexus or ImGui dependency. Tested by
   `tests/ExamplesTests.cpp`.
+- `src/Backups.*`: backups on the user's schedule (or a weekly safety copy while they're off):
+  the file names (`macros_backup_YYYY-MM-DD_HH-MM-SS_UTC.json`, `macros_safety_...`), when one is
+  due, which old copies go, and the `"backups"` setting. No Nexus or ImGui dependency. Tested by
+  `tests/BackupsTests.cpp`. `Storage` reads and writes the files in `<addon>\backups\` (only
+  names `ParseFileName` accepts); `Ui.cpp` checks the schedule once a minute and draws the
+  options page's Backups and Restore tabs.
 - `src/Cooldown.*`: the hotkey cooldown and the 1-second guard after a send (`Tracker`), per
   macro; only hotkeys wait. No Nexus or ImGui dependency. Tested by `tests/CooldownTests.cpp`.
 - `src/Placeholders.*`: fills in `{time}`, `{random}`, `{map}` and the other placeholders. The

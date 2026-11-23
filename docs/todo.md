@@ -47,17 +47,12 @@ Built so far (in `docs/design.md`): the remaining messages translated ("Language
 map search ("Features"), the default-key warning ("Input safety", hotkeys), and the import and
 export folders, ready to open ("Import / export"), Preview next to Send now ("Features"), the
 per-macro hotkey cooldown ("Input safety", hotkeys), and the starter library with its
-reserved id and "ask first, replace" button ("Starter library"), all on 2026-11-23. What was left out of them is under section 4.
+reserved id and "ask first, replace" button ("Starter library"), and backups on a schedule with
+a Restore tab ("Backups"), all on 2026-11-23. What was left out of them is under section 4.
 
-Re-ranked 2026-11-23 after the starter library: smallest and safest first. Daily backups and
-favourites came up from section 5; "Filters on folders" is the owner's new idea and needs its
-questions settled first.
-
-### Daily rolling backups of `macros.json`
-
-Keep the last 7 days (one copy per day) in `<addon>\backups\`, on top of today's single `.bak`
-(which only covers the last save). Points to settle: how many to keep, and a "Restore a backup"
-choice in the Import window.
+Re-ranked 2026-11-23 after the starter library: smallest and safest first. Favourites came up
+from section 5; "Filters on folders" is the owner's new idea and needs its questions settled
+first.
 
 ### Favourites and "recently sent" in the quick menu
 
@@ -226,7 +221,7 @@ owner 2026-11-23, documented in the README and the wiki's Sending Macros page). 
 ## 5. New ideas to discuss (suggested 2026-11-23)
 
 Ranked 2026-11-23: low risk and most use first. Preview, cooldown, favourites, the starter
-library and daily backups moved up to section 2.
+library and backups moved up to section 2.
 
 ### A random pick inside the macro: `{pick a|b|c}`
 

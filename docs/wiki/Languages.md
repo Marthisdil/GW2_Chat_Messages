@@ -12,7 +12,7 @@ wrote them.
 
 ## Choosing the language
 
-Open **Nexus > Options**, go to the addon's page, and use the **Language** dropdown (under
+Open **Nexus > Options**, go to the addon's page (the **General** tab), and use the **Language** dropdown (under
 **Text size**):
 
 - **Follow Nexus (...)** (the default) uses the language set in Nexus' own options, and switches

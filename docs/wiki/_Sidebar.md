@@ -10,5 +10,6 @@
 - [Import and export](Import-and-Export)
 - [Languages](Languages)
 - [Files and data](Files-and-Data)
+- [Backups and restore](Backups-and-Restore)
 - [Safety and troubleshooting](Safety-and-Troubleshooting)
 - [ArenaNet's policies](ArenaNet-Policies)

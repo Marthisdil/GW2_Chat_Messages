@@ -6,6 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Backups:** the addon's options page now has **General**, **Backups** and **Restore** tabs
+  (everything from before is on General). On **Backups**, turn on **Make backups of my macros**
+  and choose how often (every 1-48 hours, 1-30 days, 1-8 weeks or 1-12 months) and how many
+  copies to keep (1-50). They go into the new `backups\` folder, named with the date and time in
+  UTC (`macros_backup_2026-11-23_21-46-05_UTC.json`), only when your macros changed, and the
+  oldest are deleted beyond the number you keep. **Back up now** makes one at once. While
+  backups are off, the addon quietly makes a safety copy once a week and keeps the last 4.
+  **Restore** lists them all (date, time, folders, macros, type) and puts one back after asking,
+  with **Undo restore** in the library window.
 - **Example macros:** on the first run, the library starts with an **Examples** folder (with
   nested folders) showing several lines and channels, a whisper, an emote, placeholders and
   filters, in the addon's language and with no hotkeys. **Add the example macros** on the
