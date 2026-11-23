@@ -21,6 +21,10 @@ namespace MacroTree
     constexpr size_t kMaxNameLength = 100; // bytes of UTF-8, same as bhm-chat-macros' title limit
     constexpr int kFormatVersion = 1;
     constexpr size_t kMaxLines = 50; // lines in one macro
+    // Problems listed from one file (FromJson, an import); the rest are only counted, so a crafted
+    // file can't fill memory or the preview with millions of lines (SEC-022).
+    constexpr size_t kMaxWarnings = 200;
+    std::string MoreWarnings(size_t aCount); // "...and 12 more problems like these."
 
     enum class ENodeType : uint8_t { Folder, Macro };
 

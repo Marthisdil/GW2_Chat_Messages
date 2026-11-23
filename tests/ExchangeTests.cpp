@@ -718,8 +718,32 @@ namespace
     }
 }
 
+// SEC-022: a file with thousands of bad entries lists kMaxWarnings of them, then a count.
+static void TestWarningsCapped()
+{
+    std::string json = "{\"format\":1,\"root\":{\"children\":[";
+    for (int i = 0; i < 5000; i++) json += i ? ",1" : "1";
+    json += "]}}";
+    Package p = FromJsonText(json);
+    CHECK(p.Warnings.size() == MacroTree::kMaxWarnings + 1);
+    CHECK(p.Warnings.front() == "Skipped an entry that isn't a folder or macro.");
+    CHECK(p.Warnings.back() == "...and 4800 more problem(s) like these.");
+
+    // A few problems are all listed, with no count.
+    Package few = FromJsonText("{\"format\":1,\"root\":{\"children\":[1,2,3]}}");
+    CHECK(few.Warnings.size() == 3);
+    CHECK(few.Warnings.back().find("more problem") == std::string::npos);
+
+    // Tree::FromJson on its own (loading macros.json) is capped the same way.
+    std::vector<std::string> warnings;
+    Tree t;
+    CHECK(t.FromJson(nlohmann::json::parse(json), &warnings));
+    CHECK(warnings.size() == MacroTree::kMaxWarnings + 1);
+}
+
 void RunExchangeTests()
 {
+    TestWarningsCapped();
     TestFileNames();
     TestExport();
     TestReadText();

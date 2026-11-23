@@ -36,6 +36,16 @@ namespace
     }
 
     // Checks what a source gave: something there, and not too much.
+    // The preview draws every warning each frame (SEC-022): list at most kMaxWarnings. JSON is
+    // capped while it's read (Tree::FromJson); a folder of up to kMaxFolderFiles files is cut here.
+    void CapWarnings(std::vector<std::string>& aWarnings)
+    {
+        if (aWarnings.size() <= kMaxWarnings + 1) return;
+        const size_t more = aWarnings.size() - kMaxWarnings;
+        aWarnings.resize(kMaxWarnings);
+        aWarnings.push_back(MoreWarnings(more));
+    }
+
     void Finish(Exchange::Package& aPkg)
     {
         if (!aPkg.Ok()) return;
@@ -591,6 +601,7 @@ namespace Exchange
             Node* top = r.Ok ? r.Target : nullptr;
             FolderReader reader{p.Items, p.Warnings};
             reader.Read(aPath, top, 1);
+            CapWarnings(p.Warnings);
             if (top && top->Children.empty()) p.Items.Delete(*top);
             if (Tree::CountDescendants(p.Items.Root()) == 0)
                 p.Error = "No .txt files with lines were found in it.";

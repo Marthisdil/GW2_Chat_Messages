@@ -144,7 +144,14 @@ namespace MacroTree
             std::vector<std::string>*    Warnings = nullptr;
             bool                         WarnedDepth = false;
 
-            void Warn(std::string s) { if (Warnings) Warnings->push_back(std::move(s)); }
+            size_t                       Dropped = 0; // warnings past kMaxWarnings
+
+            void Warn(std::string s)
+            {
+                if (!Warnings) return;
+                if (Warnings->size() < kMaxWarnings) Warnings->push_back(std::move(s));
+                else Dropped++;
+            }
 
             // Parses the children of a folder json into aFolder. aLevel = aFolder's folder level.
             void ParseChildren(const json& aJson, Node& aFolder, int aLevel)
@@ -800,7 +807,13 @@ namespace MacroTree
             for (Node* n : p.NeedIdNodes) n->Id = NewId();
             if (aWarnings) aWarnings->push_back("Gave new ids to " + std::to_string(p.NeedIdNodes.size()) + " item(s) with a missing or repeated id.");
         }
+        if (aWarnings && p.Dropped) aWarnings->push_back(MoreWarnings(p.Dropped));
         return true;
+    }
+
+    std::string MoreWarnings(size_t aCount)
+    {
+        return "...and " + std::to_string(aCount) + " more problem(s) like these.";
     }
 }
 
