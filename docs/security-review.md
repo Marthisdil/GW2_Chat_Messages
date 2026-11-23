@@ -51,8 +51,10 @@ to scan, where untrusted data comes in, which bug classes matter here, and how p
    in `Languages.cpp` (regular files only, no links, at most `kMaxFiles`), and that a text can't
    change an ImGui ID (the `##` part is kept from the English literal). The built-in files go
    through the same checks.
-6. **Our own files** (`macros.json`, `settings.json`, `.bak`): may be hand-edited or damaged; an
-   unreadable file is renamed aside, never overwritten.
+6. **Our own files** (`macros.json`, `settings.json`, `.bak`, `backups\*.json`): may be hand-edited
+   or damaged; an unreadable file is renamed aside, never overwritten. Backups are read (capped at
+   32 MB) only under names `Backups::ParseFileName` accepts, and a restore checks the whole file
+   before the library changes.
 
 ## Bug classes that matter here
 

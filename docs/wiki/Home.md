@@ -21,7 +21,9 @@ chat macros in folders and types them into chat for you.
 - [Import and export](Import-and-Export): share and back up macros, with a preview and undo.
 - [Languages](Languages): show the addon in English, German, French, Spanish, or a language
   file of your own.
-- [Files and data](Files-and-Data): where your macros are saved, and backups.
+- [Files and data](Files-and-Data): where your macros are saved.
+- [Backups and restore](Backups-and-Restore): backups on a schedule you choose, and putting
+  one back.
 - [Safety and troubleshooting](Safety-and-Troubleshooting): how sending stays safe, and what the
   error messages mean.
 - [ArenaNet's policies](ArenaNet-Policies): the macro policy, what the addon is for (and not
