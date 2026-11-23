@@ -267,7 +267,9 @@ the error window says the path wasn't found. `{json id http://127.0.0.1/}` and
 `{json id http://localhost/}`: nothing is sent; the error window says the address leads to this
 PC or a local network. `{json id http://localtest.me/}` (a public name that points to 127.0.0.1):
 the same. *Only if you use a WinHTTP proxy* (`netsh winhttp show proxy` names one): the build
-number still arrives, and the local addresses are still refused.
+number still arrives, and the local addresses are still refused, as is
+`{json id http://odd_name.example.com/}` (the error window says the name has characters that
+can't be checked).
 
 **I6. Offline.** Close the game, delete `maps.json`, disconnect from the internet, start the game
 (Nexus may complain about updates; that's fine) and enter a map. `{map}` fails, the error window says the API

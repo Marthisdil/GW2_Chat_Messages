@@ -74,6 +74,8 @@ Sends one value from a JSON web page. For example, the current game build:
 - Behind a proxy (a WinHTTP proxy, set with `netsh winhttp set proxy`), the addon looks the
   address up itself before sending, and checks every redirect the same way. If your network only
   lets the proxy look names up, that `{json}` is refused, because the address can't be checked.
+  Behind a proxy, addresses whose name has characters other than letters, digits, `-` and `.`
+  are refused too.
 
 ## Length
 

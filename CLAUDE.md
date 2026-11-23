@@ -114,7 +114,8 @@ to the todo list", add it there (don't start building it). Move agreed items int
   names cached in `maps.json`, looked up on a background thread. Link `winhttp.lib` and `ws2_32.lib`.
   `{json}` uses `Http::GetPublic`, which refuses servers on this PC or a local network (a status
   callback checks the connection's real address before every request; behind a WinHTTP proxy it
-  looks the target and every redirect up itself, `GetAddrInfoW`); the address rule is
+  looks the target and every redirect up itself, `GetAddrInfoW`, sends only plain host names, and
+  lets a local connection through only if it's the proxy's own address); the address rule is
   `src/NetAddress.*`, with no Nexus, ImGui or windows.h dependency, tested by
   `tests/NetAddressTests.cpp`.
 - `src/Exchange.*`: import and export: the export format, reading .json/.txt/folders into a

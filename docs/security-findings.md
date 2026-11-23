@@ -222,15 +222,24 @@ made.
     request (new, reused keep-alive and redirect hops);
   - **a proxy:** that address is the proxy's, so the target's name is looked up first
     (`GetAddrInfoW`) and every redirect's (`WINHTTP_CALLBACK_STATUS_REDIRECT`); any local address
-    refuses it, and so does a name that can't be looked up (owner: fail closed).
+    refuses it, and so does a name that can't be looked up (owner: fail closed). Only plain host
+    names (letters, digits, `-`, `.`) and IP literals are sent, so the proxy can't read the name
+    differently from our lookup. The real connection is still checked before every request: a
+    local address passes only if it is one of the proxy's own (its names looked up when the
+    request starts), so a host WinHTTP reaches directly (the bypass list) gets the no-proxy check.
   - **Accepted limit (owner):** behind a proxy, a DNS server that answers us with a public
-    address and the proxy with a local one (DNS rebinding). It needs the attacker's own DNS
-    server and a proxy that can reach the LAN.
+    address and the proxy with a local one (DNS rebinding), or split-horizon DNS on the proxy's
+    side. It needs the attacker's own DNS server and a proxy that can reach the LAN.
+  Quick audit of the PR (2026-11-22, `/security-review`): no findings; its notes 1 (check the real
+  connection behind a proxy too) and 2 (odd host names) are closed as above, note 3 (split-horizon
+  DNS) falls under the accepted limit.
   Checked without a proxy: the GW2 API works; `127.0.0.1`, `localhost`, `[::1]`, `192.168.1.1`,
-  `169.254.169.254` and `localtest.me` (a public name for 127.0.0.1) are refused. With a faked
-  proxy setting: the same local targets are refused at the lookup, before any connection. Not
-  checked: a real proxy, and a redirect through it (in-game check I5).
-- **Status:** Fixing in `feature/sec-012`, commit `9f7d407`.
+  `169.254.169.254` and `localtest.me` (a public name for 127.0.0.1) are refused. Through a real
+  local proxy (`127.0.0.1:8888`, a test build that pins it): the GW2 API works through the proxy;
+  the same local targets are refused at the lookup and never reach the proxy; `odd_name.example.com`
+  is refused for its name. With a dead proxy: "couldn't connect". Not checked: a redirect through
+  a proxy, and a bypass-list host (in-game check I5).
+- **Status:** Fixing in `feature/sec-012`, commits `9f7d407` and `07fcc1a`.
 
 ### SEC-013
 
