@@ -44,6 +44,7 @@ folder with someone else's file), **Medium** (wrong behaviour reachable with rea
 | [SEC-025](#sec-025) | 2026-11-22 (approx.) | Low | `src/Exchange.cpp` (folder import) | A crafted folder import can hold about 1.5 GB; an out-of-memory error there isn't caught | Fixed | PR #38, commit `7afa630`, build `b76b291` |
 | [SEC-026](#sec-026) | 2026-11-22 (approx.) | Info | `src/Ui.cpp:1404` (`InputString`) | A C1 control character pasted into the editor stays in the line until the next load | Fixed | PR #38, commit `4716bfe`, build `b76b291` |
 | [SEC-027](#sec-027) | 2026-11-22 22:05 | High | `src/Exchange.cpp` (`ApplyItems`), `src/MacroTree.cpp` (`CheckName`) | Importing many macros into one folder, and its preview on a re-import, took quadratic time: the game freezes | Fixed | PR #35, commit `1247a73`, build `f055144` |
+| [SEC-028](#sec-028) | 2026-11-23 01:14 | High | `src/Placeholders.cpp` (`Uses`, `HasPlaceholders`) | Finding placeholder names took quadratic time on a line full of `{`, every frame in the import preview and the editor: the game freezes | Fixing | `feature/import-flags`, commit `83be7f6` |
 
 "Build" is the build stamp's commit (shown in the Nexus log and the DLL's Properties). Until a
 release is tagged, it's the PR's commit; the release that first ships a fix is added when it's
@@ -419,6 +420,24 @@ made.
   scan; `Dest` keeps the existing items by lower-case name. Test `TestApplyMany`: 5,000 macros
   into one folder, again (all renamed), then with Replace.
 - **Status:** Fixed in PR #35, commit `1247a73`; first build `f055144`.
+
+### SEC-028
+
+- **Found:** 2026-11-23 01:14 UTC, the quick audit (`/security-review`) of the import-flags PR
+  (a lower-confidence note). **Severity:** High (a game freeze from an imported file, as
+  SEC-027). **Where:** `src/Placeholders.cpp` (`Uses`, `HasPlaceholders`, both through
+  `NameAt`).
+- **Finding:** both called `NameAt` for every `{`, and each call scanned forward to the next `}`.
+  A line full of `{` (an imported macro's message can be megabytes) cost about N² per call. The
+  new `Uses` runs on every imported macro every frame while the Import window is open (the
+  preview's {txt}/{json} marks), and `HasPlaceholders` every frame in the editor once such a
+  macro is in the library, so either froze the game. `Expand` has the same loop, but runs on
+  the sender's worker thread, once per send.
+- **Decision (2026-11-23):** fix in the same PR, since that PR adds `Uses`. One shared pass
+  (`AnyName`) finds the same names as `NameAt` (a `{` whose first `}` comes before any other
+  `{`). Tests: edge cases matching `Expand`, and 2 MB of `{` under 2 s in the test build.
+  `Expand` is left as it is (worker thread, not a freeze); open for the owner to revisit.
+- **Status:** Fixing in `feature/import-flags`, commit `83be7f6`.
 
 ## Tuning decisions (checks turned off)
 
