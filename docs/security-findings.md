@@ -28,7 +28,7 @@ folder with someone else's file), **Medium** (wrong behaviour reachable with rea
 | [SEC-009](#sec-009) | 2026-11-22 01:59 | High | `src/MacroTree.cpp:258` (`MakeNamesUnique`) | Renaming repeated names took cubic time, and never ended for names near 100 bytes: the game freezes | Fixed | PR #33 (merged via #34), commit `dc2cba4`, build `1dcd3c0` |
 | [SEC-010](#sec-010) | 2026-11-22 01:59 | High | `src/MacroTree.cpp:185` (`ParseChildren`) | A wrongly typed `"expanded"` threw `type_error` out of the render callback | Fixed | PR #33 (merged via #34), commit `f8f58b1`, build `1dcd3c0` |
 | [SEC-011](#sec-011) | 2026-11-22 01:59 | High | `src/MacroTree.cpp:662` (`Tree::FromJson`) | A wrongly typed `"format"` threw `type_error` out of the render callback | Fixed | PR #33 (merged via #34), commit `36e562c`, build `1dcd3c0` |
-| [SEC-012](#sec-012) | 2026-11-22 01:59 | Medium | `src/Placeholders.cpp:181` (`{json}`) | An imported `{json}` can fetch this PC's or the LAN's addresses and type the answer into chat | Open | |
+| [SEC-012](#sec-012) | 2026-11-22 01:59 | Medium | `src/Placeholders.cpp:181` (`{json}`) | An imported `{json}` can fetch this PC's or the LAN's addresses and type the answer into chat | Fixing | `feature/sec-012`, commit `9f7d407` |
 | [SEC-013](#sec-013) | 2026-11-22 01:59 | Medium | `src/Sender.cpp:149` (`TypeUtf8`) | Placeholder values can add control characters or start a line with a `/` command | Fixing | `feature/sec-013`, commit `727675a` |
 | [SEC-014](#sec-014) | 2026-11-22 01:59 | High | `src/Exchange.cpp:445` (`ExportJsonText`) | Non-UTF-8 text from a `.txt` made every save fail and a JSON export close the game | Fixed | PR #33 (merged via #34), commit `8ea6ce0`, build `1dcd3c0` |
 | [SEC-015](#sec-015) | 2026-11-22 01:59 | Medium | `src/Sender.cpp:149` (`TypeUtf8`) | Control characters in imported lines were typed into chat as `WM_CHAR` | Fixed | PR #33 (merged via #34), commit `d7435e2`, build `1dcd3c0` |
@@ -215,7 +215,22 @@ made.
   path the reviewer tried, but anyone with a WinHTTP proxy on their PC or LAN would lose `{json}`
   entirely. Its draft is `CLAUDE-SECURITY-20261122-015931/F5-declined-draft.diff`. See also the
   todo "Hide {txt} and {json} behind an advanced setting".
-- **Status:** Open.
+- **Decision (2026-11-22, the owner):** fix it proxy-aware. `Http::GetPublic` (for `{json}`) uses
+  the draft's address rules (`src/NetAddress.*`) and pins WinHTTP's default proxy setting for the
+  request:
+  - **no proxy:** the draft's check, on the address of the connection actually used, before every
+    request (new, reused keep-alive and redirect hops);
+  - **a proxy:** that address is the proxy's, so the target's name is looked up first
+    (`GetAddrInfoW`) and every redirect's (`WINHTTP_CALLBACK_STATUS_REDIRECT`); any local address
+    refuses it, and so does a name that can't be looked up (owner: fail closed).
+  - **Accepted limit (owner):** behind a proxy, a DNS server that answers us with a public
+    address and the proxy with a local one (DNS rebinding). It needs the attacker's own DNS
+    server and a proxy that can reach the LAN.
+  Checked without a proxy: the GW2 API works; `127.0.0.1`, `localhost`, `[::1]`, `192.168.1.1`,
+  `169.254.169.254` and `localtest.me` (a public name for 127.0.0.1) are refused. With a faked
+  proxy setting: the same local targets are refused at the lookup, before any connection. Not
+  checked: a real proxy, and a redirect through it (in-game check I5).
+- **Status:** Fixing in `feature/sec-012`, commit `9f7d407`.
 
 ### SEC-013
 

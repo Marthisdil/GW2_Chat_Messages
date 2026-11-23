@@ -17,7 +17,7 @@ Results so far (keep your notes in `docs\testing results.txt`; it isn't committe
 |---|---|---|
 | A1 | Passed (PR #15 build) | Re-check only the version and build stamp lines with a new build. |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text now wraps (PR #17) and errors open the error window (PR #18). Re-check those two points only, then go on to A3. |
-| A3 to Q | Not run yet | New since the last build: O (trash bin), the counter in A4, J3b/J6 (import checkboxes, trash bin not exported or imported). Newer still: P (search box; P6-P8 the "only active here" filter and the quick menu search), J7 (a whole library), and F2/F3/F7 (mouse buttons now need Ctrl, Alt or Shift). Newest: Q (languages), J8/K6 (text files that aren't UTF-8), and J2 (**Keep hotkeys** now starts unticked for every import; ticked, the preview shows the hotkeys), O3's long name, and I8 (a placeholder can't add a command or a key). |
+| A3 to Q | Not run yet | New since the last build: O (trash bin), the counter in A4, J3b/J6 (import checkboxes, trash bin not exported or imported). Newer still: P (search box; P6-P8 the "only active here" filter and the quick menu search), J7 (a whole library), and F2/F3/F7 (mouse buttons now need Ctrl, Alt or Shift). Newest: Q (languages), J8/K6 (text files that aren't UTF-8), and J2 (**Keep hotkeys** now starts unticked for every import; ticked, the preview shows the hotkeys), O3's long name, I8 (a placeholder can't add a command or a key) and I5 (`{json}` refuses local addresses). |
 
 **Errors since PR #18:** every refusal and error the checks below expect ("refused", "says
 why", "a message") now opens the **error window** instead of a red line under the editor. Click
@@ -265,7 +265,9 @@ arrive on a map you haven't visited this session. `{json id https://api.guildwar
 sends the game build number. `{json nope https://api.guildwars2.com/v2/build}`: nothing is sent;
 the error window says the path wasn't found. `{json id http://127.0.0.1/}` and
 `{json id http://localhost/}`: nothing is sent; the error window says the address leads to this
-PC or a local network.
+PC or a local network. `{json id http://localtest.me/}` (a public name that points to 127.0.0.1):
+the same. *Only if you use a WinHTTP proxy* (`netsh winhttp show proxy` names one): the build
+number still arrives, and the local addresses are still refused.
 
 **I6. Offline.** Close the game, delete `maps.json`, disconnect from the internet, start the game
 (Nexus may complain about updates; that's fine) and enter a map. `{map}` fails, the error window says the API
