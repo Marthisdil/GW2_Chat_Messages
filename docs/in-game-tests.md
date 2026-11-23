@@ -16,7 +16,7 @@ Results so far (keep your notes in `docs\testing results.txt`; it isn't committe
 
 | Session | State | Notes |
 |---|---|---|
-| A1 | Passed (PR #15 build) | Re-check with the current build: the log and the options page show its version and build stamp. |
+| A1 | Passed (PR #15 build) | Re-check with the current build: the log and the options page show its version and build stamp, and the two links and the folders are new (A1's last part). |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text wraps and errors open the error window. Re-check those two points only (marked *Re-check* in A2), then go on to A3. |
 | A3 to Q | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build. |
 
@@ -58,6 +58,12 @@ version show the version, Comments shows the same stamp.
 The scroll icon is in the Nexus bar. Clicking it opens and closes the library; so does your
 library key. Nexus > Options > Addons > Chat Messages shows the version, the build stamp under it
 ("Build abc1234, ..."), and an **Open macro library** button that works.
+Under the build stamp: **Chat Messages on GitHub** and **ArenaNet's macro policy** in the link
+colour, underlined. Hovering one shows the hand cursor and its address; clicking it opens that
+page in your browser (the repository; ArenaNet's "Policy: Macros and Macro Use"). Back in the
+game, keys and Tab work. The line under them says the addon only sends messages you start.
+In the addon folder, `imports\` and `exports\` exist (delete both before starting the game to
+check they're created).
 
 **A2. Building the tree.** In the library:
 - **New folder** (toolbar) → name `Test`. In it, **New folder inside** five times, one inside the
@@ -312,7 +318,9 @@ the number after `"format":` to `"x"` (with the quotes) and save. Start the game
 ## J. Import and export
 
 **J1. Export.** Right-click `Say` > Export > **Save as a .json file**, twice: `exports\Say.json`
-and `exports\Say (2).json` appear and the status names the file. **Save as a .txt file** and
+and `exports\Say (2).json` appear and the status names the file, with an **Open exports folder**
+button under it that opens the folder (it goes away with the message). The toolbar's **Exports
+folder** opens it too. **Save as a .txt file** and
 **Copy the lines as text** give the raw lines, one per row (paste into Notepad to check).
 
 **J2. Import with conflicts.** Right-click the `Test` folder > Export > **Copy to the clipboard**.

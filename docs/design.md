@@ -342,7 +342,10 @@ unload. Hotkeys are kept only if "Keep hotkeys" is ticked; it starts unticked fo
 import, each time a source is loaded (changed 2026-11-22, security review: a shared file's
 hotkey would send its macro on an ordinary key press). While it's ticked, the preview shows
 each macro's hotkey as `Name  [key]`. Link files are never exported or imported. A Replace
-keeps the existing item's id and place.)*
+keeps the existing item's id and place. Since 2026-11-23 the addon creates `imports\` and
+`exports\` when it loads (`Ui::Init`), the toolbar has **Exports folder**, and the "Exported to
+..." message has **Open exports folder**; the Import window already had **Open imports
+folder**.)*
 
 - **Export**: the whole tree, one folder, or one macro. The format is
   `ChatMessages.export.json` (`{ "format": 1, "root": Node }`). A single macro can also be
@@ -496,8 +499,23 @@ Rules this addon follows:
 
 Raidcore's guide quotes ArenaNet's macro policy ("one user action may lead to one game action"),
 and Raidcore has a "Macro Usage" label. Sending several lines from one key press is how bhm
-works and is what the user wants. Before the first public release, check ArenaNet's current
-policy and mention the behaviour when registering with Raidcore.
+works and is what the user wants. When registering with Raidcore, mention the multi-line
+sending.
+
+**Checked 2026-11-23** ([Policy: Macros and Macro Use](https://help.guildwars2.com/hc/en-us/articles/360013762153-Policy-Macros-and-Macro-Use)):
+attended macros are allowed if they give no unfair advantage; unattended ones never are. The
+examples of what isn't allowed are all gameplay (skills, skill chains, farming, events, several
+accounts, bots), and each macro should be a single action that needs the user to start it
+again. The addon fits that: the user starts every send, one press sends the macro once, and it
+only types chat. So that users know, the policy is linked:
+- on the options page, under the version and build (`kMacroPolicyUrl` in `Globals.h`, opened by
+  `Storage::OpenWebPage`, which only opens `https://` addresses built into the addon), with a
+  line saying the addon only sends messages the user starts and mustn't automate gameplay;
+- in the README ("Macro use and ArenaNet's policy") and the wiki's
+  [ArenaNet's policies](https://github.com/Marthisdil/GW2_Chat_Messages/wiki/ArenaNet-Policies)
+  page (the macro and third-party program policies, what the addon is and isn't for, and the
+  disclaimer).
+The options page also links the repository (`kRepositoryUrl`).
 
 ## Versioning
 

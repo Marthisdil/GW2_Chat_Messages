@@ -20,13 +20,6 @@ whether the game takes the addon's keys and text, matters most: everything else 
 Find a way to send whispers that needs no Tab key (Tab is the riskiest key the sender presses).
 Test in game during session B.
 
-### ArenaNet's macro policy
-
-Check ArenaNet's current macro policy before the first public release, and mention the
-multi-line sending when registering the addon with Raidcore. Several lines from one key press is
-exactly what the policy is about; if it calls for one line per press or a forced delay, it's
-cheaper to know before the release. Also decides "Timed lines" (section 5).
-
 ### Full security scan for the first release (added 2026-11-23)
 
 The first release needs a whole-repository claude-security scan of areas A-D (untrusted files,
@@ -50,24 +43,37 @@ the first release.
 
 ## 2. Quick wins
 
-The first four were built on 2026-11-23 and moved to `docs/design.md`: the remaining messages are
-translated ("Languages"), the filters have a map search with the API's full list, visited maps
-and a weekly refresh ("Features", filters and placeholders), and the hotkey editor warns about
-GW2's default keys ("Input safety", hotkeys). What was left out of them is under section 4.
-The folders item below moved here from section 4.
+Built so far (in `docs/design.md`): the remaining messages translated ("Languages"), the filters'
+map search ("Features"), the default-key warning ("Input safety", hotkeys), and the import and
+export folders, ready to open ("Import / export"), all on 2026-11-23. What was left out of them
+is under section 4.
 
-### Import and export folders, ready to open (added 2026-11-23)
+Moved up from section 5 on 2026-11-23, in this order:
 
-Replaces the Windows file picker idea, which the owner dropped on 2026-11-23: a file dialog over
-the game would be one more thing to get wrong, for little gain.
+### Preview what would be sent
 
-- The addon creates `<addon>\imports\` and `<addon>\exports\` itself (at load, or the first time
-  the Import window or an export needs them), so the user never has to make them by hand.
-- The Import window has a link that opens the imports folder (an **Open imports folder** button
-  exists today; check it creates the folder first). The export side gets the same: a link that
-  opens the exports folder, shown where exports are made and after an export ("Exported to ...").
-- When this is built: document both folders and the links in the wiki (Import and Export, Files
-  and Data) and the README.
+A button in the editor that shows every line exactly as it would be typed (placeholders filled
+in, the channel command added), without sending anything. Errors show the same way as on send.
+
+### Per-macro cooldown or double-send guard
+
+A minimum time between two sends of the same macro (and maybe a global one), so a held,
+bouncing or repeated hotkey can't spam chat or run into the game's chat flood limit.
+
+- Points to settle: default value (off, or a second or two), whether the quick menu and Send now
+  obey it too, and what the user sees when a press is ignored.
+
+### Favourites and "recently sent" in the quick menu
+
+Pinned macros and the last few sent ones at the top of the quick menu (and the pop-up), so the
+common ones don't need digging through folders.
+
+### A starter library on first run
+
+When there's no `macros.json` yet, create an "Examples" folder showing lines, a whisper,
+placeholders and filters. Helps new users and makes good screenshots. Points to settle: whether
+it's in every language, and a way to get it back later (Import from a built-in file).
+
 
 ## 3. Bigger features
 
@@ -217,21 +223,8 @@ owner 2026-11-23, documented in the README and the wiki's Sending Macros page). 
 
 ## 5. New ideas to discuss (suggested 2026-11-23)
 
-Ranked 2026-11-23: low risk and most use first. Timed lines is last because it waits on the
-macro policy check (section 1).
-
-### Preview what would be sent
-
-A button in the editor that shows every line exactly as it would be typed (placeholders filled
-in, the channel command added), without sending anything. Errors show the same way as on send.
-
-### Per-macro cooldown or double-send guard
-
-A minimum time between two sends of the same macro (and maybe a global one), so a held,
-bouncing or repeated hotkey can't spam chat or run into the game's chat flood limit.
-
-- Points to settle: default value (off, or a second or two), whether the quick menu and Send now
-  obey it too, and what the user sees when a press is ignored.
+Ranked 2026-11-23: low risk and most use first. Preview, cooldown, favourites and the starter
+library moved up to section 2.
 
 ### Daily rolling backups of `macros.json`
 
@@ -247,11 +240,6 @@ part of `{txt}` (a random line) with no file reading: every choice is written in
 - Points to settle: the separator (`|`), how to write a literal `|`, whether empty choices are
   allowed, and a limit on the number of choices. The chosen text is a value, so the SEC-013
   mask applies (it can't start a command), and the length check uses the longest choice.
-
-### Favourites and "recently sent" in the quick menu
-
-Pinned macros and the last few sent ones at the top of the quick menu (and the pop-up), so the
-common ones don't need digging through folders.
 
 ### Character placeholders: `{name}`, `{profession}`, `{spec}`
 
@@ -270,12 +258,6 @@ filters, from MumbleLink's identity.
   aren't logged in; whether it applies to hotkeys, the quick menu and the library dimming like
   the other filters.
 
-### A starter library on first run
-
-When there's no `macros.json` yet, create an "Examples" folder showing lines, a whisper,
-placeholders and filters. Helps new users and makes good screenshots. Points to settle: whether
-it's in every language, and a way to get it back later (Import from a built-in file).
-
 ### Copy to clipboard as a fallback
 
 When a send is refused (game not focused, a text box already open...), offer "Copy the text"
@@ -285,5 +267,8 @@ only a user action, and only for one line at a time (or all lines joined).
 ### Timed lines ("Pull in 5... 4... 3...")
 
 A delay per line (e.g. one second between lines) for countdowns. Raid leaders would like it, but
-it's the idea most likely to conflict with ArenaNet's macro policy: decide only after the
-policy check (section 1).
+it's the idea closest to ArenaNet's macro policy. The policy was read on 2026-11-23 (see the
+wiki's ArenaNet's policies page): it's about gameplay (skills, farming, bots, playing while
+away) and asks that each macro is a single action you start again. A countdown is still one
+press sending chat lines once, but it runs on its own for several seconds, so decide with
+care (and say so when registering with Raidcore).

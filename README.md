@@ -72,11 +72,29 @@ chat for you, from a hotkey, a menu or a button.
 
 Your macros are saved in `<GW2>\addons\GW2_Chat_Messages\macros.json`.
 
+## Macro use and ArenaNet's policy
+
+This addon is for **your convenience**: it types chat messages that you start yourself (a
+hotkey, the quick menu or **Send now**) into the channels you chose. One press sends one macro
+once. It never sends on a timer or while you're away, and it doesn't use skills, move your
+character or press any other game key.
+
+**Don't try to use it to automate gameplay**, to play or stay "active" while you're away, or to
+spam other players. ArenaNet allows macros only while you're at the keyboard, and only when they
+give no unfair advantage: read their
+[Policy: Macros and Macro Use](https://help.guildwars2.com/hc/en-us/articles/360013762153-Policy-Macros-and-Macro-Use) and
+[Policy: Third-Party Programs](https://help.guildwars2.com/hc/en-us/articles/360013625034-Policy-Third-Party-Programs).
+The addon's options page in Nexus links to the macro policy too.
+
+GW2 Chat Messages is unofficial and isn't made, reviewed or endorsed by ArenaNet. You use it at
+your own risk and are responsible for following ArenaNet's rules. More in the wiki's
+[ArenaNet's policies](https://github.com/Marthisdil/GW2_Chat_Messages/wiki/ArenaNet-Policies) page.
+
 ## Documentation
 
 Full usage documentation is in the [wiki](https://github.com/Marthisdil/GW2_Chat_Messages/wiki): installation, the macro
-library, editing and sending macros, filters, placeholders, import and export, languages, files
-and troubleshooting.
+library, editing and sending macros, filters, placeholders, import and export, languages, files,
+troubleshooting and ArenaNet's policies.
 
 ## Building from source
 
