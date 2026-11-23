@@ -29,7 +29,7 @@ chat for you, from a hotkey, a menu or a button.
     Shift+click already do things (chat links, targeting), so a macro would go off by accident.
     The editor warns when a key is one of GW2's default keys (like F1 or Ctrl+T).
   - **Quick menu:** right-click the scroll icon in the Nexus bar, or press a key you choose, to
-    pick a macro from nested menus.
+    pick a macro from nested menus, with your favourites and the macros you sent last at the top.
   - **Send now** in the library. **Preview**, next to it, shows exactly what would be typed
     (placeholders filled in, channel commands added) without sending anything.
 - **Filters:** limit a macro to PvE, WvW or PvP, and to certain maps. Hotkeys and the quick menu

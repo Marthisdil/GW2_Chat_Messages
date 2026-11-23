@@ -39,6 +39,7 @@
 #include "MacroTree.h"
 #include "Mumble.h"
 #include "Placeholders.h"
+#include "QuickLists.h"
 #include "Search.h"
 #include "SendPlan.h"
 #include "Sender.h"
@@ -103,6 +104,8 @@ namespace
     bool           s_SearchFocus    = false; // Ctrl+F: put the cursor in the box next frame
     bool           s_ActiveOnly     = false; // settings.json "active_only": only macros active here
     constexpr const char* kActiveOnlySetting = "active_only";
+    constexpr const char* kRecentSetting      = "recently_sent"; // the macros sent last (QuickLists.h)
+    constexpr const char* kRecentCountSetting = "recent_count";  // how many the quick menu shows
     Search::Result s_Search;
     const ImU32    kSearchHighlight = IM_COL32(255, 215, 0, 80);
 
@@ -125,7 +128,7 @@ namespace
 
     // Requests raised while drawing the tree, handled after it (never change the tree mid-draw).
     enum class EAction { None, Move, Shift, Sort, OpenName, OpenDelete, ExpandAll,
-                         Trash, OpenRestore, RestoreNow, OpenPurge, OpenEmpty };
+                         Trash, OpenRestore, RestoreNow, OpenPurge, OpenEmpty, Favourite };
     struct Action
     {
         EAction  Type   = EAction::None;
@@ -345,6 +348,16 @@ namespace
     // anywhere count, but only hotkeys wait: Send now and the quick menu always send.
     Cooldown::Tracker s_Cooldowns;
 
+    // The macros sent last, from anywhere, for the quick menu's "Recently sent" (QuickLists.h).
+    QuickLists::Recent s_Recent;
+    int                s_RecentCount = QuickLists::kDefaultRecent;
+
+    void SaveRecent()
+    {
+        if (!Storage::SaveSetting(kRecentSetting, s_Recent.ToJson()))
+            LogF(LOGL_WARNING, "The recently sent list couldn't be saved.");
+    }
+
     // A short Nexus on-screen alert: the only feedback a hotkey has when the library is closed.
     void Alert(const std::string& aText)
     {
@@ -376,6 +389,8 @@ namespace
         if (Sender::Start(aMacro.Id, aMacro.Lines, error))
         {
             s_Cooldowns.Started(aMacro.Id, ImGui::GetTime());
+            s_Recent.Sent(aMacro.Id);
+            SaveRecent();
             s_SendAlertOnFail = alert;
             s_SendAction      = action;
             return;
@@ -547,6 +562,20 @@ namespace
                                                "Adding Ctrl, Alt or Shift is safer."));
             }
         }
+    }
+
+    // Favourite: listed at the top of the quick menu.
+    void DrawFavouriteRow(Node& aMacro)
+    {
+        bool fav = aMacro.Favourite;
+        if (ImGui::Checkbox(T("Favourite"), &fav))
+        {
+            aMacro.Favourite = fav;
+            MarkDirty();
+        }
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip(T("Favourites are listed at the top of the quick menu (where they're active),\n"
+                              "and marked with * in the library."));
     }
 
     // Cooldown: how long the hotkey waits before sending this macro again (0 = off).
@@ -1065,6 +1094,8 @@ namespace
         else
         {
             if (ImGui::MenuItem(T("Send now"), nullptr, false, !Sender::IsBusy())) SendMacro(aNode); // doesn't change the tree
+            if (ImGui::MenuItem(T("Favourite"), nullptr, aNode.Favourite)) s_Pending = {EAction::Favourite, aNode.Id};
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip(T("Favourites are listed at the top of the quick menu."));
             ImGui::Separator();
         }
         if (ImGui::MenuItem(T("Rename")))
@@ -1136,7 +1167,8 @@ namespace
 
         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAvailWidth;
         if (aNode.Id == s_SelectedId) flags |= ImGuiTreeNodeFlags_Selected;
-        const std::string suffix = SearchSuffix(aNode);
+        std::string suffix = SearchSuffix(aNode);
+        if (aNode.IsMacro() && aNode.Favourite) suffix += "  *"; // a favourite (the quick menu's top)
 
         bool open = false;
         if (aNode.IsFolder())
@@ -1534,6 +1566,13 @@ namespace
             s_PurgeAll = a.Type == EAction::OpenEmpty;
             s_PurgeId  = a.Id;
             ImGui::OpenPopup(kPurgePopup);
+            break;
+        case EAction::Favourite:
+            if (Node* node = s_Tree.Find(a.Id); node && node->IsMacro())
+            {
+                node->Favourite = !node->Favourite;
+                MarkDirty();
+            }
             break;
         }
     }
@@ -2199,6 +2238,7 @@ namespace
         DrawPreview(aMacro);
         DrawHotkeyRow(aMacro);
         DrawCooldownRow(aMacro);
+        DrawFavouriteRow(aMacro);
         DrawFilters(aMacro);
         DrawLinkFile(aMacro);
         ImGui::Separator();
@@ -2441,6 +2481,33 @@ namespace
         }
     }
 
+    // The favourites and the recently sent macros that are active here, above the folders.
+    void DrawQuickLists(const Here& aHere)
+    {
+        const QuickLists::Lists ls = QuickLists::Build(s_Tree, s_Recent, s_RecentCount,
+                                                       [&](const Node& n) { return IsActiveHere(n, aHere); });
+        if (ls.Favourites.empty() && ls.Recent.empty()) return;
+        const bool busy = Sender::IsBusy();
+        const auto drawList = [&](const char* aTitle, const std::vector<const Node*>& aList, int aSection)
+        {
+            if (aList.empty()) return;
+            ImGui::TextDisabled("%s", aTitle);
+            ImGui::PushID(aSection); // the same macro can be in the tree below too
+            for (const Node* n : aList)
+            {
+                const std::string path  = MenuPath(*n);
+                const std::string label = path.empty() ? n->Name : n->Name + "  (" + path + ")";
+                ImGui::PushID(static_cast<int>(n->Id ^ (n->Id >> 32)));
+                DrawMenuMacro(*n, label.c_str(), busy);
+                ImGui::PopID();
+            }
+            ImGui::PopID();
+        };
+        drawList(T("Favourites"), ls.Favourites, 1);
+        drawList(T("Recently sent"), ls.Recent, 2);
+        ImGui::Separator();
+    }
+
     void DrawQuickMenu(MenuSearch& aSearch)
     {
         const int frame = ImGui::GetFrameCount();
@@ -2468,6 +2535,7 @@ namespace
             else
             {
                 if (Sender::IsBusy()) ImGui::TextColored(kWarnColor, T("Sending..."));
+                DrawQuickLists(here);
                 DrawQuickMenuItems(s_Tree.Root(), here);
             }
         }
@@ -3627,6 +3695,11 @@ void Ui::Init()
         s_ActiveOnly = active != settings.end() && active->is_boolean() && active->get<bool>(); // off by default
         const auto examples = settings.find(kExamplesSetting);
         s_ExamplesAdded = examples != settings.end() && examples->is_boolean() && examples->get<bool>();
+        const auto recent = settings.find(kRecentSetting);
+        if (recent != settings.end()) s_Recent.FromJson(*recent);
+        else s_Recent.Clear();
+        const auto recentCount = settings.find(kRecentCountSetting);
+        s_RecentCount = recentCount != settings.end() ? QuickLists::CountFromJson(*recentCount) : QuickLists::kDefaultRecent;
         const auto backups = settings.find(kBackupsSetting);
         s_Backup = backups != settings.end() ? Backups::FromJson(*backups) : Backups::Settings{};
     }
@@ -3681,6 +3754,7 @@ void Ui::Shutdown()
     s_LinkProblems.clear();
     s_Preview = {};
     s_Cooldowns.Clear();
+    s_Recent.Clear();
     s_ExamplesRequest = false;
     s_BackupNames.clear();
     s_BackupInfos.clear();
@@ -3752,6 +3826,33 @@ void Ui::RenderOptions()
         ImGui::Spacing();
         ImGui::TextWrapped(T("Quick menu: right-click the scroll icon in the Nexus bar, or set a key for "
                            "\"Open Chat Messages quick menu\" in Nexus > Options > Keybinds."));
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted(T("Recently sent in the quick menu:"));
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(Px(90.0f));
+        int count = s_RecentCount;
+        if (ImGui::InputInt("##recent_count", &count, 1, 1))
+        {
+            count = std::clamp(count, 0, QuickLists::kMaxRecent);
+            if (count != s_RecentCount)
+            {
+                s_RecentCount = count;
+                if (!Storage::SaveSetting(kRecentCountSetting, s_RecentCount))
+                    LogF(LOGL_WARNING, "The recently sent setting couldn't be saved.");
+            }
+        }
+        if (!s_Recent.Ids().empty())
+        {
+            ImGui::SameLine();
+            if (ImGui::SmallButton(T("Clear the list")))
+            {
+                s_Recent.Clear();
+                SaveRecent();
+            }
+        }
+        ImGui::TextWrapped(T("How many of the macros you sent last are listed at the top of the quick menu, under your "
+                           "favourites (0 to 10; 0 = none). Mark a favourite in the macro's editor, or right-click it "
+                           "in the library."));
         ImGui::EndTabItem();
     }
     if (ImGui::BeginTabItem(T("Backups###chatmsg_tab_backups")))

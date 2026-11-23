@@ -18,7 +18,7 @@ Results so far (keep your notes in `docs\testing results.txt`; it isn't committe
 |---|---|---|
 | A1 | Passed (PR #15 build) | Re-check with the current build: the log and the options page show its version and build stamp, and the two links and the folders are new (A1's last part). |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text wraps and errors open the error window. Re-check those two points only (marked *Re-check* in A2), then go on to A3. |
-| A3 to R | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (R, backups and restore, is the newest; A1b, the example macros, and F9, the hotkey cooldown, came just before). |
+| A3 to R | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (G4 and G5, favourites and recently sent, and R, backups and restore, are the newest; A1b, the example macros, and F9, the hotkey cooldown, came just before). |
 
 ## How to report
 
@@ -265,6 +265,18 @@ Put a folder and a macro with the same name in one folder: both work.
 
 **G2. Pop-up key.** Press your quick menu key: the menu opens at the mouse pointer. Press it again,
 or click outside: it closes. Send something from it.
+
+**G4. Favourites.** In the library, tick **Favourite** in one macro's editor, and right-click
+another > **Favourite**: both show `*` after their name. Open the quick menu: **Favourites** at
+the top lists both (with their folders in brackets), above the folders. Untick one: it's gone
+from the list. Give a favourite a filter that's off here (e.g. PvP only): it isn't listed.
+
+**G5. Recently sent.** Send three macros that aren't favourites: one by hotkey, one from the
+quick menu, one with Send now. **Recently sent** lists them newest first, under the favourites.
+Send a favourite: it isn't added under Recently sent. Restart the game: the list is still there.
+On the options page (General tab), set **Recently sent in the quick menu** to 1: only the newest
+shows; set 0: none. Set it back to 5, then **Clear the list**: it's empty. Delete a macro that
+was listed: it drops out. Type in the menu's search box: both lists are hidden while you search.
 
 **G3. Action camera (question).** Turn on action camera (mouse hidden), press the quick menu key.
 Where does it appear, and can you use it? We may need a "centre of the screen" option.
@@ -710,7 +722,7 @@ C1  C2 (did /w Name work without Tab?):
 D1  D2  D3  D4  D5  D6
 E1
 F1  F2 (which mouse buttons, where):  F3  F4  F5  F6  F7  F8
-G1  G2  G3 (where did it appear?):
+G1  G2  G3 (where did it appear?):  G4  G5
 H1  H2  H3  H4 (map: mode, map id):  H5  H6  H7  H8
 I1 (date format sent):  I2  I3  I4  I5  I6  I7  I8  I9
 J1  J2  J3  J3b  J4  J5  J6  J7  J8  J9  J10

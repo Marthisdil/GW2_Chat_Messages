@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Favourites and recently sent:** the quick menu lists your **Favourites** and the macros you
+  **Recently sent** (from anywhere, newest first) above the folders, only those active where you
+  are. Mark a favourite with the new **Favourite** box in the editor, or right-click > **Favourite**
+  in the library (it shows a `*` after the name). The options page's General tab sets how many
+  recently sent macros show (0-10, 5 by default) and can clear the list. Favourites aren't
+  exported.
 - **Backups:** the addon's options page now has **General**, **Backups** and **Restore** tabs
   (everything from before is on General). On **Backups**, turn on **Make backups of my macros**
   and choose how often (every 1-48 hours, 1-30 days, 1-8 weeks or 1-12 months) and how many

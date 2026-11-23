@@ -104,6 +104,7 @@ Right-click any item in the tree for:
 
 - **New folder inside** / **New macro inside** (folders)
 - **Send now** (macros)
+- **Favourite** (macros): ticks or unticks it, see [Favourites and recently sent](Sending-Macros#favourites-and-recently-sent)
 - **Rename**
 - **Move up** / **Move down** (not while [searching](#search))
 - **Export**: save as a .json or .txt file, or copy to the clipboard (see

@@ -129,6 +129,7 @@ namespace MacroTree
                 if (!n.LinkFile.empty()) j["link_file"] = n.LinkFile;
                 if (!n.Hotkey.Empty()) j["hotkey"] = Hotkey::ToString(n.Hotkey);
                 if (n.CooldownSec > 0) j["cooldown"] = n.CooldownSec;
+                if (n.Favourite) j["favourite"] = true;
             }
             return j;
         }
@@ -277,6 +278,14 @@ namespace MacroTree
                         else n.CooldownSec = static_cast<int>(v);
                     }
                     else Warn(Localization::Fmt(TR("Macro \"%s\": its cooldown isn't a whole number of seconds and was removed."),
+                                                n.Name.c_str()));
+                }
+                // "favourite": true or false; anything else is dropped (not a favourite).
+                auto fav = j.find("favourite");
+                if (fav != j.end())
+                {
+                    if (fav->is_boolean()) n.Favourite = fav->get<bool>();
+                    else Warn(Localization::Fmt(TR("Macro \"%s\": its favourite mark isn't true or false and was removed."),
                                                 n.Name.c_str()));
                 }
             }

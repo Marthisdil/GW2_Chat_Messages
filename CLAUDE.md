@@ -133,6 +133,9 @@ to the todo list", add it there (don't start building it). Move agreed items int
   `tests/BackupsTests.cpp`. `Storage` reads and writes the files in `<addon>\backups\` (only
   names `ParseFileName` accepts); `Ui.cpp` checks the schedule once a minute and draws the
   options page's Backups and Restore tabs.
+- `src/QuickLists.*`: the quick menu's Favourites and Recently sent lists (`Recent`, `Build`) and
+  the `"recently_sent"` / `"recent_count"` settings. No Nexus or ImGui dependency. Tested by
+  `tests/QuickListsTests.cpp`. The favourite mark itself is `Node::Favourite` (`MacroTree`).
 - `src/Cooldown.*`: the hotkey cooldown and the 1-second guard after a send (`Tracker`), per
   macro; only hotkeys wait. No Nexus or ImGui dependency. Tested by `tests/CooldownTests.cpp`.
 - `src/Placeholders.*`: fills in `{time}`, `{random}`, `{map}` and the other placeholders. The
