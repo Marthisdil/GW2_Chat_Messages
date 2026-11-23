@@ -10,6 +10,40 @@ the right.
 <!-- screenshot: library-window.png (docs/screenshots.md) -->
 > 📷 *Screenshot to come: the library window, with the tree and the editor.*
 
+## The Examples folder
+
+The first time the addon starts, the library isn't empty: an **Examples** folder shows what a
+macro can do. Select a macro to see how it's made, try **Preview** or **Send now**, and change or
+delete anything you like. It's an ordinary folder.
+
+```
+Examples
+├── Hello                      Say: "Hello everyone!"
+├── Basics
+│   ├── Two channels           Say, then Party
+│   ├── Whisper a friend       a whisper to "Friend Name"
+│   └── Wave                   an emote
+├── Placeholders
+│   ├── Roll a die             {random 1 6}
+│   ├── Time check             {time}
+│   └── Where am I             {map}
+└── Filters
+    ├── In WvW
+    │   └── Stack on tag       squad (broadcast as commander), WvW only
+    └── In Lion's Arch
+        └── Meet at the bank   map chat, only in Lion's Arch
+```
+
+- The examples are in the addon's language at the time, and none has a hotkey.
+- They're only added once. If you delete them, or start over by removing `macros.json`, they
+  don't come back by themselves.
+- To get them back, click **Add the example macros** on the addon's page in Nexus options. It
+  adds a new Examples folder (named "Examples (2)" if you still have one) and leaves your own
+  macros alone.
+
+<!-- screenshot: starter-library.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the library on a first run, with the Examples folder open.*
+
 ## Folders and macros
 
 - Folders can be nested up to **6 levels** deep, for example *Raids › Wing 3 › Escort*. Macros can

@@ -66,8 +66,9 @@ chat for you, from a hotkey, a menu or a button.
    `<GW2>\addons\`.
 2. In Nexus > Options > Game Keybinds, make sure your **Chat** key is set (and **Squad
    Broadcast** if you're a commander). The addon uses them to open chat.
-3. Left-click the scroll icon in the Nexus bar to open the macro library. Click **New macro**,
-   add a line, pick a channel and type a message.
+3. Left-click the scroll icon in the Nexus bar to open the macro library. The **Examples**
+   folder shows what a macro can do. Click **New macro**, add a line, pick a channel and type a
+   message.
 4. Press **Send now**, set a hotkey in the macro editor, or right-click the scroll icon for the
    quick menu.
 

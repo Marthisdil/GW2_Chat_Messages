@@ -45,22 +45,36 @@ the first release.
 
 Built so far (in `docs/design.md`): the remaining messages translated ("Languages"), the filters'
 map search ("Features"), the default-key warning ("Input safety", hotkeys), and the import and
-export folders, ready to open ("Import / export"), Preview next to Send now ("Features") and
-the per-macro hotkey cooldown ("Input safety", hotkeys), all on 2026-11-23. What was left out of them is under section 4.
+export folders, ready to open ("Import / export"), Preview next to Send now ("Features"), the
+per-macro hotkey cooldown ("Input safety", hotkeys) and the starter library ("Starter
+library"), all on 2026-11-23. What was left out of them is under section 4.
 
-Moved up from section 5 on 2026-11-23, in this order:
+Moved up from section 5 on 2026-11-23, in this order, plus the owner's new "Filters on folders"
+at the end:
 
 ### Favourites and "recently sent" in the quick menu
 
 Pinned macros and the last few sent ones at the top of the quick menu (and the pop-up), so the
 common ones don't need digging through folders.
 
-### A starter library on first run
+### Daily rolling backups of `macros.json`
 
-When there's no `macros.json` yet, create an "Examples" folder showing lines, a whisper,
-placeholders and filters. Helps new users and makes good screenshots. Points to settle: whether
-it's in every language, and a way to get it back later (Import from a built-in file).
+Keep the last 7 days (one copy per day) in `<addon>\backups\`, on top of today's single `.bak`
+(which only covers the last save). Points to settle: how many to keep, and a "Restore a backup"
+choice in the Import window.
 
+### Filters on folders (added 2026-11-23)
+
+Folder visibility that follows the filter system. What's there already: the quick menu hides a
+folder with no macro active where you are, and the library's **Only active here** box shows only
+the folders above active macros. What's missing is a filter **on a folder itself** (game modes,
+maps), which every macro inside it follows, so a whole "WvW" folder can be limited in one place.
+
+- Points to settle: whether a folder filter adds to the macros' own filters (a macro is active
+  only where both say so) or replaces them; how it shows in the tree and the editor (a folder
+  with a filter, a macro whose folder limits it); how it goes into `macros.json` and exports
+  (and what an older build does with it); and whether the library dims a whole folder that's
+  inactive here, like it dims macros.
 
 ## 3. Bigger features
 
@@ -210,14 +224,8 @@ owner 2026-11-23, documented in the README and the wiki's Sending Macros page). 
 
 ## 5. New ideas to discuss (suggested 2026-11-23)
 
-Ranked 2026-11-23: low risk and most use first. Preview, cooldown, favourites and the starter
-library moved up to section 2.
-
-### Daily rolling backups of `macros.json`
-
-Keep the last 7 days (one copy per day) in `<addon>\backups\`, on top of today's single `.bak`
-(which only covers the last save). Points to settle: how many to keep, and a "Restore a backup"
-choice in the Import window.
+Ranked 2026-11-23: low risk and most use first. Preview, cooldown, favourites, the starter
+library and daily backups moved up to section 2.
 
 ### A random pick inside the macro: `{pick a|b|c}`
 

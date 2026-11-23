@@ -148,6 +148,42 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
     50 are used and the file's extra lines are kept until the macro is edited.
   - The sync state is in memory only. Unload does a last sync.
 
+## Starter library
+
+Built 2026-11-23 (todo section 2). On the **first run** (no `macros.json` yet), the library starts
+with an **Examples** folder, with nested folders, so new users see what a macro can do:
+
+```
+Examples
+├── Hello                      Say: "Hello everyone!"
+├── Basics
+│   ├── Two channels           Say, then Party
+│   ├── Whisper a friend       a whisper to "Friend Name"
+│   └── Wave                   an emote
+├── Placeholders
+│   ├── Roll a die             {random 1 6}
+│   ├── Time check             {time}
+│   └── Where am I             {map}
+└── Filters
+    ├── In WvW
+    │   └── Stack on tag       squad (broadcast as commander), WvW only
+    └── In Lion's Arch
+        └── Meet at the bank   map chat, only in Lion's Arch
+```
+
+- **In the addon's language** at the moment it's added (names and lines are `TR` texts, so
+  de/fr/es get their own; map names in the lines are written per language). No hotkeys and no
+  cooldowns: nothing fires until the user sets a key.
+- **Once only:** `settings.json` gets `"examples_added": true` the first time the addon loads
+  (also when a library already exists), so a `macros.json` removed on purpose later starts
+  empty, as before. A library restored from the `.bak` doesn't get examples either.
+- **Getting them back:** the options page has **Add the example macros**: a new folder at the
+  top level ("Examples (2)" if the name is taken), selected and shown in the library. The
+  user's own macros aren't touched.
+- `src/Examples.*` builds it (no Nexus or ImGui), tested by `tests/ExamplesTests.cpp`: the shape,
+  every line within 199 units with no removed placeholder, a save and load round trip, and the
+  "(2)" names. It's an ordinary folder: edit, move or delete it like any other.
+
 ## Text size
 
 *(Built 2026-11-21; `src/TextSize.*` (rules, unit tested in `tests/TextSizeTests.cpp`) and
