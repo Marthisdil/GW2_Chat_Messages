@@ -11,6 +11,7 @@
 
 #include "ChatLine.h"
 #include "PathText.h"
+#include "Placeholders.h"
 
 namespace fs = std::filesystem;
 using nlohmann::json;
@@ -230,10 +231,71 @@ namespace
 
     size_t SubtreeSize(const Node& aNode) { return 1 + Tree::CountDescendants(aNode); }
 
+    // The user's own hotkeys (macros in the library, not the trash bin), by Combo::Pack.
+    using HotkeyOwners = std::map<uint32_t, std::vector<const Node*>>;
+
+    void CollectHotkeys(const Node& aFolder, HotkeyOwners& aOut)
+    {
+        for (const auto& c : aFolder.Children)
+        {
+            if (c->IsFolder()) CollectHotkeys(*c, aOut);
+            else if (!c->Hotkey.Empty()) aOut[c->Hotkey.Pack()].push_back(c.get());
+        }
+    }
+
+    bool MacroUses(const Node& aMacro, const char* aName)
+    {
+        for (const Line& l : aMacro.Lines)
+            if (Placeholders::Uses(l.Message, aName) || Placeholders::Uses(l.WhisperTo, aName)) return true;
+        return false;
+    }
+
     struct Planner
     {
         const Exchange::Options& Opt;
         Exchange::Plan&          Out;
+        const HotkeyOwners&      Mine;
+        std::set<const Node*>    Gone; // the user's items inside a folder this import replaces
+
+        void MarkGone(const Node& aFolder)
+        {
+            for (const auto& c : aFolder.Children)
+            {
+                Gone.insert(c.get());
+                MarkGone(*c);
+            }
+        }
+
+        // The flags of a macro that is imported (aReplaced: the user's macro it replaces, or null).
+        void Flag(const Node& aSrc, Exchange::PlanItem& aItem, const Node* aReplaced)
+        {
+            using Exchange::EHotkeyRisk;
+            aItem.ReadsFile = MacroUses(aSrc, "txt");
+            aItem.ReadsWeb  = MacroUses(aSrc, "json");
+            if (aItem.ReadsFile) Out.ReadsFile++;
+            if (aItem.ReadsWeb) Out.ReadsWeb++;
+            if (!aSrc.Hotkey.Empty())
+            {
+                if (!aSrc.Hotkey.HasModifier()) aItem.HotkeyRisk = EHotkeyRisk::NoModifier;
+                else
+                {
+                    auto it = Mine.find(aSrc.Hotkey.Pack());
+                    if (it != Mine.end())
+                        for (const Node* owner : it->second)
+                            if (owner != aReplaced && !Gone.count(owner)) { aItem.HotkeyRisk = EHotkeyRisk::Clash; break; }
+                }
+            }
+            // Replace: a risky hotkey isn't brought along, even with Keep hotkeys (owner, 2026-11-23).
+            aItem.HotkeyCleared = aReplaced && Opt.KeepHotkeys && aItem.HotkeyRisk != EHotkeyRisk::None;
+            if (aItem.HotkeyCleared) Out.HotkeysCleared++;
+            else if (aItem.HotkeyRisk == EHotkeyRisk::NoModifier) Out.HotkeysNoModifier++; // comes along (if kept)
+            else if (aItem.HotkeyRisk == EHotkeyRisk::Clash) Out.HotkeysClash++;
+            if (!aReplaced) return;
+            const bool brings = Opt.KeepHotkeys && !aItem.HotkeyCleared && !aSrc.Hotkey.Empty();
+            aItem.LosesOwnHotkey = !aReplaced->Hotkey.Empty() && !(brings && aSrc.Hotkey == aReplaced->Hotkey);
+            if (aItem.LosesOwnHotkey) Out.OwnHotkeysLost++;
+            if (aItem.HotkeyCleared || aItem.LosesOwnHotkey) Out.HotkeysChanged++;
+        }
 
         Exchange::EChoice ChoiceFor(const Node& aSrc) const
         {
@@ -323,6 +385,7 @@ namespace
                     aItem.Outcome = EOutcome::Replaced;
                     aItem.Name    = existing->Name;
                     Out.Replaced++;
+                    MarkGone(*existing); // their hotkeys don't clash with what comes in
                     Dest inner(nullptr, level); // its old contents go
                     Children(aSrc, inner, aItem.Children);
                     return;
@@ -363,6 +426,7 @@ namespace
                     aItem.Outcome = EOutcome::Replaced;
                     aItem.Name    = existing->Name;
                     Out.Replaced++;
+                    Flag(aSrc, aItem, existing);
                     return;
                 }
                 aItem.Outcome = EOutcome::Renamed;
@@ -371,6 +435,7 @@ namespace
             }
             aDest.Macros.insert(Lower(aItem.Name));
             Out.NewMacros++;
+            Flag(aSrc, aItem, nullptr);
         }
     };
 
@@ -452,7 +517,7 @@ namespace
                         existing->Expanded = src.Expanded;
                         ApplyItems(aTree, *existing, item.Children, aOpt, aCount);
                     }
-                    else CopyMacro(src, *existing, aOpt.KeepHotkeys);
+                    else CopyMacro(src, *existing, aOpt.KeepHotkeys && !item.HotkeyCleared);
                     continue;
                 }
                 break;
@@ -469,7 +534,7 @@ namespace
                 added->Expanded = src.Expanded;
                 ApplyItems(aTree, *added, item.Children, aOpt, aCount);
             }
-            else CopyMacro(src, *added, aOpt.KeepHotkeys);
+            else CopyMacro(src, *added, aOpt.KeepHotkeys && !item.HotkeyCleared);
         }
     }
 }
@@ -803,9 +868,10 @@ namespace Exchange
 
     Plan BuildPlan(const Tree& aTree, const Node& aTarget, const Tree& aPackage, const Options& aOptions)
     {
-        (void)aTree;
         Plan plan;
-        Planner planner{aOptions, plan};
+        HotkeyOwners mine;
+        CollectHotkeys(aTree.Root(), mine);
+        Planner planner{aOptions, plan, mine};
         Dest dest(&aTarget, Tree::FolderLevel(aTarget));
         planner.Children(aPackage.Root(), dest, plan.Items);
         return plan;

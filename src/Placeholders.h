@@ -55,6 +55,9 @@ namespace Placeholders
     // Whether aText has at least one known placeholder (for "filled in when sent" hints).
     bool HasPlaceholders(const std::string& aText);
 
+    // Whether aText has a placeholder called aName (lower case, like "txt"), in any case.
+    bool Uses(const std::string& aText, const std::string& aName);
+
     // Files for {txt} must stay inside the addon folder: no drive letters, no leading slash,
     // no ".." parts, nothing empty.
     bool IsSafeRelativePath(const std::string& aPath);

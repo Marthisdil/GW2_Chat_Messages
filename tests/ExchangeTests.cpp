@@ -730,6 +730,88 @@ namespace
     }
 }
 
+static const PlanItem* ItemNamed(const std::vector<PlanItem>& aItems, const std::string& aName)
+{
+    for (const PlanItem& i : aItems)
+        if (i.Src->Name == aName) return &i;
+    return nullptr;
+}
+
+static Hotkey::Combo Key(uint16_t aKey, bool aCtrl)
+{
+    Hotkey::Combo c;
+    c.Key  = aKey;
+    c.Ctrl = aCtrl;
+    return c;
+}
+
+// The preview flags macros that read files or web pages, and risky hotkeys; Replace doesn't
+// bring a risky hotkey even with Keep hotkeys (owner, 2026-11-23).
+static void TestPlanFlags()
+{
+    const uint16_t kF1 = 0x70, kF2 = 0x71, kF3 = 0x72, kF4 = 0x73, kF = 0x46;
+    Tree mine;
+    AddM(mine, nullptr, "Mine", "a")->Hotkey = Key(kF1, true);
+    AddM(mine, nullptr, "Old", "a")->Hotkey  = Key(kF2, true);
+    AddM(mine, nullptr, "Same", "a")->Hotkey = Key(kF3, true);
+    Node* folder = mine.AddFolder(nullptr, "F").Target;
+    AddM(mine, folder, "Inside", "a")->Hotkey = Key(kF4, true);
+
+    Package p;
+    AddM(p.Items, nullptr, "Txt", "say {TXT jokes.txt}");
+    Node* web = AddM(p.Items, nullptr, "Web", "hi");
+    web->Lines[0].Channel   = EChannel::Whisper;
+    web->Lines[0].WhisperTo = "{json name https://example.com/a}";
+    AddM(p.Items, nullptr, "NoMod", "a")->Hotkey = Key(kF, false);
+    AddM(p.Items, nullptr, "Clash", "a")->Hotkey = Key(kF1, true);
+    AddM(p.Items, nullptr, "Old", "new")->Hotkey = Key(kF1, true);   // replaces Old, clashes with Mine
+    AddM(p.Items, nullptr, "Same", "new")->Hotkey = Key(kF3, true);  // replaces Same with its own key
+    AddM(p.Items, nullptr, "Plain", "{txt} is just text here? no: {hello}");
+    Node* pf = p.Items.AddFolder(nullptr, "F").Target;
+    AddM(p.Items, pf, "X", "a")->Hotkey = Key(kF4, true);            // the folder's old Inside goes
+
+    Options o;
+    o.MacroConflict  = EChoice::Replace;
+    o.FolderConflict = EChoice::Replace;
+    o.KeepHotkeys    = true;
+    Plan plan = BuildPlan(mine, mine.Root(), p.Items, o);
+    CHECK(ItemNamed(plan.Items, "Txt")->ReadsFile && !ItemNamed(plan.Items, "Txt")->ReadsWeb);
+    CHECK(ItemNamed(plan.Items, "Web")->ReadsWeb && !ItemNamed(plan.Items, "Web")->ReadsFile);
+    CHECK(ItemNamed(plan.Items, "Plain")->ReadsFile); // "{txt}" alone is still {txt}
+    CHECK(ItemNamed(plan.Items, "NoMod")->HotkeyRisk == EHotkeyRisk::NoModifier);
+    CHECK(ItemNamed(plan.Items, "Clash")->HotkeyRisk == EHotkeyRisk::Clash && !ItemNamed(plan.Items, "Clash")->HotkeyCleared);
+    const PlanItem* old = ItemNamed(plan.Items, "Old");
+    CHECK(old->Outcome == EOutcome::Replaced && old->HotkeyRisk == EHotkeyRisk::Clash && old->HotkeyCleared && old->LosesOwnHotkey);
+    const PlanItem* same = ItemNamed(plan.Items, "Same");
+    CHECK(same->Outcome == EOutcome::Replaced && same->HotkeyRisk == EHotkeyRisk::None && !same->HotkeyCleared && !same->LosesOwnHotkey);
+    const PlanItem* f = ItemNamed(plan.Items, "F");
+    CHECK(f->Outcome == EOutcome::Replaced && f->Children[0].HotkeyRisk == EHotkeyRisk::None); // Inside goes with the folder
+    CHECK(plan.ReadsFile == 2 && plan.ReadsWeb == 1);
+    CHECK(plan.HotkeysNoModifier == 1 && plan.HotkeysClash == 1 && plan.HotkeysCleared == 1);
+    CHECK(plan.OwnHotkeysLost == 1 && plan.HotkeysChanged == 1);
+
+    Apply(mine, mine.Root(), plan, o);
+    CHECK(Child(mine.Root(), "Old", ENodeType::Macro)->Hotkey.Empty() && Child(mine.Root(), "Old", ENodeType::Macro)->Lines[0].Message == "new");
+    CHECK(Child(mine.Root(), "Same", ENodeType::Macro)->Hotkey == Key(kF3, true));
+    CHECK(Child(mine.Root(), "Clash", ENodeType::Macro)->Hotkey == Key(kF1, true)); // a new macro: only flagged
+    CHECK(Child(mine.Root(), "NoMod", ENodeType::Macro)->Hotkey == Key(kF, false));
+
+    // Keep hotkeys unticked: nothing is "cleared" (nothing comes along), but a replaced macro's own
+    // hotkey still goes, and that's shown.
+    Tree mine2;
+    AddM(mine2, nullptr, "Old", "a")->Hotkey = Key(kF2, true);
+    Package p2;
+    AddM(p2.Items, nullptr, "Old", "new")->Hotkey = Key(kF2, true);
+    Options o2;
+    o2.MacroConflict = EChoice::Replace;
+    Plan plan2 = BuildPlan(mine2, mine2.Root(), p2.Items, o2);
+    CHECK(!plan2.Items[0].HotkeyCleared && plan2.Items[0].LosesOwnHotkey && plan2.HotkeysChanged == 1);
+    // Ticked, the same key replaces itself: nothing lost.
+    o2.KeepHotkeys = true;
+    plan2 = BuildPlan(mine2, mine2.Root(), p2.Items, o2);
+    CHECK(!plan2.Items[0].HotkeyCleared && !plan2.Items[0].LosesOwnHotkey && plan2.HotkeysChanged == 0);
+}
+
 // SEC-022: a file with thousands of bad entries lists kMaxWarnings of them, then a count.
 static void TestWarningsCapped()
 {
@@ -756,6 +838,7 @@ static void TestWarningsCapped()
 void RunExchangeTests()
 {
     TestWarningsCapped();
+    TestPlanFlags();
     TestFileNames();
     TestExport();
     TestReadText();

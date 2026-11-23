@@ -198,6 +198,13 @@ static void TestHas()
     CHECK(HasPlaceholders("at {time}"));
     CHECK(HasPlaceholders("{Random 5}"));
     CHECK(!HasPlaceholders("{smile}"));
+    // Uses: by name, in any case, as Expand finds them.
+    CHECK(Placeholders::Uses("say {TXT jokes.txt} now", "txt"));
+    CHECK(Placeholders::Uses("{Json id https://a}", "json"));
+    CHECK(!Placeholders::Uses("{txts a}", "txt"));
+    CHECK(!Placeholders::Uses("{ {time}", "txt"));
+    CHECK(!Placeholders::Uses("no braces txt", "txt"));
+    CHECK(Placeholders::Uses("{x {txt a}", "txt"));
     CHECK(!HasPlaceholders("plain"));
     CHECK(!List().empty());
 }

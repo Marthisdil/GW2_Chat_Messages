@@ -237,6 +237,16 @@ bool Placeholders::HasPlaceholders(const std::string& aText)
     return false;
 }
 
+bool Placeholders::Uses(const std::string& aText, const std::string& aName)
+{
+    for (size_t open = aText.find('{'); open != std::string::npos; open = aText.find('{', open + 1))
+    {
+        size_t close = 0;
+        if (NameAt(aText, open, close) == aName) return true;
+    }
+    return false;
+}
+
 bool Placeholders::JsonValue(const std::string& aJson, const std::string& aPath, std::string& aOut, std::string& aError)
 {
     const nlohmann::json doc = nlohmann::json::parse(aJson, nullptr, false);
