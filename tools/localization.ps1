@@ -1,6 +1,6 @@
 # Keeps localization\ in step with the code (docs/design.md, "Languages").
 #
-# The addon's English text is the key: every T("...") and TX("...") literal in src\ is a text to
+# The addon's English text is the key: every T("..."), TR("...") and TX("...") literal in src\ is a text to
 # translate (the "##id" part of an ImGui label is left out). This script lists them and
 #   -Check (default): fails if localization\en.json or template.json is out of date with the code,
 #                     and reports what each language file is missing or has extra;
@@ -39,7 +39,7 @@ $first = @("entry.cpp", "Ui.cpp")
 $files = @($files | Where-Object { $first -contains $_.Name } | Sort-Object { [array]::IndexOf($first, $_.Name) }) +
          @($files | Where-Object { $first -notcontains $_.Name })
 $lit   = '"(?:[^"\\\r\n]|\\.)*"'
-$call  = [regex]('\bTX?\(\s*((?:' + $lit + '\s*)+)\)')
+$call  = [regex]('\bT[XR]?\(\s*((?:' + $lit + '\s*)+)\)')
 $piece = [regex]$lit
 $texts = New-Object System.Collections.Generic.List[string]
 $seen  = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::Ordinal)

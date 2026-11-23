@@ -14,8 +14,8 @@ New-Item -ItemType Directory -Force -Path $out | Out-Null
 
 # Every test file, plus the Nexus-free sources under test. Add new ones here.
 $sources = @(
-    "tests\TestMain.cpp", "tests\MacroTreeTests.cpp", "tests\ChatLineTests.cpp", "tests\SendPlanTests.cpp", "tests\HotkeyTests.cpp", "tests\FilterTests.cpp", "tests\PlaceholderTests.cpp", "tests\ExchangeTests.cpp", "tests\LinkSyncTests.cpp", "tests\TextSizeTests.cpp", "tests\ErrorReportTests.cpp", "tests\TrashTests.cpp", "tests\SearchTests.cpp", "tests\LocalizationTests.cpp", "tests\PathTextTests.cpp",
-    "src\MacroTree.cpp", "src\ChatLine.cpp", "src\SendPlan.cpp", "src\Hotkey.cpp", "src\Placeholders.cpp", "src\Exchange.cpp", "src\LinkSync.cpp", "src\TextSize.cpp", "src\ErrorReport.cpp", "src\Search.cpp", "src\Localization.cpp", "src\PathText.cpp"
+    "tests\TestMain.cpp", "tests\MacroTreeTests.cpp", "tests\ChatLineTests.cpp", "tests\SendPlanTests.cpp", "tests\HotkeyTests.cpp", "tests\FilterTests.cpp", "tests\PlaceholderTests.cpp", "tests\ExchangeTests.cpp", "tests\LinkSyncTests.cpp", "tests\TextSizeTests.cpp", "tests\ErrorReportTests.cpp", "tests\TrashTests.cpp", "tests\SearchTests.cpp", "tests\LocalizationTests.cpp", "tests\PathTextTests.cpp", "tests\GameKeysTests.cpp", "tests\MapCatalogTests.cpp",
+    "src\MacroTree.cpp", "src\ChatLine.cpp", "src\SendPlan.cpp", "src\Hotkey.cpp", "src\Placeholders.cpp", "src\Exchange.cpp", "src\LinkSync.cpp", "src\TextSize.cpp", "src\ErrorReport.cpp", "src\Search.cpp", "src\Localization.cpp", "src\PathText.cpp", "src\GameKeys.cpp", "src\MapCatalog.cpp"
 ) | ForEach-Object { "`"$(Join-Path $root $_)`"" }
 $includes = "/I `"$root\src`" /I `"$root\tests`" /I `"$root\vendor\json\single_include`""
 # /Z7 keeps debug info in the .obj files (compile-time PDBs fail inside Dropbox folders).

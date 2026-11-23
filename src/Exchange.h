@@ -48,6 +48,7 @@ namespace Exchange
         std::string              Error;   // set if nothing could be read
         std::vector<std::string> Warnings;
         std::string              Source;  // what was read, for display ("Pasted text", a file name)
+        bool                     NotOurFormat = false; // valid JSON, but not an export or a library
 
         bool Ok() const { return Error.empty(); }
     };
@@ -72,9 +73,9 @@ namespace Exchange
     // The suggested folder name: "From <file name>" ("From Alex" for Alex.json), or "Imported
     // library" for a file just called macros.json / macros.json.bak.
     std::string LibraryFolderName(const std::string& aSource);
-    constexpr const char* kLibraryFolderFallback = "Imported library";
+    const char* LibraryFolderFallback(); // "Imported library", in the active language (TR)
     // Moves everything at the package's top level into one new folder called aName (cleaned;
-    // kLibraryFolderFallback if empty). Returns that folder, or nullptr if the package is empty.
+    // LibraryFolderFallback() if empty). Returns that folder, or nullptr if the package is empty.
     Node* WrapInFolder(Package& aPkg, const std::string& aName);
 
     // --- Preview and import ---------------------------------------------------------------------

@@ -135,6 +135,44 @@ static void TestLookup()
     CHECK(vis == "Name" && suf == "###id");
 }
 
+// TR: any thread, and a text it returned stays valid after the language changes (the catalog it
+// came from may be gone by then).
+static void TestTranslate()
+{
+    SetActive(nullptr);
+    CHECK(std::string(TR("Sent %s")) == "Sent %s");
+    CHECK(std::string(Translate(nullptr)) == "");
+
+    const char* held = nullptr;
+    {
+        Catalog de;
+        de.Id = "de";
+        de.Texts["Sent %s"] = "%s gesendet";
+        SetActive(&de);
+        held = TR("Sent %s");
+        CHECK(std::string(held) == "%s gesendet");
+        CHECK(std::string(TR("Not translated")) == "Not translated");
+        CHECK(Fmt(TR("Sent %s"), "Hallo") == "Hallo gesendet");
+        SetActive(nullptr); // before the catalog goes, as Languages does
+    }
+    CHECK(std::string(held) == "%s gesendet"); // the shared copy is still there
+    CHECK(std::string(TR("Sent %s")) == "Sent %s");
+
+    Catalog fr;
+    fr.Id = "fr";
+    fr.Texts["Sent %s"] = "%s envoy\xC3\xA9";
+    SetActive(&fr);
+    CHECK(std::string(TR("Sent %s")) == "%s envoy\xC3\xA9");
+    SetActive(&fr); // the same texts again: the same copy is reused
+    const char* a = TR("Sent %s");
+    SetActive(&fr);
+    CHECK(TR("Sent %s") == a);
+    CHECK(std::string(held) == "%s gesendet");
+    SetActive(nullptr);
+    ClearShared();
+    CHECK(std::string(TR("Sent %s")) == "Sent %s");
+}
+
 // The files in localization\: every one parses with nothing skipped, and the built-in languages
 // translate every text.
 static void TestShippedFiles()
@@ -174,5 +212,6 @@ void RunLocalizationTests()
     TestPlaceholders();
     TestParse();
     TestLookup();
+    TestTranslate();
     TestShippedFiles();
 }

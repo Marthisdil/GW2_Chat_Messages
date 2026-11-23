@@ -110,27 +110,27 @@ namespace
             long long lo = 0, hi = 100;
             if (aArgs.size() == 1)
             {
-                if (!ParseInt(aArgs[0], hi)) { aError = tag + "\"" + aArgs[0] + "\" isn't a whole number."; return false; }
+                if (!ParseInt(aArgs[0], hi)) { aError = tag + Localization::Fmt(TR("\"%s\" isn't a whole number."), aArgs[0].c_str()); return false; }
             }
             else if (aArgs.size() == 2)
             {
-                if (!ParseInt(aArgs[0], lo)) { aError = tag + "\"" + aArgs[0] + "\" isn't a whole number."; return false; }
-                if (!ParseInt(aArgs[1], hi)) { aError = tag + "\"" + aArgs[1] + "\" isn't a whole number."; return false; }
+                if (!ParseInt(aArgs[0], lo)) { aError = tag + Localization::Fmt(TR("\"%s\" isn't a whole number."), aArgs[0].c_str()); return false; }
+                if (!ParseInt(aArgs[1], hi)) { aError = tag + Localization::Fmt(TR("\"%s\" isn't a whole number."), aArgs[1].c_str()); return false; }
             }
-            else if (aArgs.size() > 2) { aError = tag + "use {random}, {random max} or {random min max}."; return false; }
+            else if (aArgs.size() > 2) { aError = tag + TR("use {random}, {random max} or {random min max}."); return false; }
             if (lo > hi) std::swap(lo, hi);
-            if (!c.Random) { aError = tag + "random numbers aren't available."; return false; }
+            if (!c.Random) { aError = tag + TR("random numbers aren't available."); return false; }
             aOut = std::to_string(c.Random(lo, hi));
             return true;
         }
         if (aName == "map")
         {
-            if (!aArgs.empty()) { aError = tag + "it doesn't take anything after the name."; return false; }
+            if (!aArgs.empty()) { aError = tag + TR("it doesn't take anything after the name."); return false; }
             std::string why;
-            if (!c.MapName || !c.MapName(aOut, why)) { aError = tag + (why.empty() ? "the map name isn't known." : why); return false; }
+            if (!c.MapName || !c.MapName(aOut, why)) { aError = tag + (why.empty() ? std::string(TR("the map name isn't known.")) : why); return false; }
             return true;
         }
-        aError = tag + "unknown placeholder.";
+        aError = tag + TR("unknown placeholder.");
         return false;
     }
 }
@@ -165,7 +165,7 @@ Placeholders::Result Placeholders::Expand(const std::string& aText, const Contex
         const std::string name = NameAt(aText, open, close, nextClose);
         if (IsRemoved(name))
         {
-            r.Error = "{" + name + "} isn't available any more: edit this line to remove it.";
+            r.Error = Localization::Fmt(TR("{%s} isn't available any more: edit this line to remove it."), name.c_str());
             fail();
             return r;
         }

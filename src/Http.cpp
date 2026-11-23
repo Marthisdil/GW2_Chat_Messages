@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "Globals.h"
+#include "Localization.h"
 
 namespace
 {
@@ -29,11 +30,11 @@ namespace
     std::string Failed(const char* aWhat)
     {
         const DWORD e = GetLastError();
-        if (e == ERROR_WINHTTP_TIMEOUT) return "the address didn't answer in time.";
-        if (e == ERROR_WINHTTP_NAME_NOT_RESOLVED) return "the address couldn't be found (no internet?).";
-        if (e == ERROR_WINHTTP_CANNOT_CONNECT) return "couldn't connect to the address.";
-        if (e == ERROR_WINHTTP_SECURE_FAILURE) return "the secure connection failed.";
-        return std::string(aWhat) + " failed (error " + std::to_string(e) + ").";
+        if (e == ERROR_WINHTTP_TIMEOUT) return TR("the address didn't answer in time.");
+        if (e == ERROR_WINHTTP_NAME_NOT_RESOLVED) return TR("the address couldn't be found (no internet?).");
+        if (e == ERROR_WINHTTP_CANNOT_CONNECT) return TR("couldn't connect to the address.");
+        if (e == ERROR_WINHTTP_SECURE_FAILURE) return TR("the secure connection failed.");
+        return Localization::Fmt(TR("%s failed (error %lu)."), aWhat, static_cast<unsigned long>(e));
     }
 }
 
@@ -56,13 +57,13 @@ Http::Response Http::Get(const std::string& aUrl, int aTimeoutMs, size_t aMaxByt
     if (url.empty() || !WinHttpCrackUrl(url.c_str(), static_cast<DWORD>(url.size()), 0, &parts) ||
         (parts.nScheme != INTERNET_SCHEME_HTTPS && parts.nScheme != INTERNET_SCHEME_HTTP))
     {
-        r.Error = "that isn't a valid web address.";
+        r.Error = TR("that isn't a valid web address.");
         return r;
     }
 
     const std::wstring agent = Widen(std::string("GW2-Chat-Messages/") + kVersionText + " (Nexus addon)");
     Handle session{WinHttpOpen(agent.c_str(), WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0)};
-    if (!session.H) { r.Error = Failed("Starting the download"); return r; }
+    if (!session.H) { r.Error = Failed(TR("Starting the download")); return r; }
     WinHttpSetTimeouts(session.H, aTimeoutMs, aTimeoutMs, aTimeoutMs, aTimeoutMs);
 
     Handle connect{WinHttpConnect(session.H, host, parts.nPort, 0)};
@@ -72,11 +73,11 @@ Http::Response Http::Get(const std::string& aUrl, int aTimeoutMs, size_t aMaxByt
     const DWORD flags = parts.nScheme == INTERNET_SCHEME_HTTPS ? WINHTTP_FLAG_SECURE : 0;
     Handle req{WinHttpOpenRequest(connect.H, L"GET", target.c_str(), nullptr, WINHTTP_NO_REFERER,
                                   WINHTTP_DEFAULT_ACCEPT_TYPES, flags)};
-    if (!req.H) { r.Error = Failed("Opening the request"); return r; }
+    if (!req.H) { r.Error = Failed(TR("Opening the request")); return r; }
     if (!WinHttpSendRequest(req.H, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0) ||
         !WinHttpReceiveResponse(req.H, nullptr))
     {
-        r.Error = Failed("The request");
+        r.Error = Failed(TR("The request"));
         return r;
     }
 
@@ -89,15 +90,15 @@ Http::Response Http::Get(const std::string& aUrl, int aTimeoutMs, size_t aMaxByt
     for (;;)
     {
         DWORD available = 0;
-        if (!WinHttpQueryDataAvailable(req.H, &available)) { r.Error = Failed("Reading the answer"); return r; }
+        if (!WinHttpQueryDataAvailable(req.H, &available)) { r.Error = Failed(TR("Reading the answer")); return r; }
         if (available == 0) break;
-        if (r.Body.size() + available > aMaxBytes) { r.Error = "the answer is too big."; return r; }
+        if (r.Body.size() + available > aMaxBytes) { r.Error = TR("the answer is too big."); return r; }
         chunk.resize(available);
         DWORD read = 0;
-        if (!WinHttpReadData(req.H, chunk.data(), available, &read)) { r.Error = Failed("Reading the answer"); return r; }
+        if (!WinHttpReadData(req.H, chunk.data(), available, &read)) { r.Error = Failed(TR("Reading the answer")); return r; }
         r.Body.append(chunk.data(), read);
     }
-    if (r.Status < 200 || r.Status >= 300) r.Error = "the address answered with HTTP " + std::to_string(r.Status) + ".";
+    if (r.Status < 200 || r.Status >= 300) r.Error = Localization::Fmt(TR("the address answered with HTTP %d."), r.Status);
     return r;
 }
 

@@ -5,6 +5,7 @@
 #include <nlohmann/json.hpp>
 
 #include "Hotkey.h"
+#include "Localization.h"
 #include "MacroTree.h"
 #include "TestCheck.h"
 
@@ -78,6 +79,15 @@ static void TestRefusal()
     CHECK(!Refusal(Combo{}).empty());
     CHECK(!Refusal(C(0x01)).empty());         // left mouse
     CHECK(!Refusal(C(0x02, true)).empty());   // right mouse, even with Ctrl
+    // Never left or right mouse, with any modifiers (owner's decision, 2026-11-23).
+    for (uint16_t button : {uint16_t(0x01), uint16_t(0x02)})
+        for (int mods = 0; mods < 8; mods++)
+        {
+            const Combo c = C(button, mods & 1, (mods & 2) != 0, (mods & 4) != 0);
+            CHECK(!Refusal(c).empty());
+            CHECK(!Fires(c));
+            CHECK(!KeepOnLoad(c));
+        }
     CHECK(!Refusal(C(kVkEscape, true)).empty());
     CHECK(!Refusal(C(0x10)).empty());         // Shift alone
     CHECK(!Refusal(C(0xA2, true)).empty());   // Left Ctrl as the key
@@ -152,9 +162,38 @@ static void TestTree()
     CHECK(warnings.size() == 2);
 }
 
+// What the user sees is translated; what's saved (ToString) never is.
+static void TestDisplay()
+{
+    Localization::SetActive(nullptr);
+    CHECK(Display(C(0x70, true, false, true)) == "Ctrl+Shift+F1");
+    CHECK(Display(C(kVkXButton1, false, true)) == "Alt+Mouse 4");
+    CHECK(Display(Combo{}) == "");
+    CHECK(DisplayKeyName(0xE2) == "Key 0xE2");
+    CHECK(DisplayKeyName(0x65) == "Num 5");
+    CHECK(DisplayKeyName(0xBF) == "/");
+
+    Localization::Catalog de;
+    de.Id = "de";
+    de.Texts["Ctrl"] = "Strg";
+    de.Texts["Shift"] = "Umschalt";
+    de.Texts["Mouse 4"] = "Maus 4";
+    de.Texts["Page Up"] = "Bild auf";
+    de.Texts["Key 0x%02X"] = "Taste 0x%02X";
+    Localization::SetActive(&de);
+    CHECK(Display(C(0x70, true, false, true)) == "Strg+Umschalt+F1");
+    CHECK(Display(C(kVkXButton1, true)) == "Strg+Maus 4");
+    CHECK(Display(C(0x21)) == "Bild auf");
+    CHECK(DisplayKeyName(0xE2) == "Taste 0xE2");
+    CHECK(ToString(C(kVkXButton1, true)) == "Ctrl+Mouse 4"); // the stored form stays English
+    CHECK(FromString(ToString(C(0x21, false, false, true))) == C(0x21, false, false, true));
+    Localization::SetActive(nullptr);
+}
+
 void RunHotkeyTests()
 {
     TestNames();
+    TestDisplay();
     TestParse();
     TestPack();
     TestRefusal();

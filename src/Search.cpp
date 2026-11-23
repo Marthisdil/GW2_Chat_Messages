@@ -147,7 +147,9 @@ bool Search::NodeMatches(const MacroTree::Node& aNode, const std::string& aFolde
     if (!aNode.IsMacro()) return false;
     for (const MacroTree::Line& l : aNode.Lines)
         if (Contains(l.Message, aFoldedQuery) || Contains(l.WhisperTo, aFoldedQuery)) return true;
-    return !aNode.Hotkey.Empty() && Contains(Hotkey::ToString(aNode.Hotkey), aFoldedQuery);
+    // Both the stored form ("Ctrl+F1") and what the user sees ("Strg+F1") match.
+    return !aNode.Hotkey.Empty() && (Contains(Hotkey::ToString(aNode.Hotkey), aFoldedQuery) ||
+                                    Contains(Fold(Hotkey::Display(aNode.Hotkey)), aFoldedQuery));
 }
 
 void Search::Run(const MacroTree::Node& aRoot, const std::string& aQuery, const Where& aWhere, Result& aOut)

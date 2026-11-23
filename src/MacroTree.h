@@ -25,6 +25,9 @@ namespace MacroTree
     // file can't fill memory or the preview with millions of lines (SEC-022).
     constexpr size_t kMaxWarnings = 200;
     std::string MoreWarnings(size_t aCount); // "...and 12 more problems like these."
+    // Tree::FromJson's "Gave new ids to N item(s)..." warning (an import gives new ids anyway).
+    const char* NewIdsFormat();
+    bool IsNewIdsWarning(const std::string& aWarning);
 
     enum class ENodeType : uint8_t { Folder, Macro };
 

@@ -1,17 +1,28 @@
 #include "Localization.h"
 
+#include <atomic>
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
+#include <memory>
+#include <mutex>
 
 #include <nlohmann/json.hpp>
 
 namespace
 {
     using nlohmann::json;
+    using Texts = std::unordered_map<std::string, std::string>;
 
     const Localization::Catalog*                 s_Active = nullptr;
     std::unordered_map<const char*, std::string> s_Cache; // literal address -> text (nodes never move)
+
+    // For TR (any thread): a copy of each language's texts that SetActive has used. Copies are
+    // never freed while the addon runs (a thread may still hold a text from one), only by
+    // ClearShared; switching back to a language reuses its copy.
+    std::mutex                               s_SharedMutex;
+    std::vector<std::unique_ptr<const Texts>> s_Shared;
+    std::atomic<const Texts*>                s_SharedActive{nullptr};
 
     // Decodes one UTF-8 character at aText[i]. Returns its length, or 0 if it's invalid.
     size_t DecodeUtf8(const std::string& aText, size_t i, uint32_t& aCp)
@@ -229,6 +240,36 @@ void Localization::SetActive(const Catalog* aCatalog)
 {
     s_Active = aCatalog;
     s_Cache.clear();
+
+    const Texts* shared = nullptr;
+    if (aCatalog)
+    {
+        std::lock_guard<std::mutex> lock(s_SharedMutex);
+        for (const auto& t : s_Shared)
+            if (*t == aCatalog->Texts) shared = t.get();
+        if (!shared)
+        {
+            s_Shared.push_back(std::make_unique<const Texts>(aCatalog->Texts));
+            shared = s_Shared.back().get();
+        }
+    }
+    s_SharedActive.store(shared, std::memory_order_release);
+}
+
+const char* Localization::Translate(const char* aEnglish)
+{
+    if (!aEnglish) return "";
+    const Texts* texts = s_SharedActive.load(std::memory_order_acquire);
+    if (!texts) return aEnglish;
+    const auto it = texts->find(aEnglish);
+    return it != texts->end() ? it->second.c_str() : aEnglish;
+}
+
+void Localization::ClearShared()
+{
+    s_SharedActive.store(nullptr, std::memory_order_release);
+    std::lock_guard<std::mutex> lock(s_SharedMutex);
+    s_Shared.clear();
 }
 
 const Localization::Catalog* Localization::Active() { return s_Active; }

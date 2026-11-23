@@ -8,6 +8,7 @@
 #include <nlohmann/json.hpp>
 
 #include "Exchange.h"
+#include "Localization.h"
 #include "TestCheck.h"
 
 using namespace Exchange;
@@ -649,10 +650,10 @@ namespace
     void TestLibraryImport()
     {
         CHECK(LibraryFolderName("Alex.json") == "From Alex");
-        CHECK(LibraryFolderName("macros.json") == kLibraryFolderFallback);
-        CHECK(LibraryFolderName("MACROS.json.bak") == kLibraryFolderFallback);
+        CHECK(LibraryFolderName("macros.json") == LibraryFolderFallback());
+        CHECK(LibraryFolderName("MACROS.json.bak") == LibraryFolderFallback());
         CHECK(LibraryFolderName("Alex macros.json.bak") == "From Alex macros");
-        CHECK(LibraryFolderName("") == kLibraryFolderFallback);
+        CHECK(LibraryFolderName("") == LibraryFolderFallback());
         CHECK(IsLibraryFileName("macros.json") && IsLibraryFileName("macros.json.BAK"));
         CHECK(!IsLibraryFileName("one.txt"));
 
@@ -700,7 +701,7 @@ namespace
         Package empty;
         CHECK(WrapInFolder(empty, "x") == nullptr);
         Package blank = FromJsonText(text);
-        CHECK(WrapInFolder(blank, "   ")->Name == kLibraryFolderFallback);
+        CHECK(WrapInFolder(blank, "   ")->Name == LibraryFolderFallback());
 
         // Into my library: only the new folder at my top level; a taken name gets "(2)"; their
         // hotkeys are dropped when Keep hotkeys is off.
@@ -854,8 +855,36 @@ static void TestWarningsCapped()
     CHECK(warnings.size() == MacroTree::kMaxWarnings + 1);
 }
 
+// Messages follow the language, and checks on them still work in another one.
+static void TestTranslatedMessages()
+{
+    using namespace MacroTree;
+    Localization::Catalog de;
+    de.Id = "de";
+    de.Texts["Gave new ids to %zu item(s) with a missing or repeated id."] = "%zu Eintr\xC3\xA4ge bekamen neue IDs.";
+    de.Texts["From %s"] = "Von %s";
+    de.Texts["It isn't a Chat Messages export."] = "Kein Export.";
+    de.Texts["It isn't a Chat Messages library (macros.json)."] = "Keine Bibliothek.";
+    Localization::SetActive(&de);
+    CHECK(IsNewIdsWarning("3 Eintr\xC3\xA4ge bekamen neue IDs."));
+    CHECK(!IsNewIdsWarning("Eintr\xC3\xA4ge bekamen neue IDs."));
+    CHECK(!IsNewIdsWarning("Gave new ids to 3 item(s) with a missing or repeated id."));
+    CHECK(Exchange::LibraryFolderName("Alex.json") == "Von Alex");
+    // A file without a library in it says so in German too (the error is matched, then replaced).
+    const fs::path dir = fs::temp_directory_path() / "gw2cm_tr_test";
+    std::error_code ec;
+    fs::create_directories(dir, ec);
+    { std::ofstream(dir / "macros.json") << "{\"something\": 1}"; }
+    const Exchange::Package p = Exchange::FromLibraryFile(dir / "macros.json");
+    CHECK(!p.Ok() && p.Error == "Keine Bibliothek.");
+    fs::remove_all(dir, ec);
+    Localization::SetActive(nullptr);
+    CHECK(IsNewIdsWarning("Gave new ids to 3 item(s) with a missing or repeated id."));
+}
+
 void RunExchangeTests()
 {
+    TestTranslatedMessages();
     TestWarningsCapped();
     TestPlanFlags();
     TestFileNames();
