@@ -47,8 +47,13 @@ namespace
         if (s_File.empty() || !std::filesystem::exists(s_File, ec)) return;
         std::ifstream in(s_File, std::ios::binary);
         const json j = json::parse(in, nullptr, false);
-        // A bad cache is just thrown away: it's rebuilt from the API.
-        if (j.is_discarded() || !j.is_object() || j.value("format", 0) != kFormat || j.value("lang", "") != kLang) return;
+        // A bad cache is just thrown away: it's rebuilt from the API. The fields are checked with
+        // find + type, not value(), which throws on a wrongly typed one (SEC-021).
+        if (j.is_discarded() || !j.is_object()) return;
+        const auto format = j.find("format");
+        const auto lang = j.find("lang");
+        if (format == j.end() || !format->is_number_integer() || format->get<long long>() != kFormat) return;
+        if (lang == j.end() || !lang->is_string() || lang->get_ref<const std::string&>() != kLang) return;
         auto names = j.find("names");
         if (names == j.end() || !names->is_object()) return;
         for (auto it = names->begin(); it != names->end(); ++it)
