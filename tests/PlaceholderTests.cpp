@@ -220,8 +220,18 @@ static void TestHas()
         CHECK(!Placeholders::Uses(braces, "txt"));
         CHECK(!HasPlaceholders(braces + "}"));
         CHECK(Placeholders::Uses(braces + "txt}", "txt"));
+        // Expand too (on the sender thread, but a send shouldn't take minutes).
+        CHECK(X(braces) == braces);
+        CHECK(X(braces + "}") == braces + "}");
+        CHECK(X(braces + "time}") == braces.substr(1) + "09:05");
         CHECK(std::chrono::steady_clock::now() - start < std::chrono::seconds(2));
     }
+    // The cached "}" still finds the right one each time.
+    CHECK(X("{a}{time}") == "{a}09:05");
+    CHECK(X("{ {x} {time}}") == "{ {x} 09:05}");
+    CHECK(X("{{{time}}}") == "{{09:05}}");
+    CHECK(X("{time}{hour}") == "09:0509");
+    CHECK(X("{x {y {time}") == "{x {y 09:05");
     CHECK(!HasPlaceholders("plain"));
     CHECK(!List().empty());
 }
