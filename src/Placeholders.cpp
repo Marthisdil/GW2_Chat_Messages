@@ -79,10 +79,13 @@ namespace
     }
 
     // The name of the placeholder starting at aText[aOpen] == '{', or "" if there isn't one.
-    // aClose gets the index of the matching '}'.
-    std::string NameAt(const std::string& aText, size_t aOpen, size_t& aClose)
+    // aClose gets the index of the matching '}'. aNextClose carries the first '}' found by the
+    // previous call (start it at 0; aOpen only grows): without it, a line full of '{' was scanned
+    // to the next '}' once per '{', quadratic (SEC-028).
+    std::string NameAt(const std::string& aText, size_t aOpen, size_t& aClose, size_t& aNextClose)
     {
-        aClose = aText.find('}', aOpen + 1);
+        if (aNextClose != std::string::npos && aNextClose <= aOpen) aNextClose = aText.find('}', aOpen + 1);
+        aClose = aNextClose;
         if (aClose == std::string::npos) return {};
         const size_t nextOpen = aText.find('{', aOpen + 1);
         if (nextOpen != std::string::npos && nextOpen < aClose) return {}; // "{ {time}": the inner one counts
@@ -186,18 +189,27 @@ Placeholders::Result Placeholders::Expand(const std::string& aText, const Contex
     auto written = [&r](const std::string& s) { r.Text += s; r.FromValue.insert(r.FromValue.end(), s.size(), false); };
     auto filled  = [&r](const std::string& s) { r.Text += s; r.FromValue.insert(r.FromValue.end(), s.size(), true); };
     auto fail    = [&r]() { r.Text.clear(); r.FromValue.clear(); };
-    size_t i = 0;
+    size_t i = 0, nextClose = 0;
     while (i < aText.size())
     {
-        const size_t open = aText.find('{', i);
+        size_t open = aText.find('{', i);
         if (open == std::string::npos)
         {
             written(aText.substr(i));
             break;
         }
         written(aText.substr(i, open - i));
+        // In a run of "{" only the last one can start a placeholder ("{ {time}": the inner one
+        // counts), so the others are written text, copied in one go.
+        const size_t notBrace = aText.find_first_not_of('{', open);
+        const size_t last = (notBrace == std::string::npos ? aText.size() : notBrace) - 1;
+        if (last > open)
+        {
+            written(aText.substr(open, last - open));
+            open = last;
+        }
         size_t close = 0;
-        const std::string name = NameAt(aText, open, close);
+        const std::string name = NameAt(aText, open, close, nextClose);
         if (name.empty() || !IsKnown(name))
         {
             written("{"); // not ours: keep it as typed
@@ -230,8 +242,8 @@ namespace
 {
     // Whether aMatch(name) holds for a placeholder name in aText, as Expand finds them (NameAt: a
     // "{" whose first "}" comes before any other "{"; the name is its first word, lower case). One
-    // pass: calling NameAt for every "{" scanned to the next "}" each time, quadratic on a line full
-    // of "{", and the import preview and the editor run this every frame (SEC-028).
+    // pass, without building any text: the import preview and the editor run this every frame
+    // (SEC-028).
     template <class Match>
     bool AnyName(const std::string& aText, Match aMatch)
     {
