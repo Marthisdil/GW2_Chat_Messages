@@ -27,6 +27,7 @@
 #include "ChatLine.h"
 #include "ErrorReport.h"
 #include "Exchange.h"
+#include "GameKeys.h"
 #include "Globals.h"
 #include "Hotkeys.h"
 #include "LinkSync.h"
@@ -336,7 +337,7 @@ namespace
         const bool alert = aFrom != ESendFrom::Window;
         if (aFrom == ESendFrom::Hotkey && Sender::IsBusy()) return; // one macro at a time; extra presses are ignored
         const std::string name = "\"" + aMacro.Name + "\"";
-        const std::string action = aFrom == ESendFrom::Hotkey ? Fmt(T("Pressed the hotkey %s to send %s"), Hotkey::ToString(aMacro.Hotkey).c_str(), name.c_str())
+        const std::string action = aFrom == ESendFrom::Hotkey ? Fmt(T("Pressed the hotkey %s to send %s"), Hotkey::Display(aMacro.Hotkey).c_str(), name.c_str())
                                  : aFrom == ESendFrom::Menu   ? Fmt(T("Sent %s from the quick menu"), name.c_str())
                                                               : Fmt(T("Sent %s from the library (Send now)"), name.c_str());
         std::string error;
@@ -393,7 +394,7 @@ namespace
         const uint32_t id = WhereAmI().MapId;
         if (id == s_LastMapId) return;
         s_LastMapId = id;
-        MapNames::Request(id);
+        MapNames::NoteVisit(id); // remembered for the map picker, and its name looked up
     }
 
     void HandleHotkeys()
@@ -412,7 +413,7 @@ namespace
             if (!cancelled && m && m->IsMacro())
             {
                 const std::string why = Hotkey::Refusal(combo);
-                if (!why.empty()) ShowError(Fmt(T("Set a hotkey for \"%s\" and pressed %s"), m->Name.c_str(), Hotkey::ToString(combo).c_str()), why);
+                if (!why.empty()) ShowError(Fmt(T("Set a hotkey for \"%s\" and pressed %s"), m->Name.c_str(), Hotkey::Display(combo).c_str()), why);
                 else
                 {
                     m->Hotkey = combo;
@@ -435,8 +436,8 @@ namespace
             if (macros.size() > 1)
             {
                 const std::string why = Fmt(T("%s is set on %zu macros, so nothing was sent. Give each macro its own hotkey."),
-                                            Hotkey::ToString(combo).c_str(), macros.size());
-                ShowError(Fmt(T("Pressed the hotkey %s"), Hotkey::ToString(combo).c_str()), why, false);
+                                            Hotkey::Display(combo).c_str(), macros.size());
+                ShowError(Fmt(T("Pressed the hotkey %s"), Hotkey::Display(combo).c_str()), why, false);
                 Alert(why);
                 continue;
             }
@@ -458,7 +459,7 @@ namespace
             return;
         }
 
-        const std::string keys = aMacro.Hotkey.Empty() ? std::string(T("None")) : Hotkey::ToString(aMacro.Hotkey);
+        const std::string keys = aMacro.Hotkey.Empty() ? std::string(T("None")) : Hotkey::Display(aMacro.Hotkey);
         row.Next(UiFont::TextWidth(keys.c_str()));
         if (aMacro.Hotkey.Empty()) ImGui::TextDisabled(T("None"));
         else if (Hotkey::NeedsModifier(aMacro.Hotkey)) ImGui::TextColored(kErrorColor, "%s", keys.c_str());
@@ -498,6 +499,13 @@ namespace
                 ImGui::TextColored(kWarnColor, T("Also set on: %s. Where both are active, this hotkey sends nothing."),
                                    names.c_str());
             }
+            // GW2's default keys (GameKeys): the user's own binds may differ, so it's a hint.
+            if (const char* use = GameKeys::DefaultUse(aMacro.Hotkey))
+            {
+                ImGui::TextColored(kWarnColor, T("In GW2's default keys, %s is \"%s\". If it's still a game key for "
+                                               "you, pressing it does both. Your own keys may differ."),
+                                   keys.c_str(), Localization::Lookup(use));
+            }
             else if (!aMacro.Hotkey.HasModifier() && aMacro.Hotkey.Key < 0x60 && aMacro.Hotkey.Key > Hotkey::kVkXButton2)
             {
                 ImGui::TextColored(kWarnColor, T("Plain letters, numbers and keys like Space are usually game keys. "
@@ -507,6 +515,75 @@ namespace
     }
 
     int s_MapIdInput = 0;
+
+    // The filter editor's map search: names from the GW2 API's full list (MapNames), maps you've
+    // been to first. Results are refreshed when the text changes and twice a second (names that
+    // arrive meanwhile).
+    char                         s_MapSearch[64] = "";
+    std::string                  s_MapSearchFor;
+    int                          s_MapSearchFrame = -1000;
+    std::vector<MapNames::Entry> s_MapResults;
+    constexpr size_t             kMapResults = 12;
+
+    std::string MapEntryText(const MapNames::Entry& aEntry)
+    {
+        std::string text = aEntry.Name.empty() ? Fmt(T("Map %u"), static_cast<unsigned>(aEntry.Id)) : aEntry.Name;
+        if (!aEntry.Region.empty()) text += " - " + aEntry.Region;
+        text += " (" + std::to_string(aEntry.Id) + ")";
+        if (aEntry.Visited) text += std::string("  ") + T("(been there)");
+        return text;
+    }
+
+    template <typename HasMap, typename AddMap>
+    void DrawMapPicker(const HasMap& aHasMap, const AddMap& aAddMap)
+    {
+        auto pick = [&](const MapNames::Entry& aEntry) {
+            ImGui::PushID(static_cast<int>(aEntry.Id));
+            const bool have = aHasMap(static_cast<int>(aEntry.Id));
+            const std::string text = MapEntryText(aEntry);
+            if (have) ImGui::TextDisabled(T("%s (in the list)"), text.c_str());
+            else if (ImGui::Selectable(text.c_str())) aAddMap(static_cast<int>(aEntry.Id));
+            ImGui::PopID();
+        };
+
+        UiFont::Row row;
+        ImGui::SetNextItemWidth(Px(240.0f));
+        ImGui::InputTextWithHint("##mapsearch", T("Find a map by name or id"), s_MapSearch, sizeof(s_MapSearch));
+        const std::vector<MapNames::Entry> visited = MapNames::Visited(30);
+        row.Next(UiFont::ButtonWidth(T("Maps you've been to")) + ImGui::GetFrameHeight());
+        ImGui::SetNextItemWidth(UiFont::ButtonWidth(T("Maps you've been to")) + ImGui::GetFrameHeight());
+        if (ImGui::BeginCombo("##visited", T("Maps you've been to")))
+        {
+            if (visited.empty()) ImGui::TextDisabled(T("None yet: maps are remembered as you visit them."));
+            for (const MapNames::Entry& e : visited) pick(e);
+            ImGui::EndCombo();
+        }
+
+        const std::string query = Search::Trim(s_MapSearch);
+        if (query.empty()) return;
+        const int frame = ImGui::GetFrameCount();
+        if (query != s_MapSearchFor || frame - s_MapSearchFrame >= 30 || frame < s_MapSearchFrame)
+        {
+            s_MapResults = MapNames::Find(query, kMapResults);
+            s_MapSearchFor = query;
+            s_MapSearchFrame = frame;
+        }
+        if (s_MapResults.empty())
+        {
+            const MapNames::State st = MapNames::GetState();
+            if (st.Listed == 0 && st.Refreshing) ImGui::TextDisabled(T("The map list is still loading from the GW2 API..."));
+            else if (st.Listed == 0)
+                ImGui::TextDisabled(T("The map list isn't loaded yet (it comes from the GW2 API). Try Refresh map list "
+                                    "on the addon's options page, or add the map by its id."));
+            else ImGui::TextDisabled(T("No map matches."));
+            return;
+        }
+        ImGui::BeginChild("##mapresults", ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() *
+                          (static_cast<float>(std::min<size_t>(s_MapResults.size(), 6)) + 0.5f)), true);
+        for (const MapNames::Entry& e : s_MapResults) pick(e);
+        ImGui::EndChild();
+        if (s_MapResults.size() >= kMapResults) ImGui::TextDisabled(T("Only the first %zu matches are shown."), kMapResults);
+    }
 
     void DrawFilters(Node& aMacro)
     {
@@ -567,11 +644,23 @@ namespace
         for (size_t i = 0; i < aMacro.MapIds.size(); i++)
         {
             ImGui::PushID(static_cast<int>(i));
-            const std::string name = MapNames::Label(static_cast<uint32_t>(aMacro.MapIds[i]));
-            const std::string label = name + " x";
+            const uint32_t mapId = static_cast<uint32_t>(aMacro.MapIds[i]);
+            const std::string name = MapNames::Label(mapId);
+            // The API's full list doesn't have it: removed or replaced in a game update, maybe.
+            const bool unlisted = MapNames::Unlisted(mapId);
+            const std::string label = name + (unlisted ? " (!)" : "") + " x";
             mapsRow.Next(UiFont::ButtonWidth(label.c_str()));
+            if (unlisted) ImGui::PushStyleColor(ImGuiCol_Text, kWarnColor);
             if (ImGui::SmallButton(label.c_str())) removeAt = static_cast<int>(i);
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip(T("Remove %s"), name.c_str());
+            if (unlisted) ImGui::PopStyleColor();
+            if (ImGui::IsItemHovered())
+            {
+                if (unlisted)
+                    ImGui::SetTooltip(T("Remove %s\nThe GW2 API's map list doesn't have this id: the map may have been "
+                                      "removed or replaced in a game update (then this filter never matches), or "
+                                      "it's an instance the API doesn't list."), name.c_str());
+                else ImGui::SetTooltip(T("Remove %s"), name.c_str());
+            }
             ImGui::PopID();
         }
         if (removeAt >= 0)
@@ -610,6 +699,7 @@ namespace
         ImGui::InputInt("##mapid", &s_MapIdInput, 0, 0);
         addRow.Next(UiFont::ButtonWidth(T("Add id")));
         if (ImGui::SmallButton(T("Add id"))) addMap(s_MapIdInput);
+        DrawMapPicker(hasMap, addMap);
         ImGui::TextDisabled(T("Map names come from the GW2 API. Ids are also listed on the GW2 wiki."));
 
         const std::string where = here.MapId ? MapNames::Label(here.MapId) : std::string(T("no map"));
@@ -876,7 +966,7 @@ namespace
         if (!s_Search.Active || !s_Search.Matches.count(aNode.Id)) return {};
         size_t at = 0, len = 0;
         if (Search::FindRange(aNode.Name, s_SearchBuf, at, len)) return {};
-        if (!aNode.Hotkey.Empty() && Search::FindRange(Hotkey::ToString(aNode.Hotkey), s_SearchBuf, at, len))
+        if (!aNode.Hotkey.Empty() && Search::FindRange(Hotkey::Display(aNode.Hotkey), s_SearchBuf, at, len))
             return std::string("  ") + T("(found in its hotkey)");
         return std::string("  ") + T("(found in its lines)");
     }
@@ -933,8 +1023,8 @@ namespace
             if (aNode.Hotkey.Empty()) ImGui::TreeNodeEx("##node", flags, "%s%s", aNode.Name.c_str(), suffix.c_str());
             else if (Hotkey::NeedsModifier(aNode.Hotkey))
                 ImGui::TreeNodeEx("##node", flags, T("%s  [%s: off, needs Ctrl/Alt/Shift]%s"), aNode.Name.c_str(),
-                                  Hotkey::ToString(aNode.Hotkey).c_str(), suffix.c_str());
-            else ImGui::TreeNodeEx("##node", flags, "%s  [%s]%s", aNode.Name.c_str(), Hotkey::ToString(aNode.Hotkey).c_str(), suffix.c_str());
+                                  Hotkey::Display(aNode.Hotkey).c_str(), suffix.c_str());
+            else ImGui::TreeNodeEx("##node", flags, "%s  [%s]%s", aNode.Name.c_str(), Hotkey::Display(aNode.Hotkey).c_str(), suffix.c_str());
             ImGui::PopStyleColor();
         }
         HighlightSearch(aNode);
@@ -1126,7 +1216,7 @@ namespace
         {
             if (n.Lines.empty()) ImGui::TextDisabled(T("No lines."));
             for (const Line& l : n.Lines) ImGui::TextColored(ChannelColorVec(l.Channel), "%s", ChatLine::TypedText(l).c_str());
-            if (!n.Hotkey.Empty()) ImGui::TextDisabled(T("Hotkey (not active in the bin): %s"), Hotkey::ToString(n.Hotkey).c_str());
+            if (!n.Hotkey.Empty()) ImGui::TextDisabled(T("Hotkey (not active in the bin): %s"), Hotkey::Display(n.Hotkey).c_str());
         }
     }
 
@@ -1994,7 +2084,7 @@ namespace
     void DrawMenuMacro(const Node& n, const char* aLabel, bool aBusy)
     {
         const EChannel first = n.Lines.empty() ? EChannel::Current : n.Lines.front().Channel;
-        const std::string keys = Hotkey::Fires(n.Hotkey) ? Hotkey::ToString(n.Hotkey) : std::string(); // an off hotkey isn't shown
+        const std::string keys = Hotkey::Fires(n.Hotkey) ? Hotkey::Display(n.Hotkey) : std::string(); // an off hotkey isn't shown
         ImGui::PushStyleColor(ImGuiCol_Text, ChannelColorVec(first));
         const bool clicked = ImGui::MenuItem(aLabel, keys.empty() ? nullptr : keys.c_str(), false, !aBusy);
         ImGui::PopStyleColor();
@@ -2192,7 +2282,7 @@ namespace
         }
         if (s_ImportLibrary)
         {
-            s_LibraryName = aPasted ? std::string(Exchange::kLibraryFolderFallback) : Exchange::LibraryFolderName(aPkg.Source);
+            s_LibraryName = aPasted ? std::string(Exchange::LibraryFolderFallback()) : Exchange::LibraryFolderName(aPkg.Source);
             Exchange::WrapInFolder(aPkg, s_LibraryName);
         }
         s_ImportPkg = std::make_unique<Exchange::Package>(std::move(aPkg));
@@ -2341,7 +2431,7 @@ namespace
             ImGui::PushStyleColor(ImGuiCol_Text, src.IsFolder() ? kFolderColor : ImGui::GetStyleColorVec4(ImGuiCol_Text));
             // A hotkey that comes along is shown as in the library tree, so it can be checked first.
             const bool showKey = s_ImportOpt.KeepHotkeys && src.IsMacro() && !src.Hotkey.Empty();
-            const bool open = showKey ? ImGui::TreeNodeEx("##item", flags, "%s  [%s]", src.Name.c_str(), Hotkey::ToString(src.Hotkey).c_str())
+            const bool open = showKey ? ImGui::TreeNodeEx("##item", flags, "%s  [%s]", src.Name.c_str(), Hotkey::Display(src.Hotkey).c_str())
                                       : ImGui::TreeNodeEx("##item", flags, "%s", src.Name.c_str());
             ImGui::PopStyleColor();
             if (Exchange::IsPartlySelected(s_ImportOpt, src))
@@ -2479,10 +2569,10 @@ namespace
             // A library always goes into its own new folder at the top level.
             ImGui::Text(T("2. Name the new folder it goes into (from %s)"), s_ImportPkg->Source.c_str());
             ImGui::SetNextItemWidth(-1.0f);
-            if (InputString("##libname", Exchange::kLibraryFolderFallback, s_LibraryName))
+            if (InputString("##libname", Exchange::LibraryFolderFallback(), s_LibraryName))
             {
                 const std::string clean = Tree::CleanName(s_LibraryName);
-                folder->Name = clean.empty() ? std::string(Exchange::kLibraryFolderFallback) : clean;
+                folder->Name = clean.empty() ? std::string(Exchange::LibraryFolderFallback()) : clean;
             }
             ImGui::TextDisabled(T("It's added at the top level of your library. If that name is taken, it gets \" (2)\"."));
             target = &s_Tree.Root();
@@ -2832,6 +2922,33 @@ namespace
         return label;
     }
 
+    // The options page's map list: when the GW2 API's list was last fetched, and a button to do
+    // it again now (it's also fetched on the first run, weekly, and when the language changes).
+    void DrawMapListOptions()
+    {
+        const MapNames::State st = MapNames::GetState();
+        UiFont::Row row;
+        ImGui::AlignTextToFramePadding();
+        if (st.Refreshing) ImGui::TextUnformatted(T("Map list: loading from the GW2 API..."));
+        else if (st.Listed == 0) ImGui::TextUnformatted(T("Map list: not loaded yet."));
+        else
+        {
+            char when[32] = "?";
+            const std::time_t t = static_cast<std::time_t>(st.ListedAt);
+            std::tm local{};
+            if (localtime_s(&local, &t) == 0) std::strftime(when, sizeof(when), "%Y-%m-%d %H:%M", &local);
+            ImGui::Text(T("Map list: %zu maps, from %s."), st.Listed, when);
+        }
+        if (!st.Refreshing)
+        {
+            row.Next(UiFont::ButtonWidth(T("Refresh map list")));
+            if (ImGui::SmallButton(T("Refresh map list"))) MapNames::RefreshNow();
+        }
+        if (!st.LastError.empty()) ImGui::TextColored(kWarnColor, T("The last refresh failed: %s"), st.LastError.c_str());
+        ImGui::TextWrapped(T("Map names for the filters' map search and {map}, in your language where the GW2 API has "
+                           "it. It's fetched on the first run, once a week, and when you change the language."));
+    }
+
     void DrawLanguageOptions()
     {
         const std::vector<Languages::Entry>& list = Languages::List();
@@ -2969,6 +3086,8 @@ void Ui::RenderOptions()
                        "Off: Delete asks first and removes the item for good. Items already in the bin stay "
                        "there, and the bin stays visible, until you empty it."));
     if (!s_Tree.Trash().empty()) ImGui::TextDisabled(T("The trash bin holds %zu item(s)."), s_Tree.Trash().size());
+    ImGui::Spacing();
+    DrawMapListOptions();
     ImGui::Spacing();
     ImGui::TextWrapped(T("Quick menu: right-click the scroll icon in the Nexus bar, or set a key for "
                        "\"Open Chat Messages quick menu\" in Nexus > Options > Keybinds."));

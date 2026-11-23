@@ -51,24 +51,24 @@ namespace
     {
         if (!aPkg.Ok()) return;
         const size_t count = Tree::CountDescendants(aPkg.Items.Root());
-        if (count == 0) aPkg.Error = "There's nothing to import in it.";
+        if (count == 0) aPkg.Error = TR("There's nothing to import in it.");
         else if (count > Exchange::kMaxImportItems)
-            aPkg.Error = "It has " + std::to_string(count) + " folders and macros. At most " +
-                         std::to_string(Exchange::kMaxImportItems) + " can be imported at once.";
+            aPkg.Error = Localization::Fmt(TR("It has %zu folders and macros. At most %zu can be imported at once."),
+                                           count, static_cast<size_t>(Exchange::kMaxImportItems));
     }
 
     bool ReadFile(const fs::path& aFile, size_t aMaxBytes, std::string& aOut, std::string& aError)
     {
         std::error_code ec;
         const auto size = fs::file_size(aFile, ec);
-        if (ec) { aError = "It couldn't be read."; return false; }
+        if (ec) { aError = TR("It couldn't be read."); return false; }
         if (size > aMaxBytes)
         {
-            aError = "It's too big (over " + std::to_string(aMaxBytes / 1024) + " KB).";
+            aError = Localization::Fmt(TR("It's too big (over %zu KB)."), static_cast<size_t>(aMaxBytes / 1024));
             return false;
         }
         std::ifstream in(aFile, std::ios::binary);
-        if (!in) { aError = "It couldn't be opened."; return false; }
+        if (!in) { aError = TR("It couldn't be opened."); return false; }
         aOut.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
         if (aOut.size() >= 3 && aOut.compare(0, 3, "\xEF\xBB\xBF") == 0) aOut.erase(0, 3); // UTF-8 BOM
         return true;
@@ -76,9 +76,10 @@ namespace
 
     std::string Utf8Name(const fs::path& aPath) { return PathText::Utf8(aPath); } // std::string in C++17
 
-    // A macro from raw text; false (with a warning) if the text has no lines.
+    // A macro from raw text; false (with a warning) if the text has no lines. aTooBig: set when
+    // it was left out for being too big once its characters were repaired.
     bool AddTextMacro(Tree& aTree, Node* aParent, const std::string& aName, const std::string& aText,
-                      std::vector<std::string>& aWarnings)
+                      std::vector<std::string>& aWarnings, bool* aTooBig = nullptr)
     {
         // A file in another encoding (Windows-1252, say) isn't UTF-8: such bytes would make every
         // save of the library fail, so they're replaced.
@@ -86,34 +87,37 @@ namespace
         const bool repaired = ChatLine::RepairUtf8(text);
         if (repaired && text.size() > Exchange::kMaxTextBytes) // each replaced byte takes three (SEC-023, SEC-025)
         {
-            aWarnings.push_back("\"" + aName + "\" isn't saved as UTF-8, and with its characters replaced it's over " +
-                                std::to_string(Exchange::kMaxTextBytes / 1024) + " KB, so it was left out.");
+            aWarnings.push_back(Localization::Fmt(TR("\"%s\" isn't saved as UTF-8, and with its characters replaced "
+                                                     "it's over %zu KB, so it was left out."),
+                                                  aName.c_str(), static_cast<size_t>(Exchange::kMaxTextBytes / 1024)));
+            if (aTooBig) *aTooBig = true;
             return false;
         }
         std::vector<Line> lines = ChatLine::ParseRaw(text);
         if (lines.empty())
         {
-            aWarnings.push_back("\"" + aName + "\" has no lines, so it was left out.");
+            aWarnings.push_back(Localization::Fmt(TR("\"%s\" has no lines, so it was left out."), aName.c_str()));
             return false;
         }
         if (lines.size() > kMaxLines)
         {
             lines.resize(kMaxLines);
-            aWarnings.push_back("\"" + aName + "\" has more than " + std::to_string(kMaxLines) +
-                                " lines. Only the first " + std::to_string(kMaxLines) + " were kept.");
+            aWarnings.push_back(Localization::Fmt(TR("\"%s\" has more than %zu lines. Only the first %zu were kept."),
+                                                  aName.c_str(), static_cast<size_t>(kMaxLines), static_cast<size_t>(kMaxLines)));
         }
         std::string name = Tree::CleanName(aName);
-        if (name.empty()) name = "Imported macro";
+        if (name.empty()) name = TR("Imported macro");
         Result r = aTree.AddMacro(aParent, name);
         if (!r.Ok)
         {
-            aWarnings.push_back("\"" + aName + "\" was left out: " + r.Error);
+            aWarnings.push_back(Localization::Fmt(TR("\"%s\" was left out: %s"), aName.c_str(), r.Error.c_str()));
             return false;
         }
         r.Target->Lines = std::move(lines);
         if (repaired)
-            aWarnings.push_back("\"" + aName + "\" isn't saved as UTF-8, so some of its characters couldn't be read and "
-                                "were replaced. Save it as UTF-8 and import it again to keep them.");
+            aWarnings.push_back(Localization::Fmt(TR("\"%s\" isn't saved as UTF-8, so some of its characters couldn't "
+                                                     "be read and were replaced. Save it as UTF-8 and import it again "
+                                                     "to keep them."), aName.c_str()));
         return true;
     }
 
@@ -150,7 +154,7 @@ namespace
                     else if (!WarnedDepth)
                     {
                         // Too deep (or an odd name): its files go into the folder above.
-                        Warnings.push_back("Some folders are nested too deeply; their files were put in the folder above.");
+                        Warnings.push_back(TR("Some folders are nested too deeply; their files were put in the folder above."));
                         WarnedDepth = true;
                     }
                     Read(e.path(), into, aDepth + 1);
@@ -161,7 +165,8 @@ namespace
                     if (Files >= Exchange::kMaxFolderFiles)
                     {
                         if (!WarnedCount)
-                            Warnings.push_back("Only the first " + std::to_string(Exchange::kMaxFolderFiles) + " text files were read.");
+                            Warnings.push_back(Localization::Fmt(TR("Only the first %zu text files were read."),
+                                                                 static_cast<size_t>(Exchange::kMaxFolderFiles)));
                         WarnedCount = true;
                         return;
                     }
@@ -170,13 +175,14 @@ namespace
                     const std::string name = Utf8Name(e.path().stem());
                     if (!ReadFile(e.path(), Exchange::kMaxTextBytes, text, error))
                     {
-                        Warnings.push_back("\"" + Utf8Name(e.path().filename()) + "\" was left out. " + error);
+                        Warnings.push_back(Localization::Fmt(TR("\"%s\" was left out. %s"),
+                                                             Utf8Name(e.path().filename()).c_str(), error.c_str()));
                         continue;
                     }
                     if (Bytes + text.size() > Exchange::kMaxFolderBytes)
                     {
-                        Warnings.push_back("Only the first " + std::to_string(Exchange::kMaxFolderBytes / (1024 * 1024)) +
-                                           " MB of text files were read.");
+                        Warnings.push_back(Localization::Fmt(TR("Only the first %zu MB of text files were read."),
+                                                             static_cast<size_t>(Exchange::kMaxFolderBytes / (1024 * 1024))));
                         Full = true;
                         return;
                     }
@@ -611,7 +617,7 @@ namespace Exchange
         p.Source = "JSON";
         if (aText.size() > kMaxJsonBytes)
         {
-            p.Error = "It's too big (over " + std::to_string(kMaxJsonBytes / (1024 * 1024)) + " MB).";
+            p.Error = Localization::Fmt(TR("It's too big (over %zu MB)."), static_cast<size_t>(kMaxJsonBytes / (1024 * 1024)));
             return p;
         }
         // The text is untrusted (pasted, or a file from imports\ or a library file): anything that
@@ -620,19 +626,20 @@ namespace Exchange
         try
         {
             const json j = json::parse(aText, nullptr, false);
-            if (j.is_discarded()) { p.Error = "It isn't valid JSON."; return p; }
+            if (j.is_discarded()) { p.Error = TR("It isn't valid JSON."); return p; }
             std::vector<std::string> warnings;
             if (!p.Items.FromJson(j, &warnings))
             {
-                p.Error = "It isn't a Chat Messages export.";
+                p.Error = TR("It isn't a Chat Messages export.");
+                p.NotOurFormat = true;
                 return p;
             }
             for (std::string& w : warnings)
-                if (w.find("new ids") == std::string::npos) p.Warnings.push_back(std::move(w)); // ids are always new on import
+                if (!IsNewIdsWarning(w)) p.Warnings.push_back(std::move(w)); // ids are always new on import
             if (!p.Items.Trash().empty())
             {
-                p.Warnings.push_back("Its trash bin (" + std::to_string(p.Items.Trash().size()) +
-                                     " item(s)) isn't imported: only its library is.");
+                p.Warnings.push_back(Localization::Fmt(TR("Its trash bin (%zu item(s)) isn't imported: only its library is."),
+                                                       p.Items.Trash().size()));
                 p.Items.EmptyTrash();
             }
             ClearLinkFiles(p.Items.Root());
@@ -643,7 +650,7 @@ namespace Exchange
         {
             Package failed; // nothing half-read is kept
             failed.Source = "JSON";
-            failed.Error  = "It couldn't be read.";
+            failed.Error  = TR("It couldn't be read.");
             return failed;
         }
     }
@@ -654,15 +661,15 @@ namespace Exchange
         p.Source = aName;
         if (aText.size() > kMaxTextBytes)
         {
-            p.Error = "It's too big (over " + std::to_string(kMaxTextBytes / 1024) + " KB).";
+            p.Error = Localization::Fmt(TR("It's too big (over %zu KB)."), static_cast<size_t>(kMaxTextBytes / 1024));
             return p;
         }
         std::vector<std::string> warnings;
-        if (!AddTextMacro(p.Items, nullptr, aName, aText, warnings))
+        bool tooBig = false;
+        if (!AddTextMacro(p.Items, nullptr, aName, aText, warnings, &tooBig))
         {
-            p.Error = !warnings.empty() && warnings.back().find(" KB, so it was left out.") != std::string::npos
-                          ? "It isn't saved as UTF-8, and with its characters replaced it's too big."
-                          : "It has no lines to send.";
+            p.Error = tooBig ? TR("It isn't saved as UTF-8, and with its characters replaced it's too big.")
+                             : TR("It has no lines to send.");
             return p;
         }
         p.Warnings = std::move(warnings);
@@ -691,7 +698,7 @@ namespace Exchange
         {
             Package failed; // nothing half-read is kept
             failed.Source = Utf8Name(aPath.filename());
-            failed.Error  = "It couldn't be read.";
+            failed.Error  = TR("It couldn't be read.");
             return failed;
         }
     }
@@ -710,19 +717,19 @@ namespace Exchange
             CapWarnings(p.Warnings);
             if (top && top->Children.empty()) p.Items.Delete(*top);
             if (Tree::CountDescendants(p.Items.Root()) == 0)
-                p.Error = "No .txt files with lines were found in it.";
+                p.Error = TR("No .txt files with lines were found in it.");
             Finish(p);
             return p;
         }
         if (!fs::is_regular_file(aPath, ec))
         {
-            p.Error = "It wasn't found.";
+            p.Error = TR("It wasn't found.");
             return p;
         }
         const std::string ext = Lower(Utf8Name(aPath.extension()));
         if (ext != ".json" && ext != ".txt")
         {
-            p.Error = "Only .json and .txt files (or a folder of .txt files) can be imported.";
+            p.Error = TR("Only .json and .txt files (or a folder of .txt files) can be imported.");
             return p;
         }
         std::string text, error;
@@ -749,13 +756,13 @@ namespace Exchange
         std::error_code ec;
         if (!fs::is_regular_file(aPath, ec))
         {
-            p.Error = fs::is_directory(aPath, ec) ? "It's a folder. A library is one file: macros.json (or macros.json.bak)."
-                                                  : "It wasn't found.";
+            p.Error = fs::is_directory(aPath, ec) ? TR("It's a folder. A library is one file: macros.json (or macros.json.bak).")
+                                                  : TR("It wasn't found.");
             return p;
         }
         if (!IsLibraryFileName(aPath))
         {
-            p.Error = "A library file is a macros.json (or its backup, macros.json.bak).";
+            p.Error = TR("A library file is a macros.json (or its backup, macros.json.bak).");
             return p;
         }
         std::string text, error;
@@ -765,11 +772,13 @@ namespace Exchange
             return p;
         }
         Package read = FromJsonText(text);
-        if (!read.Ok() && read.Error == "It isn't a Chat Messages export.")
-            read.Error = "It isn't a Chat Messages library (macros.json).";
+        if (!read.Ok() && read.NotOurFormat)
+            read.Error = TR("It isn't a Chat Messages library (macros.json).");
         read.Source = p.Source;
         return read;
     }
+
+    const char* LibraryFolderFallback() { return TR("Imported library"); }
 
     std::string LibraryFolderName(const std::string& aSource)
     {
@@ -780,8 +789,8 @@ namespace Exchange
             if (stem.size() >= e.size() && Lower(stem.substr(stem.size() - e.size())) == e) stem.erase(stem.size() - e.size());
         }
         stem = Tree::CleanName(stem);
-        if (stem.empty() || Lower(stem) == "macros") return kLibraryFolderFallback;
-        return Tree::CleanName("From " + stem);
+        if (stem.empty() || Lower(stem) == "macros") return LibraryFolderFallback();
+        return Tree::CleanName(Localization::Fmt(TR("From %s"), stem.c_str()));
     }
 
     Node* WrapInFolder(Package& aPkg, const std::string& aName)
@@ -789,7 +798,7 @@ namespace Exchange
         Node& root = aPkg.Items.Root();
         if (root.Children.empty()) return nullptr;
         std::string name = Tree::CleanName(aName);
-        if (name.empty()) name = kLibraryFolderFallback;
+        if (name.empty()) name = LibraryFolderFallback();
         // Take the top level out first, so the new folder's name can't clash with one of them.
         std::vector<std::unique_ptr<Node>> items = std::move(root.Children);
         root.Children.clear();

@@ -167,16 +167,16 @@ namespace MacroTree
             // once per nesting level and a hostile file can nest it deep enough to overflow the stack.
             void ParseNode(const json& jc, Node& aFolder, int aLevel)
             {
-                if (!jc.is_object()) { Warn("Skipped an entry that isn't a folder or macro."); return; }
+                if (!jc.is_object()) { Warn(TR("Skipped an entry that isn't a folder or macro.")); return; }
                 const std::string type = StringField(jc, "type");
                 ENodeType t;
                 if (type == "folder") t = ENodeType::Folder;
                 else if (type == "macro") t = ENodeType::Macro;
-                else { Warn("Skipped an entry of unknown type \"" + type + "\"."); return; }
+                else { Warn(Localization::Fmt(TR("Skipped an entry of unknown type \"%s\"."), type.c_str())); return; }
 
                 if (t == ENodeType::Folder && aLevel + 1 > kMaxParseDepth)
                 {
-                    Warn("Skipped folders nested too deeply to read.");
+                    Warn(TR("Skipped folders nested too deeply to read."));
                     return;
                 }
 
@@ -184,7 +184,7 @@ namespace MacroTree
                 node->Type   = t;
                 node->Parent = &aFolder;
                 node->Name   = Tree::CleanName(StringField(jc, "name"));
-                if (node->Name.empty()) node->Name = t == ENodeType::Folder ? "New folder" : "New macro";
+                if (node->Name.empty()) node->Name = t == ENodeType::Folder ? TR("New folder") : TR("New macro");
 
                 const uint64_t id = IdFromString(StringField(jc, "id"));
                 if (id != 0 && SeenIds.insert(id).second) node->Id = id;
@@ -194,8 +194,8 @@ namespace MacroTree
                 {
                     if (aLevel + 1 > kMaxFolderDepth && !WarnedDepth)
                     {
-                        Warn("Some folders are nested deeper than " + std::to_string(kMaxFolderDepth) +
-                             " levels. They were kept, but you can't add more folders inside them.");
+                        Warn(Localization::Fmt(TR("Some folders are nested deeper than %d levels. They were kept, "
+                                                  "but you can't add more folders inside them."), kMaxFolderDepth));
                         WarnedDepth = true;
                     }
                     // Not value(): it throws on a wrongly typed key. Missing or not a bool = open.
@@ -252,7 +252,7 @@ namespace MacroTree
                 {
                     const Hotkey::Combo c = Hotkey::FromString(hk);
                     if (Hotkey::KeepOnLoad(c)) n.Hotkey = c; // an old plain mouse hotkey is kept, but never fires
-                    else Warn("Macro \"" + n.Name + "\": hotkey \"" + hk + "\" isn't valid and was removed.");
+                    else Warn(Localization::Fmt(TR("Macro \"%s\": hotkey \"%s\" isn't valid and was removed."), n.Name.c_str(), hk.c_str()));
                 }
             }
 
@@ -299,7 +299,9 @@ namespace MacroTree
                             std::string candidate = Tree::NumberedName(old, m);
                             if (taken[ti].insert(Lower(candidate)).second) { a.Name = std::move(candidate); named = true; }
                         }
-                        Warn("Renamed duplicate " + std::string(TypeWord(a.Type)) + " \"" + old + "\" to \"" + a.Name + "\".");
+                        Warn(Localization::Fmt(a.Type == ENodeType::Folder ? TR("Renamed duplicate folder \"%s\" to \"%s\".")
+                                                                      : TR("Renamed duplicate macro \"%s\" to \"%s\"."),
+                                               old.c_str(), a.Name.c_str()));
                     }
                     earlier[ti].insert(Lower(a.Name));
                 }
@@ -465,20 +467,22 @@ namespace MacroTree
 
     Result Tree::CheckName(const Node& aParent, ENodeType aType, const std::string& aName, const Node* aIgnore) const
     {
-        if (aName.empty()) return Result::Fail("The name can't be empty.");
+        if (aName.empty()) return Result::Fail(TR("The name can't be empty."));
         const std::string lower = Lower(aName);
         for (const auto& c : aParent.Children)
             if (c.get() != aIgnore && c->Type == aType && Lower(c->Name) == lower)
-                return Result::Fail(std::string("There is already a ") + TypeWord(aType) + " called \"" + c->Name + "\" here.");
+                return Result::Fail(Localization::Fmt(aType == ENodeType::Folder ? TR("There is already a folder called \"%s\" here.")
+                                                                                   : TR("There is already a macro called \"%s\" here."),
+                                                      c->Name.c_str()));
         return {};
     }
 
     Result Tree::Add(Node* aParent, ENodeType aType, const std::string& aName, bool aCheckName)
     {
         Node& parent = aParent ? *aParent : *m_Root;
-        if (!parent.IsFolder()) return Result::Fail("Items can only be added to a folder.");
+        if (!parent.IsFolder()) return Result::Fail(TR("Items can only be added to a folder."));
         if (aType == ENodeType::Folder && FolderLevel(parent) + 1 > kMaxFolderDepth)
-            return Result::Fail("Folders can be nested at most " + std::to_string(kMaxFolderDepth) + " levels deep.");
+            return Result::Fail(Localization::Fmt(TR("Folders can be nested at most %d levels deep."), kMaxFolderDepth));
 
         const std::string name = CleanName(aName);
         if (aCheckName)
@@ -486,7 +490,7 @@ namespace MacroTree
             Result check = CheckName(parent, aType, name, nullptr);
             if (!check.Ok) return check;
         }
-        else if (name.empty()) return Result::Fail("The name can't be empty.");
+        else if (name.empty()) return Result::Fail(TR("The name can't be empty."));
 
         auto node = std::make_unique<Node>();
         node->Id     = NewId();
@@ -506,7 +510,7 @@ namespace MacroTree
 
     Result Tree::Rename(Node& aNode, const std::string& aName)
     {
-        if (!aNode.Parent) return Result::Fail("The top level can't be renamed.");
+        if (!aNode.Parent) return Result::Fail(TR("The top level can't be renamed."));
         const std::string name = CleanName(aName);
         Result check = CheckName(*aNode.Parent, aNode.Type, name, &aNode);
         if (!check.Ok) return check;
@@ -518,7 +522,7 @@ namespace MacroTree
 
     Result Tree::Delete(Node& aNode)
     {
-        if (!aNode.Parent) return Result::Fail("The top level can't be deleted.");
+        if (!aNode.Parent) return Result::Fail(TR("The top level can't be deleted."));
         auto& siblings = aNode.Parent->Children;
         siblings.erase(siblings.begin() + static_cast<std::ptrdiff_t>(IndexInParent(aNode)));
         return {};
@@ -526,15 +530,15 @@ namespace MacroTree
 
     Result Tree::CanMove(const Node& aNode, const Node& aTarget, EDrop aDrop) const
     {
-        if (!aNode.Parent) return Result::Fail("The top level can't be moved.");
+        if (!aNode.Parent) return Result::Fail(TR("The top level can't be moved."));
         const Node* dest = aDrop == EDrop::Into ? &aTarget : aTarget.Parent;
-        if (!dest) return Result::Fail("Items can't be placed there.");
-        if (!dest->IsFolder()) return Result::Fail("Items can only be moved into a folder.");
-        if (&aNode == &aTarget) return aDrop == EDrop::Into ? Result::Fail("A folder can't be moved into itself.") : Result();
+        if (!dest) return Result::Fail(TR("Items can't be placed there."));
+        if (!dest->IsFolder()) return Result::Fail(TR("Items can only be moved into a folder."));
+        if (&aNode == &aTarget) return aDrop == EDrop::Into ? Result::Fail(TR("A folder can't be moved into itself.")) : Result();
         if (dest == &aNode || IsAncestorOf(aNode, *dest))
-            return Result::Fail("A folder can't be moved into one of its own subfolders.");
+            return Result::Fail(TR("A folder can't be moved into one of its own subfolders."));
         if (aNode.IsFolder() && FolderLevel(*dest) + FolderHeight(aNode) > kMaxFolderDepth)
-            return Result::Fail("That would nest folders more than " + std::to_string(kMaxFolderDepth) + " levels deep.");
+            return Result::Fail(Localization::Fmt(TR("That would nest folders more than %d levels deep."), kMaxFolderDepth));
         if (dest != aNode.Parent)
         {
             Result check = CheckName(*dest, aNode.Type, aNode.Name, &aNode);
@@ -599,7 +603,7 @@ namespace MacroTree
 
     Result Tree::MoveToTrash(Node& aNode, const std::string& aWhen)
     {
-        if (!aNode.Parent) return Result::Fail("The top level can't be deleted.");
+        if (!aNode.Parent) return Result::Fail(TR("The top level can't be deleted."));
         TrashItem t;
         for (const Node* n = aNode.Parent; n && n->Parent; n = n->Parent)
         {
@@ -634,7 +638,7 @@ namespace MacroTree
 
     std::string Tree::FromPathText(const TrashItem& aItem)
     {
-        if (aItem.FromNames.empty()) return "the top level";
+        if (aItem.FromNames.empty()) return TR("the top level");
         std::string s;
         for (const std::string& n : aItem.FromNames) s += (s.empty() ? "" : " > ") + n;
         return s;
@@ -642,7 +646,7 @@ namespace MacroTree
 
     Result Tree::Restore(size_t aIndex, ERestoreTo aTo)
     {
-        if (aIndex >= m_Trash.size()) return Result::Fail("That item is no longer in the trash bin.");
+        if (aIndex >= m_Trash.size()) return Result::Fail(TR("That item is no longer in the trash bin."));
         TrashItem& t = m_Trash[aIndex];
         Node& item = *t.Item;
         Node* dest = m_Root.get();
@@ -653,7 +657,7 @@ namespace MacroTree
             {
                 dest = Find(t.FromIds.back());
                 if (!dest || !dest->IsFolder())
-                    return Result::Fail("The folder it came from (" + FromPathText(t) + ") no longer exists.");
+                    return Result::Fail(Localization::Fmt(TR("The folder it came from (%s) no longer exists."), FromPathText(t).c_str()));
             }
             atOriginalPlace = true;
         }
@@ -662,11 +666,11 @@ namespace MacroTree
             // The old path's folders keep their old levels, so the item fits as it did. Walk down it:
             // reuse a folder with the same id, or else the same name, or else recreate it.
             if (item.IsFolder() && static_cast<int>(t.FromIds.size()) + FolderHeight(item) > kMaxFolderDepth)
-                return Result::Fail("Restored there, folders would be nested more than " + std::to_string(kMaxFolderDepth) +
-                                    " levels deep. Restore it to the top level instead.");
+                return Result::Fail(Localization::Fmt(TR("Restored there, folders would be nested more than %d levels deep. "
+                                                         "Restore it to the top level instead."), kMaxFolderDepth));
             for (size_t i = 0; i < t.FromIds.size(); i++)
             {
-                const std::string want = CleanName(t.FromNames[i]).empty() ? std::string("Restored folder") : CleanName(t.FromNames[i]);
+                const std::string want = CleanName(t.FromNames[i]).empty() ? std::string(TR("Restored folder")) : CleanName(t.FromNames[i]);
                 Node* next = nullptr;
                 for (const auto& c : dest->Children)
                     if (c->IsFolder() && c->Id == t.FromIds[i]) next = c.get();
@@ -690,15 +694,17 @@ namespace MacroTree
         }
 
         if (item.IsFolder() && FolderLevel(*dest) + FolderHeight(item) > kMaxFolderDepth)
-            return Result::Fail("Restored there, folders would be nested more than " + std::to_string(kMaxFolderDepth) +
-                                " levels deep. Restore it to the top level instead.");
+            return Result::Fail(Localization::Fmt(TR("Restored there, folders would be nested more than %d levels deep. "
+                                                     "Restore it to the top level instead."), kMaxFolderDepth));
 
         Result r;
         const std::string name = FreeName(*dest, item.Type, item.Name);
         if (name != item.Name)
         {
-            r.Note = std::string("There was already a ") + TypeWord(item.Type) + " called \"" + item.Name +
-                     "\" there, so it was restored as \"" + name + "\".";
+            r.Note = Localization::Fmt(item.Type == ENodeType::Folder
+                                           ? TR("There was already a folder called \"%s\" there, so it was restored as \"%s\".")
+                                           : TR("There was already a macro called \"%s\" there, so it was restored as \"%s\"."),
+                                       item.Name.c_str(), name.c_str());
             item.Name = name;
         }
         const size_t at = atOriginalPlace ? std::min(t.FromIndex, dest->Children.size()) : dest->Children.size();
@@ -712,7 +718,7 @@ namespace MacroTree
 
     Result Tree::DeleteFromTrash(size_t aIndex)
     {
-        if (aIndex >= m_Trash.size()) return Result::Fail("That item is no longer in the trash bin.");
+        if (aIndex >= m_Trash.size()) return Result::Fail(TR("That item is no longer in the trash bin."));
         m_Trash.erase(m_Trash.begin() + static_cast<std::ptrdiff_t>(aIndex));
         return {};
     }
@@ -752,7 +758,7 @@ namespace MacroTree
         if (jf != aJson.end() && !jf->is_number() && !jf->is_boolean()) return false;
         const int format = jf != aJson.end() ? jf->get<int>() : 0;
         if (format > kFormatVersion && aWarnings)
-            aWarnings->push_back("This file was saved by a newer version of the addon. Some details may be lost.");
+            aWarnings->push_back(TR("This file was saved by a newer version of the addon. Some details may be lost."));
 
         auto fresh = std::make_unique<Node>();
         fresh->Type = ENodeType::Folder;
@@ -805,15 +811,28 @@ namespace MacroTree
         if (!p.NeedIdNodes.empty())
         {
             for (Node* n : p.NeedIdNodes) n->Id = NewId();
-            if (aWarnings) aWarnings->push_back("Gave new ids to " + std::to_string(p.NeedIdNodes.size()) + " item(s) with a missing or repeated id.");
+            if (aWarnings) aWarnings->push_back(Localization::Fmt(NewIdsFormat(), p.NeedIdNodes.size()));
         }
         if (aWarnings && p.Dropped) aWarnings->push_back(MoreWarnings(p.Dropped));
         return true;
     }
 
+    const char* NewIdsFormat() { return TR("Gave new ids to %zu item(s) with a missing or repeated id."); }
+
+    bool IsNewIdsWarning(const std::string& aWarning)
+    {
+        // The text around the number, in the language it was made in (the active one).
+        const std::string f = NewIdsFormat();
+        const size_t at = f.find("%zu");
+        if (at == std::string::npos) return false;
+        const std::string before = f.substr(0, at), after = f.substr(at + 3);
+        return aWarning.size() > before.size() + after.size() && aWarning.compare(0, before.size(), before) == 0 &&
+               aWarning.compare(aWarning.size() - after.size(), after.size(), after) == 0;
+    }
+
     std::string MoreWarnings(size_t aCount)
     {
-        return "...and " + std::to_string(aCount) + " more problem(s) like these.";
+        return Localization::Fmt(TR("...and %zu more problem(s) like these."), aCount);
     }
 }
 

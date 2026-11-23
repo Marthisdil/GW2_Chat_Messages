@@ -11,6 +11,7 @@
 #include <nlohmann/json.hpp>
 
 #include "Globals.h"
+#include "Localization.h"
 #include "MacroTree.h"
 #include "PathText.h"
 
@@ -179,7 +180,7 @@ void Storage::LoadMacros(MacroTree::Tree& aTree, std::vector<std::string>& aMess
     const fs::path file = LibraryFile();
     if (file.empty())
     {
-        aMessages.push_back("The addon folder isn't available, so macros can't be loaded or saved.");
+        aMessages.push_back(TR("The addon folder isn't available, so macros can't be loaded or saved."));
         return;
     }
 
@@ -197,7 +198,8 @@ void Storage::LoadMacros(MacroTree::Tree& aTree, std::vector<std::string>& aMess
         const fs::path aside = WithSuffix(file, ".unreadable-" + TimeStamp());
         std::error_code ec;
         fs::rename(file, aside, ec);
-        aMessages.push_back("Your macros file couldn't be read. It was kept as \"" + PathText::Utf8(aside.filename()) + "\".");
+        aMessages.push_back(Localization::Fmt(TR("Your macros file couldn't be read. It was kept as \"%s\"."),
+                                              PathText::Utf8(aside.filename()).c_str()));
         break;
     }
     }
@@ -208,8 +210,8 @@ void Storage::LoadMacros(MacroTree::Tree& aTree, std::vector<std::string>& aMess
     if (ReadLibrary(backup, fromBackup, warnings) == ERead::Ok)
     {
         aTree = std::move(fromBackup);
-        aMessages.push_back("Your macros were restored from the backup (" + PathText::Utf8(backup.filename()) +
-                            "). Changes from the last save may be missing.");
+        aMessages.push_back(Localization::Fmt(TR("Your macros were restored from the backup (%s). Changes from the "
+                                                 "last save may be missing."), PathText::Utf8(backup.filename()).c_str()));
         for (auto& w : warnings) aMessages.push_back(std::move(w));
     }
 }

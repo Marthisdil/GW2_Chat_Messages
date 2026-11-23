@@ -4,19 +4,22 @@
 #include <cstdio>
 #include <vector>
 
+#include "Localization.h" // TR, TX: key names shown in the user's language (never in macros.json)
+
 namespace
 {
     struct Named { uint16_t Key; const char* Name; };
 
-    // Names for keys that aren't letters, digits or F-keys. Stable: they're saved in macros.json.
+    // Names for keys that aren't letters, digits or F-keys. Stable: they're saved in macros.json
+    // in English (ToString); DisplayKeyName shows them translated (TX marks them for that).
     const Named kNames[] = {
-        {Hotkey::kVkMButton, "Mouse 3"}, {Hotkey::kVkXButton1, "Mouse 4"}, {Hotkey::kVkXButton2, "Mouse 5"},
-        {0x08, "Backspace"}, {0x09, "Tab"}, {0x0D, "Enter"}, {0x13, "Pause"}, {0x14, "Caps Lock"},
-        {0x1B, "Escape"}, {0x20, "Space"}, {0x21, "Page Up"}, {0x22, "Page Down"}, {0x23, "End"},
-        {0x24, "Home"}, {0x25, "Left"}, {0x26, "Up"}, {0x27, "Right"}, {0x28, "Down"},
-        {0x2C, "Print Screen"}, {0x2D, "Insert"}, {0x2E, "Delete"},
+        {Hotkey::kVkMButton, TX("Mouse 3")}, {Hotkey::kVkXButton1, TX("Mouse 4")}, {Hotkey::kVkXButton2, TX("Mouse 5")},
+        {0x08, TX("Backspace")}, {0x09, TX("Tab")}, {0x0D, TX("Enter")}, {0x13, TX("Pause")}, {0x14, TX("Caps Lock")},
+        {0x1B, TX("Escape")}, {0x20, TX("Space")}, {0x21, TX("Page Up")}, {0x22, TX("Page Down")}, {0x23, TX("End")},
+        {0x24, TX("Home")}, {0x25, TX("Left")}, {0x26, TX("Up")}, {0x27, TX("Right")}, {0x28, TX("Down")},
+        {0x2C, TX("Print Screen")}, {0x2D, TX("Insert")}, {0x2E, TX("Delete")},
         {0x6A, "Num *"}, {0x6B, "Num +"}, {0x6D, "Num -"}, {0x6E, "Num ."}, {0x6F, "Num /"},
-        {0x90, "Num Lock"}, {0x91, "Scroll Lock"},
+        {0x90, TX("Num Lock")}, {0x91, TX("Scroll Lock")},
         {0xBA, ";"}, {0xBB, "="}, {0xBC, ","}, {0xBD, "-"}, {0xBE, "."}, {0xBF, "/"}, {0xC0, "`"},
         {0xDB, "["}, {0xDC, "\\"}, {0xDD, "]"}, {0xDE, "'"},
     };
@@ -97,6 +100,26 @@ std::string Hotkey::KeyName(uint16_t aKey)
     return buf;
 }
 
+std::string Hotkey::DisplayKeyName(uint16_t aKey)
+{
+    for (const Named& k : kNames)
+        if (k.Key == aKey) return Localization::Translate(k.Name);
+    if (aKey >= 0x0100 || !((aKey >= '0' && aKey <= '9') || (aKey >= 'A' && aKey <= 'Z') ||
+                            (aKey >= 0x70 && aKey <= 0x87) || (aKey >= 0x60 && aKey <= 0x69)))
+        return Localization::Fmt(TR("Key 0x%02X"), static_cast<unsigned>(aKey));
+    return KeyName(aKey); // letters, digits, F-keys and "Num 5" read the same everywhere
+}
+
+std::string Hotkey::Display(const Combo& aCombo)
+{
+    if (aCombo.Empty()) return {};
+    std::string s;
+    if (aCombo.Ctrl) s += std::string(TR("Ctrl")) + "+";
+    if (aCombo.Alt) s += std::string(TR("Alt")) + "+";
+    if (aCombo.Shift) s += std::string(TR("Shift")) + "+";
+    return s + DisplayKeyName(aCombo.Key);
+}
+
 std::string Hotkey::ToString(const Combo& aCombo)
 {
     if (aCombo.Empty()) return {};
@@ -150,15 +173,17 @@ bool Hotkey::IsMouseKey(uint16_t aKey)
 
 std::string Hotkey::Refusal(const Combo& aCombo)
 {
-    if (aCombo.Empty()) return "No key.";
-    if (aCombo.Key == 0x01 || aCombo.Key == 0x02) return "The left and right mouse buttons can't be hotkeys.";
-    if (aCombo.Key == kVkEscape) return "Escape can't be a hotkey.";
-    if (IsModifierKey(aCombo.Key)) return "Shift, Ctrl, Alt and Windows can only be used together with another key.";
+    if (aCombo.Empty()) return TR("No key.");
+    if (aCombo.Key == 0x01 || aCombo.Key == 0x02) return TR("The left and right mouse buttons can't be hotkeys, not even with Ctrl, Alt or Shift: you click them all "
+                  "the time, and in GW2 Ctrl+click and Shift+click already do things.");
+    if (aCombo.Key == kVkEscape) return TR("Escape can't be a hotkey.");
+    if (IsModifierKey(aCombo.Key)) return TR("Shift, Ctrl, Alt and Windows can only be used together with another key.");
     if (!aCombo.HasModifier() && (aCombo.Key == 0x09 || aCombo.Key == 0x0D || aCombo.Key == 0x20 || aCombo.Key == 0x08))
-        return KeyName(aCombo.Key) + " needs Ctrl, Alt or Shift: on its own it's used all the time in game.";
+        return Localization::Fmt(TR("%s needs Ctrl, Alt or Shift: on its own it's used all the time in game."),
+                                 DisplayKeyName(aCombo.Key).c_str());
     if (!aCombo.HasModifier() && IsMouseKey(aCombo.Key))
-        return KeyName(aCombo.Key) + " needs Ctrl, Alt or Shift: mouse buttons are often dodge or a skill, "
-               "so on their own they'd send the macro by accident.";
+        return Localization::Fmt(TR("%s needs Ctrl, Alt or Shift: mouse buttons are often dodge or a skill, so on "
+                                    "their own they'd send the macro by accident."), DisplayKeyName(aCombo.Key).c_str());
     return {};
 }
 

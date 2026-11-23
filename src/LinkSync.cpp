@@ -4,6 +4,7 @@
 #include <cwctype>
 
 #include "ChatLine.h"
+#include "Localization.h"
 #include "PathText.h"
 
 namespace fs = std::filesystem;
@@ -30,14 +31,14 @@ namespace LinkSync
     std::string CheckPath(const std::string& aPath)
     {
         const size_t first = aPath.find_first_not_of(" \t");
-        if (first == std::string::npos) return "Type a file name, like \"callouts.txt\".";
+        if (first == std::string::npos) return TR("Type a file name, like \"callouts.txt\".");
         const std::string p = aPath.substr(first, aPath.find_last_not_of(" \t") - first + 1);
         for (char c : p)
             if (static_cast<unsigned char>(c) < 0x20 || c == '*' || c == '?' || c == '"' || c == '<' || c == '>' || c == '|')
-                return "The file name has a character Windows doesn't allow.";
-        if (p.size() < 5 || Lower(p.substr(p.size() - 4)) != ".txt") return "The file name must end in \".txt\".";
+                return TR("The file name has a character Windows doesn't allow.");
+        if (p.size() < 5 || Lower(p.substr(p.size() - 4)) != ".txt") return TR("The file name must end in \".txt\".");
         const char last = p[p.size() - 5];
-        if (last == '\\' || last == '/') return "Type a file name, like \"callouts.txt\".";
+        if (last == '\\' || last == '/') return TR("Type a file name, like \"callouts.txt\".");
         return {};
     }
 
@@ -86,7 +87,7 @@ namespace LinkSync
             std::string text;
             if (!aFile.Read || !aFile.Read(text, out.Error))
             {
-                if (out.Error.empty()) out.Error = "the file couldn't be read.";
+                if (out.Error.empty()) out.Error = TR("the file couldn't be read.");
                 return out;
             }
             // Not UTF-8 (saved as Windows-1252, say): those bytes are replaced, the same way on
@@ -97,19 +98,19 @@ namespace LinkSync
                 // the link would stop syncing (SEC-023).
                 if (text.size() > kMaxFileBytes)
                 {
-                    out.Error = "it isn't saved as UTF-8, and with its characters replaced it's over 256 KB.";
+                    out.Error = TR("it isn't saved as UTF-8, and with its characters replaced it's over 256 KB.");
                     return out;
                 }
-                out.Warning = "The file isn't saved as UTF-8, so some of its characters couldn't be read and were replaced. "
-                              "Save it as UTF-8 to keep them.";
+                out.Warning = TR("The file isn't saved as UTF-8, so some of its characters couldn't be read and were "
+                                 "replaced. Save it as UTF-8 to keep them.");
             }
             std::vector<Line> lines = ChatLine::ParseRaw(text);
             if (lines.size() > MacroTree::kMaxLines)
             {
                 lines.resize(MacroTree::kMaxLines);
                 if (!out.Warning.empty()) out.Warning += " ";
-                out.Warning += "The file has more than " + std::to_string(MacroTree::kMaxLines) + " lines. Only the first " +
-                               std::to_string(MacroTree::kMaxLines) + " are used.";
+                out.Warning += Localization::Fmt(TR("The file has more than %zu lines. Only the first %zu are used."),
+                                                 static_cast<size_t>(MacroTree::kMaxLines), static_cast<size_t>(MacroTree::kMaxLines));
             }
             const std::string fileText = ChatLine::SerializeRaw(lines);
             const bool firstSync = !aState.Known;
@@ -134,7 +135,7 @@ namespace LinkSync
             std::string text = FileText(aMacroLines);
             if (text.size() > kMaxFileBytes) // it couldn't be read back (SEC-023): tried again after each edit
             {
-                out.Warning = "The macro is too big for its link file (over 256 KB), so the file wasn't updated.";
+                out.Warning = TR("The macro is too big for its link file (over 256 KB), so the file wasn't updated.");
                 return out;
             }
             out.WriteFile = true;

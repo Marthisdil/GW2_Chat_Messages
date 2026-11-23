@@ -59,6 +59,17 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
   - The quick menu lists only active macros, and hides folders without any. The library tree
     shows every macro, with inactive ones dimmed. **Send now** in the library always works.
   - Map names (GW2 API) come with phase 6; for now maps are entered by id or with "Add this map".
+  - **Map picker** (built 2026-11-23 from the todo list, section 2): under the map buttons, a
+    "Find a map by name or id" box lists up to 12 matches from the GW2 API's full map list
+    ("Name - Region (id)", case and accents ignored; maps you've been to first, then by name), and
+    a "Maps you've been to" dropdown lists the last 30 maps you visited (every map change is
+    remembered, at most 200, in `maps.json`). Clicking one adds it; one already in the list is
+    shown greyed. A map id the full list doesn't have is drawn in yellow with "(!)" and a tooltip:
+    removed or replaced in a game update (the filter then never matches) or an instance the API
+    doesn't list. Filters keep storing ids, so a rename only changes the label. Rules in
+    `src/MapCatalog.*` (tested in `tests/MapCatalogTests.cpp`); network and threads in
+    `src/MapNames.*`. Not done: the GW2 wiki as a fallback (the API covers the maps people use;
+    the wiki refuses automated requests).
 - **Quick menu**: the Quick Access right-click menu and a hotkey-opened pop-up show the tree as
   nested menus, with only the active macros listed. *(Built: folders without macros are hidden;
   macros are coloured by channel, show their hotkey, and preview their lines on hover. The pop-up
@@ -78,11 +89,22 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
     and the import preview marks the macro REMOVED PLACEHOLDER (`Placeholders::UsesRemoved`).
     `Http::GetPublic` and `src/NetAddress.*` went with `{json}`; `Http::Get` stays for map names,
     with an address built into the addon.
-  - Map names: `src/MapNames.*` asks `https://api.guildwars2.com/v2/maps?ids=...&lang=en` (no API
-    key) and caches the names in `<GW2>\addons\GW2_Chat_Messages\maps.json`. The current map is
+  - Map names: `src/MapNames.*` asks `https://api.guildwars2.com/v2/maps?ids=...&lang=<lang>` (no
+    API key) and caches the names in `<GW2>\addons\GW2_Chat_Messages\maps.json`. The current map is
     looked up in the background whenever it changes; ids the API doesn't know aren't asked again
     for 5 minutes. A bad cache file is just rebuilt. The filter editor shows names instead of ids.
-    English only until the multi-language UI (docs/todo.md).
+  - **Names follow the addon's language** (2026-11-23): German, French, Spanish and Chinese where
+    the API has them, English otherwise (`MapCatalog::ApiLang`). `{map}` types the name in that
+    language. Changing the language throws the names away (the visited maps are kept) and fetches
+    them again.
+  - **The full list** (2026-11-23): `/v2/maps` (every id), then the names 200 ids at a time with a
+    short pause between requests, on a background thread: on the first run (10 seconds after
+    load, so the language has settled), when the list is a week old, when the language changes,
+    and with **Refresh map list** on the options page (which also shows how many maps and from
+    when, or why the last refresh failed). The list and names are only replaced when every
+    request worked. `maps.json` is format 2: `lang`, `maps` (id, name, region), `listed`,
+    `listed_at` (UTC seconds) and `visited`; a file in format 1 is rebuilt. Names and regions must
+    pass `Localization::SafeText` and be at most 200 bytes; the file is read only up to 4 MB.
   - Syntax: `{name arg arg}`, case-insensitive, arguments separated by spaces.
   - Differences from bhm, on purpose: an unknown `{word}` is sent as typed (bhm drops the whole
     line), and a known placeholder that fails stops the whole macro with a message (bhm silently
@@ -187,9 +209,23 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
   ignored. A failing text is skipped (English is shown) and counted; the error window names the
   file and the count, and the Nexus log lists the first 5. A file that fails the file-level
   checks isn't loaded, and the error window says why.
-- **Not translated (yet):** messages from the core modules that run off the render thread or
-  have no UI dependency (tree, import, sender, link and hotkey errors, key names, "Imported
-  library"), and the Nexus menu names quoted in texts. See `docs/todo.md`.
+- **Core modules and worker threads** (built 2026-11-23 from the todo list): messages built in
+  the modules with no UI dependency or on another thread (tree rules, import, sender status and
+  errors, link files, hotkey refusals, placeholders, map lookups, the web request errors, loading
+  `macros.json`) use `TR("...")`. `Localization::Translate` is thread-safe: `SetActive` keeps a
+  copy of each language's texts that lives until `ClearShared` in `AddonUnload` (after every
+  thread has stopped), so a text handed to the sender stays valid if the language changes; going
+  back to a language reuses its copy. Messages are whole sentences with `%`-codes (no English
+  pieces glued together), and "folder"/"macro" variants are separate texts for languages with
+  gender. Code that checked a message's English text now checks a flag (`AddTextMacro`'s
+  `aTooBig`) or the translated format (`MacroTree::IsNewIdsWarning`).
+- **Key names** are shown translated (`Hotkey::Display`, `DisplayKeyName`: "Maus 4", "Bild auf");
+  `Hotkey::ToString` stays English, because that's what `macros.json` and exports store. The
+  library search matches both forms. Ctrl, Alt and Shift keep their names in every built-in
+  language (the existing texts already write them that way).
+- **Not translated:** the Nexus menu names quoted in texts (Nexus > Options > Game Keybinds), and
+  the headings of the error report copied to the clipboard ("What I did:", "Error:"), which are
+  meant for bug reports.
 - **Fonts:** Nexus' fonts cover Latin with accents. Other scripts need fonts of their own
   (todo).
 
@@ -429,6 +465,15 @@ Rules this addon follows:
   user sets one. Rules (`src/Hotkey.*`, unit tested; `src/Hotkeys.*` reads the presses):
   - Presses are read in a WndProc hook and **never blocked or changed**: the key still reaches the
     game. The user picks keys they don't use in game; plain letters and numbers get a warning.
+  - **GW2's default keys** (built 2026-11-23 from the todo list, the "fallback" option): when a
+    hotkey is one of the game's default binds (`src/GameKeys.*`, tested in
+    `tests/GameKeysTests.cpp`: about 90 combos from the GW2 wiki's Options page, PC with a US
+    keyboard, checked 2026-11-23), the editor says so in yellow ("In GW2's default keys, F1 is
+    \"Profession skill 1\"...") and that the user's own keys may differ. Exact matches only
+    (Ctrl+1 isn't Weapon skill 1). Plain Tab, Enter, Space and Backspace aren't listed: they're
+    refused anyway. It replaces the plain-letters warning for those keys; other plain letters and
+    numbers still get it. Not done: reading the user's real binds (Nexus API v6 has no getter;
+    the game's saved XML profiles can be out of date).
   - Keyboard keys plus Mouse 3, 4 and 5, with Ctrl, Alt and Shift. Refused: left/right mouse,
     Escape, modifier keys alone, and plain Tab, Enter, Space and Backspace.
   - **Mouse 3/4/5 need Ctrl, Alt or Shift** (decided 2026-11-21, from the todo list): plain mouse
@@ -436,7 +481,9 @@ Rules this addon follows:
     saved by an older build is kept in `macros.json` (`Hotkey::KeepOnLoad`, no load warning) but
     never fires (`Hotkey::Fires`); the tree shows `[Mouse 4: off, needs Ctrl/Alt/Shift]`, the
     editor shows it in red with a note to change it, and the quick menu doesn't show the key.
-    Ctrl/Alt/Shift + left/right click stay refused (they do things in GW2).
+    Ctrl/Alt/Shift + left/right click stay refused (they do things in GW2). Decided for good by
+    the owner on 2026-11-23 (todo list): never left or right mouse, with or without a modifier,
+    as a safety measure; the README and the wiki say why.
   - Ignored: auto-repeat, a focused game text box (Mumble), ImGui text input in any addon
     (`WantTextInput`), and outside gameplay.
   - The window thread only queues the press. The render thread matches it against the tree and

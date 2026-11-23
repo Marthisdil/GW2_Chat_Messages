@@ -38,6 +38,11 @@ namespace Hotkey
     // Display name of one key, e.g. "F1", "Mouse 4", "Key 0xE2" for unnamed keys.
     std::string KeyName(uint16_t aKey);
 
+    // ToString and KeyName are the stored form (English, in macros.json and exports). These are
+    // what the user sees: the same, in the active language ("Strg+Umschalt+F1", "Maus 4").
+    std::string Display(const Combo& aCombo);
+    std::string DisplayKeyName(uint16_t aKey);
+
     // Shift, Ctrl, Alt and Windows keys: never a hotkey's main key (they're its modifiers).
     bool IsModifierKey(uint16_t aKey);
     // Mouse 3, 4 or 5.

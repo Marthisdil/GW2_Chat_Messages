@@ -1,7 +1,9 @@
 # Languages
 
 The addon's own text (windows, buttons, tooltips and messages) can be shown in **English (US),
-Deutsch, Français and Español**. Your macros are never translated: they're sent exactly as you
+Deutsch, Français and Español**. That includes the error messages (from sending, imports, link
+files and the library) and the key names shown for hotkeys ("Maus 4", "Bild auf"; Ctrl, Alt and
+Shift keep their names). Your macros are never translated: they're sent exactly as you
 wrote them.
 
 > The German, French and Spanish texts were made by AI and haven't been checked by a native

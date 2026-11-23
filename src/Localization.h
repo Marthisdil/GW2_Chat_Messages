@@ -79,6 +79,15 @@ namespace Localization
     // For text that isn't a literal (not cached).
     std::string LookupText(const std::string& aEnglish);
 
+    // --- Any thread (TR) ----------------------------------------------------------------------
+    // The active language's text for aEnglish, for the core modules and worker threads (the
+    // sender, map lookups). Thread-safe: SetActive keeps a copy of each language's texts that
+    // lives until the addon unloads (ClearShared, after every thread has stopped), so the result
+    // stays valid even if the language changes meanwhile. English when nothing matches.
+    const char* Translate(const char* aEnglish);
+    // In AddonUnload, after the threads are joined: frees those copies.
+    void ClearShared();
+
     // printf into a std::string (for translated format strings built into labels).
     std::string Fmt(const char* aFormat, ...);
 }
@@ -93,3 +102,10 @@ inline const char* T(const char (&aEnglish)[N]) { return Localization::Lookup(aE
 // A writable char buffer isn't a literal (its address would cache the wrong text): refused.
 template <size_t N>
 const char* T(char (&aBuffer)[N]) = delete;
+
+// TR("English text"): like T(), but safe on any thread and in the core modules (messages built
+// off the render thread). Only string literals. Never keep the result past AddonUnload.
+template <size_t N>
+inline const char* TR(const char (&aEnglish)[N]) { return Localization::Translate(aEnglish); }
+template <size_t N>
+const char* TR(char (&aBuffer)[N]) = delete;

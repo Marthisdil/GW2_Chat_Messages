@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include "ChatLine.h"
+#include "Localization.h"
 
 namespace SendPlan
 {
@@ -96,7 +97,7 @@ namespace SendPlan
 
         if (!aOrigins.empty() && aOrigins.size() != aLines.size())
         {
-            plan.Error = "Internal error: the lines changed while placeholders were filled in.";
+            plan.Error = TR("Internal error: the lines changed while placeholders were filled in.");
             return plan;
         }
 
@@ -105,15 +106,15 @@ namespace SendPlan
         {
             const Line& l = aLines[i];
             if (l.Message.empty()) continue;
-            const std::string where = "Line " + std::to_string(i + 1) + ": ";
+            const std::string where = Localization::Fmt(TR("Line %zu: "), static_cast<size_t>(i + 1));
             if (ChatLine::Utf16Length(ChatLine::TypedText(l)) > ChatLine::kMaxChatLength)
             {
-                plan.Error = where + "too long for chat (over " + std::to_string(ChatLine::kMaxChatLength) + " characters).";
+                plan.Error = where + Localization::Fmt(TR("too long for chat (over %zu characters)."), static_cast<size_t>(ChatLine::kMaxChatLength));
                 return plan;
             }
             if (l.Channel == EChannel::Whisper && l.WhisperTo.empty())
             {
-                plan.Error = where + "the whisper has no recipient.";
+                plan.Error = where + TR("the whisper has no recipient.");
                 return plan;
             }
             const bool whisper   = l.Channel == EChannel::Whisper;
@@ -121,7 +122,7 @@ namespace SendPlan
             // We type Message, and WhisperTo for whispers; the rest is our own text.
             if (HasControlChar(l.Message) || (whisper && HasControlChar(l.WhisperTo)))
             {
-                plan.Error = where + "it has a control character (like a tab or a line break) that can't be typed into chat.";
+                plan.Error = where + TR("it has a control character (like a tab or a line break) that can't be typed into chat.");
                 return plan;
             }
             if (!aOrigins.empty())
@@ -143,9 +144,10 @@ namespace SendPlan
                 }
                 if (message || to)
                 {
-                    plan.Error = where + "a placeholder would start a chat command in the " +
-                                 (to ? "whisper recipient" : "message") +
-                                 " (a \"/\" at its start, or right after a command). Only a \"/\" you write yourself may do that.";
+                    plan.Error = where + (to ? TR("a placeholder would start a chat command in the whisper recipient (a \"/\" "
+                                                  "at its start, or right after a command). Only a \"/\" you write yourself may do that.")
+                                             : TR("a placeholder would start a chat command in the message (a \"/\" at its "
+                                                  "start, or right after a command). Only a \"/\" you write yourself may do that."));
                     return plan;
                 }
             }
@@ -185,7 +187,7 @@ namespace SendPlan
             Add(plan, EStep::WaitChatClosed, i);
         }
 
-        if (plan.LinesToSend == 0) plan.Error = "There's nothing to send: every line is empty.";
+        if (plan.LinesToSend == 0) plan.Error = TR("There's nothing to send: every line is empty.");
         return plan;
     }
 }

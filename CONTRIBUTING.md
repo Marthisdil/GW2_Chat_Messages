@@ -111,5 +111,5 @@ problems.
   `tools\run_tests.ps1` before sending a change.
 - Work on a branch and open a pull request against `main`. Keep each pull request to one change,
   and update `CHANGELOG.md` and the user docs in `docs/wiki/` for anything a user would notice.
-- New text in the UI goes through `T("...")` (or `TX("...")` for a text in a table); then run
+- New text in the UI goes through `T("...")` (or `TX("...")` for a text in a table, and `TR("...")` for a message built in a core module or on a worker thread); then run
   `tools\localization.ps1 -Write` to update `localization/en.json` and the other language files.

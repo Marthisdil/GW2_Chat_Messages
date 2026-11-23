@@ -100,7 +100,10 @@ to the todo list", add it there (don't start building it). Move agreed items int
   overwritten. Don't name functions `LoadLibrary` etc.: `windows.h` macros clash.
 - `src/Hotkey.*`: the hotkey combo (key + Ctrl/Alt/Shift), its text form for `macros.json`, and
   which keys are refused (`Refusal`; plain Mouse 3/4/5 are kept on load but never fire:
-  `KeepOnLoad`, `Fires`). No Nexus or ImGui dependency. Tested by `tests/HotkeyTests.cpp`.
+  `KeepOnLoad`, `Fires`). `ToString` is the stored (English) form; `Display` is what the user
+  sees, translated. No Nexus or ImGui dependency. Tested by `tests/HotkeyTests.cpp`.
+- `src/GameKeys.*`: GW2's default keybinds (from the GW2 wiki), so the hotkey editor can warn
+  about a shared key. No Nexus or ImGui dependency. Tested by `tests/GameKeysTests.cpp`.
 - `src/Search.*`: the library's search box: what matches (names, line text, whisper recipients,
   hotkeys; case and accents ignored) and which tree nodes show, plus the "only active here" filter (`Where`), also used by the
   quick menu search. No Nexus or ImGui dependency.
@@ -114,7 +117,10 @@ to the todo list", add it there (don't start building it). Move agreed items int
   add a placeholder that reads files or fetches an address written in a macro.
 - `src/Http.*`: a small blocking WinHTTP GET (worker threads only), only for addresses built into
   the addon. `src/MapNames.*`: GW2 API map names cached in `maps.json`, looked up on a background
-  thread. Link `winhttp.lib`.
+  thread, plus the API's full map list (fetched weekly, on a language change and on request) and
+  the maps visited. Link `winhttp.lib`. `src/MapCatalog.*`: its rules (parsing the API, the
+  `maps.json` format, the map picker's search, visited maps), no Nexus or ImGui dependency,
+  tested by `tests/MapCatalogTests.cpp`.
 - `src/PathText.*`: paths to and from UTF-8 without throwing (a bad sequence becomes U+FFFD).
   Never call `path::u8string()`, `path::string()` or `fs::u8path()`: use `PathText::Utf8` and
   `PathText::FromUtf8`. No Nexus, ImGui or windows.h dependency. Tested by
@@ -139,7 +145,10 @@ to the todo list", add it there (don't start building it). Move agreed items int
   depth, ids, `SafeText`, matching `%`-codes) and the lookup. **The English text is the key:**
   wrap every new UI text in `T("...")` (literals only; render thread only), mark texts in
   tables with `TX("...")` and look them up with `Localization::Lookup`, and format with
-  `Fmt(T("...%s..."), ...)`. Window and pop-up titles use `"Text###stableid"`. Then run
+  `Fmt(T("...%s..."), ...)`. Messages built in a core module or on a worker thread use
+  `TR("...")` (literals only, any thread; whole sentences with `%`-codes, never English pieces
+  glued together). Never compare a message's text to decide something. Window and pop-up titles
+  use `"Text###stableid"`. Then run
   `tools\localization.ps1 -Write` (updates `localization/en.json`, `template.json` and the
   other languages; `run_tests.ps1` fails if they're stale) and translate the new texts in
   `de.json`, `fr.json` and `es.json` (the tests require them complete). No Nexus or ImGui

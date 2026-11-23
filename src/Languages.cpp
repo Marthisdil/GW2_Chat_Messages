@@ -13,6 +13,7 @@
 
 #include "Globals.h"
 #include "Localization.h"
+#include "MapNames.h"
 #include "PathText.h"
 #include "Storage.h"
 #include "resource.h"
@@ -218,6 +219,7 @@ namespace
         const std::string now = cat ? cat->Id : std::string("en");
         if (now != s_ActiveId) LogF(LOGL_INFO, "Language: %s.", now.c_str());
         s_ActiveId = now;
+        MapNames::SetLanguage(now); // map names follow the language where the GW2 API has it
     }
 
     void LoadAll()

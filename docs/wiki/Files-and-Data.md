@@ -8,7 +8,7 @@ when it loads.
 | `macros.json` | Your library: folders, macros, hotkeys, filters, and the trash bin. |
 | `macros.json.bak` | The previous version of `macros.json`, kept on every save. |
 | `settings.json` | Addon settings: the text size, the language and whether the trash bin is on. Safe to delete (back to the defaults). |
-| `maps.json` | Map names from the GW2 API, so they're only looked up once. Safe to delete. |
+| `maps.json` | Map names and regions from the GW2 API (in the addon's language), the API's full list of map ids for the map search, and the maps you've been to. Safe to delete: it's fetched again (only the "Maps you've been to" list starts over). |
 | `exports\` | Files saved by Export. |
 | `imports\` | Put files here to see them in the Import window. |
 | `links\` | Text files linked to macros (when you give just a file name). |
@@ -36,6 +36,9 @@ Copy the whole `GW2_Chat_Messages` folder, or use **Export all** and import the 
 
 The addon only goes online for:
 
-- map names, from `https://api.guildwars2.com/v2/maps` (no API key, nothing about you is sent).
+- map names, from `https://api.guildwars2.com/v2/maps` (no API key, nothing about you is sent):
+  the map you arrive on, when its name isn't saved yet, and the full map list (about 10 short
+  requests) on the first run, once a week, when you change the language, and when you click
+  **Refresh map list**.
 
 No macro can make it go anywhere else.

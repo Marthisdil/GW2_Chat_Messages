@@ -130,6 +130,7 @@ namespace
         Ui::Shutdown();     // saves pending changes
         Languages::Shutdown(); // after Ui: nothing draws translated text any more
         MapNames::Shutdown(); // stops its lookup thread, saves maps.json
+        Localization::ClearShared(); // every thread that could hold a TR() text has stopped
 
         LogF(LOGL_INFO, "Unloaded.");
         g_Api = nullptr;

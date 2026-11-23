@@ -14,6 +14,7 @@
 #include <random>
 
 #include "Globals.h"
+#include "Localization.h"
 #include "MapNames.h"
 #include "Mumble.h"
 #include "Placeholders.h"
@@ -195,11 +196,11 @@ namespace
     // Why the game isn't ready for us to type, or empty if it is.
     std::string NotReadyReason()
     {
-        if (!s_Mumble || !s_Nexus)   return "Game data isn't available yet.";
-        if (!InGameplay())           return "Not in game (loading screen or character select).";
-        if (!GameFocused())          return "The game window isn't focused.";
-        if (TextboxFocused())        return "A text box is open in game. Close it (or finish typing) and try again.";
-        if (!s_Hwnd.load())          return "The game window isn't known yet. Try again in a moment.";
+        if (!s_Mumble || !s_Nexus)   return TR("Game data isn't available yet.");
+        if (!InGameplay())           return TR("Not in game (loading screen or character select).");
+        if (!GameFocused())          return TR("The game window isn't focused.");
+        if (TextboxFocused())        return TR("A text box is open in game. Close it (or finish typing) and try again.");
+        if (!s_Hwnd.load())          return TR("The game window isn't known yet. Try again in a moment.");
         return {};
     }
 
@@ -224,14 +225,14 @@ namespace
 
         for (const SendPlan::Step& step : aPlan.Steps)
         {
-            if (s_Stop) return "Stopped.";
+            if (s_Stop) return TR("Stopped.");
             if (step.Line != currentLine)
             {
                 currentLine = step.Line;
                 lineNumber++;
                 SetStatus(Sender::EState::Sending, lineNumber, aPlan.LinesToSend, {}, aMacro);
             }
-            const std::string where = "Line " + std::to_string(step.Line + 1) + ": ";
+            const std::string where = Localization::Fmt(TR("Line %zu: "), static_cast<size_t>(step.Line + 1));
 
             switch (step.Type)
             {
@@ -240,15 +241,15 @@ namespace
             {
                 // Never act while the user holds a modifier: Shift+Enter, Ctrl+... would change what our keys do.
                 if (!WaitUntil([] { return !AnyModifierHeld(); }, kModifierWaitMs, s_Stop))
-                    return where + "a Shift, Ctrl, Alt or Windows key is held down. Release it and try again.";
+                    return where + TR("a Shift, Ctrl, Alt or Windows key is held down. Release it and try again.");
                 const std::string why = NotReadyReason();
                 if (!why.empty()) return where + why;
 
                 const EGameBinds bind = step.Type == EStep::OpenChat ? GB_UiChatFocus : GB_UiSquadBroadcastChatFocus;
                 if (!g_Api->GameBinds_IsBound(bind))
                     return step.Type == EStep::OpenChat
-                        ? "Nexus doesn't know your \"Chat\" key. Set it in Nexus > Options > Game Keybinds."
-                        : "Nexus doesn't know your \"Squad Broadcast\" chat key. Set it in Nexus > Options > Game Keybinds.";
+                        ? TR("Nexus doesn't know your \"Chat\" key. Set it in Nexus > Options > Game Keybinds.")
+                        : TR("Nexus doesn't know your \"Squad Broadcast\" chat key. Set it in Nexus > Options > Game Keybinds.");
                 g_Api->GameBinds_Press(bind);
                 std::this_thread::sleep_for(std::chrono::milliseconds(kBindHoldMs));
                 g_Api->GameBinds_Release(bind);
@@ -257,26 +258,26 @@ namespace
             }
             case EStep::WaitChatOpen:
                 if (!WaitUntil(TextboxFocused, kChatOpenTimeoutMs, s_Stop))
-                    return where + "chat didn't open. Check your chat key in Nexus > Options > Game Keybinds.";
+                    return where + TR("chat didn't open. Check your chat key in Nexus > Options > Game Keybinds.");
                 break;
             case EStep::Type:
-                if (!TextboxFocused()) { return where + "chat closed while typing."; }
-                if (!Type(step.Text)) { CloseChatIfOpen(); return where + "couldn't reach the game window."; }
+                if (!TextboxFocused()) { return where + TR("chat closed while typing."); }
+                if (!Type(step.Text)) { CloseChatIfOpen(); return where + TR("couldn't reach the game window."); }
                 break;
             case EStep::KeyTab:
                 // Only ever inside a focused chat box, never on the open game (where Tab targets enemies).
-                if (!TextboxFocused()) return where + "chat closed before the whisper message.";
-                if (!Key(VK_TAB, L'\t')) { CloseChatIfOpen(); return where + "couldn't reach the game window."; }
+                if (!TextboxFocused()) return where + TR("chat closed before the whisper message.");
+                if (!Key(VK_TAB, L'\t')) { CloseChatIfOpen(); return where + TR("couldn't reach the game window."); }
                 break;
             case EStep::KeyEnter:
-                if (!TextboxFocused()) return where + "chat closed before sending.";
-                if (!Key(VK_RETURN, L'\r')) { CloseChatIfOpen(); return where + "couldn't reach the game window."; }
+                if (!TextboxFocused()) return where + TR("chat closed before sending.");
+                if (!Key(VK_RETURN, L'\r')) { CloseChatIfOpen(); return where + TR("couldn't reach the game window."); }
                 break;
             case EStep::WaitChatClosed:
                 if (!WaitUntil([] { return !TextboxFocused(); }, kChatCloseTimeoutMs, s_Stop))
                 {
                     CloseChatIfOpen();
-                    return where + "the game didn't take the message; chat was closed.";
+                    return where + TR("the game didn't take the message; chat was closed.");
                 }
                 s_WeOpenedChat = false; // the game closed it: it's no longer ours to close
                 sent++;
@@ -338,9 +339,9 @@ namespace
                                                                      {&aLines[i].WhisperTo, &origins[i].WhisperTo}};
             for (auto& [field, fromValue] : fields)
             {
-                if (s_Stop) return "Stopped.";
+                if (s_Stop) return TR("Stopped.");
                 Placeholders::Result r = Placeholders::Expand(*field, ctx);
-                if (!r.Error.empty()) return "Line " + std::to_string(i + 1) + ": " + r.Error;
+                if (!r.Error.empty()) return Localization::Fmt(TR("Line %zu: "), static_cast<size_t>(i + 1)) + r.Error;
                 *field     = std::move(r.Text);
                 *fromValue = std::move(r.FromValue);
             }
@@ -380,16 +381,17 @@ namespace
             }
             catch (const std::exception& e)
             {
-                error = std::string("Internal error while sending: ") + e.what();
+                error = std::string(TR("Internal error while sending: ")) + e.what();
             }
             catch (...)
             {
-                error = "Internal error while sending.";
+                error = TR("Internal error while sending.");
             }
             if (error.empty())
             {
                 SetStatus(Sender::EState::Done, plan.LinesToSend, plan.LinesToSend,
-                          plan.LinesToSend == 1 ? "Sent 1 line." : "Sent " + std::to_string(plan.LinesToSend) + " lines.", macro);
+                          plan.LinesToSend == 1 ? std::string(TR("Sent 1 line."))
+                                                : Localization::Fmt(TR("Sent %zu lines."), static_cast<size_t>(plan.LinesToSend)), macro);
             }
             else
             {
@@ -436,7 +438,7 @@ bool Sender::Start(uint64_t aMacroId, const std::vector<MacroTree::Line>& aLines
 {
     if (s_Busy.exchange(true))
     {
-        aError = "Already sending a macro.";
+        aError = TR("Already sending a macro.");
         return false;
     }
     // Placeholders and the plan are prepared on the worker (they may need the network); every
