@@ -22,6 +22,7 @@
 #include "Mumble.h"
 #include "Placeholders.h"
 #include "SendPlan.h"
+#include "PathText.h"
 #include "Storage.h"
 
 namespace
@@ -312,7 +313,7 @@ namespace
     {
         const std::filesystem::path dir = Storage::AddonDir();
         if (dir.empty()) { aError = "the addon folder isn't available."; return false; }
-        const std::filesystem::path file = dir / std::filesystem::u8path(aRelPath);
+        const std::filesystem::path file = dir / PathText::FromUtf8(aRelPath);
         std::error_code ec;
         if (!std::filesystem::is_regular_file(file, ec))
         {

@@ -10,6 +10,7 @@
 #include <nlohmann/json.hpp>
 
 #include "ChatLine.h"
+#include "PathText.h"
 
 namespace fs = std::filesystem;
 using nlohmann::json;
@@ -62,7 +63,7 @@ namespace
         return true;
     }
 
-    std::string Utf8Name(const fs::path& aPath) { return aPath.u8string(); } // std::string in C++17
+    std::string Utf8Name(const fs::path& aPath) { return PathText::Utf8(aPath); } // std::string in C++17
 
     // A macro from raw text; false (with a warning) if the text has no lines.
     bool AddTextMacro(Tree& aTree, Node* aParent, const std::string& aName, const std::string& aText,

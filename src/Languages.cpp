@@ -13,6 +13,7 @@
 
 #include "Globals.h"
 #include "Localization.h"
+#include "PathText.h"
 #include "Storage.h"
 #include "resource.h"
 
@@ -147,7 +148,7 @@ namespace
         std::unordered_set<std::string> seen;
         for (const fs::path& file : files)
         {
-            const std::string name = file.filename().u8string();
+            const std::string name = PathText::Utf8(file.filename());
             std::string text, error;
             auto cat = std::make_unique<Localization::Catalog>();
             if (!ReadCapped(file, text)) error = T("It couldn't be opened.");

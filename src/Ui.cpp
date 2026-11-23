@@ -36,6 +36,7 @@
 #include "Placeholders.h"
 #include "Search.h"
 #include "Sender.h"
+#include "PathText.h"
 #include "Storage.h"
 #include "UiFont.h"
 
@@ -696,7 +697,7 @@ namespace
         const bool made = MakeExportText(aNodes, aAsText, text);
         const std::filesystem::path file = Storage::FreeFile(dir, Exchange::FileNameFor(aName, aAsText ? ".txt" : ".json"));
         if (made && Storage::WriteText(file, text))
-            SetInfo(WithTrashNote(Fmt(T("Exported to %s."), ("<GW2>\\addons\\GW2_Chat_Messages\\exports\\" + file.filename().u8string()).c_str())));
+            SetInfo(WithTrashNote(Fmt(T("Exported to %s."), ("<GW2>\\addons\\GW2_Chat_Messages\\exports\\" + PathText::Utf8(file.filename())).c_str())));
         else ShowError(Fmt(T("Exported \"%s\" as a %s file"), aName.c_str(), aAsText ? ".txt" : ".json"),
                        T("The export couldn't be written. Check the Nexus log."));
     }
@@ -1812,7 +1813,7 @@ namespace
         {
             const std::filesystem::path dir  = Storage::AddonDir();
             const std::filesystem::path file = LinkSync::Resolve(dir, aMacro.LinkFile);
-            ImGui::TextWrapped(T("File: %s"), file.u8string().c_str());
+            ImGui::TextWrapped(T("File: %s"), PathText::Utf8(file).c_str());
             const bool missing = problem != s_LinkProblems.end() && problem->second == T(kLinkMissing);
             if (problem != s_LinkProblems.end()) ImGui::TextColored(kWarnColor, "%s", problem->second.c_str());
             else ImGui::TextDisabled(T("In step. Changes on either side show up within a second."));
@@ -2231,7 +2232,7 @@ namespace
         for (std::filesystem::directory_iterator it(dir, ec), end; !ec && it != end; it.increment(ec))
         {
             std::error_code ec2;
-            std::string ext = it->path().extension().u8string();
+            std::string ext = PathText::Utf8(it->path().extension());
             for (char& c : ext) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
             const bool dir = it->is_directory(ec2);
             const bool fits = s_ImportLibrary ? !dir && Exchange::IsLibraryFileName(it->path())
@@ -2371,7 +2372,7 @@ namespace
         {
             std::error_code ec;
             const bool dir = std::filesystem::is_directory(p, ec);
-            const std::string label = p.filename().u8string() + (dir ? "\\" : "");
+            const std::string label = PathText::Utf8(p.filename()) + (dir ? "\\" : "");
             if (ImGui::Selectable(label.c_str())) LoadImport(s_ImportLibrary ? Exchange::FromLibraryFile(p) : Exchange::FromPath(p));
         }
         ImGui::PopTextWrapPos();
@@ -2401,7 +2402,7 @@ namespace
         {
             std::string path = s_ImportPath;
             if (path.size() >= 2 && path.front() == '"' && path.back() == '"') path = path.substr(1, path.size() - 2); // "Copy as path"
-            const std::filesystem::path p = std::filesystem::u8path(path);
+            const std::filesystem::path p = PathText::FromUtf8(path);
             LoadImport(s_ImportLibrary ? Exchange::FromLibraryFile(p) : Exchange::FromPath(p));
         }
     }

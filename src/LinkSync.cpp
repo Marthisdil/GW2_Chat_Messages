@@ -4,6 +4,7 @@
 #include <cwctype>
 
 #include "ChatLine.h"
+#include "PathText.h"
 
 namespace fs = std::filesystem;
 
@@ -44,7 +45,7 @@ namespace LinkSync
     {
         const size_t first = aPath.find_first_not_of(" \t");
         const std::string p = first == std::string::npos ? std::string() : aPath.substr(first, aPath.find_last_not_of(" \t") - first + 1);
-        const fs::path path = fs::u8path(p);
+        const fs::path path = PathText::FromUtf8(p);
         if (path.is_absolute() || path.has_root_name() || path.has_root_directory()) return path.lexically_normal();
         return (aAddonDir / "links" / path).lexically_normal();
     }

@@ -12,6 +12,7 @@
 
 #include "Globals.h"
 #include "MacroTree.h"
+#include "PathText.h"
 
 namespace fs = std::filesystem;
 
@@ -50,7 +51,7 @@ namespace
         }
         catch (const std::exception& e)
         {
-            LogF(LOGL_WARNING, "Could not read %s: %s", aFile.u8string().c_str(), e.what());
+            LogF(LOGL_WARNING, "Could not read %s: %s", PathText::Utf8(aFile).c_str(), e.what());
             return ERead::Unreadable;
         }
     }
@@ -70,7 +71,7 @@ fs::path Storage::AddonDir()
 {
     const char* dir = g_Api ? g_Api->Paths_GetAddonDirectory(kDataFolder) : nullptr;
     if (!dir) return {};
-    fs::path path = fs::u8path(dir);
+    fs::path path = PathText::FromUtf8(dir);
     std::error_code ec;
     fs::create_directories(path, ec);
     return path;
@@ -95,7 +96,7 @@ fs::path Storage::LocalizationDir() { return SubDir("localization"); }
 
 fs::path Storage::FreeFile(const fs::path& aDir, const std::string& aFileName)
 {
-    const fs::path name = fs::u8path(aFileName);
+    const fs::path name = PathText::FromUtf8(aFileName);
     fs::path candidate = aDir / name;
     std::error_code ec;
     for (int n = 2; fs::exists(candidate, ec) && n < 10000; n++)
@@ -118,7 +119,7 @@ bool Storage::WriteText(const fs::path& aFile, const std::string& aText)
         out.flush();
         if (!out)
         {
-            LogF(LOGL_WARNING, "Could not write %s.", aFile.u8string().c_str());
+            LogF(LOGL_WARNING, "Could not write %s.", PathText::Utf8(aFile).c_str());
             std::error_code ec;
             fs::remove(tmp, ec);
             return false;
@@ -128,7 +129,7 @@ bool Storage::WriteText(const fs::path& aFile, const std::string& aText)
     fs::rename(tmp, aFile, ec);
     if (ec)
     {
-        LogF(LOGL_WARNING, "Could not write %s: %s", aFile.u8string().c_str(), ec.message().c_str());
+        LogF(LOGL_WARNING, "Could not write %s: %s", PathText::Utf8(aFile).c_str(), ec.message().c_str());
         fs::remove(tmp, ec);
         return false;
     }
@@ -158,7 +159,7 @@ bool Storage::WriteJson(const fs::path& aFile, const nlohmann::json& aJson, bool
         if (aKeepBackup && fs::exists(aFile, ec))
         {
             fs::copy_file(aFile, WithSuffix(aFile, ".bak"), fs::copy_options::overwrite_existing, ec);
-            if (ec) LogF(LOGL_WARNING, "Could not back up %s: %s", aFile.u8string().c_str(), ec.message().c_str());
+            if (ec) LogF(LOGL_WARNING, "Could not back up %s: %s", PathText::Utf8(aFile).c_str(), ec.message().c_str());
         }
         fs::rename(tmp, aFile, ec); // replaces an existing file on Windows (MoveFileEx semantics)
         if (ec) throw std::runtime_error(ec.message());
@@ -166,7 +167,7 @@ bool Storage::WriteJson(const fs::path& aFile, const nlohmann::json& aJson, bool
     }
     catch (const std::exception& e)
     {
-        LogF(LOGL_WARNING, "Could not write %s: %s", aFile.u8string().c_str(), e.what());
+        LogF(LOGL_WARNING, "Could not write %s: %s", PathText::Utf8(aFile).c_str(), e.what());
         std::error_code ec;
         fs::remove(tmp, ec);
         return false;
@@ -196,7 +197,7 @@ void Storage::LoadMacros(MacroTree::Tree& aTree, std::vector<std::string>& aMess
         const fs::path aside = WithSuffix(file, ".unreadable-" + TimeStamp());
         std::error_code ec;
         fs::rename(file, aside, ec);
-        aMessages.push_back("Your macros file couldn't be read. It was kept as \"" + aside.filename().u8string() + "\".");
+        aMessages.push_back("Your macros file couldn't be read. It was kept as \"" + PathText::Utf8(aside.filename()) + "\".");
         break;
     }
     }
@@ -207,7 +208,7 @@ void Storage::LoadMacros(MacroTree::Tree& aTree, std::vector<std::string>& aMess
     if (ReadLibrary(backup, fromBackup, warnings) == ERead::Ok)
     {
         aTree = std::move(fromBackup);
-        aMessages.push_back("Your macros were restored from the backup (" + backup.filename().u8string() +
+        aMessages.push_back("Your macros were restored from the backup (" + PathText::Utf8(backup.filename()) +
                             "). Changes from the last save may be missing.");
         for (auto& w : warnings) aMessages.push_back(std::move(w));
     }
@@ -230,11 +231,11 @@ nlohmann::json Storage::LoadSettings()
         std::ifstream in(file, std::ios::binary);
         nlohmann::json j = nlohmann::json::parse(in);
         if (j.is_object()) return j;
-        LogF(LOGL_WARNING, "%s isn't a settings file; using the default settings.", file.u8string().c_str());
+        LogF(LOGL_WARNING, "%s isn't a settings file; using the default settings.", PathText::Utf8(file).c_str());
     }
     catch (const std::exception& e)
     {
-        LogF(LOGL_WARNING, "Could not read %s: %s. Using the default settings.", file.u8string().c_str(), e.what());
+        LogF(LOGL_WARNING, "Could not read %s: %s. Using the default settings.", PathText::Utf8(file).c_str(), e.what());
     }
     return nlohmann::json::object();
 }
