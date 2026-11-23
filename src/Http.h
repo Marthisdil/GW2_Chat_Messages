@@ -32,7 +32,9 @@ namespace Http
     //    request (redirects and reused keep-alive connections too), so a name that resolves to
     //    127.0.0.1 or a LAN address, even only on a second lookup, is refused before it is sent;
     //  - a proxy: the connection is the proxy's, so the target's name is looked up first, and
-    //    every redirect's, and any local address refuses it. A name that can't be looked up is
-    //    refused. Accepted limit: a DNS server that tells the proxy something else.
+    //    every redirect's, and any local address refuses it. A name that can't be looked up, or
+    //    isn't a plain name or IP literal, is refused. The real connection is still checked: a
+    //    local address passes only if it is the proxy's own (so bypass-list hosts are checked
+    //    too). Accepted limit: a DNS server that tells the proxy something else.
     Response GetPublic(const std::string& aUrl, int aTimeoutMs = kDefaultTimeoutMs, size_t aMaxBytes = kDefaultMaxBytes);
 }
