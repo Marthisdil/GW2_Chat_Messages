@@ -193,6 +193,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Properties > Details tab shows it as File version and Product version.
 
 ### Fixed
+- **`{json}` only reaches the internet:** an address that leads to this PC or your local network
+  (`localhost`, `127.0.0.1`, `192.168.x.x`, `10.x.x.x` and the like, also after a redirect) is now
+  refused before anything is sent, and the macro isn't sent. A shared or imported macro could
+  otherwise read a device on your network and type the answer into chat. It also works behind a
+  Windows (WinHTTP) proxy: then the addon looks the address up itself first, and if it can't (or
+  the name has characters other than letters, digits, `-` and `.`), that `{json}` is refused.
 - A placeholder value (`{json}`, `{txt}`, `{map}`) could type control characters (Backspace,
   Escape, Tab...) into chat, or put a `/` where chat reads a command and so pick a channel or
   command the macro didn't name, even after one you wrote (`/g {json}` with the value `/w Name`).

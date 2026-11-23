@@ -67,6 +67,15 @@ Sends one value from a JSON web page. For example, the current game build:
   `data.0.name` is the `name` of the first entry of `data`.
 - The value must be text, a number or true/false. Lists, objects and empty values are refused.
 - Only `http://` and `https://` addresses, pages up to 512 KB, and a short time limit.
+- Only addresses on the internet. An address that leads to this PC or your local network
+  (`localhost`, `127.0.0.1`, `192.168.x.x`, `10.x.x.x` and other private or link-local addresses,
+  also after a redirect) is refused, and the macro isn't sent. This keeps a shared macro from
+  reading your router or another device and typing the answer into chat.
+- Behind a proxy (a WinHTTP proxy, set with `netsh winhttp set proxy`), the addon looks the
+  address up itself before sending, and checks every redirect the same way. If your network only
+  lets the proxy look names up, that `{json}` is refused, because the address can't be checked.
+  Behind a proxy, addresses whose name has characters other than letters, digits, `-` and `.`
+  are refused too.
 
 ## Length
 

@@ -365,7 +365,8 @@ namespace
             return MapNames::Get(id, aName, aError);
         };
         c.FetchUrl = [](const std::string& aUrl, std::string& aBody, std::string& aError) {
-            const Http::Response r = Http::Get(aUrl);
+            // The address may come from someone else's import: never this PC or the local network.
+            const Http::Response r = Http::GetPublic(aUrl);
             if (!r.Ok())
             {
                 aError = r.Error.empty() ? "the download failed." : r.Error;

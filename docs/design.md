@@ -73,7 +73,16 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
     (bhm's `{blish}`: "Chat Messages 2026.11.21.1412.Dev").
   - Also built: `{map}` (the current map's name) and `{json path url}` (one value from a JSON
     page: dot-separated path, numbers index arrays, like bhm; objects, lists and null are refused;
-    http/https only, at most 512 KB, 3 s timeouts).
+    http/https only, at most 512 KB, 3 s timeouts). Only public internet servers
+    (`Http::GetPublic`, `src/NetAddress.*`): this PC, private, link-local and CGNAT addresses are
+    refused on the real address of the connection before every request (new, reused keep-alive
+    and redirect hops alike), before anything is sent. Behind a WinHTTP proxy (the netsh setting
+    `Http::Get` uses too) that address is the proxy's, so the addon looks the target's name up
+    itself first, and every redirect's, and refuses any local result; a name it can't look up, or
+    one with characters other than letters, digits, `-` and `.` (IP literals aside), is refused.
+    The real connection is still checked there: a local address passes only if it is the proxy's
+    own, so a bypass-list host gets the no-proxy check. Accepted limit (owner, 2026-11-22): a DNS
+    server that answers us with a public address and the proxy with a local one.
   - Map names: `src/MapNames.*` asks `https://api.guildwars2.com/v2/maps?ids=...&lang=en` (no API
     key) and caches the names in `<GW2>\addons\GW2_Chat_Messages\maps.json`. The current map is
     looked up in the background whenever it changes; ids the API doesn't know aren't asked again
