@@ -166,6 +166,15 @@ be clicked into a message.
     cursor rather than at the end of the message.
   - Each special character counts toward the 199-character limit (one or two units).
 
+### Timed lines ("Pull in 5... 4... 3...") (moved from section 5, 2026-11-23, for more discussion)
+
+A delay per line (e.g. one second between lines) for countdowns. Raid leaders would like it, but
+it's the idea closest to ArenaNet's macro policy. The policy was read on 2026-11-23 (see the
+wiki's ArenaNet's policies page): it's about gameplay (skills, farming, bots, playing while
+away) and asks that each macro is a single action you start again. A countdown is still one
+press sending chat lines once, but it runs on its own for several seconds, so decide with
+care (and say so when registering with Raidcore).
+
 ## 4. Later, or when someone asks
 
 ### More text sizes from a font of our own (added 2026-11-21)
@@ -236,7 +245,8 @@ owner 2026-11-23, documented in the README and the wiki's Sending Macros page). 
 ## 5. New ideas to discuss (suggested 2026-11-23)
 
 Ranked 2026-11-23: low risk and most use first. Preview, cooldown, favourites, the starter
-library and backups moved up to section 2.
+library and backups moved up to section 2. Filters by character or profession were dropped (not needed), and timed
+lines moved to section 3 for more discussion (owner, 2026-11-23).
 
 ### A random pick inside the macro: `{pick a|b|c}`
 
@@ -255,29 +265,11 @@ From MumbleLink's identity (already read for the map), e.g. "LF2M, {spec} here".
   gives them; ids alone come from MumbleLink), and what to send when the identity isn't there
   yet (an error, like an unknown map).
 
-### Filters by character or profession
-
-"Only on these characters" and/or "only on these professions", next to the game mode and map
-filters, from MumbleLink's identity.
-
-- Points to settle: matching by character name (a rename breaks it) and showing names that
-  aren't logged in; whether it applies to hotkeys, the quick menu and the library dimming like
-  the other filters.
-
 ### Copy to clipboard as a fallback
 
 When a send is refused (game not focused, a text box already open...), offer "Copy the text"
 so the user can paste it themselves. The sender itself still never uses the clipboard; this is
 only a user action, and only for one line at a time (or all lines joined).
-
-### Timed lines ("Pull in 5... 4... 3...")
-
-A delay per line (e.g. one second between lines) for countdowns. Raid leaders would like it, but
-it's the idea closest to ArenaNet's macro policy. The policy was read on 2026-11-23 (see the
-wiki's ArenaNet's policies page): it's about gameplay (skills, farming, bots, playing while
-away) and asks that each macro is a single action you start again. A countdown is still one
-press sending chat lines once, but it runs on its own for several seconds, so decide with
-care (and say so when registering with Raidcore).
 
 ### More ideas (suggested 2026-11-23, not ranked yet)
 
