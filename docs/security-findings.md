@@ -52,7 +52,7 @@ folder with someone else's file), **Medium** (wrong behaviour reachable with rea
 | [SEC-033](#sec-033) | 2026-11-24 03:34 | High | `src/MacroTree.cpp` (`ParseFilter`, `ReachOf`) | A file (an import, a shared library) could give a folder a huge map list; with folder filters, every item inside it sorted that list every frame: the game freezes | Fixed | PR #63, commit `5cf4246`, build `3070952` |
 | [SEC-034](#sec-034) | 2026-11-24 05:01 | High | `src/MacroTree.cpp:289` (`ParseMacro`) | A JSON import (or a shared library) skipped the 50-line limit: one macro can hold about 1.4 million lines, and selecting it freezes the game | Fixed | PR #67, commit `7389e5d`, build `7d9876e` |
 | [SEC-035](#sec-035) | 2026-11-24 12:58 | High | `src/SendPlan.cpp:110` (`Build`), `src/Sender.cpp:146` (`TypeUtf8`) | A whisper recipient from a file has no length limit: sending it types every character on the game's window thread (the game freezes) and leaves chat open | Fixed | PR #70, commit `7f3167e`, build `e1d33cf` |
-| [SEC-036](#sec-036) | 2026-11-24 22:12 | Low | `src/MapNames.cpp:291` (`Shutdown`), `src/Sender.cpp:406` (`Shutdown`) | The stop flag is set and the worker woken without its mutex: a wakeup lost at exactly the wrong moment would hang unloading the addon (the game freezes) | Fixing | - |
+| [SEC-036](#sec-036) | 2026-11-24 22:12 | Low | `src/MapNames.cpp:291` (`Shutdown`), `src/Sender.cpp:406` (`Shutdown`) | The stop flag is set and the worker woken without its mutex: a wakeup lost at exactly the wrong moment would hang unloading the addon (the game freezes) | Fixed | PR #73, commit `134714d`, build `b4815cd` |
 
 "Build" is the build stamp's commit (shown in the Nexus log and the DLL's Properties). Until a
 release is tagged, it's the PR's commit; the release that first ships a fix is added when it's
@@ -621,7 +621,9 @@ made.
 - **Suggested fix:** set `s_Stop` while holding the worker's mutex (a small `lock_guard` scope
   around the store, then `notify_all` after it), in both `Shutdown`s; correct the comment.
 - **Decision (2026-11-24):** fix it (owner), in `feature/security-shutdown-wakeup`.
-- **Status:** Fixing.
+- **Status:** Fixed in **PR #73** (`feature/security-shutdown-wakeup`), commit `134714d`,
+  first build `b4815cd`. No unit test (`Sender` and `MapNames` need Nexus); in-game check L2
+  (idle unload/load).
 
 ## Scan log
 
