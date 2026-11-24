@@ -959,8 +959,42 @@ static void TestExportPick()
     CHECK(ExportPickedJson(t, pick)["root"]["children"].empty());
 }
 
+static void TestFolderFilterImport()
+{
+    // An imported folder brings its filter; merging into an existing folder keeps that folder's.
+    Tree t;
+    MakeLibrary(t); // Raids { Stack }, Hello
+    Node* raids = Child(t.Root(), "Raids", ENodeType::Folder);
+    raids->GameModes = GM_PvE;
+    Package p = Pkg(R"J({"format":1,"root":{"children":[
+        {"type":"folder","name":"Roam","game_modes":["wvw"],"map_ids":[38],"children":[
+            {"type":"macro","name":"Go","lines":[]}]},
+        {"type":"folder","name":"Raids","game_modes":["pvp"],"children":[
+            {"type":"macro","name":"Spread","lines":[]}]}]}})J");
+    Options o; // folders merge by default
+    Plan plan = BuildPlan(t, t.Root(), p.Items, o);
+    Apply(t, t.Root(), plan, o);
+    Node* roam = Child(t.Root(), "Roam", ENodeType::Folder);
+    CHECK(roam && roam->GameModes == GM_WvW && roam->MapIds == std::vector<int>{38});
+    CHECK(roam && !roam->Children.empty() && !IsActive(*roam->Children[0], GM_PvE, 38));
+    CHECK(raids->GameModes == GM_PvE); // merged: the existing folder's filter stays
+    Node* spread = Child(*raids, "Spread", ENodeType::Macro);
+    CHECK(spread && IsActive(*spread, GM_PvE, 1) && !IsActive(*spread, GM_PvP, 1));
+
+    // Replace takes the import's filter.
+    o.FolderConflict = EChoice::Replace;
+    plan = BuildPlan(t, t.Root(), p.Items, o);
+    Apply(t, t.Root(), plan, o);
+    CHECK(raids->GameModes == GM_PvP);
+
+    // The export carries it.
+    const nlohmann::json j = ExportJson({roam});
+    CHECK(j["root"]["children"][0]["game_modes"] == nlohmann::json::array({"wvw"}));
+}
+
 void RunExchangeTests()
 {
+    TestFolderFilterImport();
     TestExportPick();
     TestTranslatedMessages();
     TestWarningsCapped();

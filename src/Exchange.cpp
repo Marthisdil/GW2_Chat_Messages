@@ -524,7 +524,9 @@ namespace
                     if (src.IsFolder())
                     {
                         existing->Children.clear();
-                        existing->Expanded = src.Expanded;
+                        existing->Expanded  = src.Expanded;
+                        existing->GameModes = src.GameModes; // a replaced folder takes the import's filter
+                        existing->MapIds    = src.MapIds;
                         ApplyItems(aTree, *existing, item.Children, aOpt, aCount);
                     }
                     else CopyMacro(src, *existing, aOpt.KeepHotkeys && !item.HotkeyCleared);
@@ -541,7 +543,9 @@ namespace
             aCount++;
             if (src.IsFolder())
             {
-                added->Expanded = src.Expanded;
+                added->Expanded  = src.Expanded;
+                added->GameModes = src.GameModes; // its filter comes along
+                added->MapIds    = src.MapIds;
                 ApplyItems(aTree, *added, item.Children, aOpt, aCount);
             }
             else CopyMacro(src, *added, aOpt.KeepHotkeys && !item.HotkeyCleared);

@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Filters on folders:** a folder can be limited to game modes and maps, like a macro, and
+  everything inside it follows. The filters add up: a macro is active only where its own filter
+  and every folder above it allow, so a "WvW only" folder means nothing in it fires in PvE. Set a
+  folder's game modes when you create or rename it (**Active in:** PvE / WvW / PvP), and its maps
+  in the folder's details under **Where it's active**. A folder with a filter shows it after its
+  name, like `Roaming  [WvW, 2 maps]`, and is dimmed where it isn't active, with everything in
+  it. A macro's editor says which folders also limit it, and warns when a macro (or a folder)
+  can't be active anywhere because the filters have nothing in common. Hotkey clash warnings,
+  the quick menu and **Only active here** take folder filters into account. Exports and imports
+  carry a folder's filter.
 - **Export a selection:** **Export some...** in the library's toolbar (or right-click > Export >
   **Choose more to export...**) opens an **Export** window: tick the folders and macros you want
   and save them in one `.json` file, or copy them to the clipboard. Ticking a folder ticks

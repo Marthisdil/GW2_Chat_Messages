@@ -6,7 +6,8 @@ Messages library" keybind.
 
 The window has two parts: the **tree** on the left, and the **details** of the selected item on
 the right. A folder's details show its level, what's in it, a **Favourite** box (see
-[Favourites and recently sent](Sending-Macros#favourites-and-recently-sent)) and buttons for a
+[Favourites and recently sent](Sending-Macros#favourites-and-recently-sent)), **Where it's
+active** (its [filter](Filters#filters-on-folders), for everything inside it) and buttons for a
 new folder or macro inside it.
 
 <!-- screenshot: library-window.png (docs/screenshots.md) -->
@@ -63,6 +64,12 @@ Examples
 - **New folder** and **New macro** at the top create the item in the folder shown as "New items
   go into: ..." (the selected folder, or the top level).
 - **New folder** is refused where the folder would go past level 6.
+- When you create or rename a folder, the name box also has **Active in:** PvE, WvW, PvP: the
+  game modes everything in the folder is limited to (see
+  [Filters on folders](Filters#filters-on-folders)).
+
+<!-- screenshot: new-folder-modes.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the New folder name box with "Active in:".*
 
 ## Search
 
@@ -179,4 +186,6 @@ quick menu and their tooltips. Nexus' own options page isn't changed.
 ## Dimmed macros
 
 Macros that aren't active where you are right now (see [Filters](Filters)) are shown dimmed.
-They still work with **Send now**.
+They still work with **Send now**. A folder whose own filter (or a folder above it) is off here
+is dimmed too, with everything inside it. A folder with a filter shows it after its name, like
+`Roaming  [WvW, 2 maps]`.

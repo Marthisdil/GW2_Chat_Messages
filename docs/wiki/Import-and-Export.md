@@ -93,10 +93,13 @@ Pick it in one of these ways:
   - **Merge** (the default): the new folder's contents go into the existing folder, with the
     rules above for anything inside.
   - **Keep both (rename)**, **Skip**: as for macros.
-  - **Replace**: everything in the existing folder is deleted, then the new contents go in.
+  - **Replace**: everything in the existing folder is deleted, then the new contents go in, and
+    the folder takes the new one's [filter](Filters#filters-on-folders).
+  - A new folder (or a renamed copy) brings its filter along. **Merge** keeps your folder's own.
 - **Move the contents of too-deep folders up a level**: folders can be nested at most 6 deep.
   Unticked, a folder that would go deeper is left out with everything inside. Ticked, that
-  folder is left out but its contents go into the folder above.
+  folder is left out but its contents go into the folder above (without that folder's filter,
+  so they may be active in more places).
 - **Keep hotkeys**: off at first, for every import, so macros from someone else come without
   their hotkeys (a hotkey sends its macro whenever you press that key, and could clash with
   yours). Tick it for your own exports; the preview then shows each macro's hotkey next to its

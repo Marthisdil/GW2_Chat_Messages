@@ -115,6 +115,7 @@ namespace
     uint64_t    s_NameTargetId = 0; // parent folder for New*, the node for Rename (0 = root)
     char        s_NameBuf[256] = {};
     bool        s_NameFocus    = false;
+    uint8_t     s_NameModes    = MacroTree::GM_All; // a folder's game modes, ticked in the pop-up
 
     uint64_t s_DeleteId = 0;
 
@@ -194,7 +195,8 @@ namespace
         return h;
     }
 
-    bool IsActiveHere(const Node& aMacro, const Here& aHere) { return IsActive(aMacro, aHere.Mode, aHere.MapId); }
+    // A macro or folder, with the filters of the folders above it.
+    bool IsActiveHere(const Node& aNode, const Here& aHere) { return IsActive(aNode, aHere.Mode, aHere.MapId); }
 
     const char* ModeName(uint8_t aMode)
     {
@@ -221,6 +223,36 @@ namespace
         if (aMacro.MapIds.empty()) return modes.empty() ? std::string(T("Everywhere")) : modes;
         const std::string maps = aMacro.MapIds.size() == 1 ? std::string(T("1 map")) : Fmt(T("%zu maps"), aMacro.MapIds.size());
         return modes.empty() ? Fmt(T("On %s"), maps.c_str()) : Fmt(T("%s on %s"), modes.c_str(), maps.c_str());
+    }
+
+    // A folder's filter as a short tag after its name in the tree ("  [WvW, 2 maps]"), or "".
+    std::string FolderTag(const Node& aFolder)
+    {
+        if (!aFolder.IsFolder() || !HasFilter(aFolder)) return std::string();
+        std::string tag;
+        const uint8_t m = aFolder.GameModes == GM_None ? static_cast<uint8_t>(GM_All) : aFolder.GameModes;
+        if (m != GM_All)
+        {
+            const uint8_t bits[] = {GM_PvE, GM_WvW, GM_PvP};
+            for (uint8_t b : bits)
+                if (m & b) tag += (tag.empty() ? "" : ", ") + std::string(ModeName(b));
+        }
+        if (!aFolder.MapIds.empty())
+            tag += (tag.empty() ? "" : ", ") + (aFolder.MapIds.size() == 1 ? std::string(T("1 map"))
+                                                                          : Fmt(T("%zu maps"), aFolder.MapIds.size()));
+        return "  [" + tag + "]";
+    }
+
+    // The folders above a node that have a filter, "Raids (PvE), Wing (On 2 maps)", or "".
+    std::string FolderLimits(const Node& aNode)
+    {
+        std::vector<const Node*> chain;
+        for (const Node* p = aNode.Parent; p && p->Parent; p = p->Parent)
+            if (HasFilter(*p)) chain.push_back(p);
+        std::string text;
+        for (auto it = chain.rbegin(); it != chain.rend(); ++it)
+            text += (text.empty() ? "" : ", ") + (*it)->Name + " (" + FilterSummary(**it) + ")";
+        return text;
     }
 
     // --- Errors -----------------------------------------------------------------------------------
@@ -695,23 +727,34 @@ namespace
         if (s_MapResults.size() >= kMapResults) ImGui::TextDisabled(T("Only the first %zu matches are shown."), kMapResults);
     }
 
-    void DrawFilters(Node& aMacro)
+    // "Where it's active" for a macro or a folder (a folder's filter limits everything inside it).
+    void DrawFilters(Node& aNode)
     {
+        const bool folder = aNode.IsFolder();
         const Here here = WhereAmI();
-        const bool active = IsActiveHere(aMacro, here);
+        const bool active = IsActiveHere(aNode, here);
         // "###filters" keeps the header's open state while its label changes.
-        const std::string header = Fmt(T("Where it's active: %s"), FilterSummary(aMacro).c_str()) +
+        const std::string header = Fmt(T("Where it's active: %s"), FilterSummary(aNode).c_str()) +
                                    (active ? std::string() : std::string("  ") + T("(not here)")) + "###filters";
         if (!active) ImGui::PushStyleColor(ImGuiCol_Text, kWarnColor);
         const bool open = ImGui::CollapsingHeader(header.c_str());
         if (!active) ImGui::PopStyleColor();
         if (!open) return;
         ImGui::Indent();
-        ImGui::TextWrapped(T("Hotkeys and the quick menu only use a macro where it's active. "
-                           "Send now here in the library always works."));
+        if (folder)
+            ImGui::TextWrapped(T("A folder's filter limits everything inside it, sub-folders too: a macro is active "
+                               "only where its own filter and every folder above it allow."));
+        else
+            ImGui::TextWrapped(T("Hotkeys and the quick menu only use a macro where it's active. "
+                               "Send now here in the library always works."));
+        const std::string limits = FolderLimits(aNode);
+        if (!limits.empty()) ImGui::TextWrapped(T("Also limited by the folders above it: %s"), limits.c_str());
+        if (NeverActive(aNode))
+            ImGui::TextColored(kWarnColor, "%s", folder ? T("Nothing in this folder can be active anywhere: its filter and the folders above it have no game mode or map in common.")
+                                                        : T("This macro can't be active anywhere: its filter and its folders' have no game mode or map in common."));
 
         // Game modes. At least one stays ticked: "none" would mean the macro can never be used.
-        if (aMacro.GameModes == GM_None) aMacro.GameModes = GM_All;
+        if (aNode.GameModes == GM_None) aNode.GameModes = GM_All;
         UiFont::Row modesRow;
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted(T("Game modes:"));
@@ -719,17 +762,17 @@ namespace
         for (uint8_t b : bits)
         {
             modesRow.Next(UiFont::CheckboxWidth(ModeName(b)));
-            bool on = (aMacro.GameModes & b) != 0;
+            bool on = (aNode.GameModes & b) != 0;
             if (ImGui::Checkbox(ModeName(b), &on))
             {
-                const uint8_t next = on ? static_cast<uint8_t>(aMacro.GameModes | b)
-                                        : static_cast<uint8_t>(aMacro.GameModes & ~b);
+                const uint8_t next = on ? static_cast<uint8_t>(aNode.GameModes | b)
+                                        : static_cast<uint8_t>(aNode.GameModes & ~b);
                 if (next == GM_None)
-                    ShowError(Fmt(T("Unticked %s under \"Where it's active\" for \"%s\""), ModeName(b), aMacro.Name.c_str()),
-                              T("A macro needs at least one game mode."));
+                    ShowError(Fmt(T("Unticked %s under \"Where it's active\" for \"%s\""), ModeName(b), aNode.Name.c_str()),
+                              folder ? T("A folder needs at least one game mode.") : T("A macro needs at least one game mode."));
                 else
                 {
-                    aMacro.GameModes = next;
+                    aNode.GameModes = next;
                     MarkDirty();
                 }
             }
@@ -745,16 +788,16 @@ namespace
         UiFont::Row mapsRow;
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted(T("Maps:"));
-        if (aMacro.MapIds.empty())
+        if (aNode.MapIds.empty())
         {
             ImGui::SameLine();
             ImGui::TextDisabled(T("Any map"));
         }
         int removeAt = -1;
-        for (size_t i = 0; i < aMacro.MapIds.size(); i++)
+        for (size_t i = 0; i < aNode.MapIds.size(); i++)
         {
             ImGui::PushID(static_cast<int>(i));
-            const uint32_t mapId = static_cast<uint32_t>(aMacro.MapIds[i]);
+            const uint32_t mapId = static_cast<uint32_t>(aNode.MapIds[i]);
             const std::string name = MapNames::Label(mapId);
             // The API's full list doesn't have it: removed or replaced in a game update, maybe.
             const bool unlisted = MapNames::Unlisted(mapId);
@@ -775,24 +818,25 @@ namespace
         }
         if (removeAt >= 0)
         {
-            aMacro.MapIds.erase(aMacro.MapIds.begin() + removeAt);
+            aNode.MapIds.erase(aNode.MapIds.begin() + removeAt);
             MarkDirty();
         }
 
         auto hasMap = [&](int aId) {
-            for (int m : aMacro.MapIds)
+            for (int m : aNode.MapIds)
                 if (m == aId) return true;
             return false;
         };
         auto addMap = [&](int aId) {
-            const std::string action = Fmt(T("Added map id %d to \"%s\""), aId, aMacro.Name.c_str());
+            const std::string action = Fmt(T("Added map id %d to \"%s\""), aId, aNode.Name.c_str());
             if (aId <= 0) ShowError(action, T("Map ids are positive numbers."));
             else if (hasMap(aId)) ShowError(action, T("That map is already in the list."));
-            else if (aMacro.MapIds.size() >= kMaxMapIds)
-                ShowError(action, Fmt(T("A macro can list at most %zu maps."), kMaxMapIds));
+            else if (aNode.MapIds.size() >= kMaxMapIds)
+                ShowError(action, folder ? Fmt(T("A folder can list at most %zu maps."), kMaxMapIds)
+                                         : Fmt(T("A macro can list at most %zu maps."), kMaxMapIds));
             else
             {
-                aMacro.MapIds.push_back(aId);
+                aNode.MapIds.push_back(aId);
                 MarkDirty();
             }
         };
@@ -1033,6 +1077,9 @@ namespace
                             : aMode == ENameMode::NewFolder        ? T("New folder")
                                                                    : T("New macro");
         std::snprintf(s_NameBuf, sizeof(s_NameBuf), "%s", initial);
+        // A folder's game modes can be ticked here too (its maps are in its details).
+        s_NameModes = aMode == ENameMode::Rename && target && target->IsFolder() && target->GameModes != GM_None
+                          ? target->GameModes : static_cast<uint8_t>(GM_All);
         ImGui::OpenPopup(kNamePopup);
     }
 
@@ -1199,6 +1246,7 @@ namespace
         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAvailWidth;
         if (aNode.Id == s_SelectedId) flags |= ImGuiTreeNodeFlags_Selected;
         std::string suffix = SearchSuffix(aNode);
+        suffix += FolderTag(aNode); // "[WvW, 2 maps]": the folder's own filter
         if (aNode.Favourite) suffix += "  *"; // a favourite (the quick menu's top)
 
         bool open = false;
@@ -1210,7 +1258,9 @@ namespace
             // changed, so clearing the search brings the tree back as it was.
             const bool forced = s_Search.ForcedOpen(aNode.Id);
             ImGui::SetNextItemOpen(forced || aNode.Expanded, ImGuiCond_Always);
-            ImGui::PushStyleColor(ImGuiCol_Text, kFolderColor);
+            ImVec4 folderColor = kFolderColor;
+            if (!IsActiveHere(aNode, WhereAmI())) folderColor.w *= 0.45f; // its filter (or a folder above) is off here: dimmed
+            ImGui::PushStyleColor(ImGuiCol_Text, folderColor);
             open = ImGui::TreeNodeEx("##node", flags, "%s%s", aNode.Name.c_str(), suffix.c_str());
             ImGui::PopStyleColor();
             if (!forced && open != aNode.Expanded && !aNode.Children.empty())
@@ -1624,6 +1674,30 @@ namespace
         const bool enter = ImGui::InputText("##name", s_NameBuf, kMaxNameLength + 1,
                                             ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll);
 
+        // A folder: where it's active (game modes). At least one stays ticked.
+        const Node* named = NodeOrRoot(s_NameTargetId);
+        const bool forFolder = s_NameMode == ENameMode::NewFolder ||
+                               (s_NameMode == ENameMode::Rename && named && named->IsFolder());
+        if (forFolder)
+        {
+            UiFont::Row modesRow;
+            ImGui::AlignTextToFramePadding();
+            ImGui::TextUnformatted(T("Active in:"));
+            const uint8_t bits[] = {GM_PvE, GM_WvW, GM_PvP};
+            for (uint8_t b : bits)
+            {
+                modesRow.Next(UiFont::CheckboxWidth(ModeName(b)));
+                bool on = (s_NameModes & b) != 0;
+                if (ImGui::Checkbox(ModeName(b), &on))
+                {
+                    const uint8_t next = on ? static_cast<uint8_t>(s_NameModes | b) : static_cast<uint8_t>(s_NameModes & ~b);
+                    if (next != GM_None) s_NameModes = next; // the last one can't be unticked
+                }
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", T("Everything in the folder is only active in the ticked game modes."));
+            }
+            ImGui::TextDisabled("%s", T("Maps: in the folder's details, under \"Where it's active\"."));
+        }
+
         const bool ok = ImGui::Button(s_NameMode == ENameMode::Rename ? T("Rename") : T("Create"), Px(100.0f, 0.0f)) || enter;
         ImGui::SameLine();
         if (ImGui::Button(T("Cancel"), Px(100.0f, 0.0f))) ImGui::CloseCurrentPopup();
@@ -1638,6 +1712,11 @@ namespace
             if (r.Ok)
             {
                 if (r.Target) s_SelectedId = r.Target->Id;
+                if (forFolder)
+                {
+                    Node* folderNode = s_NameMode == ENameMode::NewFolder ? r.Target : target;
+                    if (folderNode && folderNode->IsFolder()) folderNode->GameModes = s_NameModes;
+                }
                 MarkDirty();
                 ImGui::CloseCurrentPopup();
             }
@@ -2348,6 +2427,7 @@ namespace
             ImGui::Text(T("Folder level %d of %d"), level, kMaxFolderDepth);
             ImGui::Text(T("Contains %zu folder(s) and %zu macro(s)"), folders, macros);
             DrawFavouriteRow(*node);
+            DrawFilters(*node);
             ImGui::Spacing();
             UiFont::Row newRow;
             if (level < kMaxFolderDepth)

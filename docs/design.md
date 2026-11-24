@@ -59,6 +59,35 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
   - The quick menu lists only active macros, and hides folders without any (except the
     Favourites at its top, shown everywhere, faded). The library tree
     shows every macro, with inactive ones dimmed. **Send now** in the library always works.
+  - **Folder filters** (built 2026-11-24 from the todo list; owner's decisions): a folder has
+    game modes and a map list too, and **they add up** with the macros' own: a macro (or
+    folder) is active only where its own filter and every folder above it allow. Game modes:
+    every one on the way up must allow the mode. Maps: every list that isn't empty must have the
+    map (an empty list = any map). `MacroTree::ReachOf` combines them (`Reach`: modes, any map or
+    the maps in common), used by `IsActive`, `NeverActive` and `FiltersOverlap` (hotkey clashes,
+    in the editor and the import preview), so hotkeys, the quick menu, favourites' fading and
+    **Only active here** all follow folders. A macro moved into a filtered folder follows it.
+    - Why add up and not replace: a folder can only narrow things, so "WvW only" on a folder
+      guarantees nothing inside fires in PvE, and a macro's own filter is never silently
+      ignored. The catch, filters with nothing in common (a PvE macro in a WvW folder), is shown:
+      the editor says "can't be active anywhere".
+    - **Where it's set:** the name pop-up (new folder, rename a folder) has **Active in:** PvE /
+      WvW / PvP (at least one stays ticked) and says the maps are in the folder's details. The
+      folder's details pane has the same **Where it's active** section as a macro (game modes,
+      maps, map search, "Active here"). Both editors list "Also limited by the folders above it:
+      Raids (PvE), ..." and warn when the node can't be active anywhere.
+    - **In the tree:** a folder with its own filter shows a tag after its name, `[PvE]`,
+      `[WvW, PvP]`, `[3 maps]`, `[WvW, 2 maps]` (no tags on macros: they already dim). A folder
+      that isn't active here (its filter or one above it) is dimmed like a macro, and so is
+      everything inside it.
+    - **macros.json:** a folder writes `"game_modes"` and `"map_ids"` only when it has a filter,
+      so folders without one look as before; they're read like a macro's. No migration: there's
+      no release yet, and the owner starts with a fresh library (planning for future format
+      changes is a todo item).
+    - **Import / export:** an exported folder carries its filter. An imported new folder, or a
+      folder that **Replace**s one, brings its filter; **Merge** keeps the existing folder's. A
+      too-deep folder that's left out with its contents moved up (**Move the contents of
+      too-deep folders up a level**) loses its filter, so those macros are less limited.
   - Map names (GW2 API) come with phase 6; for now maps are entered by id or with "Add this map".
   - **Map picker** (built 2026-11-23 from the todo list, section 2): under the map buttons, a
     "Find a map by name or id" box lists up to 12 matches from the GW2 API's full map list

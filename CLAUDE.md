@@ -98,7 +98,8 @@ to the todo list", add it there (don't start building it). Move agreed items int
 - `src/MacroTree.*`: the library data model (`Tree`, `Node` folder/macro, `Line`, channels) with the
   rules (6-folder depth, unique sibling names, move checks) and JSON (de)serialization. No Nexus or
   ImGui dependency. Tested by `tests/MacroTreeTests.cpp`; run `tools/run_tests.ps1` (CI runs it too).
-  It also holds the filter rules (`GameModeOfMapType`, `IsActive`, `FiltersOverlap`), tested by
+  It also holds the filter rules (`GameModeOfMapType`, `ReachOf`, `IsActive`, `NeverActive`,
+  `FiltersOverlap`; a folder's filter adds to everything inside it), tested by
   `tests/FilterTests.cpp`, and the trash bin (`MoveToTrash`, `Restore`, saved under `"trash"`),
   tested by `tests/TrashTests.cpp`.
   Every tree rule change needs a test.

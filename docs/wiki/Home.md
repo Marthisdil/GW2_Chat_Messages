@@ -16,7 +16,7 @@ chat macros in folders and types them into chat for you.
 - [Editing macros](Editing-Macros): lines, channels, whispers, squad broadcasts, raw text, text
   file links.
 - [Sending macros](Sending-Macros): Send now, hotkeys and the quick menu.
-- [Filters](Filters): limit a macro to game modes and maps.
+- [Filters](Filters): limit a macro, or a whole folder, to game modes and maps.
 - [Placeholders](Placeholders): `{time}`, `{random}`, `{map}` and more.
 - [Import and export](Import-and-Export): share and back up macros, with a preview and undo.
 - [Languages](Languages): show the addon in English, German, French, Spanish, or a language

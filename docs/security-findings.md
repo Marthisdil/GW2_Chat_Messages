@@ -49,6 +49,7 @@ folder with someone else's file), **Medium** (wrong behaviour reachable with rea
 | [SEC-030](#sec-030) | 2026-11-23 04:59 | Info | `src/Exchange.h` (`Package`), `src/MacroTree.h` (`Tree`), `src/MapCatalog.h` (`Cache`) | Moving these can throw (MSVC's `std::set` allocates when moved), only when out of memory | Accepted | - |
 | [SEC-031](#sec-031) | 2026-11-23 04:59 | Info | `src/GameKeys.h` (`Bind::Use`) | Field without a default value | Fixed | PR #45, commit `0bdcc55`, build `c52820b` |
 | [SEC-032](#sec-032) | 2026-11-23 04:59 | Info | `src/Ui.cpp` (`DrawMapPicker`) | `size_t` to `float` without a cast | Fixed | PR #45, commit `0bdcc55`, build `c52820b` |
+| [SEC-033](#sec-033) | 2026-11-24 03:34 | High | `src/MacroTree.cpp` (`ParseFilter`, `ReachOf`) | A file (an import, a shared library) could give a folder a huge map list; with folder filters, every item inside it sorted that list every frame: the game freezes | Fixed | PR (this branch, `feature/folder-filters`) |
 
 "Build" is the build stamp's commit (shown in the Nexus log and the DLL's Properties). Until a
 release is tagged, it's the PR's commit; the release that first ships a fix is added when it's
@@ -514,6 +515,24 @@ made.
   is joined) were all fine. Not a security issue but fixed too: importing a whole library
   compared an error message's text to choose its own message (`Exchange::FromLibraryFile`); it
   now uses a flag (`Package::NotOurFormat`).
+
+### SEC-033
+
+- **Found:** 2026-11-24 03:34 UTC, quick audit of `feature/folder-filters` (diff review).
+- **Severity:** High (can freeze the game). **Where:** `src/MacroTree.cpp`, `ParseFilter` (reading
+  `"map_ids"`) and `ReachOf` (combining a node's filter with its folders').
+- **Finding:** `"map_ids"` was read from a file without a limit (the editor allows 50, but a file
+  could have any number: about 500,000 fit in a 4 MB import). With folder filters, `ReachOf`
+  copies and sorts every map list on the way up, for every folder and macro drawn in the library
+  tree, every frame (and for every hotkey and quick menu check). One crafted folder in an
+  imported file, or a shared `macros.json`, would make every frame sort it once per item inside
+  it, and the game would freeze. Before folder filters a macro's own huge list was only scanned,
+  not sorted, once per frame.
+- **Decision (2026-11-24):** fix it: read at most `kMaxMapIds` (50) ids per folder or macro, the
+  same limit as the editor, with a warning naming the item. Tested in `tests/FilterTests.cpp`
+  (`TestFolderFilterJson`).
+- **Status:** Fixed in the PR for `feature/folder-filters` (the commit and first build are added
+  when it merges).
 
 ## Scan log
 

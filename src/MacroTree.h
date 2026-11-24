@@ -67,10 +67,12 @@ namespace MacroTree
         std::vector<std::unique_ptr<Node>> Children;
         bool Expanded = true;
 
-        // Macro
-        std::vector<Line> Lines;
+        // Filters (folders and macros): where it's active. A folder's limit everything inside it.
         uint8_t           GameModes = GM_All;
         std::vector<int>  MapIds;
+
+        // Macro
+        std::vector<Line> Lines;
         std::string       LinkFile;
         Hotkey::Combo     Hotkey;   // empty = none
         int               CooldownSec = 0; // hotkey cooldown, 0 = off, at most Cooldown::kMaxSec
@@ -96,14 +98,34 @@ namespace MacroTree
     // --- Filters (docs/design.md, "Filters") ---
     // A macro is *active* when it matches where the player is. Inactive macros never fire from a
     // hotkey and are hidden from the quick menu; "Send now" in the library still works.
+    // Folders have filters too, and they add up: a macro is active only where its own filter and
+    // every folder above it allow (game modes: all must allow the mode; maps: every list that
+    // isn't empty must have the map).
     constexpr size_t kMaxMapIds = 50;
 
     // The game mode of a Mumble map type (Mumble::EMapType as a number). Character select,
     // creation and redirects are GM_None. Armistice Bastion (the WvW lounge) counts as WvW.
     uint8_t GameModeOfMapType(uint32_t aMapType);
-    // aMode: GM_PvE/GM_WvW/GM_PvP or GM_None (unknown: only macros active in every mode match).
-    bool    IsActive(const Node& aMacro, uint8_t aMode, uint32_t aMapId);
-    // Whether two macros can ever be active at the same time (a shared hotkey is then a conflict).
+
+    // Where a node can be active, its own filter and its folders' together.
+    struct Reach
+    {
+        uint8_t          Modes  = GM_All;
+        bool             AnyMap = true; // no map list anywhere on the way up
+        std::vector<int> Maps;          // else: the maps every list has (sorted); empty = none
+        bool Never() const { return Modes == GM_None || (!AnyMap && Maps.empty()); }
+    };
+    Reach   ReachOf(const Node& aNode);
+    // Its own filter only: a game mode left out or a map list (a folder shows it as a tag).
+    bool    HasFilter(const Node& aNode);
+    // aMode: GM_PvE/GM_WvW/GM_PvP or GM_None (unknown: only what's active in every mode matches).
+    // A folder is active where its own filter and the folders above it allow.
+    bool    IsActive(const Node& aNode, uint8_t aMode, uint32_t aMapId);
+    // Whether it can never be active: its filters and its folders' have no game mode or no map
+    // in common.
+    bool    NeverActive(const Node& aNode);
+    // Whether two macros can ever be active at the same time (a shared hotkey is then a conflict),
+    // with their folders' filters.
     bool    FiltersOverlap(const Node& aA, const Node& aB);
 
     const char* ChannelKey(EChannel aChannel);   // stable JSON key, e.g. "say", "guild3"
