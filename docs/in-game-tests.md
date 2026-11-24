@@ -549,6 +549,8 @@ and the chat key all work normally. No key feels stuck.
 **L2. Unloading.** Send `Long` and, while it's sending, unload the addon in Nexus > Addons: the
 game doesn't freeze and the unload finishes within about a second. Do the same right after sending
 `{map}` on a map that isn't looked up yet (delete `maps.json` first): done within a few seconds. Load the addon again: everything's there.
+Then unload and load it about five times with nothing sending (SEC-036): each unload finishes at
+once.
 
 ## M. Text size
 

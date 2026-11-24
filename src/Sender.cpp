@@ -403,9 +403,15 @@ void Sender::Init()
 
 void Sender::Shutdown()
 {
-    s_Stop = true;
+    {
+        // Under the mutex, so the idle worker can't miss it between its check and its wait
+        // (SEC-036): that wait has no timeout.
+        std::lock_guard<std::mutex> lock(s_JobMutex);
+        s_Stop = true;
+    }
     s_JobCv.notify_all();
-    // Bounded: every wait in the worker times out (game steps ~1 s, a {map} download ~3 s per stage).
+    // Bounded: the idle wait wakes on the notify above, and every wait during a send times out
+    // (game steps ~1 s, a {map} download ~3 s per stage).
     if (s_Thread.joinable()) s_Thread.join();
     g_Api->WndProc_Deregister(OnWndProc);
     {

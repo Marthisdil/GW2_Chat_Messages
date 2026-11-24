@@ -288,7 +288,11 @@ void MapNames::Init()
 
 void MapNames::Shutdown()
 {
-    s_Stop = true;
+    {
+        // Under the mutex, so the worker can't miss it between its check and its wait (SEC-036).
+        std::lock_guard<std::mutex> lock(s_Mutex);
+        s_Stop = true;
+    }
     s_Cv.notify_all();
     if (s_Thread.joinable()) s_Thread.join();
     std::lock_guard<std::mutex> lock(s_Mutex);
