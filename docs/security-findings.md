@@ -49,7 +49,7 @@ folder with someone else's file), **Medium** (wrong behaviour reachable with rea
 | [SEC-030](#sec-030) | 2026-11-23 04:59 | Info | `src/Exchange.h` (`Package`), `src/MacroTree.h` (`Tree`), `src/MapCatalog.h` (`Cache`) | Moving these can throw (MSVC's `std::set` allocates when moved), only when out of memory | Accepted | - |
 | [SEC-031](#sec-031) | 2026-11-23 04:59 | Info | `src/GameKeys.h` (`Bind::Use`) | Field without a default value | Fixed | PR #45, commit `0bdcc55`, build `c52820b` |
 | [SEC-032](#sec-032) | 2026-11-23 04:59 | Info | `src/Ui.cpp` (`DrawMapPicker`) | `size_t` to `float` without a cast | Fixed | PR #45, commit `0bdcc55`, build `c52820b` |
-| [SEC-033](#sec-033) | 2026-11-24 03:34 | High | `src/MacroTree.cpp` (`ParseFilter`, `ReachOf`) | A file (an import, a shared library) could give a folder a huge map list; with folder filters, every item inside it sorted that list every frame: the game freezes | Fixed | PR (this branch, `feature/folder-filters`) |
+| [SEC-033](#sec-033) | 2026-11-24 03:34 | High | `src/MacroTree.cpp` (`ParseFilter`, `ReachOf`) | A file (an import, a shared library) could give a folder a huge map list; with folder filters, every item inside it sorted that list every frame: the game freezes | Fixed | PR #63, commit `5cf4246`, build `3070952` |
 
 "Build" is the build stamp's commit (shown in the Nexus log and the DLL's Properties). Until a
 release is tagged, it's the PR's commit; the release that first ships a fix is added when it's
@@ -531,8 +531,8 @@ made.
 - **Decision (2026-11-24):** fix it: read at most `kMaxMapIds` (50) ids per folder or macro, the
   same limit as the editor, with a warning naming the item. Tested in `tests/FilterTests.cpp`
   (`TestFolderFilterJson`).
-- **Status:** Fixed in the PR for `feature/folder-filters` (the commit and first build are added
-  when it merges).
+- **Status:** Fixed in **PR #63** (`feature/folder-filters`), commit `5cf4246`, first build
+  `3070952`.
 
 ## Scan log
 
