@@ -32,9 +32,10 @@ chat for you, from a hotkey, a menu or a button.
     pick a macro from nested menus, with your favourites and the macros you sent last at the top.
   - **Send now** in the library. **Preview**, next to it, shows exactly what would be typed
     (placeholders filled in, channel commands added) without sending anything.
-- **Filters:** limit a macro to PvE, WvW or PvP, and to certain maps. Hotkeys and the quick menu
-  only use macros that are active where you are, so one key can do different things in WvW and
-  in PvE. Find maps by name (or pick one you've been to); names come from the official GW2 API.
+- **Filters:** limit a macro, or a whole folder, to PvE, WvW or PvP, and to certain maps. A
+  folder's filter applies to everything inside it, on top of each macro's own. Hotkeys and the
+  quick menu only use macros that are active where you are, so one key can do different things
+  in WvW and in PvE. Find maps by name (or pick one you've been to); names come from the official GW2 API.
 - **Placeholders:** `{time}`, `{today}`, `{random 1 6}`, `{map}` and more, filled in when the
   message is sent.
 - **Safe input:** it never interferes with normal game controls. Keys go only to the game window,

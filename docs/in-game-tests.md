@@ -18,7 +18,7 @@ Results so far (keep your notes in `docs\testing results.txt`; it isn't committe
 |---|---|---|
 | A1 | Passed (PR #15 build) | Re-check with the current build: the log and the options page show its version and build stamp, and the two links and the folders are new (A1's last part). |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text wraps and errors open the error window. Re-check those two points only (marked *Re-check* in A2), then go on to A3. |
-| A3 to R | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (J11, export a selection, is the newest; G4 to G6, favourites and recently sent, with G4 and G6 new for favourites shown everywhere, and R, backups and restore, are the newest; A1b, the example macros, and F9, the hotkey cooldown, came just before). |
+| A3 to R | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (H9 and H10, filters on folders, are the newest; then J11, export a selection; G4 to G6, favourites and recently sent, with G4 and G6 new for favourites shown everywhere, and R, backups and restore, are the newest; A1b, the example macros, and F9, the hotkey cooldown, came just before). |
 
 ## How to report
 
@@ -331,6 +331,24 @@ hovering it says the GW2 API doesn't list that map. Remove it.
 N maps, from (date)." Click **Refresh map list**: it says it's loading, then shows the new date,
 and the game doesn't stutter. Disconnect from the internet and click it again: the old count stays
 and a yellow line says the refresh failed and why. Reconnect.
+
+**H9. Filters on folders.** **New folder** `Roam`: the name box has **Active in:** PvE, WvW,
+PvP, all ticked; try to untick all three: the last one stays. Untick PvE and PvP and create it:
+the tree shows `Roam  [WvW]`. In PvE it's dimmed, with everything in it. Move `Say` into it:
+`Say` is dimmed in PvE, its hotkey does nothing there and it's gone from the quick menu, and its
+editor says "Also limited by the folders above it: Roam (WvW)". Go to WvW (or Armistice
+Bastion): all of it is active, not dimmed, and the hotkey sends. In `Say`'s filter, tick only
+PvE: the editor warns it can't be active anywhere. Put it back to all modes.
+
+**H10. Folder maps, sub-folders and sharing.** Select `Roam`, open **Where it's active** in its
+details, and **Add this map**: the tag becomes `[WvW, 1 map]`. Make a sub-folder inside it with
+the map of a different WvW borderland: the sub-folder and everything in it are never active
+(its details warn), and it's dimmed everywhere. Remove that map again. Rename `Roam`: the name box
+shows WvW ticked; tick PvE too and rename: the tag says `[PvE, WvW, 1 map]`. Give `Say` (in
+`Roam`) and a macro outside it the same hotkey, the outside one PvE only, and untick PvE on
+`Roam` again: no clash warning (they can never be active together). Export `Roam` and import
+it as a copy (**Keep both**): the copy has the same tag. Restart the game: the folder filters are
+still there. Move `Say` back out of `Roam` and delete the test folders.
 
 ## I. Placeholders
 
@@ -747,7 +765,7 @@ D1  D2  D3  D4  D5  D6
 E1
 F1  F2 (which mouse buttons, where):  F3  F4  F5  F6  F7  F8
 G1  G2  G3 (where did it appear?):  G4  G5  G6
-H1  H2  H3  H4 (map: mode, map id):  H5  H6  H7  H8
+H1  H2  H3  H4 (map: mode, map id):  H5  H6  H7  H8  H9  H10
 I1 (date format sent):  I2  I3  I4  I5  I6  I7  I8  I9
 J1  J2  J3  J3b  J4  J5  J6  J7  J8  J9  J10  J11
 K1  K2  K3  K4  K5  K6

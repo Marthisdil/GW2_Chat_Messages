@@ -28,6 +28,27 @@ full audit") describes. Start well before the release date, A and B first, and l
 with its usage in the Scan log (`docs/security-findings.md`). The release waits until every area
 is covered and its findings are fixed or accepted.
 
+### Plan ahead for changes to the saved files (added 2026-11-24)
+
+Before the first release, decide how the addon deals with changes to what it saves
+(`macros.json`, `settings.json`, `maps.json`, exports), so a feature added, removed or changed
+later never loses or garbles a user's library. Until now the owner, the only tester, starts with
+a fresh library when the format changes (folder filters were added this way, 2026-11-24).
+
+- Points to settle:
+  - A **format number** in `macros.json` (exports already have `"format": 1`), raised whenever a
+    change means an older build would read the file wrongly, and what a build does with a
+    **newer** file than it knows: refuse to save over it (read-only, with a message), or open
+    it and drop what it doesn't know.
+  - **Unknown keys:** keep them when saving (so an older build doesn't strip a newer feature's
+    data), or drop them. Today they're dropped.
+  - **Upgrades:** a step per format number that turns an old file into the new shape, with a
+    backup (`macros.json.vN.bak` or the Backups folder) written first, and tests that load a
+    saved file from every old format.
+  - **Removed features:** what happens to their data (like the `{txt}`/`{json}` lines, refused
+    with a notice instead of being deleted).
+  - The same questions for exports someone else made with an older or newer build.
+
 ### VirusTotal scan for every released DLL (added 2026-11-21)
 
 If there's a way to automate it, submit every DLL that's to be released to virustotal.com, and
@@ -51,22 +72,9 @@ reserved id and "ask first, replace" button ("Starter library"), backups on a sc
 a Restore tab ("Backups"), favourites and recently sent in the quick menu, and favourites shown
 everywhere whatever the filters, folders too, at most 10 ("Features"), all on 2026-11-23. What was left out of them is under section 4.
 
-Re-ranked 2026-11-23 after the starter library: smallest and safest first. "Filters on folders"
-is the owner's new idea and needs its questions settled first. "Export a selection" (owner,
-2026-11-24) was built the same day ("Import / export").
-
-### Filters on folders (added 2026-11-23)
-
-Folder visibility that follows the filter system. What's there already: the quick menu hides a
-folder with no macro active where you are, and the library's **Only active here** box shows only
-the folders above active macros. What's missing is a filter **on a folder itself** (game modes,
-maps), which every macro inside it follows, so a whole "WvW" folder can be limited in one place.
-
-- Points to settle: whether a folder filter adds to the macros' own filters (a macro is active
-  only where both say so) or replaces them; how it shows in the tree and the editor (a folder
-  with a filter, a macro whose folder limits it); how it goes into `macros.json` and exports
-  (and what an older build does with it); and whether the library dims a whole folder that's
-  inactive here, like it dims macros.
+Re-ranked 2026-11-23 after the starter library: smallest and safest first. "Export a selection"
+(owner, 2026-11-24) was built the same day ("Import / export"), and so were filters on folders
+("Features", Filters). Nothing is left here: the next quick wins come from section 5.
 
 ## 3. Bigger features
 

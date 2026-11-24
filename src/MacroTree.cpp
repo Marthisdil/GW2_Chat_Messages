@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
+#include <iterator>
 #include <random>
 #include <map>
 #include <set>
@@ -96,6 +97,15 @@ namespace MacroTree
             return siblings.size();
         }
 
+        json ModesJson(uint8_t aModes)
+        {
+            json modes = json::array();
+            if (aModes & GM_PvE) modes.push_back("pve");
+            if (aModes & GM_WvW) modes.push_back("wvw");
+            if (aModes & GM_PvP) modes.push_back("pvp");
+            return modes;
+        }
+
         json NodeJson(const Node& n)
         {
             json j;
@@ -106,6 +116,11 @@ namespace MacroTree
             if (n.IsFolder())
             {
                 j["expanded"] = n.Expanded;
+                if (HasFilter(n)) // a folder without a filter keeps the format it had before
+                {
+                    j["game_modes"] = ModesJson(n.GameModes);
+                    j["map_ids"]    = n.MapIds;
+                }
                 json children = json::array();
                 for (const auto& c : n.Children) children.push_back(NodeJson(*c));
                 j["children"] = std::move(children);
@@ -121,11 +136,7 @@ namespace MacroTree
                     lines.push_back(std::move(jl));
                 }
                 j["lines"] = std::move(lines);
-                json modes = json::array();
-                if (n.GameModes & GM_PvE) modes.push_back("pve");
-                if (n.GameModes & GM_WvW) modes.push_back("wvw");
-                if (n.GameModes & GM_PvP) modes.push_back("pvp");
-                j["game_modes"] = std::move(modes);
+                j["game_modes"] = ModesJson(n.GameModes);
                 j["map_ids"]    = n.MapIds;
                 if (!n.LinkFile.empty()) j["link_file"] = n.LinkFile;
                 if (!n.Hotkey.Empty()) j["hotkey"] = Hotkey::ToString(n.Hotkey);
@@ -212,6 +223,7 @@ namespace MacroTree
                 {
                     ParseMacro(jc, *node);
                 }
+                ParseFilter(jc, *node);
                 // "favourite" (folders and macros): true or false; anything else is dropped.
                 auto fav = jc.find("favourite");
                 if (fav != jc.end())
@@ -221,6 +233,29 @@ namespace MacroTree
                                                 node->Name.c_str()));
                 }
                 aFolder.Children.push_back(std::move(node));
+            }
+
+            // "game_modes" and "map_ids" (folders and macros). Missing = everywhere.
+            void ParseFilter(const json& j, Node& n)
+            {
+                auto modes = j.find("game_modes");
+                if (modes != j.end() && modes->is_array())
+                {
+                    uint8_t m = GM_None;
+                    for (const json& jm : *modes)
+                    {
+                        if (!jm.is_string()) continue;
+                        const std::string s = jm.get<std::string>();
+                        if (s == "pve") m |= GM_PvE;
+                        else if (s == "wvw") m |= GM_WvW;
+                        else if (s == "pvp") m |= GM_PvP;
+                    }
+                    n.GameModes = m == GM_None ? static_cast<uint8_t>(GM_All) : m;
+                }
+                auto maps = j.find("map_ids");
+                if (maps != j.end() && maps->is_array())
+                    for (const json& jm : *maps)
+                        if (jm.is_number_integer()) n.MapIds.push_back(jm.get<int>());
             }
 
             void ParseMacro(const json& j, Node& n)
@@ -241,24 +276,6 @@ namespace MacroTree
                         n.Lines.push_back(std::move(l));
                     }
                 }
-                auto modes = j.find("game_modes");
-                if (modes != j.end() && modes->is_array())
-                {
-                    uint8_t m = GM_None;
-                    for (const json& jm : *modes)
-                    {
-                        if (!jm.is_string()) continue;
-                        const std::string s = jm.get<std::string>();
-                        if (s == "pve") m |= GM_PvE;
-                        else if (s == "wvw") m |= GM_WvW;
-                        else if (s == "pvp") m |= GM_PvP;
-                    }
-                    n.GameModes = m == GM_None ? static_cast<uint8_t>(GM_All) : m;
-                }
-                auto maps = j.find("map_ids");
-                if (maps != j.end() && maps->is_array())
-                    for (const json& jm : *maps)
-                        if (jm.is_number_integer()) n.MapIds.push_back(jm.get<int>());
                 n.LinkFile = StringField(j, "link_file");
                 const std::string hk = StringField(j, "hotkey");
                 if (!hk.empty())
@@ -930,25 +947,59 @@ uint8_t MacroTree::GameModeOfMapType(uint32_t aMapType)
     }
 }
 
-bool MacroTree::IsActive(const Node& aMacro, uint8_t aMode, uint32_t aMapId)
+MacroTree::Reach MacroTree::ReachOf(const Node& aNode)
 {
-    if (!aMacro.IsMacro()) return false;
-    const uint8_t modes = aMacro.GameModes == GM_None ? static_cast<uint8_t>(GM_All) : aMacro.GameModes;
-    if (modes != GM_All && (modes & aMode) == 0) return false;
-    if (aMacro.MapIds.empty()) return true;
-    for (int id : aMacro.MapIds)
-        if (id > 0 && static_cast<uint32_t>(id) == aMapId) return true;
-    return false;
+    Reach r;
+    for (const Node* n = &aNode; n; n = n->Parent)
+    {
+        // GM_None in a file means "not set": every mode, as for a macro.
+        const uint8_t modes = n->GameModes == GM_None ? static_cast<uint8_t>(GM_All) : n->GameModes;
+        r.Modes = static_cast<uint8_t>(r.Modes & modes);
+        if (n->MapIds.empty()) continue;
+        std::vector<int> own;
+        for (int id : n->MapIds)
+            if (id > 0) own.push_back(id); // only real ids can match a map
+        std::sort(own.begin(), own.end());
+        own.erase(std::unique(own.begin(), own.end()), own.end());
+        if (r.AnyMap)
+        {
+            r.AnyMap = false;
+            r.Maps   = std::move(own);
+        }
+        else
+        {
+            std::vector<int> both;
+            std::set_intersection(r.Maps.begin(), r.Maps.end(), own.begin(), own.end(), std::back_inserter(both));
+            r.Maps = std::move(both);
+        }
+    }
+    return r;
 }
+
+bool MacroTree::HasFilter(const Node& aNode)
+{
+    const uint8_t modes = aNode.GameModes == GM_None ? static_cast<uint8_t>(GM_All) : aNode.GameModes;
+    return modes != GM_All || !aNode.MapIds.empty();
+}
+
+bool MacroTree::IsActive(const Node& aNode, uint8_t aMode, uint32_t aMapId)
+{
+    const Reach r = ReachOf(aNode);
+    if (r.Modes != GM_All && (r.Modes & aMode) == 0) return false;
+    if (r.AnyMap) return true;
+    return aMapId > 0 && aMapId <= static_cast<uint32_t>(INT32_MAX) &&
+           std::binary_search(r.Maps.begin(), r.Maps.end(), static_cast<int>(aMapId));
+}
+
+bool MacroTree::NeverActive(const Node& aNode) { return ReachOf(aNode).Never(); }
 
 bool MacroTree::FiltersOverlap(const Node& aA, const Node& aB)
 {
-    const uint8_t ma = aA.GameModes == GM_None ? static_cast<uint8_t>(GM_All) : aA.GameModes;
-    const uint8_t mb = aB.GameModes == GM_None ? static_cast<uint8_t>(GM_All) : aB.GameModes;
-    if ((ma & mb) == 0) return false;
-    if (aA.MapIds.empty() || aB.MapIds.empty()) return true;
-    for (int x : aA.MapIds)
-        for (int y : aB.MapIds)
-            if (x == y) return true;
-    return false;
+    const Reach a = ReachOf(aA);
+    const Reach b = ReachOf(aB);
+    if (a.Never() || b.Never() || (a.Modes & b.Modes) == 0) return false;
+    if (a.AnyMap || b.AnyMap) return true;
+    std::vector<int> both;
+    std::set_intersection(a.Maps.begin(), a.Maps.end(), b.Maps.begin(), b.Maps.end(), std::back_inserter(both));
+    return !both.empty();
 }

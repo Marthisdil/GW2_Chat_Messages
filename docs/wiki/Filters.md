@@ -1,7 +1,8 @@
 # Filters
 
 Filters decide **where a macro is active**: in which game modes, and optionally on which maps.
-Open them in the macro editor under **Where it's active**. The header shows a summary, like
+Open them in the macro editor under **Where it's active**. Folders can have filters too: see
+[Filters on folders](#filters-on-folders). The header shows a summary, like
 "Everywhere", "PvE, PvP" or "PvE on 2 maps", and "(not here)" when the macro isn't active where
 you are.
 
@@ -67,8 +68,35 @@ the page says why.
 The editor says whether the macro is active where you are now ("Active here" / "Not active
 here").
 
+## Filters on folders
+
+A folder can have game modes and maps too, and **everything inside it follows**: its macros and
+its sub-folders.
+
+- The filters **add up**. A macro is active only where its own filter **and** every folder above
+  it allow. A "WvW only" folder means nothing in it is ever active in PvE, whatever the macros
+  inside say. A macro with no filter of its own simply follows its folders.
+- **Game modes:** when you create a folder or rename it, the name box has **Active in:** PvE,
+  WvW, PvP. At least one stays ticked.
+- **Maps, and everything else:** select the folder and open **Where it's active** in its
+  details. It works like a macro's: game modes, maps, map search, and whether it's active here.
+- **In the library:** a folder with a filter shows it after its name, like `Roaming  [WvW]`,
+  `LA  [1 map]` or `Squad  [WvW, 2 maps]`. A folder that isn't active where you are is dimmed,
+  and so is everything inside it.
+- A macro's editor lists the folders that also limit it ("Also limited by the folders above
+  it: Roaming (WvW)").
+- **Filters that have nothing in common:** a PvE-only macro in a WvW-only folder, or a macro
+  whose maps aren't on its folder's map list, can't be active anywhere. The editor warns you in
+  yellow. Change one of the filters, or move the macro.
+- Moving a macro into a folder with a filter makes it follow that folder.
+- Exports carry a folder's filter, and an imported folder brings it along (see
+  [Import and export](Import-and-Export)).
+
+<!-- screenshot: folder-filters.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: folders with filter tags in the library, one dimmed, with its "Where it's active".*
+
 ## Sharing a hotkey
 
 Because hotkeys only use active macros, you can give the same key to macros whose filters never
-overlap, for example "WvW only" and "PvE only". The editor warns only when two macros with the
+overlap, for example "WvW only" and "PvE only" (a folder's filter counts too). The editor warns only when two macros with the
 same key could be active in the same place.
