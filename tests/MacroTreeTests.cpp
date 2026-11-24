@@ -11,6 +11,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "ChatLine.h"
 #include "MacroTree.h"
 #include "TestCheck.h"
 
@@ -498,6 +499,26 @@ static void TestJsonLineLimit()
     CHECK(exact.Find(0xc1) && exact.Find(0xc1)->Lines.size() == kMaxLines && none.empty());
 }
 
+static void TestJsonRecipientLimit()
+{
+    // A file can't bring a whisper recipient longer than any name (SEC-035): it's cut to
+    // kMaxRecipientLength with one warning naming the macro; a recipient that fits is kept.
+    const size_t max = ChatLine::kMaxRecipientLength;
+    json lines = json::array({{{"channel", "whisper"}, {"whisper_to", "Bob" + std::string(100000, 'x')}, {"message", "hi"}},
+                              {{"channel", "whisper"}, {"whisper_to", std::string(max, 'y')}, {"message", "ok"}}});
+    json j = {{"format", 1},
+              {"root", {{"children", json::array({{{"type", "macro"}, {"id", "00000000000000c2"},
+                                                   {"name", "Whisper"}, {"lines", lines}}})}}}};
+    Tree t;
+    std::vector<std::string> warnings;
+    CHECK(t.FromJson(j, &warnings));
+    const Node* m = t.Find(0xc2);
+    CHECK(m && m->Lines.size() == 2);
+    CHECK(m && m->Lines.size() == 2 && ChatLine::Utf16Length(m->Lines[0].WhisperTo) == max &&
+          m->Lines[0].WhisperTo.compare(0, 3, "Bob") == 0 && m->Lines[1].WhisperTo == std::string(max, 'y'));
+    CHECK(warnings.size() == 1 && warnings[0].find("Whisper") != std::string::npos);
+}
+
 static void TestChannels()
 {
     for (int i = 0; i < static_cast<int>(EChannel::Count); i++)
@@ -572,6 +593,7 @@ void RunMacroTreeTests()
     TestJsonCooldown();
     TestJsonControlCharacters();
     TestJsonLineLimit();
+    TestJsonRecipientLimit();
     TestChannels();
     TestManyMissingIds();
     TestNumberedName();

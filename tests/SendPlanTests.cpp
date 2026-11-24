@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 
+#include "ChatLine.h"
 #include "SendPlan.h"
 #include "TestCheck.h"
 
@@ -91,6 +92,27 @@ static void TestEmptyAndTooLong()
     CHECK(p.Error.empty());
     p = Build({L(EChannel::Say, std::string(197, 'a'))}, false);
     CHECK(!p.Error.empty() && p.Steps.empty());
+}
+
+// SEC-035: a whisper recipient longer than any name is refused, so it's never typed.
+static void TestRecipientTooLong()
+{
+    const size_t max = ChatLine::kMaxRecipientLength;
+    Plan p = Build({L(EChannel::Whisper, "hi", std::string(max, 'a'))}, false);
+    CHECK(p.Error.empty());
+    p = Build({L(EChannel::Whisper, "hi", std::string(max + 1, 'a'))}, false);
+    CHECK(!p.Error.empty() && p.Steps.empty());
+    // Counted in UTF-16 units, like chat: an emoji is two.
+    std::string emoji;
+    for (size_t i = 0; i < max / 2 + 1; i++) emoji += "\xF0\x9F\x98\x80";
+    p = Build({L(EChannel::Whisper, "hi", emoji)}, false);
+    CHECK(!p.Error.empty() && p.Steps.empty());
+    // Megabytes from a file: refused, and nothing is planned.
+    p = Build({L(EChannel::Say, "ok"), L(EChannel::Whisper, "hi", "Bob" + std::string(1 << 20, ' '))}, false);
+    CHECK(!p.Error.empty() && p.Steps.empty() && p.Error.find("Line 2") == 0);
+    // The recipient of a line that isn't a whisper is never typed, so it isn't checked.
+    p = Build({L(EChannel::Say, "hi", std::string(max + 1, 'a'))}, false);
+    CHECK(p.Error.empty());
 }
 
 // SEC-013: only our own Enter and Tab may reach the chat box.
@@ -255,6 +277,7 @@ void RunSendPlanTests()
     TestWhisper();
     TestBroadcast();
     TestEmptyAndTooLong();
+    TestRecipientTooLong();
     TestControlCharacters();
     TestPlaceholderCommand();
     TestPrepare();
