@@ -59,9 +59,9 @@ namespace MacroTree
     {
         uint64_t    Id   = 0;
         ENodeType   Type = ENodeType::Folder;
+        bool        Favourite = false; // a folder or macro at the top of the quick menu (QuickLists.h)
         std::string Name;          // folder name or macro title
         Node*       Parent = nullptr;
-        bool        Favourite = false; // a folder or macro at the top of the quick menu (QuickLists.h)
 
         // Folder
         std::vector<std::unique_ptr<Node>> Children;
