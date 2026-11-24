@@ -52,6 +52,7 @@ folder with someone else's file), **Medium** (wrong behaviour reachable with rea
 | [SEC-033](#sec-033) | 2026-11-24 03:34 | High | `src/MacroTree.cpp` (`ParseFilter`, `ReachOf`) | A file (an import, a shared library) could give a folder a huge map list; with folder filters, every item inside it sorted that list every frame: the game freezes | Fixed | PR #63, commit `5cf4246`, build `3070952` |
 | [SEC-034](#sec-034) | 2026-11-24 05:01 | High | `src/MacroTree.cpp:289` (`ParseMacro`) | A JSON import (or a shared library) skipped the 50-line limit: one macro can hold about 1.4 million lines, and selecting it freezes the game | Fixed | PR #67, commit `7389e5d`, build `7d9876e` |
 | [SEC-035](#sec-035) | 2026-11-24 12:58 | High | `src/SendPlan.cpp:110` (`Build`), `src/Sender.cpp:146` (`TypeUtf8`) | A whisper recipient from a file has no length limit: sending it types every character on the game's window thread (the game freezes) and leaves chat open | Fixed | PR #70, commit `7f3167e`, build `e1d33cf` |
+| [SEC-036](#sec-036) | 2026-11-24 22:12 | Low | `src/MapNames.cpp:291` (`Shutdown`), `src/Sender.cpp:406` (`Shutdown`) | The stop flag is set and the worker woken without its mutex: a wakeup lost at exactly the wrong moment would hang unloading the addon (the game freezes) | Fixing | - |
 
 "Build" is the build stamp's commit (shown in the Nexus log and the DLL's Properties). Until a
 release is tagged, it's the PR's commit; the release that first ships a fix is added when it's
@@ -599,6 +600,29 @@ made.
   changing the Examples folder's lines; no real impact, since the example lines are checked and
   sent like any other line.
 
+### SEC-036
+
+- **Found:** 2026-11-24 22:12 UTC, by claude-security area C (whole, `cac1442`, medium effort).
+  The panel rejected both candidates (0 of 3) as **not security issues**, since only the
+  addon's own unload reaches them, but every voter agreed the race is real; the owner chose to
+  record it and fix it.
+- **Severity:** Low (a correctness bug, not reachable from any file or web response, and it
+  needs exact timing; the effect would be a hang when the addon unloads or the game closes).
+  **Where:** `src/MapNames.cpp:291` (`MapNames::Shutdown`) with the wait in `ThreadStep`
+  (`:217-218`); `src/Sender.cpp:406` (`Sender::Shutdown`) with the wait in `WorkerMain`
+  (`:347`).
+- **Finding:** both `Shutdown`s set their atomic `s_Stop` and call `notify_all` without taking
+  the mutex the worker waits on (`s_Mutex`, `s_JobMutex`). The worker checks its predicate under
+  that mutex and then blocks; if the store and the notify fall between the check and the block,
+  the wakeup is lost. With no refresh due (`MapNames`) or no job queued (`Sender`) the wait has
+  no timeout, nothing else notifies after unload has begun, and the `join` in `AddonUnload`
+  waits forever. The comment at `src/Sender.cpp:408` ("every wait in the worker times out")
+  doesn't hold for this idle wait.
+- **Suggested fix:** set `s_Stop` while holding the worker's mutex (a small `lock_guard` scope
+  around the store, then `notify_all` after it), in both `Shutdown`s; correct the comment.
+- **Decision (2026-11-24):** fix it (owner), in `feature/security-shutdown-wakeup`.
+- **Status:** Fixing.
+
 ## Scan log
 
 Every claude-security scan, for planning the next one ([security-audit.md](security-audit.md),
@@ -612,6 +636,7 @@ on every push.
 | 2026-11-22 01:59 | A-D (before the split) | whole | `028549c` | medium | not recorded | SEC-008 to SEC-026 |
 | 2026-11-24 04:33 | A (with `Backups`, `PathText`) | whole | `be4c6e8` | high | $1.22 → $30.12 session cost (about $28.90; 33 agents, about 2.74M subagent tokens); weekly 73% → 85%; the 5-hour window reset during the run, so its share wasn't measured; 27 min (04:33-05:01) | SEC-034 |
 | 2026-11-24 12:34 | B (with `Hotkey`) | whole | `cd2868b` | high | $0.44 → $18.05 session cost (about $17.60; 21 agents, about 1.48M subagent tokens); 5-hour window 13% → 70%; weekly 87% → 94%; 23 min (12:34-12:58) | SEC-035 |
+| 2026-11-24 22:04 | C | whole | `cac1442` | medium | $0.40 → $6.31 session cost (about $5.90; 13 agents, about 0.56M subagent tokens); 5-hour window 0% → 19%; weekly 0% → 3% (just after the weekly reset); 8 min (22:04-22:12) | none (2 candidates rejected by the panel as not security issues; recorded as SEC-036 at the owner's request) |
 
 The first release needs a whole-repository scan of every area, so the 2026-11-22 scan doesn't
 cover it: it ran before `{txt}`/`{json}` were removed and before PR #45.
