@@ -50,7 +50,7 @@ folder with someone else's file), **Medium** (wrong behaviour reachable with rea
 | [SEC-031](#sec-031) | 2026-11-23 04:59 | Info | `src/GameKeys.h` (`Bind::Use`) | Field without a default value | Fixed | PR #45, commit `0bdcc55`, build `c52820b` |
 | [SEC-032](#sec-032) | 2026-11-23 04:59 | Info | `src/Ui.cpp` (`DrawMapPicker`) | `size_t` to `float` without a cast | Fixed | PR #45, commit `0bdcc55`, build `c52820b` |
 | [SEC-033](#sec-033) | 2026-11-24 03:34 | High | `src/MacroTree.cpp` (`ParseFilter`, `ReachOf`) | A file (an import, a shared library) could give a folder a huge map list; with folder filters, every item inside it sorted that list every frame: the game freezes | Fixed | PR #63, commit `5cf4246`, build `3070952` |
-| [SEC-034](#sec-034) | 2026-11-24 05:01 | High | `src/MacroTree.cpp:289` (`ParseMacro`) | A JSON import (or a shared library) skipped the 50-line limit: one macro can hold about 1.4 million lines, and selecting it freezes the game | Fixing | - |
+| [SEC-034](#sec-034) | 2026-11-24 05:01 | High | `src/MacroTree.cpp:289` (`ParseMacro`) | A JSON import (or a shared library) skipped the 50-line limit: one macro can hold about 1.4 million lines, and selecting it freezes the game | Fixed | PR #67, commit `7389e5d`, build `7d9876e` |
 
 "Build" is the build stamp's commit (shown in the Nexus log and the DLL's Properties). Until a
 release is tagged, it's the PR's commit; the release that first ships a fix is added when it's
@@ -553,7 +553,8 @@ made.
   macro (counted against `kMaxWarnings`), which covers imports, `macros.json` and backups at
   once; test with a JSON macro of `kMaxLines + 5` lines.
 - **Decision (2026-11-24):** fix it as suggested (owner), in `feature/security-lines-cap`.
-- **Status:** Fixing.
+- **Status:** Fixed in **PR #67** (`feature/security-lines-cap`), commit `7389e5d`, first build
+  `7d9876e`. Tested in `tests/MacroTreeTests.cpp` (`TestJsonLineLimit`); in-game check J9.
 - The same scan's panel rejected six candidates: a trashed item's `from_ids` list (any length)
   rebuilding that many folders on Restore (3 variants), and a `link_file` path loaded without
   `CheckPath` reaching `ShellExecuteW` or a write (3 variants). Both are real gaps in the code but
