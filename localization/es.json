@@ -708,6 +708,7 @@
     "Skipped folders nested too deeply to read.": "Se omitieron carpetas anidadas demasiado para leerlas.",
     "Some folders are nested deeper than %d levels. They were kept, but you can't add more folders inside them.": "Algunas carpetas están anidadas en más de %d niveles. Se conservaron, pero no puedes añadir más carpetas dentro.",
     "\"%s\": its favourite mark isn't true or false and was removed.": "\"%s\": su marca de favorito no es true ni false y se ha quitado.",
+    "\"%s\": it listed more than %zu maps; only the first %zu were kept.": "\"%s\": tenía más de %zu mapas; solo se han conservado los %zu primeros.",
     "Macro \"%s\": hotkey \"%s\" isn't valid and was removed.": "Macro \"%s\": el atajo \"%s\" no es válido y se quitó.",
     "Macro \"%s\": its cooldown was longer than %d seconds and was cut to %d.": "Macro \"%s\": su tiempo de espera superaba los %d segundos y se redujo a %d.",
     "Macro \"%s\": its cooldown isn't a whole number of seconds and was removed.": "Macro \"%s\": su tiempo de espera no es un número entero de segundos y se eliminó.",

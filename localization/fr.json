@@ -708,6 +708,7 @@
     "Skipped folders nested too deeply to read.": "Des dossiers trop imbriqués pour être lus ont été ignorés.",
     "Some folders are nested deeper than %d levels. They were kept, but you can't add more folders inside them.": "Certains dossiers sont imbriqués sur plus de %d niveaux. Ils ont été gardés, mais vous ne pouvez plus y ajouter de dossiers.",
     "\"%s\": its favourite mark isn't true or false and was removed.": "\"%s\" : sa marque de favori n'est ni true ni false et a été retirée.",
+    "\"%s\": it listed more than %zu maps; only the first %zu were kept.": "\"%s\" : plus de %zu cartes étaient listées ; seules les %zu premières ont été gardées.",
     "Macro \"%s\": hotkey \"%s\" isn't valid and was removed.": "Macro \"%s\" : le raccourci \"%s\" n'est pas valide et a été retiré.",
     "Macro \"%s\": its cooldown was longer than %d seconds and was cut to %d.": "Macro \"%s\" : son temps de recharge dépassait %d secondes et a été réduit à %d.",
     "Macro \"%s\": its cooldown isn't a whole number of seconds and was removed.": "Macro \"%s\" : son temps de recharge n'est pas un nombre entier de secondes et a été supprimé.",

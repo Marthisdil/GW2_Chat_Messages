@@ -252,10 +252,23 @@ namespace MacroTree
                     }
                     n.GameModes = m == GM_None ? static_cast<uint8_t>(GM_All) : m;
                 }
+                // At most kMaxMapIds, as in the editor (SEC-033): every frame walks these lists for
+                // each item inside a folder, so a file must not bring a huge one.
                 auto maps = j.find("map_ids");
                 if (maps != j.end() && maps->is_array())
+                {
                     for (const json& jm : *maps)
-                        if (jm.is_number_integer()) n.MapIds.push_back(jm.get<int>());
+                    {
+                        if (!jm.is_number_integer()) continue;
+                        if (n.MapIds.size() >= kMaxMapIds)
+                        {
+                            Warn(Localization::Fmt(TR("\"%s\": it listed more than %zu maps; only the first %zu were kept."),
+                                                   n.Name.c_str(), kMaxMapIds, kMaxMapIds));
+                            break;
+                        }
+                        n.MapIds.push_back(jm.get<int>());
+                    }
+                }
             }
 
             void ParseMacro(const json& j, Node& n)

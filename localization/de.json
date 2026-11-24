@@ -708,6 +708,7 @@
     "Skipped folders nested too deeply to read.": "Zu tief verschachtelte Ordner wurden übersprungen.",
     "Some folders are nested deeper than %d levels. They were kept, but you can't add more folders inside them.": "Einige Ordner sind tiefer als %d Ebenen verschachtelt. Sie wurden behalten, aber du kannst darin keine weiteren Ordner anlegen.",
     "\"%s\": its favourite mark isn't true or false and was removed.": "\"%s\": Die Favoriten-Markierung ist weder true noch false und wurde entfernt.",
+    "\"%s\": it listed more than %zu maps; only the first %zu were kept.": "\"%s\": Es waren mehr als %zu Karten eingetragen; nur die ersten %zu wurden behalten.",
     "Macro \"%s\": hotkey \"%s\" isn't valid and was removed.": "Makro \"%s\": Das Tastenkürzel \"%s\" ist ungültig und wurde entfernt.",
     "Macro \"%s\": its cooldown was longer than %d seconds and was cut to %d.": "Makro \"%s\": Die Abklingzeit war länger als %d Sekunden und wurde auf %d gekürzt.",
     "Macro \"%s\": its cooldown isn't a whole number of seconds and was removed.": "Makro \"%s\": Die Abklingzeit ist keine ganze Zahl von Sekunden und wurde entfernt.",

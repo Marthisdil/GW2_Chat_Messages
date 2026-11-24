@@ -714,6 +714,7 @@
     "Skipped folders nested too deeply to read.": "",
     "Some folders are nested deeper than %d levels. They were kept, but you can't add more folders inside them.": "",
     "\"%s\": its favourite mark isn't true or false and was removed.": "",
+    "\"%s\": it listed more than %zu maps; only the first %zu were kept.": "",
     "Macro \"%s\": hotkey \"%s\" isn't valid and was removed.": "",
     "Macro \"%s\": its cooldown was longer than %d seconds and was cut to %d.": "",
     "Macro \"%s\": its cooldown isn't a whole number of seconds and was removed.": "",

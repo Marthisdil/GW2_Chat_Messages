@@ -1,5 +1,8 @@
 // Standalone tests for the macro filters in src/MacroTree.cpp (game mode + map ids).
 
+#include <string>
+#include <vector>
+
 #include <nlohmann/json.hpp>
 
 #include "MacroTree.h"
@@ -128,6 +131,20 @@ static void TestFolderFilterJson()
     CHECK(b && b->GameModes == (GM_WvW | GM_PvP) && b->MapIds == std::vector<int>({38, 95}));
     CHECK(back.Find(plain->Id) && !HasFilter(*back.Find(plain->Id)));
     CHECK(b && !b->Children.empty() && !IsActive(*b->Children[0], GM_PvE, 38));
+
+    // A file can't bring more maps than the editor allows (SEC-033), on a folder or a macro.
+    nlohmann::json big = j;
+    nlohmann::json many = nlohmann::json::array();
+    for (int i = 1; i <= static_cast<int>(kMaxMapIds) + 20; i++) many.push_back(i);
+    big["root"]["children"][1]["map_ids"] = many;
+    big["root"]["children"][1]["children"][0]["map_ids"] = many;
+    Tree capped;
+    std::vector<std::string> warnings;
+    CHECK(capped.FromJson(big, &warnings));
+    const Node* cf = capped.Find(roam->Id);
+    CHECK(cf && cf->MapIds.size() == kMaxMapIds && cf->MapIds.front() == 1);
+    CHECK(cf && !cf->Children.empty() && cf->Children[0]->MapIds.size() == kMaxMapIds);
+    CHECK(warnings.size() == 2);
 }
 
 static void TestOverlap()
