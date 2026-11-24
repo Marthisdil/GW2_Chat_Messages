@@ -25,7 +25,7 @@ The version is a date (`YYYY.MM.DD.HHMM.Channel`), so "major" and "minor" are de
 |---|---|---|
 | **Major release** | The first release; any **Beta** or **Rel** release; a channel change (Dev to Beta, Beta to Rel); or a Dev release that adds or changes a way untrusted data comes in (imports, link files, the network, placeholders) or the input path (`Sender`, `SendPlan`, `Hotkeys`) | **The full audit is required.** The **first release** and a **channel change** get a **whole-repository** scan (every area); any other major release gets a **changes-only** scan of each area since that area's last logged scan. As soon as a release is mentioned, Claude reads the scan log and proposes a schedule (one area per session); it doesn't ask whether to scan. The release waits until every area is covered (see "The full audit") and the findings are fixed or accepted by the owner. |
 | **Minor release** | Any other release (a tagged Dev build) | Claude **asks** before the release: full audit, quick audit since the last release tag, or skip. |
-| **Lesser change** | A pull request that changes code (`src/`, `tests/`, `tools/`, the `.vcxproj`, CI); docs-only PRs don't count | Claude **asks** when it opens the PR: quick audit of this PR, or skip. |
+| **Lesser change** | A pull request that changes code (`src/`, `tests/`, `tools/`, the `.vcxproj`, CI); docs-only PRs don't count | Claude **asks** when it opens the PR: code review and quick audit, code review only, or skip (`/code-review` is a correctness review; see "Code review" in `CLAUDE.md`). |
 
 ## The full audit
 

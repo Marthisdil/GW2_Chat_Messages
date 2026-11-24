@@ -15,6 +15,16 @@ still to discuss. Within each section, items are in priority order too.
 Work through `docs/in-game-tests.md` (A1 passed, A2 mostly; the rest is still to do). Session B,
 whether the game takes the addon's keys and text, matters most: everything else depends on it.
 
+### Cleanup PR for `Ui.cpp` after the in-game testing (added 2026-11-24)
+
+**Reminder (owner):** once every session in `docs/in-game-tests.md` has been run and passed,
+make one cleanup PR for `src/Ui.cpp` alone (about 4,200 lines, no unit tests): run `/simplify`
+on it, with no feature changes in the same PR. Rules from `CLAUDE.md` ("`/simplify`"): behaviour
+stays the same (texts, popup IDs, JSON keys, the `Action` queue), the input path is left out,
+then the build, the tests, `/code-review`, and the in-game checks of every screen it touched,
+named in the PR. Not before the in-game testing, so a break can't be mixed up with a feature
+bug.
+
 ### Whispers without Tab
 
 Find a way to send whispers that needs no Tab key (Tab is the riskiest key the sender presses).

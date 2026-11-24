@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(unzip -l *)",
+      "Bash(unzip -p *)",
+      "Bash(git submodule status)",
+      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File tools/run_tests.ps1)",
+      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File tools\\run_tests.ps1)",
+      "mcp__ccd_pr__get_status",
+      "mcp__Claude_Browser__get_page_text",
+      "mcp__Claude_Browser__find",
+      "mcp__ccd_session_mgmt__list_events"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -I \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard_testing_results.py\"",
+            "timeout": 15,
+            "statusMessage": "Checking that the private test notes stay untracked"
+          }
+        ]
+      }
+    ]
+  }
+}
