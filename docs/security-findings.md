@@ -50,6 +50,7 @@ folder with someone else's file), **Medium** (wrong behaviour reachable with rea
 | [SEC-031](#sec-031) | 2026-11-23 04:59 | Info | `src/GameKeys.h` (`Bind::Use`) | Field without a default value | Fixed | PR #45, commit `0bdcc55`, build `c52820b` |
 | [SEC-032](#sec-032) | 2026-11-23 04:59 | Info | `src/Ui.cpp` (`DrawMapPicker`) | `size_t` to `float` without a cast | Fixed | PR #45, commit `0bdcc55`, build `c52820b` |
 | [SEC-033](#sec-033) | 2026-11-24 03:34 | High | `src/MacroTree.cpp` (`ParseFilter`, `ReachOf`) | A file (an import, a shared library) could give a folder a huge map list; with folder filters, every item inside it sorted that list every frame: the game freezes | Fixed | PR #63, commit `5cf4246`, build `3070952` |
+| [SEC-034](#sec-034) | 2026-11-24 05:01 | High | `src/MacroTree.cpp:289` (`ParseMacro`) | A JSON import (or a shared library) skipped the 50-line limit: one macro can hold about 1.4 million lines, and selecting it freezes the game | Open | - |
 
 "Build" is the build stamp's commit (shown in the Nexus log and the DLL's Properties). Until a
 release is tagged, it's the PR's commit; the release that first ships a fix is added when it's
@@ -534,6 +535,31 @@ made.
 - **Status:** Fixed in **PR #63** (`feature/folder-filters`), commit `5cf4246`, first build
   `3070952`.
 
+### SEC-034
+
+- **Found:** 2026-11-24 05:01 UTC, by claude-security area A (whole, `be4c6e8`, high effort;
+  confirmed by all three verifiers).
+- **Severity:** High (can freeze the game; claude-security rated it Medium on its own scale).
+  **Where:** `src/MacroTree.cpp:289`, `ParseMacro` (reading `"lines"`).
+- **Finding:** every other way lines come in stops at `kMaxLines` (50): the `.txt` import
+  (`Exchange.cpp`, `AddTextMacro`), link files (`LinkSync.cpp`) and the raw editor. The JSON
+  path (`Exchange::FromJsonText` → `Tree::FromJson` → `ParseMacro`) adds every object in
+  `"lines"`, and `Exchange::Finish` only counts folders and macros. A 4 MB export can hold one
+  macro with about 1.4 million lines (`{}` each); the preview shows "1 new macro". Selecting it
+  draws every line every frame (the game freezes), every save writes over 100 MB of JSON on the
+  render thread, it stays in the trash after a delete, and sending it would type every non-empty
+  line into chat. Same class as SEC-033 (a list from a file without the editor's limit).
+- **Suggested fix:** stop after `kMaxLines` lines in `ParseMacro`, with a warning naming the
+  macro (counted against `kMaxWarnings`), which covers imports, `macros.json` and backups at
+  once; test with a JSON macro of `kMaxLines + 5` lines.
+- **Decision:** not yet (owner).
+- **Status:** Open.
+- The same scan's panel rejected six candidates: a trashed item's `from_ids` list (any length)
+  rebuilding that many folders on Restore (3 variants), and a `link_file` path loaded without
+  `CheckPath` reaching `ShellExecuteW` or a write (3 variants). Both are real gaps in the code but
+  can only be set by the user's own `macros.json`, `.bak` or backups: every import path empties
+  the trash and clears link paths (`Exchange::FromJsonText`, `CopyMacro`).
+
 ## Scan log
 
 Every claude-security scan, for planning the next one ([security-audit.md](security-audit.md),
@@ -545,6 +571,7 @@ on every push.
 | Date (UTC) | Area | Kind | Commit | Effort | Usage | Findings |
 |---|---|---|---|---|---|---|
 | 2026-11-22 01:59 | A-D (before the split) | whole | `028549c` | medium | not recorded | SEC-008 to SEC-026 |
+| 2026-11-24 04:33 | A (with `Backups`, `PathText`) | whole | `be4c6e8` | high | $1.22 → $30.12 session cost (about $28.90; 33 agents, about 2.74M subagent tokens); weekly 73% → 85%; the 5-hour window reset during the run, so its share wasn't measured; 27 min (04:33-05:01) | SEC-034 |
 
 The first release needs a whole-repository scan of every area, so the 2026-11-22 scan doesn't
 cover it: it ran before `{txt}`/`{json}` were removed and before PR #45.
