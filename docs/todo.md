@@ -20,14 +20,6 @@ whether the game takes the addon's keys and text, matters most: everything else 
 Find a way to send whispers that needs no Tab key (Tab is the riskiest key the sender presses).
 Test in game during session B.
 
-### Full security scan for the first release (added 2026-11-23)
-
-The first release needs a whole-repository claude-security scan of areas A-D (untrusted files,
-input path, network, everything else), one area per session, as `docs/security-audit.md` ("The
-full audit") describes. Start well before the release date, A and B first, and log each scan
-with its usage in the Scan log (`docs/security-findings.md`). The release waits until every area
-is covered and its findings are fixed or accepted.
-
 ### Plan ahead for changes to the saved files (added 2026-11-24)
 
 Before the first release, decide how the addon deals with changes to what it saves
