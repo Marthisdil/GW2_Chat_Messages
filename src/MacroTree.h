@@ -59,6 +59,7 @@ namespace MacroTree
     {
         uint64_t    Id   = 0;
         ENodeType   Type = ENodeType::Folder;
+        bool        Favourite = false; // a folder or macro at the top of the quick menu (QuickLists.h)
         std::string Name;          // folder name or macro title
         Node*       Parent = nullptr;
 
@@ -73,7 +74,6 @@ namespace MacroTree
         std::string       LinkFile;
         Hotkey::Combo     Hotkey;   // empty = none
         int               CooldownSec = 0; // hotkey cooldown, 0 = off, at most Cooldown::kMaxSec
-        bool              Favourite = false; // shown at the top of the quick menu (QuickLists.h)
 
         bool IsFolder() const { return Type == ENodeType::Folder; }
         bool IsMacro() const  { return Type == ENodeType::Macro; }

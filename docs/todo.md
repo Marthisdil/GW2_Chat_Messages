@@ -48,31 +48,11 @@ map search ("Features"), the default-key warning ("Input safety", hotkeys), and 
 export folders, ready to open ("Import / export"), Preview next to Send now ("Features"), the
 per-macro hotkey cooldown ("Input safety", hotkeys), and the starter library with its
 reserved id and "ask first, replace" button ("Starter library"), backups on a schedule with
-a Restore tab ("Backups"), and favourites and recently sent in the quick menu ("Features"), all
-on 2026-11-23. What was left out of them is under section 4.
+a Restore tab ("Backups"), favourites and recently sent in the quick menu, and favourites shown
+everywhere whatever the filters, folders too, at most 10 ("Features"), all on 2026-11-23. What was left out of them is under section 4.
 
 Re-ranked 2026-11-23 after the starter library: smallest and safest first. "Filters on folders"
-is the owner's new idea and needs its questions settled first.
-
-### Favourites shown everywhere, whatever the filters (added 2026-11-23)
-
-In the quick menu (the pop-up and the right-click menu), the **Favourites** list at the top
-always shows every favourite, wherever you are: a favourite ignores its game mode and map
-filters there. Folders can be favourites too: a favourite folder is always listed under
-Favourites (as a sub-menu), whatever its macros' filters say.
-
-- Today (PR for favourites and recently sent, 2026-11-23) only macros can be favourites, and the
-  Favourites list follows the filters like the rest of the menu.
-- Points to settle:
-  - Does "regardless of filters" also apply to **hotkeys**, or only to the quick menu? (A
-    favourite's hotkey could still follow its filters, so a WvW-only key doesn't fire in PvE.)
-  - A favourite folder: does it show **all** its macros (even ones filtered out here), or only
-    the active ones, with the folder itself always listed?
-  - Should a favourite that isn't active here look different (dimmed, like in the library), so
-    you know it's outside its filter?
-  - Recently sent keeps following the filters (it's not a favourite).
-  - Where folders get the mark: the right-click menu, and a Favourite box in the folder's details.
-    `"favourite"` would then be saved on folders in `macros.json` as well.
+is the owner's new idea and needs its questions settled first. It's the last item left here.
 
 ### Filters on folders (added 2026-11-23)
 

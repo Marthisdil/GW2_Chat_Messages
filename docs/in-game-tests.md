@@ -18,7 +18,7 @@ Results so far (keep your notes in `docs\testing results.txt`; it isn't committe
 |---|---|---|
 | A1 | Passed (PR #15 build) | Re-check with the current build: the log and the options page show its version and build stamp, and the two links and the folders are new (A1's last part). |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text wraps and errors open the error window. Re-check those two points only (marked *Re-check* in A2), then go on to A3. |
-| A3 to R | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (G4 and G5, favourites and recently sent, and R, backups and restore, are the newest; A1b, the example macros, and F9, the hotkey cooldown, came just before). |
+| A3 to R | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (G4 to G6, favourites and recently sent, with G4 and G6 new for favourites shown everywhere, and R, backups and restore, are the newest; A1b, the example macros, and F9, the hotkey cooldown, came just before). |
 
 ## How to report
 
@@ -269,7 +269,18 @@ or click outside: it closes. Send something from it.
 **G4. Favourites.** In the library, tick **Favourite** in one macro's editor, and right-click
 another > **Favourite**: both show `*` after their name. Open the quick menu: **Favourites** at
 the top lists both (with their folders in brackets), above the folders. Untick one: it's gone
-from the list. Give a favourite a filter that's off here (e.g. PvP only): it isn't listed.
+from the list. Give a favourite a filter that's off here (e.g. PvP only): it's still listed,
+faded, its preview says it isn't set for this map, and clicking it sends it. Its hotkey doesn't
+fire here.
+
+**G6. Favourite folders and the limit.** Select a folder: its details have a **Favourite** box;
+tick it (or right-click the folder > **Favourite**): the folder shows `*`. In the quick menu it's
+under **Favourites** as a sub-menu with everything inside it, sub-folders too; macros filtered
+out here are faded and still send. Give every macro in it a filter that's off here: the folder
+itself is faded, and on a map where nothing at all is active the quick menu still shows
+Favourites. Mark favourites until there are 10, then try an 11th from the box and from the
+right-click menu: the error window says you can have up to 10, and nothing changes. Restart the
+game: the folder is still a favourite.
 
 **G5. Recently sent.** Send three macros that aren't favourites: one by hotkey, one from the
 quick menu, one with Send now. **Recently sent** lists them newest first, under the favourites.
@@ -722,7 +733,7 @@ C1  C2 (did /w Name work without Tab?):
 D1  D2  D3  D4  D5  D6
 E1
 F1  F2 (which mouse buttons, where):  F3  F4  F5  F6  F7  F8
-G1  G2  G3 (where did it appear?):  G4  G5
+G1  G2  G3 (where did it appear?):  G4  G5  G6
 H1  H2  H3  H4 (map: mode, map id):  H5  H6  H7  H8
 I1 (date format sent):  I2  I3  I4  I5  I6  I7  I8  I9
 J1  J2  J3  J3b  J4  J5  J6  J7  J8  J9  J10

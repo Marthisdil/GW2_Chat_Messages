@@ -102,6 +102,7 @@ namespace MacroTree
             j["type"] = TypeWord(n.Type);
             j["id"]   = IdToString(n.Id);
             j["name"] = n.Name;
+            if (n.Favourite) j["favourite"] = true;
             if (n.IsFolder())
             {
                 j["expanded"] = n.Expanded;
@@ -129,7 +130,6 @@ namespace MacroTree
                 if (!n.LinkFile.empty()) j["link_file"] = n.LinkFile;
                 if (!n.Hotkey.Empty()) j["hotkey"] = Hotkey::ToString(n.Hotkey);
                 if (n.CooldownSec > 0) j["cooldown"] = n.CooldownSec;
-                if (n.Favourite) j["favourite"] = true;
             }
             return j;
         }
@@ -212,6 +212,14 @@ namespace MacroTree
                 {
                     ParseMacro(jc, *node);
                 }
+                // "favourite" (folders and macros): true or false; anything else is dropped.
+                auto fav = jc.find("favourite");
+                if (fav != jc.end())
+                {
+                    if (fav->is_boolean()) node->Favourite = fav->get<bool>();
+                    else Warn(Localization::Fmt(TR("\"%s\": its favourite mark isn't true or false and was removed."),
+                                                node->Name.c_str()));
+                }
                 aFolder.Children.push_back(std::move(node));
             }
 
@@ -278,14 +286,6 @@ namespace MacroTree
                         else n.CooldownSec = static_cast<int>(v);
                     }
                     else Warn(Localization::Fmt(TR("Macro \"%s\": its cooldown isn't a whole number of seconds and was removed."),
-                                                n.Name.c_str()));
-                }
-                // "favourite": true or false; anything else is dropped (not a favourite).
-                auto fav = j.find("favourite");
-                if (fav != j.end())
-                {
-                    if (fav->is_boolean()) n.Favourite = fav->get<bool>();
-                    else Warn(Localization::Fmt(TR("Macro \"%s\": its favourite mark isn't true or false and was removed."),
                                                 n.Name.c_str()));
                 }
             }
