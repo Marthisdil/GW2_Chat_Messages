@@ -279,6 +279,14 @@ namespace MacroTree
                     for (const json& jl : *lines)
                     {
                         if (!jl.is_object()) continue;
+                        // At most kMaxLines, as in the editor and the .txt import (SEC-034): a file
+                        // could otherwise bring a million lines, drawn every frame and saved each time.
+                        if (n.Lines.size() >= kMaxLines)
+                        {
+                            Warn(Localization::Fmt(TR("\"%s\" has more than %zu lines. Only the first %zu were kept."),
+                                                   n.Name.c_str(), kMaxLines, kMaxLines));
+                            break;
+                        }
                         Line l;
                         l.Channel        = ChannelFromKey(StringField(jl, "channel"));
                         // From a file (maybe someone else's): no control characters to type.

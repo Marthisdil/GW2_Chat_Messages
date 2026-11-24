@@ -470,6 +470,34 @@ static void TestJsonControlCharacters()
     CHECK(again.ToJson() == u.ToJson());
 }
 
+static void TestJsonLineLimit()
+{
+    // A file (an import, a shared macros.json) can't bring more lines than the editor allows
+    // (SEC-034): the first kMaxLines are kept, in order, with one warning naming the macro.
+    json lines = json::array();
+    for (size_t i = 0; i < kMaxLines + 5; i++)
+        lines.push_back({{"channel", "say"}, {"message", "line " + std::to_string(i)}});
+    json j = {{"format", 1},
+              {"root", {{"children", json::array({{{"type", "macro"}, {"id", "00000000000000c1"},
+                                                   {"name", "Long"}, {"lines", lines}}})}}}};
+    Tree t;
+    std::vector<std::string> warnings;
+    CHECK(t.FromJson(j, &warnings));
+    const Node* m = t.Find(0xc1);
+    CHECK(m && m->Lines.size() == kMaxLines);
+    CHECK(m && !m->Lines.empty() && m->Lines.front().Message == "line 0" &&
+          m->Lines.back().Message == "line " + std::to_string(kMaxLines - 1));
+    CHECK(warnings.size() == 1 && warnings[0].find("Long") != std::string::npos);
+
+    // Exactly kMaxLines: all kept, no warning.
+    json& kept = j["root"]["children"][0]["lines"];
+    while (kept.size() > kMaxLines) kept.erase(kept.size() - 1);
+    Tree exact;
+    std::vector<std::string> none;
+    CHECK(exact.FromJson(j, &none));
+    CHECK(exact.Find(0xc1) && exact.Find(0xc1)->Lines.size() == kMaxLines && none.empty());
+}
+
 static void TestChannels()
 {
     for (int i = 0; i < static_cast<int>(EChannel::Count); i++)
@@ -543,6 +571,7 @@ void RunMacroTreeTests()
     TestJsonFormat();
     TestJsonCooldown();
     TestJsonControlCharacters();
+    TestJsonLineLimit();
     TestChannels();
     TestManyMissingIds();
     TestNumberedName();

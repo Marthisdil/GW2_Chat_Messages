@@ -458,7 +458,7 @@ then rename any macro: no "couldn't be saved" message. Right-click the imported 
 **Save as a .json file** and **Copy to the clipboard**: both work, and the game stays open.
 **Undo import**.
 
-**J9. Crafted files.** Two files made to slow the game down; neither should. Run these in
+**J9. Crafted files.** Three files made to slow the game down; none should. Run these in
 PowerShell in the addon folder:
 - 5000 broken entries:
   `'{"format":1,"root":{"children":[' + ((1..5000 | % { '1' }) -join ',') + ']}}' | Set-Content -Encoding ascii imports\broken.json`.
@@ -469,8 +469,13 @@ PowerShell in the addon folder:
   Open it in the Import window and leave the preview up for a few seconds: no stutter. Import it,
   select the macro so the editor shows it: still no stutter. **Send now**: refused at once as
   too long. Delete the macro.
+- A macro with 100,000 lines (SEC-034):
+  `'{"format":1,"root":{"children":[{"type":"macro","name":"Long","lines":[' + ((1..100000 | % { '{"channel":"say","message":"x"}' }) -join ',') + ']}]}}' | Set-Content -Encoding ascii imports\long.json`.
+  Open it in the Import window: a warning says `"Long" has more than 50 lines. Only the first 50
+  were kept.` Import it and select `Long`: the editor shows 50 lines and the game doesn't
+  stutter. Delete the macro.
 
-Delete `broken.json` and `braces.txt` afterwards.
+Delete `broken.json`, `braces.txt` and `long.json` afterwards.
 
 **J10. Preview marks.** Give `Say` the hotkey Ctrl+F1. In `Test`, make these macros: `Old`
 with the line `/s {txt notes.txt}`; `Key` with the line `/s key` and the plain hotkey F8; and
