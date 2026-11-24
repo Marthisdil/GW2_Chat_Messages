@@ -15,6 +15,8 @@ second export of the same name is saved as `Name (2).json`.
 
 - **Export all** (in the library's toolbar) saves your whole library as
   `Chat Messages library.json`.
+- **Export some...** (in the library's toolbar) opens the **Export** window, to pick several
+  folders and macros for one file. See [Export a selection](#export-a-selection) below.
 - **Right-click a folder or macro > Export** for just that item:
   - **Save as a .json file**: the folder with everything inside it, or the macro, with its lines,
     filters and hotkey.
@@ -23,6 +25,26 @@ second export of the same name is saved as `Name (2).json`.
   - **Copy to the clipboard**: the same as the .json file, ready to paste into a message or a
     friend's Import window.
   - **Copy the lines as text** (macros only): the raw text, like the .txt file.
+  - **Choose more to export...**: opens the Export window with this item ticked.
+
+### Export a selection
+
+The **Export** window lists your library with a tick box next to each folder and macro. It
+starts with the item you had selected (or right-clicked) ticked.
+
+- Tick a folder to tick everything inside it; untick one item inside and the folder shows
+  **[some]**. Ticking a macro deep inside also ticks the folders above it, so it keeps its place.
+- **Select all** / **Deselect all**, and a line that counts the ticked folders and macros.
+- **File name:** `Chat Messages selection` unless you type another; `.json` is added, and a name
+  that's taken gets " (2)".
+- **Save as a .json file** saves the ticked items, in their folders, to the exports folder.
+  **Copy to the clipboard** copies the same, ready to paste into someone's Import window.
+- A folder with only some of its contents ticked is exported with just those inside.
+- You can keep editing the library while the window is open. Something you delete is simply
+  left out.
+
+<!-- screenshot: export-window.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the Export window with some folders and macros ticked.*
 
 [Text file links](Editing-Macros) are never exported or imported, because they're paths on your
 own PC. The [trash bin](The-Macro-Library) isn't exported either: while it holds anything, the

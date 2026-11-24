@@ -583,6 +583,104 @@ namespace Exchange
 
     std::string ExportText(const Node& aMacro) { return ChatLine::SerializeRaw(aMacro.Lines); }
 
+    namespace
+    {
+        void SetPickedSubtree(Pick& aPick, const Node& aNode, bool aOn)
+        {
+            if (aOn) aPick.Ids.insert(aNode.Id);
+            else aPick.Ids.erase(aNode.Id);
+            for (const auto& c : aNode.Children) SetPickedSubtree(aPick, *c, aOn);
+        }
+
+        bool AnyPickedInside(const Pick& aPick, const Node& aFolder)
+        {
+            for (const auto& c : aFolder.Children)
+                if (IsPicked(aPick, *c)) return true;
+            return false;
+        }
+
+        bool AnyUnpickedInside(const Pick& aPick, const Node& aFolder)
+        {
+            for (const auto& c : aFolder.Children)
+                if (!IsPicked(aPick, *c) || AnyUnpickedInside(aPick, *c)) return true;
+            return false;
+        }
+
+        void CountIn(const Pick& aPick, const Node& aFolder, size_t& aFolders, size_t& aMacros)
+        {
+            for (const auto& c : aFolder.Children)
+            {
+                if (!IsPicked(aPick, *c)) continue;
+                if (c->IsMacro()) { aMacros++; continue; }
+                aFolders++;
+                CountIn(aPick, *c, aFolders, aMacros);
+            }
+        }
+
+        // Drops the unticked items from an exported node (j was made from n, so its "children"
+        // are n's children in the same order).
+        void Prune(json& j, const Node& n, const Pick& aPick)
+        {
+            auto it = j.find("children");
+            if (it == j.end() || !it->is_array() || it->size() != n.Children.size()) return;
+            json kept = json::array();
+            for (size_t i = 0; i < n.Children.size(); i++)
+            {
+                if (!IsPicked(aPick, *n.Children[i])) continue;
+                Prune((*it)[i], *n.Children[i], aPick);
+                kept.push_back(std::move((*it)[i]));
+            }
+            *it = std::move(kept);
+        }
+    }
+
+    bool IsPicked(const Pick& aPick, const Node& aNode) { return aPick.Ids.count(aNode.Id) > 0; }
+
+    void SetPicked(Pick& aPick, const Node& aNode, bool aOn)
+    {
+        SetPickedSubtree(aPick, aNode, aOn);
+        // The folders above (the library's root has no parent and is never listed).
+        for (const Node* p = aNode.Parent; p && p->Parent; p = p->Parent)
+        {
+            if (aOn) aPick.Ids.insert(p->Id);
+            else if (!AnyPickedInside(aPick, *p)) aPick.Ids.erase(p->Id);
+        }
+    }
+
+    void PickAll(Pick& aPick, const Tree& aTree, bool aOn)
+    {
+        aPick.Ids.clear();
+        if (aOn)
+            for (const auto& c : aTree.Root().Children) SetPickedSubtree(aPick, *c, true);
+    }
+
+    bool IsPartlyPicked(const Pick& aPick, const Node& aFolder)
+    {
+        return aFolder.IsFolder() && IsPicked(aPick, aFolder) && AnyUnpickedInside(aPick, aFolder);
+    }
+
+    void CountPicked(const Pick& aPick, const Tree& aTree, size_t& aFolders, size_t& aMacros)
+    {
+        aFolders = aMacros = 0;
+        CountIn(aPick, aTree.Root(), aFolders, aMacros);
+    }
+
+    json ExportPickedJson(const Tree& aTree, const Pick& aPick)
+    {
+        std::vector<const Node*> top;
+        for (const auto& c : aTree.Root().Children)
+            if (IsPicked(aPick, *c)) top.push_back(c.get());
+        json j = ExportJson(top);
+        json& children = j["root"]["children"];
+        for (size_t i = 0; i < top.size() && i < children.size(); i++) Prune(children[i], *top[i], aPick);
+        return j;
+    }
+
+    std::string ExportPickedText(const Tree& aTree, const Pick& aPick)
+    {
+        return ExportPickedJson(aTree, aPick).dump(2, ' ', false, json::error_handler_t::replace);
+    }
+
     std::string FileNameFor(const std::string& aName, const std::string& aExt)
     {
         std::string s;

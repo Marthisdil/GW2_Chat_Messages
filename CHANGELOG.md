@@ -6,6 +6,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Export a selection:** **Export some...** in the library's toolbar (or right-click > Export >
+  **Choose more to export...**) opens an **Export** window: tick the folders and macros you want
+  and save them in one `.json` file, or copy them to the clipboard. Ticking a folder ticks
+  everything inside it; a folder with only some of its contents ticked keeps its place, with just
+  those inside. It shows how many folders and macros are ticked, and you can name the file.
 - **Favourites and recently sent:** the quick menu lists your **Favourites** and the macros you
   **Recently sent** (from anywhere, newest first) above the folders. Favourites show on every map,
   whatever their filters: one that isn't active where you are is faded, and still sends when you

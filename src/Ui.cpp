@@ -1002,9 +1002,26 @@ namespace
     bool     s_ShowImport   = false;
     uint64_t s_ImportTarget = 0; // folder to import into (0 = top level)
 
+    // The Export window (defined further down): the folders and macros ticked to export.
+    bool            s_ShowExport = false;
+    Exchange::Pick  s_ExportPick;
+    std::string     s_ExportName;
+    std::string     s_ExportDone; // the last "Exported to ..." line, shown in the window
+
+    // Opens the Export window with aTick (a folder or macro, or nothing) ticked.
+    void OpenExport(const Node* aTick)
+    {
+        s_ExportPick = {};
+        if (aTick && aTick->Parent) Exchange::SetPicked(s_ExportPick, *aTick, true);
+        s_ExportName = "Chat Messages selection";
+        s_ExportDone.clear();
+        s_ShowExport = true;
+    }
+
     // Window sizes that follow the text size (UiFont).
     UiFont::WindowFit s_MainFit;
     UiFont::WindowFit s_ImportFit;
+    UiFont::WindowFit s_ExportFit;
 
     void OpenNamePopup(ENameMode aMode, uint64_t aTargetId)
     {
@@ -1121,6 +1138,9 @@ namespace
             if (aNode.IsMacro() && ImGui::MenuItem(T("Save as a .txt file"))) ExportToFile(one, aNode.Name, true);
             if (ImGui::MenuItem(T("Copy to the clipboard"))) ExportToClipboard(one, false);
             if (aNode.IsMacro() && ImGui::MenuItem(T("Copy the lines as text"))) ExportToClipboard(one, true);
+            ImGui::Separator();
+            if (ImGui::MenuItem(T("Choose more to export..."))) OpenExport(&aNode); // opens a window; the tree is untouched
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip(T("Opens the Export window with this ticked, to add other folders and macros to the same file."));
             const std::string note = TrashNotExportedText();
             if (!note.empty())
             {
@@ -2930,6 +2950,142 @@ namespace
         s_ImportListStale = true;
     }
 
+    // --- The Export window -------------------------------------------------------------------------
+    // Tick folders and macros, then save them in one .json file or copy them to the clipboard.
+    // Ticking never changes the library (the ticks are ids, kept apart from the tree).
+
+    void DrawExportItems(const Node& aFolder)
+    {
+        for (const auto& child : aFolder.Children)
+        {
+            const Node& n = *child;
+            ImGui::PushID(static_cast<int>(n.Id ^ (n.Id >> 32)));
+            ImGui::PushID(static_cast<int>(n.Id & 0xFFFFFFFF));
+            bool on = Exchange::IsPicked(s_ExportPick, n);
+            if (ImGui::Checkbox("##pick", &on)) Exchange::SetPicked(s_ExportPick, n, on);
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("%s", n.IsFolder() ? T("Export this folder with everything ticked inside it.")
+                                                     : T("Export this macro."));
+            ImGui::SameLine();
+            const bool hasChildren = n.IsFolder() && !n.Children.empty();
+            ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAvailWidth;
+            if (hasChildren) flags |= ImGuiTreeNodeFlags_DefaultOpen;
+            else flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen | (n.IsMacro() ? ImGuiTreeNodeFlags_Bullet : 0);
+            const EChannel first = n.Lines.empty() ? EChannel::Current : n.Lines.front().Channel;
+            ImGui::PushStyleColor(ImGuiCol_Text, n.IsFolder() ? kFolderColor : ChannelColorVec(first));
+            const bool open = ImGui::TreeNodeEx("##item", flags, "%s", n.Name.c_str());
+            ImGui::PopStyleColor();
+            if (Exchange::IsPartlyPicked(s_ExportPick, n))
+            {
+                ImGui::SameLine();
+                ImGui::TextDisabled(T("[some]"));
+            }
+            if (hasChildren && open)
+            {
+                DrawExportItems(n);
+                ImGui::TreePop();
+            }
+            ImGui::PopID();
+            ImGui::PopID();
+        }
+    }
+
+    // Saves the ticked items to <addon>\exports\ (never overwriting a file) or copies them.
+    void ExportPicked(bool aClipboard)
+    {
+        const char* action = aClipboard ? T("Clicked Copy to the clipboard in the Export window")
+                                        : T("Clicked Save as a .json file in the Export window");
+        std::string text;
+        try
+        {
+            text = Exchange::ExportPickedText(s_Tree, s_ExportPick);
+        }
+        catch (const std::exception& e) // an exception must never leave the render callback
+        {
+            LogF(LOGL_WARNING, "Could not make the export: %s", e.what());
+            ShowError(action, T("The export couldn't be written. Check the Nexus log."));
+            return;
+        }
+        if (aClipboard)
+        {
+            ImGui::SetClipboardText(text.c_str());
+            s_ExportDone = WithTrashNote(T("Copied to the clipboard. Paste it into the Import window to import it."));
+            SetInfo(s_ExportDone);
+            return;
+        }
+        const std::filesystem::path dir = Storage::ExportsDir();
+        if (dir.empty())
+        {
+            ShowError(action, T("The exports folder isn't available."));
+            return;
+        }
+        const std::string name = Tree::CleanName(s_ExportName).empty() ? std::string("Chat Messages selection") : s_ExportName;
+        const std::filesystem::path file = Storage::FreeFile(dir, Exchange::FileNameFor(name, ".json"));
+        if (!Storage::WriteText(file, text))
+        {
+            ShowError(action, T("The export couldn't be written. Check the Nexus log."));
+            return;
+        }
+        s_ExportDone = WithTrashNote(Fmt(T("Exported to %s."), ("<GW2>\\addons\\GW2_Chat_Messages\\exports\\" + PathText::Utf8(file.filename())).c_str()));
+        SetInfo(s_ExportDone, true);
+    }
+
+    void DrawExportWindow()
+    {
+        if (!s_ShowExport) return;
+        UiFont::BeforeBegin(s_ExportFit, ImVec2(520.0f, 560.0f), ImVec2(380.0f, 320.0f));
+        const bool shown = ImGui::Begin(T("Export macros###chatmsg_export"), &s_ShowExport,
+                                        ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_HorizontalScrollbar);
+        UiFont::AfterBegin(s_ExportFit);
+        if (!shown)
+        {
+            ImGui::End();
+            return;
+        }
+        ImGui::PushTextWrapPos(0.0f); // long text wraps at the window's edge (popped before End)
+
+        ImGui::TextDisabled(T("Tick what to export. A folder's tick brings everything ticked inside it."));
+        UiFont::Row selRow;
+        if (ImGui::SmallButton(T("Select all"))) Exchange::PickAll(s_ExportPick, s_Tree, true);
+        selRow.Next(UiFont::ButtonWidth(T("Deselect all")));
+        if (ImGui::SmallButton(T("Deselect all"))) Exchange::PickAll(s_ExportPick, s_Tree, false);
+        size_t folders = 0, macros = 0;
+        Exchange::CountPicked(s_ExportPick, s_Tree, folders, macros);
+        ImGui::Text(T("%zu folder(s) and %zu macro(s) ticked."), folders, macros);
+        const std::string note = TrashNotExportedText();
+        if (!note.empty()) ImGui::TextColored(kWarnColor, "%s", note.c_str());
+
+        const ImGuiStyle& st = ImGui::GetStyle();
+        const float footer = ImGui::GetFrameHeightWithSpacing() * 2.0f + st.ItemSpacing.y +
+                             (s_ExportDone.empty() ? 0.0f : ImGui::GetTextLineHeightWithSpacing() * 2.0f);
+        ImGui::BeginChild("##exportpick", ImVec2(0.0f, -footer), true, ImGuiWindowFlags_HorizontalScrollbar);
+        if (s_Tree.Root().Children.empty()) ImGui::TextDisabled("%s", T("There's nothing to export yet."));
+        DrawExportItems(s_Tree.Root());
+        ImGui::EndChild();
+
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted(T("File name:"));
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(-1.0f);
+        InputString("##exportname", "Chat Messages selection", s_ExportName);
+
+        const bool any = folders + macros > 0;
+        if (!any) ImGui::PushStyleVar(ImGuiStyleVar_Alpha, st.Alpha * 0.5f);
+        UiFont::Row row;
+        if (ImGui::Button(T("Save as a .json file")) && any) ExportPicked(false);
+        row.Next(UiFont::ButtonWidth(T("Copy to the clipboard")));
+        if (ImGui::Button(T("Copy to the clipboard")) && any) ExportPicked(true);
+        if (!any) ImGui::PopStyleVar();
+        row.Next(UiFont::ButtonWidth(T("Exports folder")));
+        if (ImGui::Button(T("Exports folder"))) Storage::OpenFolder(Storage::ExportsDir());
+        row.Next(UiFont::ButtonWidth(T("Close")));
+        if (ImGui::Button(T("Close"))) s_ShowExport = false;
+        if (!s_ExportDone.empty()) ImGui::TextWrapped("%s", s_ExportDone.c_str());
+
+        ImGui::PopTextWrapPos();
+        ImGui::End();
+    }
+
     void DrawImportWindow()
     {
         if (!s_ShowImport)
@@ -3160,6 +3316,11 @@ namespace
             ImGui::SetTooltip(T("Saves your whole library to the exports folder.\nRight-click a folder or macro to export just that.%s%s"),
                               note.empty() ? "" : "\n", note.c_str());
         }
+        row.Next(UiFont::ButtonWidth(T("Export some...")));
+        if (ImGui::Button(T("Export some...")))
+            OpenExport(s_SelectedId ? s_Tree.Find(s_SelectedId) : nullptr); // the selected item starts ticked
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip(T("Tick the folders and macros you want, and save them in one file."));
         row.Next(UiFont::ButtonWidth(T("Exports folder")));
         if (ImGui::Button(T("Exports folder"))) Storage::OpenFolder(Storage::ExportsDir());
         if (ImGui::IsItemHovered())
@@ -3849,6 +4010,7 @@ void Ui::Render()
     UiFont::Push(); // the chosen text size, for our windows only
     if (s_ShowMainWindow) DrawMainWindow();
     DrawImportWindow();
+    DrawExportWindow();
     DrawQuickMenuPopup();
     DrawErrorWindow();
     UiFont::Pop();

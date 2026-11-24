@@ -498,9 +498,24 @@ keeps the existing item's id and place. Since 2026-11-23 the addon creates `impo
 ..." message has **Open exports folder**; the Import window already had **Open imports
 folder**.)*
 
-- **Export**: the whole tree, one folder, or one macro. The format is
+- **Export**: the whole tree, one folder, one macro, or a selection. The format is
   `ChatMessages.export.json` (`{ "format": 1, "root": Node }`). A single macro can also be
   exported as raw `.txt`.
+  - **A selection** (built 2026-11-24 from the todo list): **Export some...** in the toolbar, or
+    right-click > Export > **Choose more to export...**, opens the **Export** window (it starts
+    with the selected or right-clicked item ticked). It shows the library as a tree with a tick
+    box per folder and macro, **Select all** / **Deselect all**, "N folder(s) and M macro(s)
+    ticked", a file name (`Chat Messages selection` by default; `.json` is added, a taken name
+    gets " (2)") and **Save as a .json file** / **Copy to the clipboard** / **Exports folder** /
+    **Close**. The ticks follow the import preview's rules: a folder's tick ticks or unticks
+    everything inside; ticking an item ticks the folders above it; a folder whose contents are
+    all unticked is unticked (an empty folder keeps its own tick). The file holds the ticked
+    items in library order, in their folders: a part-ticked folder holds only its ticked
+    contents. Link files, favourites and the trash bin stay out, as in every export. No `.txt`
+    here (that's right-click > Export on one macro). The ticks are ids
+    (`Exchange::Pick`), so editing the library while the window is open is safe; items that are
+    gone are ignored. Rules in `src/Exchange.*` (`SetPicked`, `ExportPickedJson`), tested in
+    `tests/ExchangeTests.cpp`.
 - **Import sources**: our JSON format, a raw `.txt` (becomes one macro), or a folder of `.txt`
   files (sub-folders become folders).
   - Raw text (`.txt` imports, pasted text and link files) is read as UTF-8. Bytes that aren't

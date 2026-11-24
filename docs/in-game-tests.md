@@ -18,7 +18,7 @@ Results so far (keep your notes in `docs\testing results.txt`; it isn't committe
 |---|---|---|
 | A1 | Passed (PR #15 build) | Re-check with the current build: the log and the options page show its version and build stamp, and the two links and the folders are new (A1's last part). |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text wraps and errors open the error window. Re-check those two points only (marked *Re-check* in A2), then go on to A3. |
-| A3 to R | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (G4 to G6, favourites and recently sent, with G4 and G6 new for favourites shown everywhere, and R, backups and restore, are the newest; A1b, the example macros, and F9, the hotkey cooldown, came just before). |
+| A3 to R | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (J11, export a selection, is the newest; G4 to G6, favourites and recently sent, with G4 and G6 new for favourites shown everywhere, and R, backups and restore, are the newest; A1b, the example macros, and F9, the hotkey cooldown, came just before). |
 
 ## How to report
 
@@ -470,6 +470,19 @@ from clipboard** with `Test`'s parent as the target, and set macros to **Replace
   (it keeps it if imported). Close the window without importing. Delete `Old`, `Key` and `Plain`
   if they're still there.
 
+**J11. Export a selection.** Select the `Test` folder and click **Export some...** in the
+toolbar: the **Export** window opens with `Test` and everything in it ticked, and the count says
+how many. Untick one macro inside `Test`: `Test` shows **[some]**. Tick `Say` (outside `Test`) and
+a macro inside a sub-folder somewhere else: its folders tick too. Type `My pick` as the file
+name and **Save as a .json file**: the window and the library say `Exported to ...My pick.json`;
+save again: `My pick (2).json`. Open **Import...** with that file: the preview has exactly the
+ticked items, in their folders, and nothing else. Close it without importing. Back in the Export
+window, **Copy to the clipboard** and paste into **Import...**: the same. **Deselect all**: the
+count is 0 and the save buttons are greyed out. Right-click a macro > Export > **Choose more to
+export...**: the window starts again with only that macro ticked. While the window is open,
+rename and delete a ticked macro in the library: nothing breaks, and the deleted one isn't
+exported. Keys and Tab still work in the game afterwards.
+
 ## K. Text file links
 
 Have Notepad ready. "Within a second" means after you save, not after you switch back.
@@ -736,7 +749,7 @@ F1  F2 (which mouse buttons, where):  F3  F4  F5  F6  F7  F8
 G1  G2  G3 (where did it appear?):  G4  G5  G6
 H1  H2  H3  H4 (map: mode, map id):  H5  H6  H7  H8
 I1 (date format sent):  I2  I3  I4  I5  I6  I7  I8  I9
-J1  J2  J3  J3b  J4  J5  J6  J7  J8  J9  J10
+J1  J2  J3  J3b  J4  J5  J6  J7  J8  J9  J10  J11
 K1  K2  K3  K4  K5  K6
 L1  L2
 M1 (entries and sizes):  M2  M3  M4  M5

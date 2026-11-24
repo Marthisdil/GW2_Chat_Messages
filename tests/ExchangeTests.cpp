@@ -882,8 +882,86 @@ static void TestTranslatedMessages()
     CHECK(IsNewIdsWarning("Gave new ids to 3 item(s) with a missing or repeated id."));
 }
 
+static void TestExportPick()
+{
+    // Raids { Stack, Wings { W1, W2 } }, Hello, Empty {}
+    Tree t;
+    MakeLibrary(t);
+    Node* raids = Child(t.Root(), "Raids", ENodeType::Folder);
+    Node* stack = Child(*raids, "Stack", ENodeType::Macro);
+    Node* wings = t.AddFolder(raids, "Wings").Target;
+    Node* w1 = AddM(t, wings, "W1", "one");
+    Node* w2 = AddM(t, wings, "W2", "two");
+    Node* hello = Child(t.Root(), "Hello", ENodeType::Macro);
+    Node* empty = t.AddFolder(nullptr, "Empty").Target;
+    stack->LinkFile = "C:\\secret\\stack.txt";
+    stack->Favourite = true;
+
+    Pick pick;
+    size_t folders = 0, macros = 0;
+    CountPicked(pick, t, folders, macros);
+    CHECK(folders == 0 && macros == 0);
+    CHECK(ExportPickedJson(t, pick)["root"]["children"].empty());
+
+    // Ticking a macro ticks the folders above it; only that macro goes, in its folders.
+    SetPicked(pick, *w1, true);
+    CHECK(IsPicked(pick, *wings) && IsPicked(pick, *raids) && !IsPicked(pick, *stack));
+    CHECK(IsPartlyPicked(pick, *raids) && IsPartlyPicked(pick, *wings));
+    CountPicked(pick, t, folders, macros);
+    CHECK(folders == 2 && macros == 1);
+    nlohmann::json j = ExportPickedJson(t, pick);
+    CHECK(j["format"] == kFormatVersion);
+    CHECK(j["root"]["children"].size() == 1 && j["root"]["children"][0]["name"] == "Raids");
+    const nlohmann::json& rj = j["root"]["children"][0]["children"];
+    CHECK(rj.size() == 1 && rj[0]["name"] == "Wings" && rj[0]["children"].size() == 1);
+    CHECK(rj[0]["children"][0]["name"] == "W1");
+
+    // Unticking the last macro inside unticks the folders above it.
+    SetPicked(pick, *w1, false);
+    CHECK(!IsPicked(pick, *wings) && !IsPicked(pick, *raids) && pick.Ids.empty());
+
+    // Ticking a folder ticks everything inside; unticking one item leaves the rest.
+    SetPicked(pick, *raids, true);
+    CHECK(IsPicked(pick, *stack) && IsPicked(pick, *w2) && !IsPartlyPicked(pick, *raids));
+    SetPicked(pick, *w2, false);
+    CHECK(IsPicked(pick, *wings) && IsPartlyPicked(pick, *raids));
+    SetPicked(pick, *hello, true);
+    SetPicked(pick, *empty, true); // an empty folder keeps its own tick
+    CHECK(IsPicked(pick, *empty));
+    CountPicked(pick, t, folders, macros);
+    CHECK(folders == 3 && macros == 3);
+
+    // It reads back as the same items, in library order, without link files or favourites.
+    const std::string text = ExportPickedText(t, pick);
+    CHECK(text.find("secret") == std::string::npos && text.find("favourite") == std::string::npos);
+    Package p = FromJsonText(text);
+    CHECK(p.Ok() && p.Warnings.empty());
+    CHECK(p.Items.Root().Children.size() == 3);
+    CHECK(p.Items.Root().Children[0]->Name == "Raids" && p.Items.Root().Children[1]->Name == "Hello");
+    CHECK(p.Items.Root().Children[2]->Name == "Empty" && p.Items.Root().Children[2]->Children.empty());
+    Node* back = Child(p.Items.Root(), "Raids", ENodeType::Folder);
+    CHECK(back && back->Children.size() == 2);
+    Node* backWings = back ? Child(*back, "Wings", ENodeType::Folder) : nullptr;
+    CHECK(backWings && backWings->Children.size() == 1 && backWings->Children[0]->Name == "W1");
+    CHECK(stack->LinkFile == "C:\\secret\\stack.txt" && stack->Favourite); // the library is untouched
+
+    // Select all = Export all; deselect all = nothing.
+    PickAll(pick, t, true);
+    CHECK(ExportPickedJson(t, pick) == ExportJson({raids, hello, empty}));
+    PickAll(pick, t, false);
+    CHECK(pick.Ids.empty());
+
+    // Ids of items that are gone are ignored.
+    SetPicked(pick, *hello, true);
+    CHECK(t.MoveToTrash(*hello, "2026-11-24 02:00").Ok);
+    CountPicked(pick, t, folders, macros);
+    CHECK(folders == 0 && macros == 0);
+    CHECK(ExportPickedJson(t, pick)["root"]["children"].empty());
+}
+
 void RunExchangeTests()
 {
+    TestExportPick();
     TestTranslatedMessages();
     TestWarningsCapped();
     TestPlanFlags();

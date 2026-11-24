@@ -40,6 +40,28 @@ namespace Exchange
     // A safe Windows file name from a folder or macro name, with the extension (".json", ".txt").
     std::string    FileNameFor(const std::string& aName, const std::string& aExt);
 
+    // --- Exporting a selection (the Export window's checkboxes) ---
+    // The ticked folders and macros, by id (the library can change while the window is open; ids
+    // of items that are gone are ignored). The same rules as the import preview: ticking or
+    // unticking a folder does the same to everything inside it; ticking an item also ticks the
+    // folders above it; a folder whose contents are all unticked is unticked too (an empty folder
+    // keeps its own tick).
+    struct Pick
+    {
+        std::set<uint64_t> Ids;
+    };
+    bool IsPicked(const Pick& aPick, const Node& aNode);
+    void SetPicked(Pick& aPick, const Node& aNode, bool aOn);
+    void PickAll(Pick& aPick, const Tree& aTree, bool aOn);
+    // Whether a ticked folder has unticked items inside (shown as "some").
+    bool IsPartlyPicked(const Pick& aPick, const Node& aFolder);
+    // How many folders and macros the export would hold.
+    void CountPicked(const Pick& aPick, const Tree& aTree, size_t& aFolders, size_t& aMacros);
+    // The export of the ticked items, in library order, in their folders: a ticked folder holds
+    // only its ticked contents. The same format as ExportJson.
+    nlohmann::json ExportPickedJson(const Tree& aTree, const Pick& aPick);
+    std::string    ExportPickedText(const Tree& aTree, const Pick& aPick); // pretty-printed
+
     // --- Reading a source -----------------------------------------------------------------------
 
     struct Package // NOLINT(bugprone-exception-escape): SEC-030, accepted (MSVC set move allocates)
