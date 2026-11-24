@@ -34,8 +34,8 @@ schedule without asking whether to scan; log each scan there with its usage (`/u
 and after). Hold the release until every area is covered and findings are fixed or accepted by
 the user. CI runs the clang part (`run_audit.ps1 -Tests`) on every push; keep it clean.
 Before a **minor release** (any other tagged release), ask: full audit, quick audit since the
-last tag, or skip. When opening a PR that changes code (not docs-only), ask: quick audit of
-this PR, or skip.
+last tag, or skip. When opening a PR that changes code (not docs-only), ask: code review and
+quick audit, code review only, or skip (see "Code review" under Git workflow).
 
 `docs/todo.md` collects ideas and brainstorming for later discussion. When the user says "add X
 to the todo list", add it there (don't start building it). Move agreed items into
@@ -268,6 +268,23 @@ to the todo list", add it there (don't start building it). Move agreed items int
 - Commit messages are imperative and under 72 characters.
 - Update `CHANGELOG.md` for every user-visible change.
 - Do not commit build output (`.dll`, `.pdb`, `.obj`, `.exe`, ...).
+- **Code review (owner, 2026-11-24):** on a PR that changes code, after the build and
+  `run_tests.ps1` pass, run `/code-review` on the branch: **medium**, or **high** when it
+  changes the input path (`Sender`, `SendPlan`, `Hotkeys`, `Placeholders`). Never `max` or
+  `ultra` unless the owner asks (ultra is billed). Check every finding before acting on it, fix
+  the real ones on the same branch, and put the result in the PR body ("Code review (medium):
+  2 findings fixed" or "none"), next to the audit line. Docs-only PRs get neither.
+- **`/simplify`:** not on the existing code, and not on every PR. Only on a larger feature PR,
+  before `/code-review`, and never on `Sender`, `SendPlan`, `Hotkeys`, `Placeholders` or
+  `vendor/` without the owner's OK (it may "simplify" a safety rule away). Its edits go in their
+  own commit and must keep behaviour the same: no change to `T("...")` texts, popup IDs, JSON
+  keys, the Signature, or the render-thread `Action` queue. Then the build, the tests and, for
+  `Ui.cpp`, the in-game checks of the screens it touched (named in the PR). The `Ui.cpp`
+  cleanup PR waits until the in-game testing is finished (`docs/todo.md`).
+- **Private test notes:** `docs/testing results.txt` stays untracked. A PreToolUse hook
+  (`.claude/settings.json`, `.claude/hooks/guard_testing_results.py`) blocks any git command
+  that names it, a `git add` of everything (`-A`, `.`, `docs`, ...), and a commit while it's
+  staged. Stage files by name.
 - README keeps an "AI Disclosure" section as its last section; prose is first person singular ("I").
 - **Wiki at every merge cleanup:** the wiki repo's last commit message ends with the main commit
   it was published from (`Publish the wiki from docs/wiki at <sha>`). If
