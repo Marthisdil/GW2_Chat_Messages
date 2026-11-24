@@ -51,6 +51,7 @@ folder with someone else's file), **Medium** (wrong behaviour reachable with rea
 | [SEC-032](#sec-032) | 2026-11-23 04:59 | Info | `src/Ui.cpp` (`DrawMapPicker`) | `size_t` to `float` without a cast | Fixed | PR #45, commit `0bdcc55`, build `c52820b` |
 | [SEC-033](#sec-033) | 2026-11-24 03:34 | High | `src/MacroTree.cpp` (`ParseFilter`, `ReachOf`) | A file (an import, a shared library) could give a folder a huge map list; with folder filters, every item inside it sorted that list every frame: the game freezes | Fixed | PR #63, commit `5cf4246`, build `3070952` |
 | [SEC-034](#sec-034) | 2026-11-24 05:01 | High | `src/MacroTree.cpp:289` (`ParseMacro`) | A JSON import (or a shared library) skipped the 50-line limit: one macro can hold about 1.4 million lines, and selecting it freezes the game | Fixed | PR #67, commit `7389e5d`, build `7d9876e` |
+| [SEC-035](#sec-035) | 2026-11-24 12:58 | High | `src/SendPlan.cpp:110` (`Build`), `src/Sender.cpp:146` (`TypeUtf8`) | A whisper recipient from a file has no length limit: sending it types every character on the game's window thread (the game freezes) and leaves chat open | Open | |
 
 "Build" is the build stamp's commit (shown in the Nexus log and the DLL's Properties). Until a
 release is tagged, it's the PR's commit; the release that first ships a fix is added when it's
@@ -561,6 +562,35 @@ made.
   can only be set by the user's own `macros.json`, `.bak` or backups: every import path empties
   the trash and clears link paths (`Exchange::FromJsonText`, `CopyMacro`).
 
+### SEC-035
+
+- **Found:** 2026-11-24 12:58 UTC, by claude-security area B (whole, `cd2868b`, high effort;
+  reported twice, as F1 and F2, both confirmed by all three verifiers).
+- **Severity:** High (can freeze the game and leave chat open with someone else's file;
+  claude-security rated it Low on its own scale). **Where:** `src/SendPlan.cpp:110` and `:177`
+  (`SendPlan::Build`), `src/Sender.cpp:146` (`TypeUtf8`).
+- **Finding:** the only length check before typing measures `ChatLine::TypedText(l)`, which for
+  a whisper is `"/w " + Message`: the recipient (`Line::WhisperTo`) never meets the 199-unit
+  limit, and nothing on the way in limits it either (`MacroTree::ParseMacro`,
+  `ChatLine::ParseLine`, link files; only the whole file is capped, 4 MB for JSON, 256 KB for
+  `.txt`). `Build` queues the whole recipient as one Type step, and `TypeUtf8` sends one
+  `WndProc_SendToGameOnly(WM_CHAR)` per UTF-16 unit inside a single call on the game's window
+  thread. A shared macro with a recipient of "Bob" plus megabytes of filler imports fine (the
+  editor's recipient box shows "Bob"); sending it stalls the game's message loop for as long as
+  the typing runs, the worker's 1 s wait runs out, its Escape is dropped as too late, and chat is
+  left open with junk in the recipient box. Nothing extra is typed into chat or executed (control
+  characters are already spaces, a `/` from a placeholder is refused), and no modifier is held.
+  Same class as SEC-033/SEC-034 (a field from a file without the editor's limit).
+- **Suggested fix:** a recipient limit (`ChatLine::kMaxRecipientLength`, e.g. 64 UTF-16 units;
+  GW2 account and character names are far shorter) checked in `SendPlan::Build` after
+  placeholders are filled in, with a `SendPlanTests` case; optionally also cut `whisper_to` to it
+  on load in `ParseMacro` and `ChatLine::ParseLine`.
+- **Decision:** Open (not decided yet).
+- **Status:** Open.
+- The same scan's panel rejected one candidate (1 of 3): a language file in `localization\`
+  changing the Examples folder's lines; no real impact, since the example lines are checked and
+  sent like any other line.
+
 ## Scan log
 
 Every claude-security scan, for planning the next one ([security-audit.md](security-audit.md),
@@ -573,6 +603,7 @@ on every push.
 |---|---|---|---|---|---|---|
 | 2026-11-22 01:59 | A-D (before the split) | whole | `028549c` | medium | not recorded | SEC-008 to SEC-026 |
 | 2026-11-24 04:33 | A (with `Backups`, `PathText`) | whole | `be4c6e8` | high | $1.22 → $30.12 session cost (about $28.90; 33 agents, about 2.74M subagent tokens); weekly 73% → 85%; the 5-hour window reset during the run, so its share wasn't measured; 27 min (04:33-05:01) | SEC-034 |
+| 2026-11-24 12:34 | B (with `Hotkey`) | whole | `cd2868b` | high | $0.44 → $18.05 session cost (about $17.60; 21 agents, about 1.48M subagent tokens); 5-hour window 13% → 70%; weekly 87% → 94%; 23 min (12:34-12:58) | SEC-035 |
 
 The first release needs a whole-repository scan of every area, so the 2026-11-22 scan doesn't
 cover it: it ran before `{txt}`/`{json}` were removed and before PR #45.
