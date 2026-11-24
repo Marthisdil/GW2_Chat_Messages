@@ -639,9 +639,15 @@ on every push.
 | 2026-11-24 04:33 | A (with `Backups`, `PathText`) | whole | `be4c6e8` | high | $1.22 → $30.12 session cost (about $28.90; 33 agents, about 2.74M subagent tokens); weekly 73% → 85%; the 5-hour window reset during the run, so its share wasn't measured; 27 min (04:33-05:01) | SEC-034 |
 | 2026-11-24 12:34 | B (with `Hotkey`) | whole | `cd2868b` | high | $0.44 → $18.05 session cost (about $17.60; 21 agents, about 1.48M subagent tokens); 5-hour window 13% → 70%; weekly 87% → 94%; 23 min (12:34-12:58) | SEC-035 |
 | 2026-11-24 22:04 | C | whole | `cac1442` | medium | $0.40 → $6.31 session cost (about $5.90; 13 agents, about 0.56M subagent tokens); 5-hour window 0% → 19%; weekly 0% → 3% (just after the weekly reset); 8 min (22:04-22:12) | none (2 candidates rejected by the panel as not security issues; recorded as SEC-036 at the owner's request) |
+| 2026-11-24 22:41 | D (`Ui`, `entry`, the other `src/` modules, `tests/`, `tools/`, `.github/workflows/`; 56 files) | whole | `0a13ef7` | low | $0.53 → $4.90 session cost (about $4.40; 1 agent, about 0.23M subagent tokens); 5-hour window 27% → 41%; weekly 4% → 6%; 8 min (22:41-22:49) | none (the researcher proposed no candidates) |
 
 The first release needs a whole-repository scan of every area, so the 2026-11-22 scan doesn't
 cover it: it ran before `{txt}`/`{json}` were removed and before PR #45.
+
+With the D scan, every area (A-D) has a whole-repository scan for the first release: A at
+`be4c6e8`, B at `cd2868b`, C at `cac1442`, D at `0a13ef7`. Their findings (SEC-034, SEC-035,
+SEC-036) are fixed. The only later changes to A-C's files are those fixes: `7389e5d` (SEC-034,
+A), `7f3167e` (SEC-035, A and B) and `134714d` (SEC-036, B and C).
 
 ## Tuning decisions (checks turned off)
 
