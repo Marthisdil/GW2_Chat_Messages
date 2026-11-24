@@ -280,6 +280,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Properties > Details tab shows it as File version and Product version.
 
 ### Fixed
+- An imported `.json` file (or a shared `macros.json`) can no longer bring a macro with more than
+  50 lines, the most the editor allows. A crafted file could hold a macro with over a million
+  lines, which froze the game once it was selected. The first 50 lines are kept, and the import
+  preview says which macro was cut.
 - A macro line with a huge number of `{` (from an imported file) no longer freezes the game while
   the Import window shows it or the editor has it open, and sending such a line no longer takes
   minutes.
