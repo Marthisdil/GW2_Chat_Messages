@@ -37,7 +37,7 @@ session (and in a Pro plan usage window). Each area has its own effort level:
 | Area | Covers | Effort |
 |---|---|---|
 | **A. Untrusted files** | `Exchange` (imports), `LinkSync`, `Storage`, `MacroTree` (JSON), `Localization`, `Languages`, `Backups` (backup names and files), `PathText` (paths read from disk) | high |
-| **B. Input path** | `Sender`, `SendPlan`, `Hotkeys`, `Placeholders`, `ChatLine` | high |
+| **B. Input path** | `Sender`, `SendPlan`, `Hotkeys`, `Hotkey`, `Placeholders`, `ChatLine` | high |
 | **C. Network** | `Http`, `MapNames`, `MapCatalog` | medium |
 | **D. Everything else** | `Ui`, `entry`, the other `src/` modules, `tests/`, `tools/`, `.github/workflows/` | low |
 
