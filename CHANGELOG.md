@@ -280,6 +280,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Properties > Details tab shows it as File version and Product version.
 
 ### Fixed
+- Unloading the addon (or closing the game) could, very rarely, hang: the map-name and sender
+  threads could miss the signal to stop at exactly the wrong moment and wait forever.
 - A whisper's recipient can be at most 29 characters (a character name is at most 19). A crafted
   file could give a whisper a recipient megabytes long, so sending it typed every character and
   froze the game, and chat was left open. Longer recipients from a file (an import, a link file,
