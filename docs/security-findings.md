@@ -51,7 +51,7 @@ folder with someone else's file), **Medium** (wrong behaviour reachable with rea
 | [SEC-032](#sec-032) | 2026-11-23 04:59 | Info | `src/Ui.cpp` (`DrawMapPicker`) | `size_t` to `float` without a cast | Fixed | PR #45, commit `0bdcc55`, build `c52820b` |
 | [SEC-033](#sec-033) | 2026-11-24 03:34 | High | `src/MacroTree.cpp` (`ParseFilter`, `ReachOf`) | A file (an import, a shared library) could give a folder a huge map list; with folder filters, every item inside it sorted that list every frame: the game freezes | Fixed | PR #63, commit `5cf4246`, build `3070952` |
 | [SEC-034](#sec-034) | 2026-11-24 05:01 | High | `src/MacroTree.cpp:289` (`ParseMacro`) | A JSON import (or a shared library) skipped the 50-line limit: one macro can hold about 1.4 million lines, and selecting it freezes the game | Fixed | PR #67, commit `7389e5d`, build `7d9876e` |
-| [SEC-035](#sec-035) | 2026-11-24 12:58 | High | `src/SendPlan.cpp:110` (`Build`), `src/Sender.cpp:146` (`TypeUtf8`) | A whisper recipient from a file has no length limit: sending it types every character on the game's window thread (the game freezes) and leaves chat open | Fixing | |
+| [SEC-035](#sec-035) | 2026-11-24 12:58 | High | `src/SendPlan.cpp:110` (`Build`), `src/Sender.cpp:146` (`TypeUtf8`) | A whisper recipient from a file has no length limit: sending it types every character on the game's window thread (the game freezes) and leaves chat open | Fixed | PR #70, commit `7f3167e`, build `e1d33cf` |
 
 "Build" is the build stamp's commit (shown in the Nexus log and the DLL's Properties). Until a
 release is tagged, it's the PR's commit; the release that first ships a fix is added when it's
@@ -591,7 +591,8 @@ made.
   recipient after placeholders are filled in; `MacroTree::ParseMacro` (with a warning naming the
   macro) and `ChatLine::ParseLine` (`.txt` imports, link files, the raw editor) cut it to 29
   with `ChatLine::CutToUtf16`, which never splits a character; the line editor shows a red note.
-- **Status:** Fixing, in `feature/security-whisper-cap`. Tested in `tests/SendPlanTests.cpp`
+- **Status:** Fixed in **PR #70** (`feature/security-whisper-cap`), commit `7f3167e`, first
+  build `e1d33cf`. Tested in `tests/SendPlanTests.cpp`
   (`TestRecipientTooLong`), `tests/ChatLineTests.cpp` (`TestCutRecipient`) and
   `tests/MacroTreeTests.cpp` (`TestJsonRecipientLimit`); in-game check J9.
 - The same scan's panel rejected one candidate (1 of 3): a language file in `localization\`
