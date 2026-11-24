@@ -153,8 +153,9 @@ to the todo list", add it there (don't start building it). Move agreed items int
   Never call `path::u8string()`, `path::string()` or `fs::u8path()`: use `PathText::Utf8` and
   `PathText::FromUtf8`. No Nexus, ImGui or windows.h dependency. Tested by
   `tests/PathTextTests.cpp`.
-- `src/Exchange.*`: import and export: the export format, reading .json/.txt/folders into a
-  package, the import preview (`BuildPlan`) and `Apply`. No Nexus or ImGui dependency. Tested by
+- `src/Exchange.*`: import and export: the export format, the Export window's ticks (`Pick`,
+  `ExportPickedJson`), reading .json/.txt/folders into a package, the import preview
+  (`BuildPlan`) and `Apply`. No Nexus or ImGui dependency. Tested by
   `tests/ExchangeTests.cpp`. Exports go to `<addon>\exports\`; the Import window lists
   `<addon>\imports\`. "A whole library" (`FromLibraryFile`, `WrapInFolder`) imports someone's
   `macros.json` into one new top-level folder.

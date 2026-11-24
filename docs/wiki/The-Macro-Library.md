@@ -157,7 +157,7 @@ item with the same name. The window tells you why.
 
 - **Expand all** / **Collapse all**
 - **Sort A-Z**: sorts every folder, folders first and then macros, each alphabetically.
-- **Import...** and **Export all** (see [Import and export](Import-and-Export)).
+- **Import...**, **Export all** and **Export some...** (see [Import and export](Import-and-Export)).
 - **Text size**: see below.
 
 ## Text size
