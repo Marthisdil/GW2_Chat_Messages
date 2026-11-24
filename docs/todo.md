@@ -52,7 +52,8 @@ a Restore tab ("Backups"), favourites and recently sent in the quick menu, and f
 everywhere whatever the filters, folders too, at most 10 ("Features"), all on 2026-11-23. What was left out of them is under section 4.
 
 Re-ranked 2026-11-23 after the starter library: smallest and safest first. "Filters on folders"
-is the owner's new idea and needs its questions settled first. It's the last item left here.
+is the owner's new idea and needs its questions settled first. "Export a selection" was added
+after it (owner, 2026-11-24).
 
 ### Filters on folders (added 2026-11-23)
 
@@ -66,6 +67,27 @@ maps), which every macro inside it follows, so a whole "WvW" folder can be limit
   with a filter, a macro whose folder limits it); how it goes into `macros.json` and exports
   (and what an older build does with it); and whether the library dims a whole folder that's
   inactive here, like it dims macros.
+
+### Export a selection of folders and macros (added 2026-11-24)
+
+Besides exporting the whole library, let the user **pick several folders and macros** and export
+just those, into one file (or the clipboard).
+
+- Today there are **Export all** (the whole library) and right-click > **Export** on **one**
+  folder or macro. `Exchange::ExportJson` already takes a list of nodes, so the export format
+  doesn't change; this is mostly the picking.
+- Points to settle:
+  - How you pick: tick boxes in an **Export window** (the library as a tree with a box per
+    folder and macro, ticking a folder ticks everything inside, like the import preview), or
+    Ctrl/Shift+click in the library tree itself. The window is safer: the tree has no
+    multi-select today, and drag and drop, the details pane and the right-click menu all assume
+    one selected item.
+  - Whether a part-ticked folder exports as a folder holding only the ticked items (keeps the
+    folder structure) or the ticked macros flat at the top.
+  - A name for the file (typed, or "Chat Messages selection.json"), and whether **.txt** works
+    (only for a single macro today).
+  - Select all / none, a search box, and the "N folders and M macros selected" count.
+  - The trash bin and link files stay out, as today; favourites stay out.
 
 ## 3. Bigger features
 
