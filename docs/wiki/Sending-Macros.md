@@ -112,16 +112,23 @@ bottom item opens or hides the library.
 
 Above the folders, the quick menu lists:
 
-- **Favourites:** the macros you marked as a favourite, in library order. Mark one with the
-  **Favourite** box in its editor, or right-click it in the library > **Favourite** (click again to
+- **Favourites:** the folders and macros you marked as a favourite, in library order, on
+  **every map**, whatever their filters. Mark one with the **Favourite** box (in a macro's editor
+  or a folder's details), or right-click it in the library > **Favourite** (click again to
   unmark it). Favourites have a `*` after their name in the library.
+  - A favourite that isn't [active where you are](Filters) is **faded**. Clicking it still sends
+    it; its hotkey still follows its filters.
+  - A favourite **folder** opens as a sub-menu with everything inside it, whatever the filters
+    (what isn't active here is faded).
+  - You can have up to **10** favourites (folders and macros together). To mark another,
+    untick one first: the addon tells you if you try.
 - **Recently sent:** the macros you sent last, newest first, from anywhere (a hotkey, the quick
   menu or Send now). A favourite isn't listed here again. It shows 5 by default; set 0 to 10, or
   **Clear the list**, on the addon's options page (General tab), under **Recently sent in the quick
   menu**. The list is kept when you restart the game.
 
-Both lists only show macros that are active where you are, each with its folders in brackets.
-Deleted macros drop out. A macro you export or import isn't a favourite on the other side:
+Recently sent only shows macros that are active where you are. Both lists show each item with
+its folders in brackets, and deleted macros drop out. A macro you export or import isn't a favourite on the other side:
 favourites are your own.
 
 <!-- screenshot: quick-menu-favourites.png (docs/screenshots.md) -->

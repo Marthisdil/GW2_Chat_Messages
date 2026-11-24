@@ -26,14 +26,31 @@ namespace
         return true;
     }
 
-    void CollectFavourites(const MacroTree::Node& aFolder, const std::function<bool(const MacroTree::Node&)>& aShow,
-                           std::vector<const MacroTree::Node*>& aOut)
+    using ActiveFn = std::function<bool(const MacroTree::Node&)>;
+
+    void CollectFavourites(const MacroTree::Node& aFolder, const ActiveFn& aActive, std::vector<QuickLists::Favourite>& aOut)
     {
         for (const auto& c : aFolder.Children)
         {
-            if (c->IsFolder()) CollectFavourites(*c, aShow, aOut);
-            else if (c->Favourite && (!aShow || aShow(*c))) aOut.push_back(c.get());
+            if (aOut.size() >= static_cast<size_t>(QuickLists::kMaxFavourites)) return;
+            if (c->Favourite)
+            {
+                const bool active = c->IsFolder() ? QuickLists::HasActive(*c, aActive) : (!aActive || aActive(*c));
+                aOut.push_back({c.get(), active});
+            }
+            if (c->IsFolder()) CollectFavourites(*c, aActive, aOut); // a favourite inside a favourite folder too
         }
+    }
+
+    size_t CountIn(const MacroTree::Node& aFolder)
+    {
+        size_t n = 0;
+        for (const auto& c : aFolder.Children)
+        {
+            if (c->Favourite) ++n;
+            if (c->IsFolder()) n += CountIn(*c);
+        }
+        return n;
     }
 }
 
@@ -82,18 +99,32 @@ int QuickLists::CountFromJson(const nlohmann::json& aJson)
     return v >= 0 && v <= kMaxRecent ? static_cast<int>(v) : kDefaultRecent;
 }
 
+size_t QuickLists::CountFavourites(const MacroTree::Tree& aTree) { return CountIn(aTree.Root()); }
+
+bool QuickLists::CanAddFavourite(const MacroTree::Tree& aTree)
+{
+    return CountFavourites(aTree) < static_cast<size_t>(kMaxFavourites);
+}
+
+bool QuickLists::HasActive(const MacroTree::Node& aFolder, const std::function<bool(const MacroTree::Node&)>& aActive)
+{
+    for (const auto& c : aFolder.Children)
+        if (c->IsMacro() ? (!aActive || aActive(*c)) : HasActive(*c, aActive)) return true;
+    return false;
+}
+
 QuickLists::Lists QuickLists::Build(const MacroTree::Tree& aTree, const Recent& aRecent, int aRecentCount,
-                                    const std::function<bool(const MacroTree::Node&)>& aShow)
+                                    const std::function<bool(const MacroTree::Node&)>& aActive)
 {
     Lists out;
-    CollectFavourites(aTree.Root(), aShow, out.Favourites);
+    CollectFavourites(aTree.Root(), aActive, out.Favourites);
     const size_t count = static_cast<size_t>(std::clamp(aRecentCount, 0, kMaxRecent));
     for (uint64_t id : aRecent.Ids())
     {
         if (out.Recent.size() >= count) break;
         const MacroTree::Node* n = aTree.Find(id);
         if (!n || !n->IsMacro() || n->Favourite) continue;
-        if (aShow && !aShow(*n)) continue;
+        if (aActive && !aActive(*n)) continue;
         out.Recent.push_back(n);
     }
     return out;

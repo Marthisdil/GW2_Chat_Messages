@@ -564,18 +564,30 @@ namespace
         }
     }
 
-    // Favourite: listed at the top of the quick menu.
-    void DrawFavouriteRow(Node& aMacro)
+    // Marks or unmarks a folder or macro as a favourite. Marking one more than
+    // QuickLists::kMaxFavourites is refused, with the reason (nothing is dropped quietly).
+    void SetFavourite(Node& aNode, bool aOn, const char* aAction)
     {
-        bool fav = aMacro.Favourite;
-        if (ImGui::Checkbox(T("Favourite"), &fav))
+        if (aOn == aNode.Favourite) return;
+        if (aOn && !QuickLists::CanAddFavourite(s_Tree))
         {
-            aMacro.Favourite = fav;
-            MarkDirty();
+            ShowError(aAction, Localization::Fmt(TR("You can have up to %d favourites. Untick one first, then mark \"%s\"."),
+                                                 QuickLists::kMaxFavourites, aNode.Name.c_str()));
+            return;
         }
+        aNode.Favourite = aOn;
+        MarkDirty();
+    }
+
+    // Favourite: listed at the top of the quick menu, wherever you are.
+    void DrawFavouriteRow(Node& aNode)
+    {
+        bool fav = aNode.Favourite;
+        if (ImGui::Checkbox(T("Favourite"), &fav)) SetFavourite(aNode, fav, T("Ticked Favourite"));
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip(T("Favourites are listed at the top of the quick menu (where they're active),\n"
-                              "and marked with * in the library."));
+            ImGui::SetTooltip(T("Favourites are listed at the top of the quick menu on every map (faded where\n"
+                              "they're not active), and marked with * in the library. Up to %d folders and macros."),
+                              QuickLists::kMaxFavourites);
     }
 
     // Cooldown: how long the hotkey waits before sending this macro again (0 = off).
@@ -1089,15 +1101,14 @@ namespace
                 s_Pending = {EAction::OpenName, 0, aNode.Id, EDrop::Into, 0, ENameMode::NewFolder};
             if (ImGui::MenuItem(T("New macro inside")))
                 s_Pending = {EAction::OpenName, 0, aNode.Id, EDrop::Into, 0, ENameMode::NewMacro};
-            ImGui::Separator();
         }
         else
         {
             if (ImGui::MenuItem(T("Send now"), nullptr, false, !Sender::IsBusy())) SendMacro(aNode); // doesn't change the tree
-            if (ImGui::MenuItem(T("Favourite"), nullptr, aNode.Favourite)) s_Pending = {EAction::Favourite, aNode.Id};
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip(T("Favourites are listed at the top of the quick menu."));
-            ImGui::Separator();
         }
+        if (ImGui::MenuItem(T("Favourite"), nullptr, aNode.Favourite)) s_Pending = {EAction::Favourite, aNode.Id};
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip(T("Favourites are listed at the top of the quick menu, on every map."));
+        ImGui::Separator();
         if (ImGui::MenuItem(T("Rename")))
             s_Pending = {EAction::OpenName, 0, aNode.Id, EDrop::Into, 0, ENameMode::Rename};
         // Off while searching: the neighbours it would move past may be hidden.
@@ -1168,7 +1179,7 @@ namespace
         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAvailWidth;
         if (aNode.Id == s_SelectedId) flags |= ImGuiTreeNodeFlags_Selected;
         std::string suffix = SearchSuffix(aNode);
-        if (aNode.IsMacro() && aNode.Favourite) suffix += "  *"; // a favourite (the quick menu's top)
+        if (aNode.Favourite) suffix += "  *"; // a favourite (the quick menu's top)
 
         bool open = false;
         if (aNode.IsFolder())
@@ -1568,11 +1579,8 @@ namespace
             ImGui::OpenPopup(kPurgePopup);
             break;
         case EAction::Favourite:
-            if (Node* node = s_Tree.Find(a.Id); node && node->IsMacro())
-            {
-                node->Favourite = !node->Favourite;
-                MarkDirty();
-            }
+            if (Node* node = s_Tree.Find(a.Id))
+                SetFavourite(*node, !node->Favourite, T("Clicked Favourite (right-click menu)"));
             break;
         }
     }
@@ -2319,6 +2327,7 @@ namespace
             const int level = Tree::FolderLevel(*node);
             ImGui::Text(T("Folder level %d of %d"), level, kMaxFolderDepth);
             ImGui::Text(T("Contains %zu folder(s) and %zu macro(s)"), folders, macros);
+            DrawFavouriteRow(*node);
             ImGui::Spacing();
             UiFont::Row newRow;
             if (level < kMaxFolderDepth)
@@ -2353,10 +2362,11 @@ namespace
         return false;
     }
 
-    void MacroPreviewTooltip(const Node& aMacro)
+    void MacroPreviewTooltip(const Node& aMacro, bool aInactive = false)
     {
         ImGui::BeginTooltip();
         UiFont::PushTooltipWrap(); // a chat line can be 199 characters long
+        if (aInactive) ImGui::TextDisabled("%s", T("Not set for this map or game mode. Clicking still sends it."));
         if (aMacro.Lines.empty()) ImGui::TextDisabled(T("No lines yet."));
         for (size_t i = 0; i < aMacro.Lines.size() && i < kPreviewLines; i++)
         {
@@ -2369,17 +2379,61 @@ namespace
         ImGui::EndTooltip();
     }
 
+    constexpr float kDimAlpha = 0.45f; // a favourite that isn't active here (like the library's dimmed macros)
+
     // One macro entry: coloured by its first line's channel, its hotkey on the right, the preview
-    // on hover. Clicking sends it (sending doesn't change the tree).
-    void DrawMenuMacro(const Node& n, const char* aLabel, bool aBusy)
+    // on hover. Clicking sends it (sending doesn't change the tree). aDim fades a favourite that
+    // isn't active here; it still sends.
+    void DrawMenuMacro(const Node& n, const char* aLabel, bool aBusy, bool aDim = false)
     {
         const EChannel first = n.Lines.empty() ? EChannel::Current : n.Lines.front().Channel;
         const std::string keys = Hotkey::Fires(n.Hotkey) ? Hotkey::Display(n.Hotkey) : std::string(); // an off hotkey isn't shown
-        ImGui::PushStyleColor(ImGuiCol_Text, ChannelColorVec(first));
+        ImVec4 color = ChannelColorVec(first);
+        if (aDim) color.w *= kDimAlpha;
+        ImGui::PushStyleColor(ImGuiCol_Text, color);
         const bool clicked = ImGui::MenuItem(aLabel, keys.empty() ? nullptr : keys.c_str(), false, !aBusy);
         ImGui::PopStyleColor();
-        if (ImGui::IsItemHovered()) MacroPreviewTooltip(n);
+        if (ImGui::IsItemHovered()) MacroPreviewTooltip(n, aDim);
         if (clicked) SendMacro(n, ESendFrom::Menu);
+    }
+
+    // A favourite folder as a sub-menu: everything in it, whatever the filters (what isn't active
+    // here is faded). Folders without any macro are left out.
+    bool BeginFolderMenu(const Node& aFolder, const char* aLabel, bool aDim)
+    {
+        ImVec4 color = kFolderColor;
+        if (aDim) color.w *= kDimAlpha;
+        ImGui::PushStyleColor(ImGuiCol_Text, color);
+        const bool open = ImGui::BeginMenu(aLabel);
+        ImGui::PopStyleColor();
+        return open;
+    }
+
+    void DrawFavouriteFolderItems(const Node& aFolder, const Here& aHere)
+    {
+        const bool busy = Sender::IsBusy();
+        const auto active = [&](const Node& m) { return IsActiveHere(m, aHere); };
+        for (const auto& child : aFolder.Children)
+        {
+            const Node& n = *child;
+            ImGui::PushID(static_cast<int>(n.Id ^ (n.Id >> 32)));
+            if (n.IsFolder())
+            {
+                if (QuickLists::HasActive(n, nullptr)) // has a macro at all
+                {
+                    if (BeginFolderMenu(n, n.Name.c_str(), !QuickLists::HasActive(n, active)))
+                    {
+                        DrawFavouriteFolderItems(n, aHere);
+                        ImGui::EndMenu();
+                    }
+                }
+            }
+            else
+            {
+                DrawMenuMacro(n, n.Name.c_str(), busy, !active(n));
+            }
+            ImGui::PopID();
+        }
     }
 
     void DrawQuickMenuItems(const Node& aFolder, const Here& aHere)
@@ -2481,30 +2535,50 @@ namespace
         }
     }
 
-    // The favourites and the recently sent macros that are active here, above the folders.
+    // Above the folders: the favourites (on every map; faded where they're not active) and the
+    // recently sent macros that are active here.
     void DrawQuickLists(const Here& aHere)
     {
         const QuickLists::Lists ls = QuickLists::Build(s_Tree, s_Recent, s_RecentCount,
                                                        [&](const Node& n) { return IsActiveHere(n, aHere); });
         if (ls.Favourites.empty() && ls.Recent.empty()) return;
         const bool busy = Sender::IsBusy();
-        const auto drawList = [&](const char* aTitle, const std::vector<const Node*>& aList, int aSection)
+        const auto label = [](const Node& n)
         {
-            if (aList.empty()) return;
-            ImGui::TextDisabled("%s", aTitle);
-            ImGui::PushID(aSection); // the same macro can be in the tree below too
-            for (const Node* n : aList)
+            const std::string path = MenuPath(n);
+            return path.empty() ? n.Name : n.Name + "  (" + path + ")";
+        };
+        if (!ls.Favourites.empty())
+        {
+            ImGui::TextDisabled("%s", T("Favourites"));
+            ImGui::PushID(1); // the same macro can be in the tree below too
+            for (const QuickLists::Favourite& f : ls.Favourites)
             {
-                const std::string path  = MenuPath(*n);
-                const std::string label = path.empty() ? n->Name : n->Name + "  (" + path + ")";
-                ImGui::PushID(static_cast<int>(n->Id ^ (n->Id >> 32)));
-                DrawMenuMacro(*n, label.c_str(), busy);
+                const Node& n = *f.Item;
+                ImGui::PushID(static_cast<int>(n.Id ^ (n.Id >> 32)));
+                if (n.IsMacro()) DrawMenuMacro(n, label(n).c_str(), busy, !f.Active);
+                else if (BeginFolderMenu(n, label(n).c_str(), !f.Active))
+                {
+                    if (!QuickLists::HasActive(n, nullptr)) ImGui::TextDisabled("%s", T("No macros in this folder yet."));
+                    DrawFavouriteFolderItems(n, aHere);
+                    ImGui::EndMenu();
+                }
                 ImGui::PopID();
             }
             ImGui::PopID();
-        };
-        drawList(T("Favourites"), ls.Favourites, 1);
-        drawList(T("Recently sent"), ls.Recent, 2);
+        }
+        if (!ls.Recent.empty())
+        {
+            ImGui::TextDisabled("%s", T("Recently sent"));
+            ImGui::PushID(2);
+            for (const Node* n : ls.Recent)
+            {
+                ImGui::PushID(static_cast<int>(n->Id ^ (n->Id >> 32)));
+                DrawMenuMacro(*n, label(*n).c_str(), busy);
+                ImGui::PopID();
+            }
+            ImGui::PopID();
+        }
         ImGui::Separator();
     }
 
@@ -2515,7 +2589,8 @@ namespace
         aSearch.LastFrame = frame;
 
         const Here here = WhereAmI();
-        if (!HasActiveMacros(s_Tree.Root(), here))
+        // Favourites show on every map, so the menu has something to list whenever one is marked.
+        if (!HasActiveMacros(s_Tree.Root(), here) && QuickLists::CountFavourites(s_Tree) == 0)
             ImGui::TextDisabled("%s", s_Tree.Root().Children.empty() ? T("No macros yet.") : T("No macros for this map."));
         else
         {

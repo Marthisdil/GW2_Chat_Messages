@@ -5,7 +5,9 @@ bar, from the addon's page in Nexus options ("Open macro library"), or with the 
 Messages library" keybind.
 
 The window has two parts: the **tree** on the left, and the **details** of the selected item on
-the right.
+the right. A folder's details show its level, what's in it, a **Favourite** box (see
+[Favourites and recently sent](Sending-Macros#favourites-and-recently-sent)) and buttons for a
+new folder or macro inside it.
 
 <!-- screenshot: library-window.png (docs/screenshots.md) -->
 > 📷 *Screenshot to come: the library window, with the tree and the editor.*
@@ -104,7 +106,7 @@ Right-click any item in the tree for:
 
 - **New folder inside** / **New macro inside** (folders)
 - **Send now** (macros)
-- **Favourite** (macros): ticks or unticks it, see [Favourites and recently sent](Sending-Macros#favourites-and-recently-sent)
+- **Favourite**: ticks or unticks it (folders and macros, up to 10), see [Favourites and recently sent](Sending-Macros#favourites-and-recently-sent)
 - **Rename**
 - **Move up** / **Move down** (not while [searching](#search))
 - **Export**: save as a .json or .txt file, or copy to the clipboard (see

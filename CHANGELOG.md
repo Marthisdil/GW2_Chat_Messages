@@ -7,11 +7,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - **Favourites and recently sent:** the quick menu lists your **Favourites** and the macros you
-  **Recently sent** (from anywhere, newest first) above the folders, only those active where you
-  are. Mark a favourite with the new **Favourite** box in the editor, or right-click > **Favourite**
-  in the library (it shows a `*` after the name). The options page's General tab sets how many
-  recently sent macros show (0-10, 5 by default) and can clear the list. Favourites aren't
-  exported.
+  **Recently sent** (from anywhere, newest first) above the folders. Favourites show on every map,
+  whatever their filters: one that isn't active where you are is faded, and still sends when you
+  click it (its hotkey still follows its filters). Folders can be favourites too: a favourite
+  folder opens as a sub-menu with everything in it. Mark up to 10 folders and macros with the
+  new **Favourite** box (in a macro's editor or a folder's details) or right-click >
+  **Favourite** in the library (it shows a `*` after the name); marking an 11th says why it
+  can't. Recently sent shows only the macros active where you are. The options page's General
+  tab sets how many recently sent macros show (0-10, 5 by default) and can clear the list.
+  Favourites aren't exported.
 - **Backups:** the addon's options page now has **General**, **Backups** and **Restore** tabs
   (everything from before is on General). On **Backups**, turn on **Make backups of my macros**
   and choose how often (every 1-48 hours, 1-30 days, 1-8 weeks or 1-12 months) and how many

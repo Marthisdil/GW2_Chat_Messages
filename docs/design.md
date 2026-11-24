@@ -56,7 +56,8 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
     map list means any map; otherwise the current map id must be listed (at most 50 ids).
   - A hotkey only counts for active macros, so two macros can share a hotkey if their filters
     never overlap (for example one WvW and one PvE). The editor warns only about overlapping ones.
-  - The quick menu lists only active macros, and hides folders without any. The library tree
+  - The quick menu lists only active macros, and hides folders without any (except the
+    Favourites at its top, shown everywhere, faded). The library tree
     shows every macro, with inactive ones dimmed. **Send now** in the library always works.
   - Map names (GW2 API) come with phase 6; for now maps are entered by id or with "Add this map".
   - **Map picker** (built 2026-11-23 from the todo list, section 2): under the map buttons, a
@@ -412,15 +413,29 @@ Examples
   the tree says "N macro(s) active here", "No macros are active here.", or the search counts
   with ", active here".
 - **Favourites and recently sent** (built 2026-11-23 from the todo list): the quick menu (both
-  the pop-up and the Quick Access menu) lists, above the folders, **Favourites** (macros marked
-  as favourite, in tree order) and **Recently sent** (the last sent, newest first, without the
-  favourites), only the ones active here, each as "Name  (A > B)" like search results. Both are
-  hidden while the menu's search box has text. Rules in `src/QuickLists.*` (no Nexus or ImGui,
-  tested in `tests/QuickListsTests.cpp`).
-  - **Favourite:** `"favourite": true` on a macro in `macros.json` (left out when false; any
-    other value is dropped with a warning). Set by the editor's **Favourite** box or the tree's
-    right-click **Favourite** (a check mark; a queued action). The tree shows `  *` after the
-    name. Exports leave it out, and imports never set it (a replaced macro keeps its own).
+  the pop-up and the Quick Access menu) lists, above the folders, **Favourites** (folders and
+  macros marked as favourite, in tree order) and **Recently sent** (the last sent, newest first,
+  without the favourite macros), each as "Name  (A > B)" like search results. Both are hidden
+  while the menu's search box has text. Rules in `src/QuickLists.*` (no Nexus or ImGui, tested
+  in `tests/QuickListsTests.cpp`).
+  - **Favourites everywhere** (owner, 2026-11-23): favourites are listed on every map, whatever
+    their game mode and map filters. One that isn't active here is drawn faded (alpha 0.45,
+    like the library's dimmed macros), its preview says so, and clicking still sends it.
+    **Hotkeys still follow the filters.** A favourite folder is a sub-menu with everything
+    inside it, at any depth, whatever the filters (inactive entries faded, sub-folders with no
+    macro left out); the folder is faded when nothing inside is active here. A favourite inside
+    a favourite folder is listed on its own too. The quick menu shows its lists whenever a
+    favourite exists, even on a map where nothing is active. Recently sent and the menu's search
+    still show only what's active here.
+  - **At most 10** (`QuickLists::kMaxFavourites`; folders and macros together, trash bin not
+    counted). Marking one more is refused through the error window, saying to untick one
+    first. A hand-edited `macros.json` with more keeps them all marked; the first 10 in tree
+    order are listed.
+  - **Favourite:** `"favourite": true` on a folder or macro in `macros.json` (left out when
+    false; any other value is dropped with a warning). Set by the **Favourite** box (a macro's
+    editor, a folder's details) or the tree's right-click **Favourite** (a check mark; a queued
+    action). The tree shows `  *` after the name. Exports leave it out at every level, and
+    imports never set it (a replaced macro keeps its own).
   - **Recently sent:** every send that starts (hotkey, quick menu, Send now) moves the macro to
     the front; at most 10 ids are kept, in `settings.json` `"recently_sent"` (16-digit hex ids,
     like `macros.json`). Ids that are gone or in the trash bin are skipped. The General tab's

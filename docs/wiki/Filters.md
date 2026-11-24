@@ -11,7 +11,8 @@ you are.
 ## What filters change
 
 - **Hotkeys** only send macros that are active here.
-- The **quick menu** only lists macros that are active here.
+- The **quick menu** only lists macros that are active here, except your
+  [favourites](Sending-Macros#favourites-and-recently-sent): they show on every map, faded.
 - In the **library**, inactive macros are dimmed. **Send now** always works.
 
 ## Game modes
