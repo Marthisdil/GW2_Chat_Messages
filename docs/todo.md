@@ -175,6 +175,32 @@ away) and asks that each macro is a single action you start again. A countdown i
 press sending chat lines once, but it runs on its own for several seconds, so decide with
 care (and say so when registering with Raidcore).
 
+### Scheduled and repeating macros (added 2026-11-24)
+
+- **Scheduled:** the user sets a date and time, and the macro sends itself then (for example a
+  guild event reminder at 19:55).
+- **Repeating:** the user starts the macro, and it sends again on a timer they set (every N
+  minutes), either until they stop it or for X repeats.
+- **Must (owner):** before every send, the addon checks that the chat box isn't open and the user
+  isn't typing. If it is, the send **waits** until the box is free, and doesn't skip it or
+  interrupt. All the existing send rules still apply on top (game focused, in gameplay, one macro
+  at a time; see `docs/design.md`, "Input safety").
+- Points to settle:
+  - **ArenaNet's macro policy:** this is the closest idea to it, closer than timed lines. A
+    macro that sends on its own, or again and again, is the "automation" and "while away" the
+    policy warns about, and repeated chat can count as spam. Read the policy again (the wiki's
+    ArenaNet's policies page), decide limits (for example a minimum interval, a maximum number of
+    repeats, stop when the map changes or the player is idle), and say so when registering with
+    Raidcore. This may decide whether it's built at all.
+  - How long a waiting send may wait (the user typing for minutes), and whether it's dropped or
+    still sent after that. Is a late scheduled message still useful?
+  - What shows that something is scheduled or repeating: a line in the library, the quick menu,
+    an on-screen marker, and a clear **Stop** (and whether a hotkey stops it too).
+  - What happens on a map change, a loading screen, a character switch, alt-tab, or the game
+    closing. Are schedules kept across restarts?
+  - Times: the user's local time or UTC, and one-off dates versus "every day at".
+  - Whether it shares the per-line delay with timed lines (above): both are "wait, then send".
+
 ## 4. Later, or when someone asks
 
 ### More text sizes from a font of our own (added 2026-11-21)
