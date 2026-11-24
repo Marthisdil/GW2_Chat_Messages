@@ -286,6 +286,27 @@ When a send is refused (game not focused, a text box already open...), offer "Co
 so the user can paste it themselves. The sender itself still never uses the clipboard; this is
 only a user action, and only for one line at a time (or all lines joined).
 
+### Import macros from Blish HUD's chat macro module (added 2026-11-24)
+
+Could the Import window read the macros someone made in Blish HUD's chat macro module ("chat
+shorts"; this addon is modelled on agaertner's `bhm-chat-macros`, see `docs/design.md`), so a
+player moving from Blish HUD to Nexus doesn't have to type them all again?
+
+- Points to settle:
+  - Which module exactly ("chat_shorts" may be `bhm-chat-macros` or another one), and where and
+    how it keeps its macros: the file, its folder under Blish HUD's settings, and its format (a
+    database file, JSON...). Read its source before deciding anything; a database format may
+    need a reader we don't have, and the file is untrusted input like any import
+    (`docs/security-review.md`).
+  - How its data maps onto ours: lines and channels (including squad broadcast and whispers),
+    its placeholders (`{blish}` is our `{nexus}`; anything we don't have is marked in the
+    preview, like `REMOVED PLACEHOLDER`), game mode and map filters, hotkeys (off unless **Keep
+    hotkeys**, as for every import), and its folders or lists, if any.
+  - Where it appears: a new source in the Import window ("From Blish HUD"), going through the
+    usual preview, so nothing changes until **Import selected**; whether the addon looks for the
+    file in Blish HUD's usual folder or the user copies it into `imports\`.
+  - Whether its export or share format (if it has one) is easier to read than its saved file.
+
 ### More ideas (suggested 2026-11-23, not ranked yet)
 
 - **Duplicate a macro:** right-click > **Duplicate** makes "Name (2)" next to it, with the same
