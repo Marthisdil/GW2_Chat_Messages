@@ -458,7 +458,7 @@ then rename any macro: no "couldn't be saved" message. Right-click the imported 
 **Save as a .json file** and **Copy to the clipboard**: both work, and the game stays open.
 **Undo import**.
 
-**J9. Crafted files.** Three files made to slow the game down; none should. Run these in
+**J9. Crafted files.** Four files made to slow the game down; none should. Run these in
 PowerShell in the addon folder:
 - 5000 broken entries:
   `'{"format":1,"root":{"children":[' + ((1..5000 | % { '1' }) -join ',') + ']}}' | Set-Content -Encoding ascii imports\broken.json`.
@@ -474,8 +474,14 @@ PowerShell in the addon folder:
   Open it in the Import window: a warning says `"Long" has more than 50 lines. Only the first 50
   were kept.` Import it and select `Long`: the editor shows 50 lines and the game doesn't
   stutter. Delete the macro.
+- A whisper with a 1,000,000-character recipient (SEC-035):
+  `'{"format":1,"root":{"children":[{"type":"macro","name":"Far","lines":[{"channel":"whisper","whisper_to":"Bob' + ('x' * 1000000) + '","message":"hi"}]}]}}' | Set-Content -Encoding ascii imports\far.json`.
+  Open it in the Import window: a warning says `"Far": a whisper recipient was longer than 29
+  characters and was shortened.` Import it and select `Far`: the recipient is `Bob` and 26 `x`.
+  Type one more letter in **Recipient**: a red note says it's longer than 29 characters, and
+  **Send now** is refused without opening chat. Delete the macro.
 
-Delete `broken.json`, `braces.txt` and `long.json` afterwards.
+Delete `broken.json`, `braces.txt`, `long.json` and `far.json` afterwards.
 
 **J10. Preview marks.** Give `Say` the hotkey Ctrl+F1. In `Test`, make these macros: `Old`
 with the line `/s {txt notes.txt}`; `Key` with the line `/s key` and the plain hotkey F8; and

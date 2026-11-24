@@ -117,6 +117,14 @@ namespace SendPlan
                 plan.Error = where + TR("the whisper has no recipient.");
                 return plan;
             }
+            // A recipient is typed one character at a time on the game's window thread, and no
+            // name is longer than this (SEC-035): a file could otherwise freeze the game.
+            if (l.Channel == EChannel::Whisper && ChatLine::Utf16Length(l.WhisperTo) > ChatLine::kMaxRecipientLength)
+            {
+                plan.Error = where + Localization::Fmt(TR("the whisper recipient is too long (over %zu characters)."),
+                                                       static_cast<size_t>(ChatLine::kMaxRecipientLength));
+                return plan;
+            }
             const bool whisper   = l.Channel == EChannel::Whisper;
             const bool broadcast = l.Channel == EChannel::Squad && l.SquadBroadcast && aIsCommander;
             // We type Message, and WhisperTo for whispers; the rest is our own text.

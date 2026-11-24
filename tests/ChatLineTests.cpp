@@ -172,6 +172,25 @@ static void TestTypedAndLength()
     CHECK(Utf16Length("\xF0\x9F\x98\x80") == 2);    // emoji: surrogate pair
 }
 
+// SEC-035: CutToUtf16 keeps whole characters, and ParseLine cuts a recipient to kMaxRecipientLength.
+static void TestCutRecipient()
+{
+    CHECK(CutToUtf16("abc", 5) == "abc");
+    CHECK(CutToUtf16("abc", 2) == "ab");
+    CHECK(CutToUtf16("abc", 0).empty());
+    CHECK(CutToUtf16("caf\xC3\xA9!", 4) == "caf\xC3\xA9");             // keeps the whole e-acute
+    CHECK(CutToUtf16("a\xF0\x9F\x98\x80", 2) == "a");                   // an emoji is 2 units: not cut in half
+    CHECK(CutToUtf16("a\xF0\x9F\x98\x80", 3) == "a\xF0\x9F\x98\x80");
+    CHECK(CutToUtf16("\xE2\x9C\x93\xE2\x9C\x93", 1) == "\xE2\x9C\x93"); // a 3-byte character is 1 unit
+
+    const size_t max = kMaxRecipientLength;
+    Line l = ParseLine("/w [" + std::string(max, 'n') + "] hi");
+    CHECK(l.WhisperTo == std::string(max, 'n') && l.Message == "hi");
+    l = ParseLine("/w [Bob" + std::string(300000, 'x') + "] hi");
+    CHECK(l.Channel == EChannel::Whisper && Utf16Length(l.WhisperTo) == max && l.WhisperTo.compare(0, 3, "Bob") == 0);
+    CHECK(l.Message == "hi");
+}
+
 static void TestLengthLevels()
 {
     CHECK(LengthLevel(0) == ELengthLevel::Normal);
@@ -244,5 +263,6 @@ void RunChatLineTests()
     TestTypedAndLength();
     TestColors();
     TestLengthLevels();
+    TestCutRecipient();
     TestRepairUtf8();
 }

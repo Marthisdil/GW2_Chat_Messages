@@ -36,7 +36,8 @@ Each line has a channel dropdown and a message box, with arrow buttons to change
 | Reply | `/r` | Replies to the last whisper. |
 | Emote | `/e` | |
 
-- **Whisper:** type a character or account name in **Recipient**.
+- **Whisper:** type a character or account name in **Recipient** (at most 29 characters; a
+  longer recipient gets a red note and the line isn't sent).
 - **Squad broadcast:** tick **Broadcast** on a squad line. It's only sent as a broadcast while
   you're the commander; otherwise it's a normal squad message. It needs the Squad Broadcast chat
   key (see [Installation](Installation)).

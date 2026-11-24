@@ -154,7 +154,8 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
 - **Preview** (built 2026-11-23): a button next to **Send now** shows what it would type, line by
   line, without sending anything. It goes through `SendPlan::Prepare` (fill in placeholders, then
   `Build` with their origins), the same function a real send uses, so every check runs (199
-  units, control characters, SEC-013 commands, an empty whisper recipient). `SendPlan::Describe`
+  units, control characters, SEC-013 commands, an empty whisper recipient or one over
+  `ChatLine::kMaxRecipientLength`, 29 units: SEC-035). `SendPlan::Describe`
   turns the plan's steps into the text per box: `/s hello`; for a whisper `/w Name`, then Tab,
   then the message; for a squad broadcast (as commander) just the message. On the render
   thread `{map}` uses only the map name cache (`Sender::Preview`): an unknown name is requested in

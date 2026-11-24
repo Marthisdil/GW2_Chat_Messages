@@ -168,7 +168,8 @@ namespace ChatLine
             const size_t close = afterSpace.find(']');
             if (close != std::string::npos)
             {
-                line.WhisperTo = afterSpace.substr(1, close - 1);
+                // No longer than a name can be (SEC-035): a file could otherwise bring megabytes.
+                line.WhisperTo = CutToUtf16(afterSpace.substr(1, close - 1), kMaxRecipientLength);
                 rest = afterSpace.substr(close + 1);
             }
         }
@@ -242,6 +243,20 @@ namespace ChatLine
             units += (c >= 0xF0) ? 2 : 1;       // 4-byte sequences are surrogate pairs in UTF-16
         }
         return units;
+    }
+
+    std::string CutToUtf16(const std::string& s, size_t aMaxUnits)
+    {
+        size_t units = 0;
+        for (size_t i = 0; i < s.size(); i++)
+        {
+            const unsigned char c = static_cast<unsigned char>(s[i]);
+            if ((c & 0xC0) == 0x80) continue; // continuation byte: part of the character before
+            const size_t n = (c >= 0xF0) ? 2 : 1;
+            if (units + n > aMaxUnits) return s.substr(0, i);
+            units += n;
+        }
+        return s;
     }
 
     bool RepairUtf8(std::string& aText)

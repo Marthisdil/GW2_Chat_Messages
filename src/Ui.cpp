@@ -1965,6 +1965,9 @@ namespace
     {
         if (aLine.Channel == EChannel::Whisper && aLine.WhisperTo.empty())
             ImGui::TextColored(kWarnColor, T("Whisper needs a recipient."));
+        if (aLine.Channel == EChannel::Whisper && ChatLine::Utf16Length(aLine.WhisperTo) > ChatLine::kMaxRecipientLength)
+            ImGui::TextColored(kErrorColor, T("The recipient is longer than %zu characters: this line won't be sent."),
+                               ChatLine::kMaxRecipientLength);
         if (aLine.Message.empty())
             ImGui::TextColored(kWarnColor, T("Empty message."));
         if (Placeholders::UsesRemoved(aLine.Message) || Placeholders::UsesRemoved(aLine.WhisperTo))

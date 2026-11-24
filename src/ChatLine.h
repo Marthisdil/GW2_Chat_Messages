@@ -22,6 +22,9 @@ namespace ChatLine
 {
     // GW2's chat box limit, counted like the game counts: UTF-16 code units of the typed text.
     constexpr size_t kMaxChatLength = 199;
+    // Longest whisper recipient we load or send (SEC-035): GW2 character names are at most 19
+    // characters, plus 10 to spare. Counted in UTF-16 units, like kMaxChatLength.
+    constexpr size_t kMaxRecipientLength = 19 + 10;
 
     using MacroTree::EChannel;
     using MacroTree::Line;
@@ -50,6 +53,10 @@ namespace ChatLine
 
     // Length as the game counts it (UTF-16 code units of UTF-8 text).
     size_t Utf16Length(const std::string& aUtf8);
+
+    // The longest start of aUtf8 that is at most aMaxUnits UTF-16 units, never cutting a
+    // character in two. Text that already fits is returned as it is.
+    std::string CutToUtf16(const std::string& aUtf8, size_t aMaxUnits);
 
     // Makes raw text from a file or the clipboard valid UTF-8, as a macro's lines must be (they're
     // saved as JSON): every byte sequence that isn't UTF-8 (a stray byte, a cut-off character, an

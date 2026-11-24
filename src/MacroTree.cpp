@@ -292,6 +292,13 @@ namespace MacroTree
                         // From a file (maybe someone else's): no control characters to type.
                         l.Message        = ChatLine::ControlsToSpaces(StringField(jl, "message"));
                         l.WhisperTo      = ChatLine::ControlsToSpaces(StringField(jl, "whisper_to"));
+                        // No longer than a name can be (SEC-035): sending types every character.
+                        if (ChatLine::Utf16Length(l.WhisperTo) > ChatLine::kMaxRecipientLength)
+                        {
+                            l.WhisperTo = ChatLine::CutToUtf16(l.WhisperTo, ChatLine::kMaxRecipientLength);
+                            Warn(Localization::Fmt(TR("\"%s\": a whisper recipient was longer than %zu characters and was shortened."),
+                                                   n.Name.c_str(), ChatLine::kMaxRecipientLength));
+                        }
                         auto sb = jl.find("squad_broadcast");
                         l.SquadBroadcast = sb != jl.end() && sb->is_boolean() && sb->get<bool>();
                         n.Lines.push_back(std::move(l));
