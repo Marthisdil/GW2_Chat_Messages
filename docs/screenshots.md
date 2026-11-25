@@ -36,10 +36,10 @@ changed gets a new description (and goes back to **Needed** if its picture is ou
 
 | # | File name | What to capture | Used in | Status |
 |---|---|---|---|---|
-| 1 | `library-window.png` | The whole library window: a few folders (e.g. *Raids › Wing 3*, *WvW*, *Guild*) with one expanded, and a macro selected so the editor shows on the right. The empty **Search (Ctrl+F)** box and the unticked **Only active in ...** checkbox show above the tree. | README, wiki Home, The macro library | Needed |
-| 2 | `chat-result.png` | The game's chat box right after sending a multi-line macro, showing two or three lines in different channels (e.g. squad, party, map). | README | Needed |
-| 3 | `quick-menu.png` | The quick menu open from right-clicking the chat bubble icon: the empty search box at the top, nested folders under it, and the mouse over a macro so its line preview shows. | README, Sending macros | Needed |
-| 4 | `nexus-quick-access.png` | The Nexus Quick Access bar with the chat bubble icon (the quick bubble, since 2026-11-25), mouse over it so the tooltip shows. A small crop is fine. | Installation | Needed |
+| 1 | `library-window.png` | The whole library window: a few folders (e.g. *Raids › Wing 3*, *WvW*, *Guild*) with one expanded, and a macro selected so the editor shows on the right. The empty **Search (Ctrl+F)** box and the unticked **Only active in ...** checkbox show above the tree. | README, wiki Home, The macro library | Captured (2026-11-25) |
+| 2 | `chat-result.png` | The game's chat box right after sending a multi-line macro, showing two or three lines in different channels (e.g. squad, party, map). | README | Captured (2026-11-25) |
+| 3 | `quick-menu.png` | The quick menu open from right-clicking the chat bubble icon: the empty search box at the top, nested folders under it, and the mouse over a macro so its line preview shows. | README, Sending macros | Captured (2026-11-25) |
+| 4 | `nexus-quick-access.png` | The Nexus Quick Access bar with the chat bubble icon (the quick bubble, since 2026-11-25), mouse over it so the tooltip shows. A small crop is fine. | Installation | Captured (2026-11-25) |
 | 5 | `nexus-game-keybinds.png` | Nexus > Options > Game Keybinds, showing the **Chat** (and **Squad Broadcast**) keys set. | Installation | Needed |
 | 6 | `tree-context-menu.png` | Right-click menu on a folder in the library tree (shows Export, Import into this folder, Sort...). | The macro library | Needed |
 | 7 | `macro-editor-lines.png` | The macro editor's **Lines** tab with 3-4 lines: a say line, a whisper with a recipient, a squad line with **Broadcast** ticked, and the character counters under the message boxes (ideally one long line with a yellow counter). | Editing macros | Needed |

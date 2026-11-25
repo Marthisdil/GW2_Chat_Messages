@@ -10,8 +10,7 @@ the right. A folder's details show its level, what's in it, a **Favourite** box 
 active** (its [filter](Filters#filters-on-folders), for everything inside it) and buttons for a
 new folder or macro inside it.
 
-<!-- screenshot: library-window.png (docs/screenshots.md) -->
-> 📷 *Screenshot to come: the library window, with the tree and the editor.*
+![The library window, with the tree and the editor](../images/library-window.png)
 
 ## The Examples folder
 
