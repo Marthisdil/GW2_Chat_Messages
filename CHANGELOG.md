@@ -5,6 +5,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- **New icon:** the Quick Access icon in the Nexus bar is now a speech bubble with a lightning
+  bolt (it was a scroll), so it reads as "chat, fast" even at small sizes.
+
 ### Added
 - **Filters on folders:** a folder can be limited to game modes and maps, like a macro, and
   everything inside it follows. The filters add up: a macro is active only where its own filter

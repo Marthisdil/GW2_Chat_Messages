@@ -4144,7 +4144,7 @@ void Ui::RenderOptions()
         ImGui::Spacing();
         DrawMapListOptions();
         ImGui::Spacing();
-        ImGui::TextWrapped(T("Quick menu: right-click the scroll icon in the Nexus bar, or set a key for "
+        ImGui::TextWrapped(T("Quick menu: right-click the chat bubble icon in the Nexus bar, or set a key for "
                            "\"Open Chat Messages quick menu\" in Nexus > Options > Keybinds."));
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted(T("Recently sent in the quick menu:"));

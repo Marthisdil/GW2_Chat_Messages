@@ -28,7 +28,7 @@ chat for you, from a hotkey, a menu or a button.
     not even with Ctrl, Alt or Shift: you click them all the time, and in GW2 Ctrl+click and
     Shift+click already do things (chat links, targeting), so a macro would go off by accident.
     The editor warns when a key is one of GW2's default keys (like F1 or Ctrl+T).
-  - **Quick menu:** right-click the scroll icon in the Nexus bar, or press a key you choose, to
+  - **Quick menu:** right-click the chat bubble icon in the Nexus bar, or press a key you choose, to
     pick a macro from nested menus, with your favourites and the macros you sent last at the top.
   - **Send now** in the library. **Preview**, next to it, shows exactly what would be typed
     (placeholders filled in, channel commands added) without sending anything.
@@ -70,10 +70,10 @@ chat for you, from a hotkey, a menu or a button.
    `<GW2>\addons\`.
 2. In Nexus > Options > Game Keybinds, make sure your **Chat** key is set (and **Squad
    Broadcast** if you're a commander). The addon uses them to open chat.
-3. Left-click the scroll icon in the Nexus bar to open the macro library. The **Examples**
+3. Left-click the chat bubble icon in the Nexus bar to open the macro library. The **Examples**
    folder shows what a macro can do. Click **New macro**, add a line, pick a channel and type a
    message.
-4. Press **Send now**, set a hotkey in the macro editor, or right-click the scroll icon for the
+4. Press **Send now**, set a hotkey in the macro editor, or right-click the chat bubble icon for the
    quick menu.
 
 Your macros are saved in `<GW2>\addons\GW2_Chat_Messages\macros.json`.

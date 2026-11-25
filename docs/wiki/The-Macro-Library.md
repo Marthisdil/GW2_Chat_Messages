@@ -1,6 +1,6 @@
 # The macro library
 
-The library window holds all your macros. Open it by left-clicking the scroll icon in the Nexus
+The library window holds all your macros. Open it by left-clicking the chat bubble icon in the Nexus
 bar, from the addon's page in Nexus options ("Open macro library"), or with the "Show/hide Chat
 Messages library" keybind.
 
