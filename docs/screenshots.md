@@ -12,10 +12,13 @@ C:\Dropbox\~ Github\GW2_Chat_Messages\docs\images\
 ```
 
 At each build, Claude checks that folder. Each new file replaces its placeholders with the
-image, and its row below is marked **Captured**. Nothing in the folder is overwritten.
+image, and its row is marked **Captured** and moves from the list to [Done](#done) at the bottom.
+Nothing in the folder is overwritten. So the list only shows pictures still to take, and
+[Retakes](#retakes) the ones to redo.
 
 The list is kept up to date with every change: new screens get a row, and a row whose screen has
-changed gets a new description (and goes back to **Needed** if its picture is out of date).
+changed gets a new description (and goes back to **Needed**, moving from Done to the list, if
+its picture is out of date).
 
 ## Tips
 
@@ -36,10 +39,8 @@ changed gets a new description (and goes back to **Needed** if its picture is ou
 
 | # | File name | What to capture | Used in | Status |
 |---|---|---|---|---|
-| 1 | `library-window.png` | The whole library window: a few folders (e.g. *Raids › Wing 3*, *WvW*, *Guild*) with one expanded, and a macro selected so the editor shows on the right. The empty **Search (Ctrl+F)** box and the unticked **Only active in ...** checkbox show above the tree. | README, wiki Home, The macro library | Captured (2026-11-25) |
-| 2 | `chat-result.png` | The game's chat box right after sending a multi-line macro, showing two or three lines in different channels (e.g. squad, party, map). | README | Captured (2026-11-25) |
-| 3 | `quick-menu.png` | The quick menu open from right-clicking the chat bubble icon: the empty search box at the top, nested folders under it, and the mouse over a macro so its line preview shows. | README, Sending macros | Captured (2026-11-25) |
-| 4 | `nexus-quick-access.png` | The Nexus Quick Access bar with the chat bubble icon (the quick bubble, since 2026-11-25), mouse over it so the tooltip shows. A small crop is fine. | Installation | Captured (2026-11-25) |
+| 2 | `chat-result.png` | The game's chat box right after sending a multi-line macro, showing two or three lines in different channels (e.g. squad, party, map). | README | Captured (2026-11-25), retake |
+| 3 | `quick-menu.png` | The quick menu open from right-clicking the chat bubble icon: the empty search box at the top, nested folders under it, and the mouse over a macro so its line preview shows. | README, Sending macros | Captured (2026-11-25), retake |
 | 5 | `nexus-game-keybinds.png` | Nexus > Options > Game Keybinds, showing the **Chat** (and **Squad Broadcast**) keys set. | Installation | Needed |
 | 6 | `tree-context-menu.png` | Right-click menu on a folder in the library tree (shows Export, Import into this folder, Sort...). | The macro library | Needed |
 | 7 | `macro-editor-lines.png` | The macro editor's **Lines** tab with 3-4 lines: a say line, a whisper with a recipient, a squad line with **Broadcast** ticked, and the character counters under the message boxes (ideally one long line with a yellow counter). | Editing macros | Needed |
@@ -78,10 +79,21 @@ changed gets a new description (and goes back to **Needed** if its picture is ou
 ## Retakes
 
 Captured pictures that work but could be better. Save the new picture in `docs\images\` under
-the same name, replacing the old one (the README and wiki already point to it), then remove its
-row here. Its row in the list above stays **Captured**.
+the same name, replacing the old one (the README and wiki already point to it). Its row in the
+list above says "Captured, retake" until then; once the new picture is in, its row here goes and
+its row in the list moves to Done.
 
 | Image | What to change | Noted |
 |---|---|---|
 | `chat-result.png` | The middle line is the game's red "No one hears you." because nobody was near for the **Say** line. Retake with someone nearby, or with a macro whose lines go to Party and Squad, so every line shows as sent. | 2026-11-25 |
 | `quick-menu.png` | No line preview shows: retake with the mouse resting over a macro (e.g. **Two channels**) so its lines appear next to the menu, as the row asks. The search box's hint is also cut off ("Search (Enter sends the f..."); retake after that's fixed. | 2026-11-25 |
+
+## Done
+
+Pictures that are in the docs and need nothing more. If a later change makes one out of date,
+its row goes back to **Needed** in the list above.
+
+| # | File name | What to capture | Used in | Status |
+|---|---|---|---|---|
+| 1 | `library-window.png` | The whole library window: a few folders (e.g. *Raids › Wing 3*, *WvW*, *Guild*) with one expanded, and a macro selected so the editor shows on the right. The empty **Search (Ctrl+F)** box and the unticked **Only active in ...** checkbox show above the tree. | README, wiki Home, The macro library | Captured (2026-11-25) |
+| 4 | `nexus-quick-access.png` | The Nexus Quick Access bar with the chat bubble icon (the quick bubble, since 2026-11-25), mouse over it so the tooltip shows. A small crop is fine. | Installation | Captured (2026-11-25) |
