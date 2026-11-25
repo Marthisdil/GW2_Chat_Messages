@@ -21,8 +21,6 @@ change means a done check must be run again, it moves back here and into its ses
 |---|---|---|
 | A1 | Passed (PR #15 build) | Re-check with the current build: the log and the options page show its version and build stamp, the two links and the folders are new (A1's last part), and so is the icon (the quick bubble, 2026-11-25). |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text wraps and errors open the error window. Re-check those two points only (marked *Re-check* in A2), then go on to A3. |
-| C1 | Failed (PR #81 build), fixed | The message after Tab was lost: the name went in, the message box stayed empty, nothing was sent and no error showed. The addon now pauses after `/w ` and after Tab. Re-check C1 with a build from PR #82 on. |
-| C3 | New (PR #82) | The error window opened behind the library window with the PR #81 build; it now stays in front of the addon's windows (never over a pop-up). Run C3. |
 | A3 to R | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (H9 and H10, filters on folders, are the newest; then J11, export a selection; G4 to G6, favourites and recently sent, with G4 and G6 new for favourites shown everywhere, and R, backups and restore, are the newest; A1b, the example macros, and F9, the hotkey cooldown, came just before). |
 
 ## How to report
@@ -168,34 +166,20 @@ it. Back in the game, keys and Tab work.
 the text). Send `Say`. What arrives: `test 1`, or `leftovertest 1`? We can't clear the box without
 Ctrl+A, so this tells us whether that's needed.
 
+**B5. Many lines in a row (new 2026-11-25).** Make a macro with 4 or 5 lines, each to a
+different channel you can use (for example Party, Squad, and `/g1` to `/g5` for the guilds
+you're in), then send it a few times. Every line arrives, in order, each in its channel. If one
+is ever missing, say which one and where you were: the gap between lines then gets longer.
+
 ## C. Whispers and Tab
 
-**C1. Whisper.** Send `Whisper` (to yourself): it arrives as a whisper, with the whole message.
-Then, with chat closed, press **Tab** a few times: it targets enemies as normal. Send `Whisper` 5
-times in a row (wait for each), then Tab again: still normal. *Re-check (2026-11-25):* this failed
-with the PR #81 build (the name went into the recipient box, the message box stayed empty,
-nothing was sent and no error showed). The addon now waits for the game after `/w ` and after
-Tab. Also try it in a busy place (a big meta event or a WvW zerg, low frame rate): if the message
-is still lost there, say so, and the waits get longer. A lost message shows **no error**: the
-addon can't see which box the game is typing into, and an empty Enter closes chat as if the
-whisper went out. So check in chat that each whisper arrived with its message.
-
-*C2 is done (see [Done](#done-passed-checks)).*
-
-**C3. The error window stays in front.** With the library open, make a send fail: open chat
-yourself (press Enter in game, leave it open), then click **Send now** on any macro. The error
-window ("A text box is open in game...") shows **in front of** the library. Click in the library
-(e.g. on another macro): the error window stays in front, and you can still type in the library's
-search box. Click **OK**: it closes. (With the PR #81 build it opened behind the library.)
+*C1, C2 and C3 are done (see [Done](#done-passed-checks)).*
 
 ## D. Refusals and recovery
 
 Nothing should happen in game for D1-D4: no chat opens, nothing is typed. Each refusal opens
-the error window with the message below; click OK before the next check.
-
-**D1. You're typing.** Open chat and type something. Move the mouse to the addon window and click
-**Send now** on `Say` (the click takes focus from chat; if chat closes, say so). Expected: refused,
-"A text box is open in game", and your own text is untouched.
+the error window with the message below; click OK before the next check. (D1 is done: see
+[Done](#done-passed-checks).)
 
 **D2. Modifier held.** Hold Shift, click **Send now**, keep holding for a second: refused with
 the "Shift, Ctrl, Alt or Windows key is held down" message. Repeat with Ctrl.
@@ -789,9 +773,8 @@ changed.
 ```
 Build: (stamp from the log)   Nexus version:   Game language:
 A1  A2 (both re-checks)  A3  A4 (yellow/red easy to see?):  A5  A6
-B1  B2  B3  B4 (what arrived):
-C1 (busy place too?)  C3
-D1  D2  D3  D4  D5  D6
+B1  B2  B3  B4 (what arrived):  B5 (any line missing?):
+D2  D3  D4  D5  D6
 E1
 F1  F2 (which mouse buttons, where):  F3  F4  F5  F6  F7  F8
 G1  G2  G3 (where did it appear?):  G4  G5  G6
@@ -817,9 +800,32 @@ Progress table.
 
 | Check | Result | Build | Notes |
 |---|---|---|---|
+| C1 | Passed after a fix | PR #83 (`7a24eb6`) | Failed with the PR #81 build (the message after Tab was lost); fixed in PR #82 with pauses after `/w ` and Tab. Whispers send properly (ping 65-68 ms). |
 | C2 | Answered | PR #81 | The game needs Tab for whispers: a space or a pasted `/w Name message` doesn't move to the message box. |
+| C3 | Passed | PR #83 (`7a24eb6`) | The error window stays in front of the library. |
+| D1 | Passed | PR #83 (`7a24eb6`) | Refused with the error, shown in front of the library. |
 
 **C2. Whisper without Tab (answered 2026-11-25).** Typing `/w YourName test` by hand opens the
 recipient and message boxes after `/w `, but a space after the name stays in the name box, and
 pasting `/w YourName test` puts everything in the name box. So the game needs Tab, and the addon
 keeps pressing it (only inside the chat box). Nothing to re-run.
+
+**C1. Whisper.** Send `Whisper` (to yourself): it arrives as a whisper, with the whole message.
+Then, with chat closed, press **Tab** a few times: it targets enemies as normal. Send `Whisper` 5
+times in a row (wait for each), then Tab again: still normal. *Re-check (2026-11-25):* this failed
+with the PR #81 build (the name went into the recipient box, the message box stayed empty,
+nothing was sent and no error showed). The addon now waits for the game after `/w ` and after
+Tab. Also try it in a busy place (a big meta event or a WvW zerg, low frame rate): if the message
+is still lost there, say so, and the waits get longer. A lost message shows **no error**: the
+addon can't see which box the game is typing into, and an empty Enter closes chat as if the
+whisper went out. So check in chat that each whisper arrived with its message.
+
+**C3. The error window stays in front.** With the library open, make a send fail: open chat
+yourself (press Enter in game, leave it open), then click **Send now** on any macro. The error
+window ("A text box is open in game...") shows **in front of** the library. Click in the library
+(e.g. on another macro): the error window stays in front, and you can still type in the library's
+search box. Click **OK**: it closes. (With the PR #81 build it opened behind the library.)
+
+**D1. You're typing.** Open chat and type something. Move the mouse to the addon window and click
+**Send now** on `Say` (the click takes focus from chat; if chat closes, say so). Expected: refused,
+"A text box is open in game", and your own text is untouched.
