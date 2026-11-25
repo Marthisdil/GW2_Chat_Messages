@@ -74,3 +74,14 @@ changed gets a new description (and goes back to **Needed** if its picture is ou
 | 36 | `export-window.png` | The **Export** window: the library as a tree with tick boxes, one folder ticked with a sub-folder showing **[some]**, a macro outside it ticked, the "N folder(s) and M macro(s) ticked" line, a file name typed, and the **Save as a .json file** / **Copy to the clipboard** buttons. | Import and export | Needed |
 | 37 | `folder-filters.png` | The library with two or three folders that have filters, showing their tags (`Roaming  [WvW]`, `LA  [1 map]`), one of them dimmed because it isn't active here, and that folder selected: its details show **Where it's active** open with WvW ticked, a map listed, and "Not active here". | Filters | Needed |
 | 38 | `new-folder-modes.png` | The **New folder** name box with a name typed and **Active in:** PvE / WvW / PvP below it (WvW only ticked), and the "Maps: in the folder's details" line. | The macro library | Needed |
+
+## Retakes
+
+Captured pictures that work but could be better. Save the new picture in `docs\images\` under
+the same name, replacing the old one (the README and wiki already point to it), then remove its
+row here. Its row in the list above stays **Captured**.
+
+| Image | What to change | Noted |
+|---|---|---|
+| `chat-result.png` | The middle line is the game's red "No one hears you." because nobody was near for the **Say** line. Retake with someone nearby, or with a macro whose lines go to Party and Squad, so every line shows as sent. | 2026-11-25 |
+| `quick-menu.png` | No line preview shows: retake with the mouse resting over a macro (e.g. **Two channels**) so its lines appear next to the menu, as the row asks. The search box's hint is also cut off ("Search (Enter sends the f..."); retake after that's fixed. | 2026-11-25 |
