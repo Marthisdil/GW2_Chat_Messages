@@ -41,6 +41,11 @@ namespace SendPlan
     };
 
     constexpr int kPauseBetweenLinesMs = 50;
+    // Whispers: the game needs a few frames to open the recipient box after "/w " and to move the
+    // cursor to the message box after Tab. Text typed sooner is lost (in-game check C1, 2026-11-25:
+    // the name went in, the message didn't, and Enter sent nothing), so wait before typing on.
+    constexpr int kPauseAfterWhisperCommandMs = 100;
+    constexpr int kPauseAfterTabMs            = 200;
 
     // Which bytes of a line's Message and WhisperTo came from placeholder values
     // (Placeholders::Result::FromValue). Empty vectors: all written by the user.

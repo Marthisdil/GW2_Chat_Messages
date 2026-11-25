@@ -53,11 +53,17 @@ static void TestWhisper()
 {
     Plan p = Build({L(EChannel::Whisper, "hi there", "Some Name")}, false);
     CHECK(p.Error.empty());
-    CHECK(Types(p) == (std::vector<EStep>{EStep::OpenChat, EStep::WaitChatOpen, EStep::Type, EStep::Type,
-                                          EStep::KeyTab, EStep::Type, EStep::KeyEnter, EStep::WaitChatClosed}));
+    CHECK(Types(p) == (std::vector<EStep>{EStep::OpenChat, EStep::WaitChatOpen, EStep::Type, EStep::Pause,
+                                          EStep::Type, EStep::KeyTab, EStep::Pause, EStep::Type,
+                                          EStep::KeyEnter, EStep::WaitChatClosed}));
     CHECK(p.Steps[2].Text == "/w ");
-    CHECK(p.Steps[3].Text == "Some Name");
-    CHECK(p.Steps[5].Text == "hi there");
+    // The game needs time to open the recipient box and, after Tab, to move to the message box:
+    // text typed sooner is lost (in-game check C1).
+    CHECK(p.Steps[3].Ms == kPauseAfterWhisperCommandMs && p.Steps[3].Ms >= 50);
+    CHECK(p.Steps[4].Text == "Some Name");
+    CHECK(p.Steps[6].Ms == kPauseAfterTabMs && p.Steps[6].Ms >= 100);
+    CHECK(p.Steps[7].Text == "hi there");
+    for (const Step& s : p.Steps) CHECK(s.Line == 0);
 
     p = Build({L(EChannel::Say, "ok"), L(EChannel::Whisper, "hi")}, false);
     CHECK(!p.Error.empty() && p.Steps.empty()); // nothing is sent if any line is invalid

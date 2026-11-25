@@ -20,6 +20,7 @@
 #include <nlohmann/json.hpp>
 
 #include "imgui.h"
+#include "imgui_internal.h" // BringWindowToDisplayFront: keep the error window on top
 
 #include "Languages.h"
 #include "Localization.h"
@@ -338,7 +339,12 @@ namespace
             s_ErrorFocus = false;
         }
         if (ImGui::Begin(T(kErrorWindow), nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings))
+        {
+            // Stay in front of the library while there's an error, without taking keyboard focus:
+            // focusing it once wasn't enough, a click in the library hid it behind (in game, 2026-11-25).
+            ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
             DrawErrorBody();
+        }
         ImGui::End();
     }
 

@@ -16,11 +16,6 @@ priority order too.
 Work through `docs/in-game-tests.md` (A1 passed, A2 mostly; the rest is still to do). Session B,
 whether the game takes the addon's keys and text, matters most: everything else depends on it.
 
-### Whispers without Tab
-
-Find a way to send whispers that needs no Tab key (Tab is the riskiest key the sender presses).
-Test in game during session B.
-
 ### Plan ahead for changes to the saved files (added 2026-11-24)
 
 Before the first release, decide how the addon deals with changes to what it saves

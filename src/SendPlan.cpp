@@ -181,9 +181,12 @@ namespace SendPlan
             else if (l.Channel == EChannel::Whisper)
             {
                 // "/w " moves the cursor to the recipient box; Tab moves on to the message box.
+                // Each move takes the game a few frames: pause before typing into the new box.
                 Add(plan, EStep::Type, i, "/w ");
+                Add(plan, EStep::Pause, i, {}, kPauseAfterWhisperCommandMs);
                 Add(plan, EStep::Type, i, l.WhisperTo);
                 Add(plan, EStep::KeyTab, i);
+                Add(plan, EStep::Pause, i, {}, kPauseAfterTabMs);
                 Add(plan, EStep::Type, i, l.Message);
             }
             else

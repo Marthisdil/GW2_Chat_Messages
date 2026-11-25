@@ -24,8 +24,9 @@ you did to get it, and two buttons:
 - **Copy to clipboard** copies the error for a bug report: the addon version and build stamp,
   the time, what you did, the error, and where you were in game.
 
-Errors from a hotkey or the quick menu also show a Nexus alert, and their window opens without
-taking focus, so you can keep playing and read it later.
+The window stays in front of the library until you click **OK**, even if you click in the
+library meanwhile. Errors from a hotkey or the quick menu also show a Nexus alert, and their
+window opens without taking focus, so you can keep playing and read it later.
 
 <!-- screenshot: error-window.png (docs/screenshots.md) -->
 > 📷 *Screenshot to come: the error window.*

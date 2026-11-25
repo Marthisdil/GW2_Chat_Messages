@@ -18,6 +18,9 @@ Results so far (keep your notes in `docs\testing results.txt`; it isn't committe
 |---|---|---|
 | A1 | Passed (PR #15 build) | Re-check with the current build: the log and the options page show its version and build stamp, the two links and the folders are new (A1's last part), and so is the icon (the quick bubble, 2026-11-25). |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text wraps and errors open the error window. Re-check those two points only (marked *Re-check* in A2), then go on to A3. |
+| C1 | Failed (PR #81 build), fixed | The message after Tab was lost: the name went in, the message box stayed empty, nothing was sent and no error showed. The addon now pauses after `/w ` and after Tab. Re-check C1 with a build from PR #82 on. |
+| C3 | New (PR #82) | The error window opened behind the library window with the PR #81 build; it now stays in front. Run C3. |
+| C2 | Answered (PR #81 build) | The game needs Tab for whispers: a space or a pasted `/w Name message` doesn't move to the message box. |
 | A3 to R | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (H9 and H10, filters on folders, are the newest; then J11, export a selection; G4 to G6, favourites and recently sent, with G4 and G6 new for favourites shown everywhere, and R, backups and restore, are the newest; A1b, the example macros, and F9, the hotkey cooldown, came just before). |
 
 ## How to report
@@ -165,13 +168,24 @@ Ctrl+A, so this tells us whether that's needed.
 
 ## C. Whispers and Tab
 
-**C1. Whisper.** Send `Whisper` (to yourself): it arrives as a whisper. Then, with chat closed,
-press **Tab** a few times: it targets enemies as normal. Send `Whisper` 5 times in a row (wait for
-each), then Tab again: still normal.
+**C1. Whisper.** Send `Whisper` (to yourself): it arrives as a whisper, with the whole message.
+Then, with chat closed, press **Tab** a few times: it targets enemies as normal. Send `Whisper` 5
+times in a row (wait for each), then Tab again: still normal. *Re-check (2026-11-25):* this failed
+with the PR #81 build (the name went into the recipient box, the message box stayed empty,
+nothing was sent and no error showed). The addon now waits for the game after `/w ` and after
+Tab. Also try it in a busy place (a big meta event or a WvW zerg, low frame rate): if the message
+is still lost there, say so, and the waits get longer.
 
-**C2. Whisper without Tab (question).** By hand, in chat, type `/w YourName test` (no Tab, just a
-space after the name) and press Enter. Does the whisper arrive? Also try a name with a space in
-it if you know one, e.g. `/w Some Name test`. If the first works, the addon can stop pressing Tab.
+**C3. The error window stays in front.** With the library open, make a send fail: open chat
+yourself (press Enter in game, leave it open), then click **Send now** on any macro. The error
+window ("A text box is open in game...") shows **in front of** the library. Click in the library
+(e.g. on another macro): the error window stays in front, and you can still type in the library's
+search box. Click **OK**: it closes. (With the PR #81 build it opened behind the library.)
+
+**C2. Whisper without Tab (answered 2026-11-25).** Typing `/w YourName test` by hand opens the
+recipient and message boxes after `/w `, but a space after the name stays in the name box, and
+pasting `/w YourName test` puts everything in the name box. So the game needs Tab, and the addon
+keeps pressing it (only inside the chat box). Nothing to re-run.
 
 ## D. Refusals and recovery
 
