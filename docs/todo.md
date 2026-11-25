@@ -78,6 +78,23 @@ whether it can be clearer: what goes where, in what order, what's grouped or fol
 how it fits at small window sizes and bigger text sizes. Do it before the `Ui.cpp` cleanup
 below, so that cleanup works on the final layout.
 
+**For reference** (owner, 2026-11-25): how the Blish HUD module we started from
+(bhm-chat-macros) lays out one macro, in
+[`docs/reference/bhm-chat-macros-editor.webp`](reference/bhm-chat-macros-editor.webp):
+- the macro's name as a wide title bar at the top;
+- two boxes side by side: **Active Areas** (a list of maps, an "Add Map..." field, and PvE /
+  WvW / PvP tick boxes under it) and **Trigger Options** (voice commands, an "Add Voice
+  Command..." field, and the key binding as "Non-Voice Trigger");
+- a **Message Sequence** header with small icon buttons on its right (toggle, link a file,
+  open the file);
+- one row per line: a channel drop-down (`[G2]`), the text in a monospaced box, a red ✕ to
+  delete it and a drag handle to reorder;
+- a wide **Add Line** button at the bottom.
+
+What stands out: everything about one macro is on one screen, with where it's active and how
+it's triggered side by side above the lines, and each line is compact (channel, text, delete,
+drag). The text box doesn't wrap, so long lines get cut off at the edge.
+
 ### Cleanup PR for `Ui.cpp` after the in-game testing (added 2026-11-24)
 
 **Reminder (owner):** once every session in `docs/in-game-tests.md` has been run and passed,
