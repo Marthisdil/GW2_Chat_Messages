@@ -174,7 +174,9 @@ times in a row (wait for each), then Tab again: still normal. *Re-check (2026-11
 with the PR #81 build (the name went into the recipient box, the message box stayed empty,
 nothing was sent and no error showed). The addon now waits for the game after `/w ` and after
 Tab. Also try it in a busy place (a big meta event or a WvW zerg, low frame rate): if the message
-is still lost there, say so, and the waits get longer.
+is still lost there, say so, and the waits get longer. A lost message shows **no error**: the
+addon can't see which box the game is typing into, and an empty Enter closes chat as if the
+whisper went out. So check in chat that each whisper arrived with its message.
 
 **C2. Whisper without Tab (answered 2026-11-25).** Typing `/w YourName test` by hand opens the
 recipient and message boxes after `/w `, but a space after the name stays in the name box, and

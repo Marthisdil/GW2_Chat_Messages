@@ -62,6 +62,14 @@ window opens without taking focus, so you can keep playing and read it later.
 - Is another active macro using the same key? You'll see an alert.
 - Holding the key down doesn't repeat it: press it again.
 
+## A whisper arrives without its message
+
+The addon can't see which chat box the game is typing into, only that a chat box is open. If the
+game is slow to move from the name box to the message box, the message can be lost, and the
+whisper goes out empty (or not at all) **without an error**. The addon waits for the game after
+`/w` and after Tab to prevent this. If it still happens, for example at a very low frame rate,
+please report it with your frame rate and where you were (see below).
+
 ## Getting help
 
 Open an issue on the project's GitHub page, with what you did, what happened, and the lines from
