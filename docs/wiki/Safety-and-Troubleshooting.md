@@ -24,8 +24,9 @@ you did to get it, and two buttons:
 - **Copy to clipboard** copies the error for a bug report: the addon version and build stamp,
   the time, what you did, the error, and where you were in game.
 
-Errors from a hotkey or the quick menu also show a Nexus alert, and their window opens without
-taking focus, so you can keep playing and read it later.
+The window stays in front of the library until you click **OK**, even if you click in the
+library meanwhile. Errors from a hotkey or the quick menu also show a Nexus alert, and their
+window opens without taking focus, so you can keep playing and read it later.
 
 <!-- screenshot: error-window.png (docs/screenshots.md) -->
 > 📷 *Screenshot to come: the error window.*
@@ -60,6 +61,14 @@ taking focus, so you can keep playing and read it later.
 - Are you typing in chat, or in a text box in another addon? Hotkeys are ignored then.
 - Is another active macro using the same key? You'll see an alert.
 - Holding the key down doesn't repeat it: press it again.
+
+## A whisper arrives without its message
+
+The addon can't see which chat box the game is typing into, only that a chat box is open. If the
+game is slow to move from the name box to the message box, the message can be lost, and the
+whisper goes out empty (or not at all) **without an error**. The addon waits for the game after
+`/w` and after Tab to prevent this. If it still happens, for example at a very low frame rate,
+please report it with your frame rate and where you were (see below).
 
 ## Getting help
 

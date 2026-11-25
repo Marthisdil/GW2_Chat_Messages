@@ -20,6 +20,7 @@
 #include <nlohmann/json.hpp>
 
 #include "imgui.h"
+#include "imgui_internal.h" // BringWindowToDisplayFront: keep the error window on top
 
 #include "Languages.h"
 #include "Localization.h"
@@ -326,6 +327,26 @@ namespace
         return ok;
     }
 
+    // True when the library, Import or Export window is drawn above the error window and no pop-up
+    // is open. Only then is the error window brought forward: never over a pop-up (a combo list,
+    // a menu, a modal it couldn't be clicked through) or another addon's window.
+    bool OurWindowAboveError(ImGuiWindow* aError)
+    {
+        if (ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopup)) return false;
+        const ImGuiWindow* ours[] = {ImGui::FindWindowByName(Ui::kMainWindowName),
+                                     ImGui::FindWindowByName("###chatmsg_import"),
+                                     ImGui::FindWindowByName("###chatmsg_export")};
+        bool pastError = false;
+        for (const ImGuiWindow* w : GImGui->Windows) // back to front
+        {
+            if (w == aError) { pastError = true; continue; }
+            if (!pastError || !w->Active) continue;
+            for (const ImGuiWindow* o : ours)
+                if (o && w == o) return true;
+        }
+        return false;
+    }
+
     void DrawErrorWindow()
     {
         if (s_Errors.empty() || s_ErrorInPopup) return;
@@ -338,7 +359,12 @@ namespace
             s_ErrorFocus = false;
         }
         if (ImGui::Begin(T(kErrorWindow), nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings))
+        {
+            // Stay in front of the library while there's an error, without taking keyboard focus:
+            // focusing it once wasn't enough, a click in the library hid it behind (in game, 2026-11-25).
+            if (OurWindowAboveError(ImGui::GetCurrentWindow())) ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
             DrawErrorBody();
+        }
         ImGui::End();
     }
 
@@ -4084,6 +4110,7 @@ void Ui::Shutdown()
 
 void Ui::Render()
 {
+    Sender::FrameRendered(); // first: the sender's whisper pauses count frames
     ShowLanguageProblems(); // after a reload (Languages::Update ran before this)
     PollSender();
     WatchMap();

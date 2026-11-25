@@ -779,6 +779,7 @@
     "chat closed before the whisper message.": "",
     "chat closed before sending.": "",
     "the game didn't take the message; chat was closed.": "",
+    "the game stopped drawing frames while typing; nothing more was typed and chat was closed.": "",
     "Internal error while sending: ": "",
     "Internal error while sending.": "",
     "Sent 1 line.": "",

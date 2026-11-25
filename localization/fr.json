@@ -773,6 +773,7 @@
     "chat closed before the whisper message.": "le chat s'est fermé avant le message du murmure.",
     "chat closed before sending.": "le chat s'est fermé avant l'envoi.",
     "the game didn't take the message; chat was closed.": "le jeu n'a pas pris le message ; le chat a été fermé.",
+    "the game stopped drawing frames while typing; nothing more was typed and chat was closed.": "le jeu a cessé d'afficher des images pendant la saisie ; rien de plus n'a été tapé et le chat a été fermé.",
     "Internal error while sending: ": "Erreur interne pendant l'envoi : ",
     "Internal error while sending.": "Erreur interne pendant l'envoi.",
     "Sent 1 line.": "1 ligne envoyée.",

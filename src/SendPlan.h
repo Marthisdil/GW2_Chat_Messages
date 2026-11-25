@@ -22,7 +22,7 @@ namespace SendPlan
         KeyTab,              // whisper: move from the recipient box to the message box
         KeyEnter,            // send
         WaitChatClosed,      // wait until the text box loses focus (the message went out)
-        Pause,               // wait Ms milliseconds
+        Pause,               // wait Ms milliseconds, then until Frames more frames are drawn
     };
 
     struct Step
@@ -30,6 +30,7 @@ namespace SendPlan
         EStep       Type = EStep::Pause;
         std::string Text;      // Type only
         int         Ms   = 0;  // Pause only
+        int         Frames = 0; // Pause only: also wait until the game has drawn this many frames
         size_t      Line = 0;  // index of the macro line this step belongs to
     };
 
@@ -41,6 +42,15 @@ namespace SendPlan
     };
 
     constexpr int kPauseBetweenLinesMs = 50;
+    // Whispers: the game needs a few frames to open the recipient box after "/w " and to move the
+    // cursor to the message box after Tab. Text typed sooner is lost (in-game check C1, 2026-11-25:
+    // the name went in, the message didn't, and Enter sent nothing), so wait before typing on:
+    // a minimum time, then a number of drawn frames, so a low frame rate (a WvW zerg) still gets
+    // enough time.
+    constexpr int kPauseAfterWhisperCommandMs = 100;
+    constexpr int kFramesAfterWhisperCommand  = 2;
+    constexpr int kPauseAfterTabMs            = 200;
+    constexpr int kFramesAfterTab             = 3;
 
     // Which bytes of a line's Message and WhisperTo came from placeholder values
     // (Placeholders::Result::FromValue). Empty vectors: all written by the user.

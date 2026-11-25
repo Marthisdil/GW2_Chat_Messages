@@ -31,6 +31,7 @@ namespace
     constexpr int kWindowCallTimeoutMs = 1000;
     constexpr int kBindHoldMs          = 30;
     constexpr int kPollMs              = 10;
+    constexpr int kFrameWaitTimeoutMs  = 1500; // a pause's frames must be drawn within this
 
     // --- Game state ----------------------------------------------------------------------------
 
@@ -173,6 +174,7 @@ namespace
 
     std::thread             s_Thread;
     std::atomic<bool>       s_Stop{false};
+    std::atomic<uint64_t>   s_Frames{0}; // frames drawn so far (FrameRendered), for the whisper pauses
     std::atomic<bool>       s_Busy{false};
     std::mutex              s_JobMutex;
     std::condition_variable s_JobCv;
@@ -283,8 +285,22 @@ namespace
                 sent++;
                 break;
             case EStep::Pause:
-                std::this_thread::sleep_for(std::chrono::milliseconds(step.Ms));
+            {
+                // The time first (WaitUntil wakes early on a stop), then the frames: the game
+                // processes our keys in its message loop and updates its chat boxes as it draws.
+                const uint64_t start = s_Frames.load();
+                WaitUntil([] { return false; }, step.Ms, s_Stop);
+                if (s_Stop) return TR("Stopped.");
+                if (step.Frames > 0 &&
+                    !WaitUntil([start, n = static_cast<uint64_t>(step.Frames)] { return s_Frames.load() >= start + n; },
+                               kFrameWaitTimeoutMs, s_Stop))
+                {
+                    if (s_Stop) return TR("Stopped.");
+                    CloseChatIfOpen();
+                    return where + TR("the game stopped drawing frames while typing; nothing more was typed and chat was closed.");
+                }
                 break;
+            }
             }
         }
         (void)sent;
@@ -449,6 +465,11 @@ bool Sender::Start(uint64_t aMacroId, const std::vector<MacroTree::Line>& aLines
     }
     s_JobCv.notify_one();
     return true;
+}
+
+void Sender::FrameRendered()
+{
+    s_Frames.fetch_add(1);
 }
 
 Sender::Status Sender::GetStatus()

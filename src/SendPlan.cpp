@@ -12,13 +12,14 @@ namespace SendPlan
 
     namespace
     {
-        void Add(Plan& p, EStep t, size_t line, std::string text = {}, int ms = 0)
+        void Add(Plan& p, EStep t, size_t line, std::string text = {}, int ms = 0, int frames = 0)
         {
             Step s;
-            s.Type = t;
-            s.Line = line;
-            s.Text = std::move(text);
-            s.Ms   = ms;
+            s.Type   = t;
+            s.Line   = line;
+            s.Text   = std::move(text);
+            s.Ms     = ms;
+            s.Frames = frames;
             p.Steps.push_back(std::move(s));
         }
 
@@ -181,9 +182,12 @@ namespace SendPlan
             else if (l.Channel == EChannel::Whisper)
             {
                 // "/w " moves the cursor to the recipient box; Tab moves on to the message box.
+                // Each move takes the game a few frames: pause before typing into the new box.
                 Add(plan, EStep::Type, i, "/w ");
+                Add(plan, EStep::Pause, i, {}, kPauseAfterWhisperCommandMs, kFramesAfterWhisperCommand);
                 Add(plan, EStep::Type, i, l.WhisperTo);
                 Add(plan, EStep::KeyTab, i);
+                Add(plan, EStep::Pause, i, {}, kPauseAfterTabMs, kFramesAfterTab);
                 Add(plan, EStep::Type, i, l.Message);
             }
             else

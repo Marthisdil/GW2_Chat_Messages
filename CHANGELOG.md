@@ -5,6 +5,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- **Whispers:** the message is typed again. The addon typed it right after Tab, before the game
+  had moved to the message box, so the message was lost and nothing was sent. It now waits a
+  moment after `/w` and after Tab.
+- **Error window:** it stays in front of the library window. Before, it could open behind it
+  (or end up there after a click in the library), so an error went unseen until the library was
+  closed.
+
 ### Changed
 - **New icon:** the Quick Access icon in the Nexus bar is now a speech bubble with a lightning
   bolt (it was a scroll), so it reads as "chat, fast" even at small sizes.

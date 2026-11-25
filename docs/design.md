@@ -645,9 +645,18 @@ Rules this addon follows:
   each Enter, wait for it to clear. If anything fails, close chat with a single Escape (only if
   the box is still focused, and only if we opened it: a chat box the user opened is never
   touched) and abort the rest of the macro.
-- **Avoid Tab where possible.** Whisper handling will be tested in game first, to look for a way
-  that needs no Tab. If Tab is needed, it is only sent while the whisper box is verified as
-  focused, and focus is verified as released afterwards.
+- **Tab only for whispers, only inside chat.** The game needs Tab for whispers (in-game check C2,
+  2026-11-25): it doesn't split `/w Name message` on a space, typed or pasted, so there's no way
+  around it. Tab is only sent while a chat box is focused, and focus is verified as released
+  afterwards (the Enter's wait).
+- **Whispers wait for the game's boxes.** `/w ` opens the recipient box and Tab moves to the
+  message box, and each takes the game a few frames: text typed sooner is lost (C1 failed on
+  2026-11-25 this way: the name went in, the message didn't, and Enter sent nothing). The plan
+  pauses 100 ms and 2 drawn frames after `/w `, and 200 ms and 3 drawn frames after Tab
+  (`SendPlan`, `kPauseAfterWhisperCommandMs`, `kPauseAfterTabMs` and their `kFrames...`), so a
+  low frame rate still gets enough time. The sender counts frames from the render callback
+  (`Sender::FrameRendered`); if none are drawn for 1.5 s it closes chat and stops with an error.
+  To be tuned in game.
 - **One macro at a time** runs on a dedicated sender thread. Triggers that arrive while a macro
   is sending are ignored. A 50 ms gap is left between lines (bhm uses 20 ms; to be tuned in game).
   Unload waits for the thread to finish.
