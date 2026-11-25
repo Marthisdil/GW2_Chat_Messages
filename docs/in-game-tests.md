@@ -16,7 +16,7 @@ Results so far (keep your notes in `docs\testing results.txt`; it isn't committe
 
 | Session | State | Notes |
 |---|---|---|
-| A1 | Passed (PR #15 build) | Re-check with the current build: the log and the options page show its version and build stamp, and the two links and the folders are new (A1's last part). |
+| A1 | Passed (PR #15 build) | Re-check with the current build: the log and the options page show its version and build stamp, the two links and the folders are new (A1's last part), and so is the icon (the quick bubble, 2026-11-25). |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text wraps and errors open the error window. Re-check those two points only (marked *Re-check* in A2), then go on to A3. |
 | A3 to R | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (H9 and H10, filters on folders, are the newest; then J11, export a selection; G4 to G6, favourites and recently sent, with G4 and G6 new for favourites shown everywhere, and R, backups and restore, are the newest; A1b, the example macros, and F9, the hotkey cooldown, came just before). |
 
@@ -55,7 +55,9 @@ describe what you saw even if nothing went wrong. A copy-paste template is at th
 (the build's version and stamp; `+changes` after the commit if it was built with uncommitted
 edits) and no warnings. Right-click the DLL > Properties > Details: File version and Product
 version show the version, Comments shows the same stamp.
-The scroll icon is in the Nexus bar. Clicking it opens and closes the library; so does your
+The chat bubble icon (a speech bubble with a lightning bolt, since 2026-11-25; re-check it with
+a build from then on) is in the Nexus bar, sharp at the bar's size, and turns cream while the
+mouse is over it. Clicking it opens and closes the library; so does your
 library key. Nexus > Options > Addons > Chat Messages shows the version, the build stamp under it
 ("Build abc1234, ..."), and an **Open macro library** button that works.
 Under the build stamp: **Chat Messages on GitHub** and **ArenaNet's macro policy** in the link
@@ -259,7 +261,7 @@ cooldown is still set (and the hotkey works at once). Set it back to `0`.
 
 ## G. Quick menu
 
-**G1. Right-click menu.** Right-click the scroll icon: the library shows as nested menus (empty
+**G1. Right-click menu.** Right-click the chat bubble icon: the library shows as nested menus (empty
 folders hidden). Hovering a macro shows its lines; clicking it sends it and closes the menu.
 Put a folder and a macro with the same name in one folder: both work.
 
@@ -675,7 +677,7 @@ coloured by channel, with its hotkey on the right and the line preview on hover.
 `zzz`: "No macro active here matches". **(question)** While typing in the box, did any letter, or
 the Enter, also reach the game (chat opening, a skill, movement)?
 
-**P8. Search in the Quick Access menu.** Right-click the scroll icon: the search box is there but
+**P8. Search in the Quick Access menu.** Right-click the chat bubble icon: the search box is there but
 not focused. Click it and type `say`: the same flat list. Click `Say` to send it. Close and reopen
 the menu: the box is empty. A macro that isn't active here (P6's `Emote` in WvW) never shows in the
 results.
@@ -702,7 +704,7 @@ off, overlapping or running out of a window, at the default and the biggest text
 correctly (no `?` boxes) in the library, the menus and the tooltips.
 
 **Q5. Names in Nexus.** With Nexus set to Deutsch, **Nexus > Options > Keybinds** shows the
-addon's two keybinds in German, and hovering the scroll icon shows a German tooltip.
+addon's two keybinds in German, and hovering the chat bubble icon shows a German tooltip.
 
 **Q6. A file of your own.** Click **Open localization folder**: Explorer opens
 `<GW2>\addons\GW2_Chat_Messages\localization\`. Copy `localization\template.json` from the

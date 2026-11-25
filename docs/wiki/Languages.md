@@ -24,7 +24,7 @@ Open **Nexus > Options**, go to the addon's page (the **General** tab), and use 
 Each language shows how much of it is translated, e.g. **Deutsch (100%)**. Texts that aren't
 translated are shown in English. The choice is remembered.
 
-The names of the addon's keybinds in **Nexus > Options > Keybinds**, and the scroll icon's
+The names of the addon's keybinds in **Nexus > Options > Keybinds**, and the chat bubble icon's
 tooltip, follow Nexus' language.
 
 <!-- screenshot: language-options.png (docs/screenshots.md) -->

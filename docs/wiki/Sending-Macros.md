@@ -100,7 +100,7 @@ macro again: 0 (off, the default) up to 600 (10 minutes).
 
 The quick menu shows your library as nested menus, so you can pick a macro with the mouse.
 
-- **Right-click the scroll icon** in the Nexus bar, or
+- **Right-click the chat bubble icon** in the Nexus bar, or
 - set a key for **Open Chat Messages quick menu** in Nexus > Options > Keybinds, to open it as a
   pop-up.
 

@@ -197,7 +197,7 @@ to the todo list", add it there (don't start building it). Move agreed items int
   only touched on the render thread. Never change the tree while drawing it: queue an `Action`
   and apply it after. Open popups at the main window's ID level, not from inside a child window.
 - `src/resource.h` + `src/GW2_Chat_Messages.rc`: Quick Access icons embedded as resource type
-  `PNG`, and the built-in language files (`localization/en|de|fr|es.json`) as type `LOCALE`. The icon is a scroll; regenerate it with `tools/draw_chat_icon.ps1 -OutDir resources\icons`.
+  `PNG`, and the built-in language files (`localization/en|de|fr|es.json`) as type `LOCALE`. The icon is a speech bubble with a lightning bolt (the "quick bubble"); regenerate it with `tools/draw_chat_icon.ps1 -OutDir resources\icons`.
   The other icon concepts that were considered are in `docs/icon-suggestions/` (README + SVGs).
 - `vendor/`: submodules `nexus`, `mumble`, `imgui` (tag v1.80) and `json` (nlohmann v3.11.3,
   shallow). Include json as `<nlohmann/json.hpp>`.

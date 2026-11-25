@@ -9,11 +9,11 @@
 
 1. Install Nexus and start the game once, so it creates `<GW2>\addons\`.
 2. Copy `GW2_Chat_Messages.dll` into `<GW2>\addons\`.
-3. Start the game. Nexus loads the addon, and a scroll icon appears in the Nexus bar
+3. Start the game. Nexus loads the addon, and a chat bubble icon appears in the Nexus bar
    (Quick Access).
 
 <!-- screenshot: nexus-quick-access.png (docs/screenshots.md) -->
-> 📷 *Screenshot to come: the scroll icon in the Nexus bar.*
+> 📷 *Screenshot to come: the chat bubble icon in the Nexus bar.*
 
 There is no public release yet. Until there is, build the DLL from source as described in the
 README.
