@@ -70,6 +70,14 @@ the first release.
   some engines flag it (false positives are common for DLLs that hook a game's window), and
   whether the release waits for the scan or the link is added afterwards.
 
+### Look at the layout of the macro settings (added 2026-11-25)
+
+Go over the layout of a macro's settings in the library window (the details pane on the right:
+name, lines, hotkey, filters, link file, the Send now / Preview buttons and the rest) to see
+whether it can be clearer: what goes where, in what order, what's grouped or folded away, and
+how it fits at small window sizes and bigger text sizes. Do it before the `Ui.cpp` cleanup
+below, so that cleanup works on the final layout.
+
 ### Cleanup PR for `Ui.cpp` after the in-game testing (added 2026-11-24)
 
 **Reminder (owner):** once every session in `docs/in-game-tests.md` has been run and passed,
