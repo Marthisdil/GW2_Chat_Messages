@@ -143,8 +143,7 @@ again each time the menu opens.
 <!-- screenshot: quick-menu-search.png (docs/screenshots.md) -->
 > 📷 *Screenshot to come: the quick menu with a search typed and its flat result list.*
 
-<!-- screenshot: quick-menu.png (docs/screenshots.md) -->
-> 📷 *Screenshot to come: the quick menu with a macro's line preview.*
+![The quick menu with a macro's line preview](../images/quick-menu.png)
 
 ## One at a time
 

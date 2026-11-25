@@ -36,10 +36,10 @@ changed gets a new description (and goes back to **Needed** if its picture is ou
 
 | # | File name | What to capture | Used in | Status |
 |---|---|---|---|---|
-| 1 | `library-window.png` | The whole library window: a few folders (e.g. *Raids › Wing 3*, *WvW*, *Guild*) with one expanded, and a macro selected so the editor shows on the right. The empty **Search (Ctrl+F)** box and the unticked **Only active in ...** checkbox show above the tree. | README, wiki Home, The macro library | Needed |
-| 2 | `chat-result.png` | The game's chat box right after sending a multi-line macro, showing two or three lines in different channels (e.g. squad, party, map). | README | Needed |
-| 3 | `quick-menu.png` | The quick menu open from right-clicking the chat bubble icon: the empty search box at the top, nested folders under it, and the mouse over a macro so its line preview shows. | README, Sending macros | Needed |
-| 4 | `nexus-quick-access.png` | The Nexus Quick Access bar with the chat bubble icon (the quick bubble, since 2026-11-25), mouse over it so the tooltip shows. A small crop is fine. | Installation | Needed |
+| 1 | `library-window.png` | The whole library window: a few folders (e.g. *Raids › Wing 3*, *WvW*, *Guild*) with one expanded, and a macro selected so the editor shows on the right. The empty **Search (Ctrl+F)** box and the unticked **Only active in ...** checkbox show above the tree. | README, wiki Home, The macro library | Captured (2026-11-25) |
+| 2 | `chat-result.png` | The game's chat box right after sending a multi-line macro, showing two or three lines in different channels (e.g. squad, party, map). | README | Captured (2026-11-25) |
+| 3 | `quick-menu.png` | The quick menu open from right-clicking the chat bubble icon: the empty search box at the top, nested folders under it, and the mouse over a macro so its line preview shows. | README, Sending macros | Captured (2026-11-25) |
+| 4 | `nexus-quick-access.png` | The Nexus Quick Access bar with the chat bubble icon (the quick bubble, since 2026-11-25), mouse over it so the tooltip shows. A small crop is fine. | Installation | Captured (2026-11-25) |
 | 5 | `nexus-game-keybinds.png` | Nexus > Options > Game Keybinds, showing the **Chat** (and **Squad Broadcast**) keys set. | Installation | Needed |
 | 6 | `tree-context-menu.png` | Right-click menu on a folder in the library tree (shows Export, Import into this folder, Sort...). | The macro library | Needed |
 | 7 | `macro-editor-lines.png` | The macro editor's **Lines** tab with 3-4 lines: a say line, a whisper with a recipient, a squad line with **Broadcast** ticked, and the character counters under the message boxes (ideally one long line with a yellow counter). | Editing macros | Needed |
@@ -74,3 +74,14 @@ changed gets a new description (and goes back to **Needed** if its picture is ou
 | 36 | `export-window.png` | The **Export** window: the library as a tree with tick boxes, one folder ticked with a sub-folder showing **[some]**, a macro outside it ticked, the "N folder(s) and M macro(s) ticked" line, a file name typed, and the **Save as a .json file** / **Copy to the clipboard** buttons. | Import and export | Needed |
 | 37 | `folder-filters.png` | The library with two or three folders that have filters, showing their tags (`Roaming  [WvW]`, `LA  [1 map]`), one of them dimmed because it isn't active here, and that folder selected: its details show **Where it's active** open with WvW ticked, a map listed, and "Not active here". | Filters | Needed |
 | 38 | `new-folder-modes.png` | The **New folder** name box with a name typed and **Active in:** PvE / WvW / PvP below it (WvW only ticked), and the "Maps: in the folder's details" line. | The macro library | Needed |
+
+## Retakes
+
+Captured pictures that work but could be better. Save the new picture in `docs\images\` under
+the same name, replacing the old one (the README and wiki already point to it), then remove its
+row here. Its row in the list above stays **Captured**.
+
+| Image | What to change | Noted |
+|---|---|---|
+| `chat-result.png` | The middle line is the game's red "No one hears you." because nobody was near for the **Say** line. Retake with someone nearby, or with a macro whose lines go to Party and Squad, so every line shows as sent. | 2026-11-25 |
+| `quick-menu.png` | No line preview shows: retake with the mouse resting over a macro (e.g. **Two channels**) so its lines appear next to the menu, as the row asks. The search box's hint is also cut off ("Search (Enter sends the f..."); retake after that's fixed. | 2026-11-25 |

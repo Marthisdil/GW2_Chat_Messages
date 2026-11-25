@@ -11,8 +11,7 @@ Chat macros for Guild Wars 2, as a [Nexus](https://raidcore.gg/Nexus) addon.
 GW2 Chat Messages keeps your chat macros in a library you organise yourself, and types them into
 chat for you, from a hotkey, a menu or a button.
 
-<!-- screenshot: library-window.png (docs/screenshots.md) -->
-> 📷 *Screenshot to come: the macro library window.*
+![The macro library window](docs/images/library-window.png)
 
 - **Folders:** keep macros in folders nested up to 6 levels deep (for example
   expansion › map › event), or at the top level. Drag and drop to rearrange, or sort A–Z.
@@ -58,11 +57,9 @@ chat for you, from a hotkey, a menu or a button.
   choice. Every message and key name is translated, and map names come in your language where
   the GW2 API has them. More languages can be added with a file (see [Contributing](#contributing)).
 
-<!-- screenshot: chat-result.png (docs/screenshots.md) -->
-> 📷 *Screenshot to come: a multi-line macro sent to several chat channels.*
+![A multi-line macro sent to several chat channels](docs/images/chat-result.png)
 
-<!-- screenshot: quick-menu.png (docs/screenshots.md) -->
-> 📷 *Screenshot to come: the quick menu.*
+![The quick menu](docs/images/quick-menu.png)
 
 ## Quick start
 

@@ -12,8 +12,7 @@
 3. Start the game. Nexus loads the addon, and a chat bubble icon appears in the Nexus bar
    (Quick Access).
 
-<!-- screenshot: nexus-quick-access.png (docs/screenshots.md) -->
-> 📷 *Screenshot to come: the chat bubble icon in the Nexus bar.*
+![The chat bubble icon in the Nexus bar](../images/nexus-quick-access.png)
 
 There is no public release yet. Until there is, build the DLL from source as described in the
 README.
