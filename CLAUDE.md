@@ -235,7 +235,7 @@ to the todo list", add it there (don't start building it). Move agreed items int
 - **Screenshots, at every build:** before building, run
   `powershell -NoProfile -ExecutionPolicy Bypass -File tools\update_screenshots.ps1`. It puts any
   new PNG from `docs\images\` into its placeholders in README.md and `docs/wiki/` and marks its
-  row in `docs/screenshots.md` "Captured". Tell the user what was captured, and ask about any file
+  row in `docs/screenshots.md` "Captured", moving it to the "Done" table. Tell the user what was captured, and ask about any file
   it lists as "Not in the list". Captured images go into the current branch's PR.
 - **In-game tests and screenshots, after every build or update** (owner, 2026-11-23): check
   what the build changed against `docs/in-game-tests.md` and `docs/screenshots.md`, and update
@@ -248,6 +248,13 @@ to the todo list", add it there (don't start building it). Move agreed items int
   (back to "Needed" if its picture is now out of date). Also add, change or remove the checks in
   `docs/in-game-tests.md` that the change affects, and keep its "Progress" table current with the
   user's results.
+- **Done sections (owner, 2026-11-25):** both lists show only what's still to do at the top.
+  An in-game check that passes (or fails, is fixed and passes its re-check) moves, text and
+  Progress row, to "Done (passed checks)" at the bottom of `docs/in-game-tests.md`. A captured
+  picture with no retake pending is in the "Done" table at the bottom of `docs/screenshots.md`
+  (under "Retakes"); one waiting on a retake stays in the list as "Captured, retake". When a
+  change means a done check must run again or a done picture is out of date, move it back up
+  (the check into its session and the Progress table; the picture's row to "Needed").
 - The repo is in Dropbox. Compile-time PDB writes (`/Zi`) fail under `C:\Dropbox` with
   `C1090 PDB API call failed`. Use `DebugInformationFormat=OldStyle` (`/Z7`) for Debug.
 - Locally only the VS 2026 v145 toolset is installed; CI (windows-2022) uses v143. Build locally with

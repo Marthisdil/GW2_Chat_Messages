@@ -2,7 +2,7 @@
 # For every row marked "Needed" whose PNG now exists in docs\images\:
 #   - each "<!-- screenshot: name.png ... -->" placeholder in README.md and docs\wiki\*.md is
 #     replaced with the image (README: docs/images/..., wiki pages: ../images/...),
-#   - the row is marked "Captured (date)".
+#   - the row is marked "Captured (date)" and moved to the table under "## Done".
 # Also lists PNGs in docs\images\ that aren't in the table. Changes nothing else.
 # Usage: powershell -NoProfile -ExecutionPolicy Bypass -File tools\update_screenshots.ps1
 $ErrorActionPreference = "Stop"
@@ -13,6 +13,23 @@ $utf8   = New-Object System.Text.UTF8Encoding $false
 
 function Read-Text($path)  { [System.IO.File]::ReadAllText($path, $utf8) }
 function Write-Text($path, $text) { [System.IO.File]::WriteAllText($path, $text, $utf8) }
+
+# Moves the row for one (regex-escaped) file name to the end of the table under "## Done".
+function Move-ToDone($text, $escaped) {
+    $nl = if ($text.Contains("`r`n")) { "`r`n" } else { "`n" }
+    $m = [regex]::Match($text, '(?m)^\| \d+ \| `' + $escaped + '` \|[^\r\n]*\r?\n')
+    $d = [regex]::Match($text, '(?m)^## Done\r?$')
+    if (-not $m.Success -or -not $d.Success -or $m.Index -gt $d.Index) { return $text }
+    $line = $m.Value.TrimEnd("`r", "`n")
+    $text = $text.Remove($m.Index, $m.Length)
+    $d = [regex]::Match($text, '(?m)^## Done\r?$')
+    $rows = [regex]::Matches($text.Substring($d.Index), '(?m)^\|[^\r\n]*\r?\n?')
+    if ($rows.Count -eq 0) { return $text }
+    $last = $rows[$rows.Count - 1]
+    $at = $d.Index + $last.Index + $last.Length
+    $insert = if ($last.Value.EndsWith("`n")) { $line + $nl } else { $nl + $line }
+    return $text.Insert($at, $insert)
+}
 
 $table = Read-Text $list
 $rowPattern = '(?m)^\| (\d+) \| `([^`]+\.png)` \|(.*)\| Needed \|\r?$'
@@ -42,6 +59,7 @@ foreach ($name in $needed) {
     }
     $row = '(?m)^(\| \d+ \| `' + $escaped + '` \|.*\| )Needed( \|)\r?$'
     $table = [regex]::Replace($table, $row, "`${1}Captured ($today)`${2}")
+    $table = Move-ToDone $table $escaped
     $done += $name
 }
 if ($done.Count -gt 0) { Write-Text $list $table }
