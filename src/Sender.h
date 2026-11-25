@@ -36,6 +36,9 @@ namespace Sender
     // Safe to call from any thread (render thread, keybind threads).
     bool Start(uint64_t aMacroId, const std::vector<MacroTree::Line>& aLines, std::string& aError);
 
+    // Render thread, once per frame: the sender's whisper pauses count drawn frames.
+    void FrameRendered();
+
     Status GetStatus();
     bool   IsBusy();
 

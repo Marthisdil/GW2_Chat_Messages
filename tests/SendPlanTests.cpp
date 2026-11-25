@@ -46,6 +46,7 @@ static void TestTwoLinesPause()
     CHECK(p.LinesToSend == 2);
     CHECK(p.Steps.size() == 11);
     CHECK(p.Steps[5].Type == EStep::Pause && p.Steps[5].Ms == kPauseBetweenLinesMs);
+    CHECK(p.Steps[5].Frames == 0); // between lines: time only, chat is closed
     CHECK(p.Steps[8].Text == "/p b" && p.Steps[8].Line == 1);
 }
 
@@ -60,8 +61,10 @@ static void TestWhisper()
     // The game needs time to open the recipient box and, after Tab, to move to the message box:
     // text typed sooner is lost (in-game check C1).
     CHECK(p.Steps[3].Ms == kPauseAfterWhisperCommandMs && p.Steps[3].Ms >= 50);
+    CHECK(p.Steps[3].Frames == kFramesAfterWhisperCommand && p.Steps[3].Frames >= 2);
     CHECK(p.Steps[4].Text == "Some Name");
     CHECK(p.Steps[6].Ms == kPauseAfterTabMs && p.Steps[6].Ms >= 100);
+    CHECK(p.Steps[6].Frames == kFramesAfterTab && p.Steps[6].Frames >= 2);
     CHECK(p.Steps[7].Text == "hi there");
     for (const Step& s : p.Steps) CHECK(s.Line == 0);
 

@@ -773,6 +773,7 @@
     "chat closed before the whisper message.": "der Chat wurde vor der Flüsternachricht geschlossen.",
     "chat closed before sending.": "der Chat wurde vor dem Senden geschlossen.",
     "the game didn't take the message; chat was closed.": "das Spiel hat die Nachricht nicht angenommen; der Chat wurde geschlossen.",
+    "the game stopped drawing frames while typing; nothing more was typed and chat was closed.": "das Spiel hat beim Tippen keine Bilder mehr gezeichnet; es wurde nichts mehr getippt und der Chat wurde geschlossen.",
     "Internal error while sending: ": "Interner Fehler beim Senden: ",
     "Internal error while sending.": "Interner Fehler beim Senden.",
     "Sent 1 line.": "1 Zeile gesendet.",
