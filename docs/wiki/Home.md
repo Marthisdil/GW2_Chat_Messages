@@ -34,5 +34,5 @@ chat macros in folders and types them into chat for you.
 1. Open the library by left-clicking the chat bubble icon in the Nexus bar. On the first run it has
    an [Examples folder](The-Macro-Library#the-examples-folder) to look at and try.
 2. Make a macro: give it one or more lines, each with its own channel and message.
-3. Send it with **Send now**, a hotkey of your own, or the quick menu (right-click the scroll
-   icon).
+3. Send it with **Send now**, a hotkey of your own, or the quick menu (right-click the chat
+   bubble icon).
