@@ -5,8 +5,9 @@ Items here are **not decided**. Once an item is agreed, move it into `docs/desig
 and remove it here.
 
 The sections are in priority order (ranked 2026-11-23, updated the same day after the security
-scan plan): release blockers first, then quick wins, bigger features, later items, and new ideas
-still to discuss. Within each section, items are in priority order too.
+scan plan; sections 1 and 5 re-ranked 2026-11-24): release blockers first, then quick wins,
+bigger features, later items, and new ideas still to discuss. Within each section, items are in
+priority order too.
 
 ## 1. Before a first public release
 
@@ -14,16 +15,6 @@ still to discuss. Within each section, items are in priority order too.
 
 Work through `docs/in-game-tests.md` (A1 passed, A2 mostly; the rest is still to do). Session B,
 whether the game takes the addon's keys and text, matters most: everything else depends on it.
-
-### Cleanup PR for `Ui.cpp` after the in-game testing (added 2026-11-24)
-
-**Reminder (owner):** once every session in `docs/in-game-tests.md` has been run and passed,
-make one cleanup PR for `src/Ui.cpp` alone (about 4,200 lines, no unit tests): run `/simplify`
-on it, with no feature changes in the same PR. Rules from `CLAUDE.md` ("`/simplify`"): behaviour
-stays the same (texts, popup IDs, JSON keys, the `Action` queue), the input path is left out,
-then the build, the tests, `/code-review`, and the in-game checks of every screen it touched,
-named in the PR. Not before the in-game testing, so a break can't be mixed up with a feature
-bug.
 
 ### Whispers without Tab
 
@@ -63,6 +54,16 @@ the first release.
   SHA-256 to the release notes. The key would be a GitHub Actions secret. Also: what to do when
   some engines flag it (false positives are common for DLLs that hook a game's window), and
   whether the release waits for the scan or the link is added afterwards.
+
+### Cleanup PR for `Ui.cpp` after the in-game testing (added 2026-11-24)
+
+**Reminder (owner):** once every session in `docs/in-game-tests.md` has been run and passed,
+make one cleanup PR for `src/Ui.cpp` alone (about 4,200 lines, no unit tests): run `/simplify`
+on it, with no feature changes in the same PR. Rules from `CLAUDE.md` ("`/simplify`"): behaviour
+stays the same (texts, popup IDs, JSON keys, the `Action` queue), the input path is left out,
+then the build, the tests, `/code-review`, and the in-game checks of every screen it touched,
+named in the PR. Not before the in-game testing, so a break can't be mixed up with a feature
+bug.
 
 ## 2. Quick wins
 
@@ -261,9 +262,16 @@ owner 2026-11-23, documented in the README and the wiki's Sending Macros page). 
 
 ## 5. New ideas to discuss (suggested 2026-11-23)
 
-Ranked 2026-11-23: low risk and most use first. Preview, cooldown, favourites, the starter
-library and backups moved up to section 2. Filters by character or profession were dropped (not needed), and timed
-lines moved to section 3 for more discussion (owner, 2026-11-23).
+Ranked 2026-11-23: low risk and most use first (re-ranked 2026-11-24: Duplicate first, then
+the clipboard fallback before the character placeholders). Preview, cooldown, favourites, the
+starter library and backups moved up to section 2. Filters by character or profession were
+dropped (not needed), and timed lines moved to section 3 for more discussion (owner,
+2026-11-23).
+
+### Duplicate a macro
+
+Right-click > **Duplicate** makes "Name (2)" next to it, with the same lines and filters but no
+hotkey (a hotkey must stay unique). Quick to build; handy for variants of one callout.
 
 ### A random pick inside the macro: `{pick a|b|c}`
 
@@ -274,6 +282,12 @@ part of `{txt}` (a random line) with no file reading: every choice is written in
   allowed, and a limit on the number of choices. The chosen text is a value, so the SEC-013
   mask applies (it can't start a command), and the length check uses the longest choice.
 
+### Copy to clipboard as a fallback
+
+When a send is refused (game not focused, a text box already open...), offer "Copy the text"
+so the user can paste it themselves. The sender itself still never uses the clipboard; this is
+only a user action, and only for one line at a time (or all lines joined).
+
 ### Character placeholders: `{name}`, `{profession}`, `{spec}`
 
 From MumbleLink's identity (already read for the map), e.g. "LF2M, {spec} here".
@@ -281,12 +295,6 @@ From MumbleLink's identity (already read for the map), e.g. "LF2M, {spec} here".
 - Points to settle: profession and specialization names in the user's language (the GW2 API
   gives them; ids alone come from MumbleLink), and what to send when the identity isn't there
   yet (an error, like an unknown map).
-
-### Copy to clipboard as a fallback
-
-When a send is refused (game not focused, a text box already open...), offer "Copy the text"
-so the user can paste it themselves. The sender itself still never uses the clipboard; this is
-only a user action, and only for one line at a time (or all lines joined).
 
 ### Import macros from Blish HUD's chat macro module (added 2026-11-24)
 
@@ -311,9 +319,6 @@ player moving from Blish HUD to Nexus doesn't have to type them all again?
 
 ### More ideas (suggested 2026-11-23, not ranked yet)
 
-- **Duplicate a macro:** right-click > **Duplicate** makes "Name (2)" next to it, with the same
-  lines and filters but no hotkey (a hotkey must stay unique). Quick to build; handy for
-  variants of one callout.
 - **Notes on a macro:** a free-text note that's never sent (what it's for, when to use it),
   shown in the editor and in the quick menu's hover preview.
 - **Ask before sending to a big channel:** a per-macro "ask first" box, so a macro for Map,
