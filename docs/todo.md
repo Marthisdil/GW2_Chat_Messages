@@ -5,7 +5,7 @@ Items here are **not decided**. Once an item is agreed, move it into `docs/desig
 and remove it here.
 
 The sections are in priority order (ranked 2026-11-23, updated the same day after the security
-scan plan; sections 1 and 5 re-ranked 2026-11-24): release blockers first, then quick wins,
+scan plan; sections 1 and 5 re-ranked 2026-11-24; section 2 refilled from section 5 on 2026-11-26): release blockers first, then quick wins,
 bigger features, later items, and new ideas still to discuss. Within each section, items are in
 priority order too.
 
@@ -131,7 +131,69 @@ everywhere whatever the filters, folders too, at most 10 ("Features"), all on 20
 
 Re-ranked 2026-11-23 after the starter library: smallest and safest first. "Export a selection"
 (owner, 2026-11-24) was built the same day ("Import / export"), and so were filters on folders
-("Features", Filters). Nothing is left here: the next quick wins come from section 5.
+("Features", Filters).
+
+Refilled 2026-11-26 (owner): six items moved up from section 5, all small, low risk and useful
+to everyone, smallest first.
+
+### Duplicate a macro
+
+Right-click > **Duplicate** makes "Name (2)" next to it, with the same lines and filters but no
+hotkey (a hotkey must stay unique). Quick to build; handy for variants of one callout.
+
+**Advanced option?** No (2026-11-26): an everyday edit, nothing surprising.
+
+### Refresh the map list after a game update (added 2026-11-25)
+
+The map list (`maps.json`) is fetched on the first run, once a week, on a language change, and by
+**Refresh map list**. New maps arrive with game updates, so fetch it again soon after the game is
+updated. Possible signal: MumbleLink's `Context.BuildID` (the game's build number, in
+`vendor/mumble`): remember the last one seen in `maps.json` or `settings.json`, and when it
+changes, start a background refresh (the same one as the weekly refresh, on the worker thread).
+Points to settle: whether `BuildID` is filled in before the first map load, a small delay so a
+refresh doesn't start during the loading screen, and that the GW2 API may list a new map a little
+after the patch (maybe refresh again a day later).
+
+**Advanced option?** No: it's automatic and invisible, and helps everyone. With it, the
+**Refresh map list** button matters even less.
+
+### Own language files outside Advanced options? (added 2026-11-25)
+
+Your own language files (the `localization` folder, **Open localization folder**, **Reload
+language files**) went behind the **Advanced options** box on 2026-11-25. Consider moving them
+back out: players who speak several languages may use a language file regularly without wanting
+any of the other advanced features. Points to settle:
+- whether the files are read only after a separate, smaller opt-in (for example a "Use language
+  files from the localization folder" box next to the Language dropdown), since they're an
+  untrusted input (`docs/security-review.md`) and the folder isn't read at all while the box is
+  off today;
+- what the Language dropdown shows meanwhile, so the feature is easy to find;
+- the wiki's Advanced options and Languages pages, the S2/S3 and Q6 in-game checks, and the
+  `language-options.png` row change with it.
+
+**Advanced option?** That's the question itself: leaning towards no (useful to many, nothing
+surprising once chosen), with its own small opt-in.
+
+### Notes on a macro (suggested 2026-11-23)
+
+A free-text note that's never sent (what it's for, when to use it), shown in the editor and in
+the quick menu's hover preview.
+
+**Advanced option?** No (2026-11-26): never sent, useful to anyone.
+
+### Split a long line (suggested 2026-11-23)
+
+When a line is over 199 characters, offer to split it into two lines on the same channel at a
+word break, instead of only showing it in red.
+
+**Advanced option?** No (2026-11-26): it only fixes a line that can't be sent as it is.
+
+### Keyboard use of the quick menu pop-up (suggested 2026-11-23)
+
+Up/down arrows to move through the search results and Enter to send the highlighted one (today
+Enter sends the first). Must never let the keys reach the game.
+
+**Advanced option?** No (2026-11-26): plain menu navigation.
 
 ## 3. Bigger features
 
@@ -159,6 +221,9 @@ Points to settle:
 - Icon style: which 30 icons (callouts, emotes, LFG, guild, trade, waypoint...), how they look
   next to the GW2 UI, and whether users may add their own images later.
 - Whether the same icon may be used for several macros.
+
+**Advanced option?** No (2026-11-26): a way to send, like the quick menu; it's off until the
+user turns the window on anyway.
 
 ### Emote list, and which emotes the player has (added 2026-11-21)
 
@@ -196,6 +261,8 @@ To look into (none of this is checked yet):
 - **UI idea:** an "Emote..." picker next to the line's message box (search box + list), which
   fills in `/command`. It could share the pop-up idea of the special character picker.
 
+**Advanced option?** No (2026-11-26): a picker that fills in a normal chat command.
+
 ### Special character picker (added 2026-11-20)
 
 Add an icon next to the message box that opens a small window of special characters, so they can
@@ -211,6 +278,8 @@ be clicked into a message.
   - Grouping (arrows, symbols, shapes...), a "recently used" row, and inserting at the text
     cursor rather than at the end of the message.
   - Each special character counts toward the 199-character limit (one or two units).
+
+**Advanced option?** No (2026-11-26): it only inserts text.
 
 ### Timed lines ("Pull in 5... 4... 3...") (moved from section 5, 2026-11-23, for more discussion)
 
@@ -332,43 +401,8 @@ Ranked 2026-11-23: low risk and most use first (re-ranked 2026-11-24: Duplicate 
 the clipboard fallback before the character placeholders). Preview, cooldown, favourites, the
 starter library and backups moved up to section 2. Filters by character or profession were
 dropped (not needed), and timed lines moved to section 3 for more discussion (owner,
-2026-11-23).
-
-### Own language files outside Advanced options? (added 2026-11-25)
-
-Your own language files (the `localization` folder, **Open localization folder**, **Reload
-language files**) went behind the **Advanced options** box on 2026-11-25. Consider moving them
-back out: players who speak several languages may use a language file regularly without wanting
-any of the other advanced features. Points to settle:
-- whether the files are read only after a separate, smaller opt-in (for example a "Use language
-  files from the localization folder" box next to the Language dropdown), since they're an
-  untrusted input (`docs/security-review.md`) and the folder isn't read at all while the box is
-  off today;
-- what the Language dropdown shows meanwhile, so the feature is easy to find;
-- the wiki's Advanced options and Languages pages, the S2/S3 and Q6 in-game checks, and the
-  `language-options.png` row change with it.
-
-**Advanced option?** That's the question itself: leaning towards no (useful to many, nothing
-surprising once chosen), with its own small opt-in.
-
-### Refresh the map list after a game update (added 2026-11-25)
-
-The map list (`maps.json`) is fetched on the first run, once a week, on a language change, and by
-**Refresh map list**. New maps arrive with game updates, so fetch it again soon after the game is
-updated. Possible signal: MumbleLink's `Context.BuildID` (the game's build number, in
-`vendor/mumble`): remember the last one seen in `maps.json` or `settings.json`, and when it
-changes, start a background refresh (the same one as the weekly refresh, on the worker thread).
-Points to settle: whether `BuildID` is filled in before the first map load, a small delay so a
-refresh doesn't start during the loading screen, and that the GW2 API may list a new map a little
-after the patch (maybe refresh again a day later).
-
-**Advanced option?** No: it's automatic and invisible, and helps everyone. With it, the
-**Refresh map list** button matters even less.
-
-### Duplicate a macro
-
-Right-click > **Duplicate** makes "Name (2)" next to it, with the same lines and filters but no
-hotkey (a hotkey must stay unique). Quick to build; handy for variants of one callout.
+2026-11-23). Duplicate, the map refresh after a game update, own language files, notes, split a
+long line and the quick menu keyboard moved up to section 2 (owner, 2026-11-26).
 
 ### A random pick inside the macro: `{pick a|b|c}`
 
@@ -401,6 +435,8 @@ From MumbleLink's identity (already read for the map), e.g. "LF2M, {spec} here".
   gives them; ids alone come from MumbleLink), and what to send when the identity isn't there
   yet (an error, like an unknown map).
 
+**Advanced option?** No (2026-11-26): like `{map}`, it fills in text from MumbleLink.
+
 ### Import macros from Blish HUD's chat macro module (added 2026-11-24)
 
 Could the Import window read the macros someone made in Blish HUD's chat macro module ("chat
@@ -422,27 +458,26 @@ player moving from Blish HUD to Nexus doesn't have to type them all again?
     file in Blish HUD's usual folder or the user copies it into `imports\`.
   - Whether its export or share format (if it has one) is easier to read than its saved file.
 
+**Advanced option?** No (2026-11-26): players moving from Blish HUD are new users, who start
+with the box off.
+
 ### More ideas (suggested 2026-11-23, not ranked yet)
 
-- **Notes on a macro:** a free-text note that's never sent (what it's for, when to use it),
-  shown in the editor and in the quick menu's hover preview.
 - **Ask before sending to a big channel:** a per-macro "ask first" box, so a macro for Map,
   Squad broadcast or Guild shows a small Yes/No before it types anything. Guards against a wrong
   click in the quick menu. Points to settle: whether hotkeys skip it, and where the question
-  shows (a Nexus alert can't take a click).
+  shows (a Nexus alert can't take a click). Advanced option? No (2026-11-26): it's a safety
+  feature.
 - **Your own text values:** placeholders you define once on the options page, like
   `{v:guild}` = "[TAG] My Guild" or `{v:raid}` = "Wing 4", used in many macros and changed in one
   place. Text only, never files or addresses (the SEC-013 mask applies, as for `{map}`).
   **Advanced option (owner, 2026-11-25):** behind the **Advanced options** checkbox when built.
-- **Split a long line:** when a line is over 199 characters, offer to split it into two lines on
-  the same channel at a word break, instead of only showing it in red.
 - **Send to another channel once:** right-click a macro in the quick menu > "Send to..." with a
   channel list, so a Say macro can go to Party once without editing it. Whisper lines keep their
-  recipient.
-- **Keyboard use of the quick menu pop-up:** up/down arrows to move through the search results
-  and Enter to send the highlighted one (today Enter sends the first). Must never let the keys
-  reach the game.
+  recipient. Advanced option? No (2026-11-26).
 - **Undo for edits:** Ctrl+Z in the library for the last few changes (rename, move, delete, line
   edits), like Undo import but for everyday edits. Bigger; needs a snapshot or change list.
+  Advanced option? No (2026-11-26).
 - **Favourites in your own order:** drag favourites into an order of their own in the quick
-  menu, instead of library order (the first version uses library order).
+  menu, instead of library order (the first version uses library order). Advanced option? No
+  (2026-11-26).
