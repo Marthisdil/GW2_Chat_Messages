@@ -153,8 +153,7 @@ to the todo list", add it there (don't start building it). Move agreed items int
 - `src/Advanced.*`: the "Advanced options" checkbox's rules: which macros use a feature behind it
   (`Uses`, `Count`), which can't be sent while it's off (`Blocked`: linked macros), the cooldown
   in effect (`CooldownSec`), and the `"advanced_options"` setting (`FromSettings`, off unless
-  saved as true). `Ui.cpp` hides the features while it's off; `Languages::UseFolder` stops
-  reading the language folder. Settings are always kept. A new feature behind the box: add its
+  saved as true). `Ui.cpp` hides the features while it's off. Settings are always kept. A new feature behind the box: add its
   rule here, and hide it in the UI. No Nexus or ImGui dependency. Tested by `tests/AdvancedTests.cpp`.
 - `src/Cooldown.*`: the hotkey cooldown and the 1-second guard after a send (`Tracker`), per
   macro; only hotkeys wait. No Nexus or ImGui dependency. Tested by `tests/CooldownTests.cpp`.
@@ -205,7 +204,12 @@ to the todo list", add it there (don't start building it). Move agreed items int
   dependency. Tested by `tests/LocalizationTests.cpp`.
   `src/Languages.*`: loads the built-in languages (resource type `LOCALE`) and
   `<addon>\localization\*.json`, follows Nexus' language, gives Nexus the keybind names, and
-  saves the `language` setting. Language files are an untrusted input
+  saves the `language` setting. The localization folder is read only after its own opt-in
+  (`Languages::UseFolder`, the `"own_language_files"` setting: `Localization::OwnFilesFromSettings`),
+  not Advanced options. Language files have a `"Format"` (`Localization::kFormat`; no field = 1);
+  a newer one is used for what this version understands (`FromNewer`), unknown fields are
+  ignored, and a text this version doesn't use counts as `Unused`, not a problem. Tested by
+  `tests/LocalizationTests.cpp` with `tests/samples/language_format1.json`. Language files are an untrusted input
   (`docs/security-review.md`). `CONTRIBUTING.md` is the translators' guide.
 - `src/SendPlan.*`: turns a macro's lines into the exact send steps (open chat, wait, type, Tab
   for whispers, Enter, wait) and validates them. No Nexus or ImGui dependency. Tested by

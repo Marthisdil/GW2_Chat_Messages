@@ -7,6 +7,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include <nlohmann/json.hpp>
+
 #include "Localization.h"
 #include "TestCheck.h"
 
@@ -78,7 +80,9 @@ static void TestParse()
     CHECK(c.Id == "de" && c.DisplayName == "Deutsch" && c.AddonVersion == "1");
     CHECK(c.Texts.size() == 2 && c.Texts["Sent %s"] == "%s gesendet");
     CHECK(c.Texts["Open macro library"] == "Makrobibliothek \xC3\xB6" "ffnen");
-    CHECK(c.Skipped == 1 && c.SkipNotes.size() == 1); // "Unknown text"; the empty one isn't a problem
+    // "Unknown text" isn't one this version uses: left out quietly, not a problem; nor is the empty one.
+    CHECK(c.Skipped == 0 && c.SkipNotes.empty() && c.Unused == 1);
+    CHECK(c.Format == 1 && !c.FromNewer); // no "Format": format 1
     CHECK(PercentDone(c, known) == 66);
 
     // Texts that fail a check are skipped, the rest of the file is used.
@@ -175,6 +179,65 @@ static void TestTranslate()
 
 // The files in localization\: every one parses with nothing skipped, and the built-in languages
 // translate every text.
+// Files from other versions (docs/design.md, "Languages", "Language file format").
+static void TestFormats()
+{
+    const std::unordered_set<std::string> known = {"Open macro library", "Sent %s", "Delete"};
+    Catalog c;
+    std::string err;
+
+    // The sample of format 1: every field it can have; "About" and "Unused" are ignored.
+    CHECK(ParseCatalog(File("tests/samples/language_format1.json"), &known, c, err));
+    CHECK(c.Format == 1 && !c.FromNewer && c.Id == "de" && c.AddonVersion == "2026.11.26.0000.Dev");
+    CHECK(c.Texts.size() == 2 && c.Texts.count("Open macro library") && !c.Texts.count("Open the macro library"));
+    CHECK(c.Skipped == 0 && c.Unused == 0);
+
+    // A newer file: what this version understands is used; new fields and new texts are ignored
+    // quietly; a text that fails a check is still skipped on its own.
+    const std::string newer = "{\"Format\": 2, \"Identifier\": \"de\", \"DisplayName\": \"Deutsch\","
+                              " \"Plurals\": {\"one\": 1}, \"Notes\": \"new\", \"Texts\": {"
+                              " \"Sent %s\": \"%s gesendet\","
+                              " \"A text from a newer version\": \"Neu\","
+                              " \"Delete\": \"Löschen %d\" } }";
+    CHECK(ParseCatalog(newer, &known, c, err));
+    CHECK(c.Format == 2 && c.FromNewer);
+    CHECK(c.Texts.size() == 1 && c.Texts["Sent %s"] == "%s gesendet");
+    CHECK(c.Unused == 1 && c.Skipped == 1); // the new text; the %-code mismatch
+    // A text stored another way in a newer format: English, quietly (a format-1 file: a problem).
+    const std::string shape = "{\"Format\": 2, \"Identifier\": \"de\", \"DisplayName\": \"x\","
+                              " \"Texts\": { \"Delete\": {\"text\": \"Löschen\"} } }";
+    CHECK(ParseCatalog(shape, &known, c, err) && c.Texts.empty() && c.Unused == 1 && c.Skipped == 0);
+    std::string shape1 = shape;
+    shape1.replace(shape1.find("2"), 1, "1");
+    CHECK(ParseCatalog(shape1, &known, c, err) && c.Unused == 0 && c.Skipped == 1);
+
+    // An older file (texts since reworded or removed): the rest is used, text by text.
+    const std::string older = "{\"Identifier\": \"fr\", \"DisplayName\": \"Français\", \"AddonVersion\": \"0.1\","
+                              " \"Texts\": { \"Open the library\": \"Ouvrir\", \"Delete\": \"Supprimer\" } }";
+    CHECK(ParseCatalog(older, &known, c, err) && c.Texts.size() == 1 && c.Texts["Delete"] == "Supprimer");
+    CHECK(c.Unused == 1 && c.Skipped == 0 && PercentDone(c, known) == 33);
+
+    // Odd "Format" values: never an error; huge ones stay newer, the rest read as 1.
+    const char* const odd[][2] = {{"\"x\"", "1"}, {"0", "1"}, {"-5", "1"}, {"1.9", "1"}, {"null", "1"},
+                                  {"[2]", "1"}, {"3", "3"}, {"1e300", "1000000"}, {"2.5", "2"}};
+    for (const auto& o : odd)
+    {
+        const std::string doc = std::string("{\"Format\": ") + o[0] + ", \"Identifier\": \"de\", \"DisplayName\": \"x\", \"Texts\": {}}";
+        CHECK(ParseCatalog(doc, &known, c, err) && c.Format == std::stoi(o[1]));
+        CHECK(c.FromNewer == (c.Format > kFormat));
+    }
+
+    // The opt-in for your own language files: off unless saved as true.
+    CHECK(!OwnFilesFromSettings(nlohmann::json::object()));
+    CHECK(!OwnFilesFromSettings(nlohmann::json::parse("{\"own_language_files\": false}")));
+    CHECK(!OwnFilesFromSettings(nlohmann::json::parse("{\"own_language_files\": 1}")));
+    CHECK(!OwnFilesFromSettings(nlohmann::json::parse("{\"own_language_files\": \"true\"}")));
+    CHECK(!OwnFilesFromSettings(nlohmann::json::parse("[true]")));
+    CHECK(OwnFilesFromSettings(nlohmann::json::parse("{\"own_language_files\": true}")));
+    // Not tied to Advanced options any more.
+    CHECK(!OwnFilesFromSettings(nlohmann::json::parse("{\"advanced_options\": true}")));
+}
+
 static void TestShippedFiles()
 {
     const std::string enText = File("localization/en.json");
@@ -194,7 +257,7 @@ static void TestShippedFiles()
         Catalog c;
         const bool ok = ParseCatalog(File(path), &known, c, err);
         CHECK(ok);
-        CHECK(c.Skipped == 0);
+        CHECK(c.Skipped == 0 && c.Unused == 0 && c.Format == kFormat);
         for (const std::string& n : c.SkipNotes) std::printf("  %s: %s\n", path, n.c_str());
         CHECK(PercentDone(c, known) == 100);
         if (PercentDone(c, known) < 100)
@@ -211,6 +274,7 @@ void RunLocalizationTests()
     TestSafeText();
     TestPlaceholders();
     TestParse();
+    TestFormats();
     TestLookup();
     TestTranslate();
     TestShippedFiles();

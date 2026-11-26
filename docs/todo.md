@@ -138,6 +138,8 @@ Re-ranked 2026-11-23 after the starter library: smallest and safest first. "Expo
 
 Refilled 2026-11-26 (owner): six items moved up from section 5, all small, low risk and useful
 to everyone, smallest first.
+Own language files outside Advanced options (their own opt-in) and the future compatibility of
+language files were built on 2026-11-26 ("Languages", in `docs/design.md`).
 
 ### Duplicate a macro
 
@@ -159,47 +161,6 @@ after the patch (maybe refresh again a day later).
 
 **Advanced option?** No: it's automatic and invisible, and helps everyone. With it, the
 **Refresh map list** button matters even less.
-
-### Own language files outside Advanced options? (added 2026-11-25)
-
-Your own language files (the `localization` folder, **Open localization folder**, **Reload
-language files**) went behind the **Advanced options** box on 2026-11-25. Consider moving them
-back out: players who speak several languages may use a language file regularly without wanting
-any of the other advanced features. Points to settle:
-- whether the files are read only after a separate, smaller opt-in (for example a "Use language
-  files from the localization folder" box next to the Language dropdown), since they're an
-  untrusted input (`docs/security-review.md`) and the folder isn't read at all while the box is
-  off today;
-- what the Language dropdown shows meanwhile, so the feature is easy to find;
-- the wiki's Advanced options and Languages pages, the S2/S3 and Q6 in-game checks, and the
-  `language-options.png` row change with it.
-
-**Advanced option?** That's the question itself: leaning towards no (useful to many, nothing
-surprising once chosen), with its own small opt-in.
-
-### Future compatibility of language files (added 2026-11-26)
-
-Give the language files (`localization/*.json`, built in and your own) the same care as
-`macros.json` got in "Saved files" (`docs/design.md`), so a translation made for one version of
-the addon keeps working with the next, and an older or newer file never breaks the UI. Points to
-settle:
-- a `"format"` number in the file (today it has `Identifier`, `DisplayName`, `AddonVersion` and
-  `Texts`), raised only by a breaking change, and what a build does with a newer one (use what it
-  understands, with a note on the options page);
-- fields this build doesn't know: ignored, never an error, so a newer translator's tool can add
-  some;
-- the English text is the key, so a reworded text drops its translation: whether to keep a
-  stable id for texts that change (or a "this text changed" hint for translators), and how a
-  file shows which texts are missing or no longer used (`tools\localization.ps1` already counts
-  them);
-- a translation whose `%`-codes no longer match the English text is already refused
-  (`ParseCatalog`); check that a file for an older version falls back to English text by text,
-  not as a whole;
-- the same rules in `CONTRIBUTING.md` (the translators' guide), and a test sample file per
-  format, as for `macros.json`.
-
-**Advanced option?** No: invisible plumbing, the same with the box off and on (own language
-files themselves are behind it today, see the item above).
 
 ### Notes on a macro (suggested 2026-11-23)
 

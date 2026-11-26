@@ -46,8 +46,8 @@ chat for you, from a hotkey, a menu or a button.
   can be imported into a folder of its own.
 - **Advanced options:** extras most players never need stay hidden behind one checkbox, so the
   addon stays simple: **text file links** (keep a macro in step with a `.txt` file, both ways),
-  hotkey cooldowns, the Raw text tab, importing a whole library, keeping hotkeys on import, your
-  own language files and refreshing the map list by hand.
+  hotkey cooldowns, the Raw text tab, importing a whole library, keeping hotkeys on import and
+  refreshing the map list by hand.
 - **Trash bin:** deleted folders and macros can be restored, until you empty the bin (can be
   turned off).
 - **Backups:** copies of your library every few hours, days, weeks or months, as many as you

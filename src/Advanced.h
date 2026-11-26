@@ -5,12 +5,12 @@
 // the box is off, those features are hidden and don't work; nothing the user set is deleted. No
 // Nexus or ImGui dependency. Tested by tests/AdvancedTests.cpp.
 //
-// Behind the box (the UI side is in Ui.cpp and Languages.cpp):
+// Behind the box (the UI side is in Ui.cpp):
 // - link files: a linked macro can't be sent while it's off (Blocks, Blocked);
 // - a macro's hotkey cooldown: ignored while it's off (CooldownSec);
 // - the Raw text tab, importing a whole library, Keep hotkeys on import, the Refresh map list
-//   button: hidden while it's off;
-// - language files of your own (<addon>\localization\): not loaded while it's off.
+//   button: hidden while it's off.
+// Your own language files have their own opt-in instead (Localization::kOwnFilesSetting).
 
 #include <cstddef>
 

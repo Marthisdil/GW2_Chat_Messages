@@ -1,0 +1,17 @@
+{
+  "Format": 1,
+  "Identifier": "de",
+  "DisplayName": "Deutsch",
+  "AddonVersion": "2026.11.26.0000.Dev",
+  "About": [
+    "A language file in format 1, with every field a format-1 file can have."
+  ],
+  "Texts": {
+    "Open macro library": "Makrobibliothek öffnen",
+    "Sent %s": "%s gesendet",
+    "Delete": ""
+  },
+  "Unused": {
+    "Open the macro library": "Die Makrobibliothek öffnen"
+  }
+}

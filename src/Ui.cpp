@@ -3789,7 +3789,6 @@ namespace
         if (ImGui::Checkbox(T("Advanced options"), &s_AdvancedOn))
         {
             if (!Storage::SaveSetting(Advanced::kSetting, s_AdvancedOn)) LogF(LOGL_WARNING, "The advanced options setting couldn't be saved.");
-            Languages::UseFolder(s_AdvancedOn); // your own language files load only while it's on
             if (s_AdvancedOn) SyncLinks(true);  // catch up with files changed while it was off
         }
         ImGui::SameLine();
@@ -3800,8 +3799,8 @@ namespace
             ImGui::SetTooltip(T("Opens the wiki page about advanced options:\n%s"), kAdvancedHelpUrl);
         }
         ImGui::TextWrapped(T("Shows extra features most players never need: text file links, hotkey cooldowns, the Raw "
-                           "text tab, importing a whole library, Keep hotkeys on import, your own language files and "
-                           "Refresh map list. Off: they're hidden and don't work, but nothing you set is deleted."));
+                           "text tab, importing a whole library, Keep hotkeys on import and Refresh map list. Off: "
+                           "they're hidden and don't work, but nothing you set is deleted."));
         if (!s_AdvancedOn)
         {
             const Advanced::InUse in = Advanced::Count(s_Tree);
@@ -3852,7 +3851,7 @@ namespace
         if (choice != Languages::kFollowNexus)
         {
             current = choice; // a chosen language whose file is gone shows its id
-            if (!s_AdvancedOn) current = Fmt(T("%s (a language file: needs Advanced options)"), choice.c_str());
+            if (!Languages::UsesFolder()) current = Fmt(T("%s (a language file: turn on language files below)"), choice.c_str());
             for (const Languages::Entry& e : list)
                 if (e.Id == choice) current = LanguageLabel(e);
         }
@@ -3875,7 +3874,19 @@ namespace
         ImGui::TextDisabled("%s", T("The language of this addon's text. \"Follow Nexus\" uses the language set in Nexus' own options."));
         if (Languages::ActiveId() == "en" && nexusId != "en" && choice == Languages::kFollowNexus)
             ImGui::TextDisabled("%s", T("This addon has no translation for that language yet, so it's shown in English."));
-        if (!s_AdvancedOn) return; // language files of your own are an advanced option
+        // Your own language files: their own small opt-in (not Advanced options), since they're an
+        // untrusted input and the folder isn't read at all while it's off (docs/design.md, "Languages").
+        bool own = Languages::UsesFolder();
+        if (ImGui::Checkbox(T("Use language files from the localization folder"), &own)) Languages::UseFolder(own);
+        if (!own)
+        {
+            ImGui::TextDisabled("%s", T("For a language this addon doesn't include yet, from a file someone made for it."));
+            return;
+        }
+        for (const Languages::Entry& e : list)
+            if (e.Id == Languages::ActiveId() && e.FromFolder && e.FromNewer)
+                ImGui::TextColored(kWarnColor, T("%s was made for a newer version of this addon. Everything this version understands is "
+                                                 "used; the rest is shown in English."), e.File.c_str());
         UiFont::Row row;
         if (ImGui::SmallButton(T("Open localization folder"))) Storage::OpenFolder(Languages::Folder());
         row.Next(UiFont::ButtonWidth(T("Reload language files")));
