@@ -30,6 +30,7 @@
 #include "BuildStamp.h"
 #include "ChatLine.h"
 #include "Cooldown.h"
+#include "EditorLayout.h"
 #include "ErrorReport.h"
 #include "Examples.h"
 #include "Exchange.h"
@@ -824,19 +825,38 @@ namespace
         if (s_MapResults.size() >= kMapResults) ImGui::TextDisabled(T("Only the first %zu matches are shown."), kMapResults);
     }
 
+    // --- Folding sections of the details pane (docs/design.md, "Macro editor layout") --------------
+
+    EditorLayout::Sections s_Sections; // settings.json "editor_sections": which sections are open
+
+    // A folding section: its header shows a summary, and a warning (in yellow) even while it's
+    // closed, so folding never hides a problem. Open or closed is the same for every macro.
+    bool Section(const std::string& aHeader, const char* aWarning, bool& aOpen, const char* aId)
+    {
+        const std::string label = aWarning ? aHeader + "  " + aWarning : aHeader;
+        ImGui::SetNextItemOpen(aOpen, ImGuiCond_Always);
+        if (aWarning) ImGui::PushStyleColor(ImGuiCol_Text, kWarnColor);
+        // Drawn with "%s": a "##" in a name or a note is just text, not part of the id.
+        const bool open = ImGui::TreeNodeEx(aId, ImGuiTreeNodeFlags_CollapsingHeader, "%s", label.c_str());
+        if (aWarning) ImGui::PopStyleColor();
+        if (open != aOpen)
+        {
+            aOpen = open;
+            if (!Storage::SaveSetting(EditorLayout::kSetting, EditorLayout::ToJson(s_Sections)))
+                LogF(LOGL_WARNING, "The editor's open sections couldn't be saved.");
+        }
+        return open;
+    }
+
     // "Where it's active" for a macro or a folder (a folder's filter limits everything inside it).
     void DrawFilters(Node& aNode)
     {
         const bool folder = aNode.IsFolder();
         const Here here = WhereAmI();
         const bool active = IsActiveHere(aNode, here);
-        // "###filters" keeps the header's open state while its label changes.
-        const std::string header = Fmt(T("Where it's active: %s"), FilterSummary(aNode).c_str()) +
-                                   (active ? std::string() : std::string("  ") + T("(not here)")) + "###filters";
-        if (!active) ImGui::PushStyleColor(ImGuiCol_Text, kWarnColor);
-        const bool open = ImGui::CollapsingHeader(header.c_str());
-        if (!active) ImGui::PopStyleColor();
-        if (!open) return;
+        const std::string header = Fmt(T("Where it's active: %s"), FilterSummary(aNode).c_str());
+        const char* warning = NeverActive(aNode) ? T("(can't be active anywhere)") : active ? nullptr : T("(not here)");
+        if (!Section(header, warning, s_Sections.Where, "##sec_where")) return;
         ImGui::Indent();
         if (folder)
             ImGui::TextWrapped(T("A folder's filter limits everything inside it, sub-folders too: a macro is active "
@@ -1046,7 +1066,6 @@ namespace
         {
             ImGui::TextDisabled("%s", s_SendNote.c_str());
         }
-        else ImGui::NewLine(); // callers put this after SameLine: end the row
     }
 
     Node* NodeOrRoot(uint64_t aId)
@@ -2068,25 +2087,21 @@ namespace
     }
 
     // Room to leave on the right of a message box for its LengthLabel.
-    // The character counter: "23/199" (with " characters" and a warning when aLong), grey, then
-    // yellow from 150, bright red from 180 (ChatLine::LengthLevel). Placeholders make it "~".
-    void LengthLabel(const Line& aLine, bool aLong = false)
+    // The character counter: "23/199", grey, then yellow from 150, bright red from 180
+    // (ChatLine::LengthLevel). Placeholders make it "~".
+    void LengthLabel(const Line& aLine)
     {
         const std::string typed = ChatLine::TypedText(aLine);
         const size_t len = ChatLine::Utf16Length(typed);
         const bool placeholders = Placeholders::HasPlaceholders(typed);
         const ChatLine::ELengthLevel level = ChatLine::LengthLevel(len);
-        const std::string tail = !aLong ? std::string()
-                         : std::string(" ") + (level == ChatLine::ELengthLevel::Over ? T("characters: too long, this line won't be sent")
-                                             : level == ChatLine::ELengthLevel::Close ? T("characters: nearly at the limit")
-                                                                                      : T("characters"));
         // With placeholders the final length is only known when sending: show it as approximate.
         const char* approx = placeholders ? "~" : "";
         if (level == ChatLine::ELengthLevel::Normal)
-            ImGui::TextDisabled("%s%zu/%zu%s", approx, len, ChatLine::kMaxChatLength, tail.c_str());
+            ImGui::TextDisabled("%s%zu/%zu", approx, len, ChatLine::kMaxChatLength);
         else
             ImGui::TextColored(level == ChatLine::ELengthLevel::Near ? kCountNearColor : kCountCloseColor,
-                               "%s%zu/%zu%s", approx, len, ChatLine::kMaxChatLength, tail.c_str());
+                               "%s%zu/%zu", approx, len, ChatLine::kMaxChatLength);
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip(T("Characters typed into chat, including the channel command.\n"
                               "Chat allows at most %zu. Longer lines won't be sent.%s"), ChatLine::kMaxChatLength,
@@ -2115,27 +2130,70 @@ namespace
     std::string s_RawText;
     uint64_t    s_RawForId   = 0; // which macro s_RawText was built from (0 = rebuild)
 
+    // "Lines (n)" with "Placeholders (?)" on the right (it wraps under it when narrow).
+    void DrawLinesHeader(const Node& aMacro)
+    {
+        ImGui::Spacing();
+        const std::string title = Fmt(T("Lines (%zu)"), aMacro.Lines.size());
+        ImGui::TextUnformatted(title.c_str());
+        const float help = UiFont::TextWidth(T("Placeholders (?)"));
+        const float right = ImGui::GetWindowContentRegionMax().x - help; // window coordinates
+        const float after = ImGui::GetItemRectMax().x - ImGui::GetWindowPos().x + ImGui::GetStyle().ItemSpacing.x;
+        if (right > after) ImGui::SameLine(right);
+        ImGui::TextDisabled(T("Placeholders (?)"));
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::BeginTooltip();
+            UiFont::PushTooltipWrap();
+            ImGui::TextUnformatted(T("Type these in a message; they're filled in when it's sent:"));
+            ImGui::Separator();
+            float syntaxWidth = 0.0f;
+            for (const Placeholders::Info& p : Placeholders::List())
+                syntaxWidth = std::max(syntaxWidth, UiFont::TextWidth(p.Syntax));
+            for (const Placeholders::Info& p : Placeholders::List())
+            {
+                ImGui::TextUnformatted(p.Syntax);
+                ImGui::SameLine(syntaxWidth + ImGui::GetStyle().ItemSpacing.x * 3.0f);
+                ImGui::TextDisabled("%s", Localization::Lookup(p.Description));
+            }
+            ImGui::Separator();
+            ImGui::TextDisabled(T("Anything else in { } is sent as typed. Chat links like [&BDAEAAA=] work as is."));
+            ImGui::PopTextWrapPos();
+            ImGui::EndTooltip();
+        }
+        ImGui::Separator();
+    }
+
+    // One row per line: number, channel (a Whisper's recipient or a Squad line's Broadcast box
+    // next to it), message, character count, up/down and remove. The message box takes what's
+    // left of the row; on a narrow pane (or with big text) it gets a row of its own.
     void DrawLinesEditor(Node& aMacro)
     {
         auto& lines = aMacro.Lines;
         int moveFrom = -1, moveTo = -1, removeAt = -1;
+        const float sp     = ImGui::GetStyle().ItemSpacing.x;
+        const float frame  = ImGui::GetFrameHeight();
+        const float countW = UiFont::TextWidth("~000/000");
+        const float tailW  = countW + sp + frame + 2.0f + frame + sp + frame; // count, up, down, remove
+        const int count = static_cast<int>(lines.size());
 
-        for (int i = 0; i < static_cast<int>(lines.size()); i++)
+        for (int i = 0; i < count; i++)
         {
             Line& l = lines[static_cast<size_t>(i)];
             ImGui::PushID(i);
+            const float left  = ImGui::GetCursorScreenPos().x;
+            const float right = left + ImGui::GetContentRegionAvail().x;
 
             UiFont::Row row;
-            if (ImGui::ArrowButton("##up", ImGuiDir_Up) && i > 0) { moveFrom = i; moveTo = i - 1; }
-            ImGui::SameLine(0.0f, 2.0f);
-            if (ImGui::ArrowButton("##down", ImGuiDir_Down) && i + 1 < static_cast<int>(lines.size())) { moveFrom = i; moveTo = i + 1; }
-            row.Next(Px(110.0f));
-            ImGui::SetNextItemWidth(Px(110.0f));
+            ImGui::AlignTextToFramePadding();
+            ImGui::TextDisabled("%d", i + 1);
+            row.Next(Px(100.0f));
+            ImGui::SetNextItemWidth(Px(100.0f));
             if (ChannelCombo("##channel", l.Channel, l.UnknownChannel)) { l.UnknownChannel.clear(); MarkDirty(); }
             if (l.Channel == EChannel::Whisper)
             {
-                row.Next(Px(150.0f));
-                ImGui::SetNextItemWidth(Px(150.0f));
+                row.Next(Px(110.0f));
+                ImGui::SetNextItemWidth(Px(110.0f));
                 if (InputString("##to", T("Recipient"), l.WhisperTo)) MarkDirty();
                 if (ImGui::IsItemHovered()) ImGui::SetTooltip(T("Character or account name to whisper."));
             }
@@ -2147,16 +2205,30 @@ namespace
                     ImGui::SetTooltip(T("Send as a squad broadcast. Only works while you're the commander;\n"
                                       "otherwise it's sent as a normal squad message."));
             }
-            row.Next(UiFont::ButtonWidth(T("Remove")));
-            if (ImGui::SmallButton(T("Remove"))) removeAt = i;
 
-            ImGui::SetNextItemWidth(-1.0f);
+            float msgW = right - (ImGui::GetItemRectMax().x + sp) - sp - tailW;
+            if (msgW >= Px(120.0f)) ImGui::SameLine();
+            else msgW = std::max(Px(60.0f), right - left - sp - tailW);
+            ImGui::SetNextItemWidth(msgW);
             if (InputString("##msg", T("Message"), l.Message)) MarkDirty();
-            LengthLabel(l, true); // under the message box
-            LineWarnings(l);
+            ImGui::SameLine();
+            LengthLabel(l);
+            // The arrows line up whatever the count's width.
+            ImGui::SameLine(0.0f, sp + std::max(0.0f, countW - ImGui::GetItemRectSize().x));
+            if (ImGui::ArrowButton("##up", ImGuiDir_Up) && i > 0) { moveFrom = i; moveTo = i - 1; }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip(T("Move this line up"));
+            ImGui::SameLine(0.0f, 2.0f);
+            if (ImGui::ArrowButton("##down", ImGuiDir_Down) && i + 1 < count) { moveFrom = i; moveTo = i + 1; }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip(T("Move this line down"));
+            ImGui::SameLine();
+            if (ImGui::Button("X##remove", ImVec2(frame, frame))) removeAt = i;
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip(T("Remove this line"));
 
+            const size_t len = ChatLine::Utf16Length(ChatLine::TypedText(l));
+            if (ChatLine::LengthLevel(len) == ChatLine::ELengthLevel::Over)
+                ImGui::TextColored(kErrorColor, T("Over %zu characters: this line won't be sent."), ChatLine::kMaxChatLength);
+            LineWarnings(l);
             ImGui::PopID();
-            ImGui::Separator();
         }
 
         // Apply after the loop so the vector isn't changed while it's being drawn.
@@ -2165,7 +2237,7 @@ namespace
 
         if (lines.size() < kMaxLinesPerMacro)
         {
-            if (ImGui::Button(T("Add line")))
+            if (ImGui::Button(T("Add line"), ImVec2(-1.0f, 0.0f)))
             {
                 Line l;
                 if (!lines.empty()) { l.Channel = lines.back().Channel; l.WhisperTo = lines.back().WhisperTo; }
@@ -2439,10 +2511,11 @@ namespace
         }
         const auto problem = s_LinkProblems.find(aMacro.Id);
         const std::string header = aMacro.LinkFile.empty()
-            ? std::string(T("Text file link: none")) + "###linkfile"
+            ? std::string(T("Text file link: none"))
             : Fmt(T("Text file link: %s"), aMacro.LinkFile.c_str()) +
-                  (problem != s_LinkProblems.end() ? std::string(" ") + T("(needs attention)") : std::string()) + "###linkfile";
-        if (!ImGui::CollapsingHeader(header.c_str())) return;
+                  (problem != s_LinkProblems.end() ? std::string(" ") + T("(needs attention)") : std::string());
+        if (problem != s_LinkProblems.end()) ImGui::TextColored(kWarnColor, "%s", header.c_str());
+        else ImGui::TextUnformatted(header.c_str());
         ImGui::Indent();
 
         if (aMacro.LinkFile.empty())
@@ -2513,11 +2586,11 @@ namespace
             s_NoteForId   = aMacro.Id;
             s_NoteEditing = false;
         }
-        ImGui::TextUnformatted(T("Note (never sent):"));
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip(T("What this macro is for, or when to use it. It's shown in the quick menu's\n"
-                              "preview and found by the search, but never typed into chat.\n"
-                              "At most %zu lines and %zu bytes."), kMaxNoteLines, kMaxNoteLength);
+        ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+        ImGui::TextWrapped(T("What it's for, or when to use it. Never typed into chat: it's shown in the quick "
+                             "menu's preview and found by the search. At most %zu lines and %zu bytes."),
+                           kMaxNoteLines, kMaxNoteLength);
+        ImGui::PopStyleColor();
         const ImGuiStyle& style = ImGui::GetStyle();
         const float height = ImGui::GetTextLineHeight() * 3.0f + style.FramePadding.y * 2.0f;
         if (InputStringMultiline("##note", s_NoteBuf, ImVec2(-1.0f, height)))
@@ -2534,85 +2607,151 @@ namespace
             ImGui::TextColored(kWarnColor, T("A note can be at most %zu bytes long: the rest isn't kept."), kMaxNoteLength);
     }
 
+    // "Hotkey and favourite: Ctrl+F1, favourite" and its warning (a hotkey that can't work, or
+    // one shared with a macro that can be active at the same time).
+    std::string HotkeySummary(const Node& aMacro)
+    {
+        const std::string keys = aMacro.Hotkey.Empty() ? std::string(T("no hotkey")) : Hotkey::Display(aMacro.Hotkey);
+        return aMacro.Favourite ? Fmt(T("%s, favourite"), keys.c_str()) : keys;
+    }
+
+    const char* HotkeyWarning(const Node& aMacro)
+    {
+        if (aMacro.Hotkey.Empty()) return nullptr;
+        if (Hotkey::NeedsModifier(aMacro.Hotkey)) return T("(the hotkey doesn't work)");
+        for (const Node* n : s_Tree.MacrosWithHotkey(aMacro.Hotkey))
+            if (n != &aMacro && FiltersOverlap(aMacro, *n)) return T("(the hotkey is shared)");
+        // The same hints as DrawHotkeyRow: a GW2 default key, or a plain letter or number.
+        if (GameKeys::DefaultUse(aMacro.Hotkey) ||
+            (!aMacro.Hotkey.HasModifier() && aMacro.Hotkey.Key < 0x60 && aMacro.Hotkey.Key > Hotkey::kVkXButton2))
+            return T("(it may be a game key)");
+        return nullptr;
+    }
+
+    // Advanced options, all in one section at the bottom (only while they're on).
+    void DrawAdvanced(Node& aMacro)
+    {
+        const bool attention = !aMacro.LinkFile.empty() && s_LinkProblems.count(aMacro.Id) > 0;
+        if (!Section(T("Advanced"), attention ? T("(needs attention)") : nullptr, s_Sections.Advanced, "##sec_advanced"))
+            return;
+        ImGui::Indent();
+        UiFont::Row modeRow;
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted(T("Edit the lines as:"));
+        int mode = static_cast<int>(s_EditMode);
+        modeRow.Next(UiFont::CheckboxWidth(T("Lines")));
+        if (ImGui::RadioButton(T("Lines"), &mode, static_cast<int>(EEditMode::Lines))) s_RawForId = 0;
+        modeRow.Next(UiFont::CheckboxWidth(T("Raw text")));
+        if (ImGui::RadioButton(T("Raw text"), &mode, static_cast<int>(EEditMode::Raw))) s_RawForId = 0;
+        s_EditMode = static_cast<EEditMode>(mode);
+        DrawCooldownRow(aMacro);
+        ImGui::Spacing();
+        DrawLinkFile(aMacro);
+        ImGui::Unindent();
+    }
+
     void DrawMacroEditor(Node& aMacro)
     {
-        const bool busy = Sender::IsBusy();
-        const bool blocked = IsBlocked(aMacro);
-        if (blocked)
-            ImGui::TextColored(kWarnColor, "%s", T("This macro is linked to a text file, which is an advanced option. Advanced "
-                                                   "options are off, so it can't be sent (its hotkey does nothing) and it isn't "
-                                                   "kept in step with its file. Turn on \"Advanced options\" on the addon's "
-                                                   "options page to use it again."));
-        if (busy || blocked) ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
-        if (ImGui::Button(T("Send now")) && !busy) SendMacro(aMacro); // a blocked macro says why
-        if (busy || blocked) ImGui::PopStyleVar();
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip(T("Types each line into its chat channel and sends it.\n"
-                              "Needs your Chat key set in Nexus > Options > Game Keybinds."));
-        ImGui::SameLine();
-        if (ImGui::Button(T("Preview"))) MakePreview(aMacro);
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip(T("Shows what Send now would type, with placeholders filled in,\n"
-                              "and runs the same checks. Nothing is sent."));
-        ImGui::SameLine();
-        DrawSendStatus();
-        DrawPreview(aMacro);
-        DrawHotkeyRow(aMacro);
-        DrawCooldownRow(aMacro);
-        DrawFavouriteRow(aMacro);
-        DrawFilters(aMacro);
-        DrawLinkFile(aMacro);
-        DrawNote(aMacro);
-        ImGui::Separator();
-
-        UiFont::Row modeRow;
-        // The Raw text tab is an advanced option: while they're off, the editor is always Lines.
+        // The Raw text choice is an advanced option: while they're off, the editor is always Lines.
         if (!s_AdvancedOn && s_EditMode == EEditMode::Raw)
         {
             s_EditMode = EEditMode::Lines;
             s_RawForId = 0;
         }
-        const std::string count = Fmt(T("%zu line(s)"), aMacro.Lines.size());
-        if (s_AdvancedOn)
-        {
-            int mode = static_cast<int>(s_EditMode);
-            if (ImGui::RadioButton(T("Lines"), &mode, static_cast<int>(EEditMode::Lines))) s_RawForId = 0;
-            modeRow.Next(UiFont::CheckboxWidth(T("Raw text")));
-            if (ImGui::RadioButton(T("Raw text"), &mode, static_cast<int>(EEditMode::Raw))) s_RawForId = 0;
-            s_EditMode = static_cast<EEditMode>(mode);
-            modeRow.Next(UiFont::TextWidth(count.c_str()));
-        }
-        else ImGui::AlignTextToFramePadding();
-        ImGui::TextDisabled("%s", count.c_str());
-        modeRow.Next(UiFont::TextWidth(T("Placeholders (?)")));
-        ImGui::TextDisabled(T("Placeholders (?)"));
-        if (ImGui::IsItemHovered())
-        {
-            ImGui::BeginTooltip();
-            UiFont::PushTooltipWrap();
-            ImGui::TextUnformatted(T("Type these in a message; they're filled in when it's sent:"));
-            ImGui::Separator();
-            float syntaxWidth = 0.0f;
-            for (const Placeholders::Info& p : Placeholders::List())
-                syntaxWidth = std::max(syntaxWidth, UiFont::TextWidth(p.Syntax));
-            for (const Placeholders::Info& p : Placeholders::List())
-            {
-                ImGui::TextUnformatted(p.Syntax);
-                ImGui::SameLine(syntaxWidth + ImGui::GetStyle().ItemSpacing.x * 3.0f);
-                ImGui::TextDisabled("%s", Localization::Lookup(p.Description));
-            }
-            ImGui::Separator();
-            ImGui::TextDisabled(T("Anything else in { } is sent as typed. Chat links like [&BDAEAAA=] work as is."));
-            ImGui::PopTextWrapPos();
-            ImGui::EndTooltip();
-        }
-        ImGui::Spacing();
-
+        DrawLinesHeader(aMacro);
         if (s_EditMode == EEditMode::Lines) DrawLinesEditor(aMacro);
         else DrawRawEditor(aMacro);
+        ImGui::Spacing();
+
+        DrawFilters(aMacro);
+
+        if (s_CaptureFor == aMacro.Id && Hotkeys::IsCapturing() && !s_Sections.Hotkey) // keep the prompt in view
+        {
+            s_Sections.Hotkey = true;
+            if (!Storage::SaveSetting(EditorLayout::kSetting, EditorLayout::ToJson(s_Sections)))
+                LogF(LOGL_WARNING, "The editor's open sections couldn't be saved.");
+        }
+        if (Section(Fmt(T("Hotkey and favourite: %s"), HotkeySummary(aMacro).c_str()), HotkeyWarning(aMacro),
+                    s_Sections.Hotkey, "##sec_hotkey"))
+        {
+            ImGui::Indent();
+            DrawHotkeyRow(aMacro);
+            DrawFavouriteRow(aMacro);
+            ImGui::Unindent();
+        }
+
+        const std::string note = aMacro.Note.empty() ? std::string(T("Note: none"))
+                                                     : Fmt(T("Note: %s"), EditorLayout::ShortNote(aMacro.Note).c_str());
+        if (Section(note, nullptr, s_Sections.Note, "##sec_note"))
+        {
+            ImGui::Indent();
+            DrawNote(aMacro);
+            ImGui::Unindent();
+        }
+
+        if (s_AdvancedOn) DrawAdvanced(aMacro);
     }
 
     // --- Details pane -------------------------------------------------------------------------
+
+    // The header: the name, with Send now / Preview (macros) and "..." on its row (they wrap under
+    // a long name or on a narrow pane), then the path and a summary in grey.
+    void DrawDetailsHeader(Node& aNode)
+    {
+        const bool macro = aNode.IsMacro();
+        UiFont::Row head;
+        ImGui::TextWrapped("%s", aNode.Name.c_str());
+        if (macro)
+        {
+            const bool busy = Sender::IsBusy();
+            const bool blocked = IsBlocked(aNode);
+            head.Next(UiFont::ButtonWidth(T("Send now")));
+            if (busy || blocked) ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+            if (ImGui::Button(T("Send now")) && !busy) SendMacro(aNode); // a blocked macro says why
+            if (busy || blocked) ImGui::PopStyleVar();
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip(T("Types each line into its chat channel and sends it.\n"
+                                  "Needs your Chat key set in Nexus > Options > Game Keybinds."));
+            head.Next(UiFont::ButtonWidth(T("Preview")));
+            if (ImGui::Button(T("Preview"))) MakePreview(aNode);
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip(T("Shows what Send now would type, with placeholders filled in,\n"
+                                  "and runs the same checks. Nothing is sent."));
+        }
+        head.Next(UiFont::ButtonWidth("..."));
+        if (ImGui::Button("...##more")) ImGui::OpenPopup("##more");
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("%s", macro ? T("Rename, duplicate or delete it") : T("Rename or delete it"));
+        // A menu, not a modal: its items queue an action, and the pop-ups open at the window's level.
+        if (ImGui::BeginPopup("##more"))
+        {
+            if (ImGui::MenuItem(T("Rename"))) s_Pending = {EAction::OpenName, 0, aNode.Id, EDrop::Into, 0, ENameMode::Rename};
+            if (macro && ImGui::MenuItem(T("Duplicate"))) s_Pending = {EAction::Duplicate, aNode.Id};
+            if (ImGui::MenuItem(s_TrashOn ? T("Delete") : T("Delete..."))) s_Pending = {EAction::OpenDelete, aNode.Id};
+            if (s_TrashOn && ImGui::IsItemHovered()) ImGui::SetTooltip(T("Moves it to the trash bin, where it can be restored."));
+            ImGui::EndPopup();
+        }
+
+        std::string summary = PathOf(aNode);
+        if (macro && !aNode.Hotkey.Empty()) summary += "  \xC2\xB7  " + Hotkey::Display(aNode.Hotkey);
+        summary += "  \xC2\xB7  " + FilterSummary(aNode);
+        ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+        ImGui::TextWrapped("%s", summary.c_str());
+        ImGui::PopStyleColor();
+
+        if (macro)
+        {
+            if (IsBlocked(aNode))
+                ImGui::TextColored(kWarnColor, "%s", T("This macro is linked to a text file, which is an advanced option. Advanced "
+                                                       "options are off, so it can't be sent (its hotkey does nothing) and it isn't "
+                                                       "kept in step with its file. Turn on \"Advanced options\" on the addon's "
+                                                       "options page to use it again."));
+            if (!s_AdvancedOn) DrawCooldownRow(aNode); // only says so when one is kept but ignored
+            DrawSendStatus();
+            DrawPreview(aNode);
+        }
+        ImGui::Separator();
+    }
 
     void DrawDetails()
     {
@@ -2632,25 +2771,14 @@ namespace
             return;
         }
 
-        ImGui::TextDisabled("%s", node->IsFolder() ? T("Folder") : T("Macro"));
-        ImGui::TextWrapped("%s", node->Name.c_str());
-        ImGui::TextDisabled(T("In: %s"), PathOf(*node).c_str());
-        // Popups must be opened at the main window's ID level, so these buttons queue an action.
-        UiFont::Row nameRow;
-        if (ImGui::SmallButton(T("Rename"))) s_Pending = {EAction::OpenName, 0, node->Id, EDrop::Into, 0, ENameMode::Rename};
-        const char* deleteLabel = s_TrashOn ? T("Delete") : T("Delete...");
-        nameRow.Next(UiFont::ButtonWidth(deleteLabel));
-        if (ImGui::SmallButton(deleteLabel)) s_Pending = {EAction::OpenDelete, node->Id};
-        if (s_TrashOn && ImGui::IsItemHovered()) ImGui::SetTooltip(T("Moves it to the trash bin, where it can be restored."));
-        ImGui::Separator();
-
+        DrawDetailsHeader(*node);
         if (node->IsFolder())
         {
             size_t folders = 0, macros = 0;
             Tree::CountDescendants(*node, &folders, &macros);
             const int level = Tree::FolderLevel(*node);
-            ImGui::Text(T("Folder level %d of %d"), level, kMaxFolderDepth);
-            ImGui::Text(T("Contains %zu folder(s) and %zu macro(s)"), folders, macros);
+            ImGui::TextDisabled(T("Folder level %d of %d"), level, kMaxFolderDepth);
+            ImGui::TextDisabled(T("Contains %zu folder(s) and %zu macro(s)"), folders, macros);
             DrawFavouriteRow(*node);
             DrawFilters(*node);
             ImGui::Spacing();
@@ -4343,6 +4471,8 @@ void Ui::Init()
         const auto backups = settings.find(kBackupsSetting);
         s_Backup = backups != settings.end() ? Backups::FromJson(*backups) : Backups::Settings{};
         s_AdvancedOn = Advanced::FromSettings(settings); // off unless the user turned it on
+        const auto sections = settings.find(EditorLayout::kSetting);
+        s_Sections = sections != settings.end() ? EditorLayout::FromJson(*sections) : EditorLayout::Sections{};
     }
     s_TrashSelId = 0;
     // The imports and exports folders exist from the start, so there's never one to make by hand.

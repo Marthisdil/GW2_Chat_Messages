@@ -54,44 +54,6 @@ the first release.
   some engines flag it (false positives are common for DLLs that hook a game's window), and
   whether the release waits for the scan or the link is added afterwards.
 
-### Look at the layout of the macro settings (added 2026-11-25)
-
-**Decided 2026-11-26:** layout B (one column, most-used first), with the owner's defaults, is in
-`docs/design.md`, "Macro editor layout". What's left here is building it (before the `Ui.cpp`
-cleanup below). The notes below are how it started.
-
-Go over the layout of a macro's settings in the library window (the details pane on the right:
-name, lines, hotkey, filters, link file, the Send now / Preview buttons and the rest) to see
-whether it can be clearer: what goes where, in what order, what's grouped or folded away, and
-how it fits at small window sizes and bigger text sizes. Do it before the `Ui.cpp` cleanup
-below, so that cleanup works on the final layout.
-
-**For reference** (owner, 2026-11-25): how the Blish HUD module we started from
-(bhm-chat-macros) lays out one macro, in
-[`docs/reference/bhm-chat-macros-editor.webp`](reference/bhm-chat-macros-editor.webp):
-- the macro's name as a wide title bar at the top;
-- two boxes side by side: **Active Areas** (a list of maps, an "Add Map..." field, and PvE /
-  WvW / PvP tick boxes under it) and **Trigger Options** (voice commands, an "Add Voice
-  Command..." field, and the key binding as "Non-Voice Trigger");
-- a **Message Sequence** header with small icon buttons on its right (toggle, link a file,
-  open the file);
-- one row per line: a channel drop-down (`[G2]`), the text in a monospaced box, a red ✕ to
-  delete it and a drag handle to reorder;
-- a wide **Add Line** button at the bottom.
-
-What stands out: everything about one macro is on one screen, with where it's active and how
-it's triggered side by side above the lines, and each line is compact (channel, text, delete,
-drag). The text box doesn't wrap, so long lines get cut off at the edge.
-
-**Advanced options (2026-11-25):** design the layout for both states. With the box off (the
-default) the pane shows only the everyday settings, with no gaps where hidden sections would
-be. With it on, the advanced sections (now the text file link; later the planned ones in
-`docs/design.md`, "Advanced options", such as timed lines or a schedule) have a clear place of
-their own, e.g. grouped under one "Advanced" heading at the bottom, rather than scattered among
-the everyday ones. A macro that uses an advanced feature while the box is off still needs its
-note and faded Send now to fit. Screenshots of the new layout: one with the box off, and one
-with it on where it differs.
-
 ### Cleanup PR for `Ui.cpp` after the in-game testing (added 2026-11-24)
 
 **Reminder (owner):** once every session in `docs/in-game-tests.md` has been run and passed,
@@ -417,7 +379,7 @@ From MumbleLink's identity (already read for the map), e.g. "LF2M, {spec} here".
 
 ### A tabbed macro editor, chosen in the settings (added 2026-11-26)
 
-From the layout brainstorm for "Look at the layout of the macro settings" (section 1): the owner
+From the layout brainstorm for "Look at the layout of the macro settings" (built 2026-11-26, `docs/design.md`): the owner
 picked layout **B** (one column, most-used first: the lines, then folding sections for where
 it's active, hotkey and favourite, and the note, with one Advanced section at the bottom) as the
 default. Layout **C**, tabs, should be offered too, as a choice on the options page (e.g.

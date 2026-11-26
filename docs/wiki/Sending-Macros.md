@@ -4,10 +4,12 @@ There are three ways to send a macro. All of them type the lines into chat the s
 
 ## Send now
 
-**Send now** in the macro editor (or in a macro's right-click menu) sends it straight away.
+**Send now**, next to the macro's name at the top of the editor (or in a macro's right-click
+menu), sends it straight away.
 It always works, even where the macro's [filters](Filters) say it isn't active.
 
-The editor shows the progress ("Preparing...", "Sending line 2 of 3...") and the result.
+The editor shows the progress ("Preparing...", "Sending line 2 of 3...") and the result under
+its name.
 
 <!-- screenshot: send-status.png (docs/screenshots.md) -->
 > 📷 *Screenshot to come: the status line after Send now.*
@@ -35,8 +37,8 @@ the preview may ask you to try again in a moment while the name is looked up.
 
 ## Hotkeys
 
-Each macro can have its own hotkey. In the macro editor, next to **Hotkey:**, click **Set...**
-(or **Change...**) and press the key you want.
+Each macro can have its own hotkey. In the macro editor, open **Hotkey and favourite**, click
+**Set...** (or **Change...**) next to **Hotkey:** and press the key you want.
 
 - You can add **Ctrl**, **Alt** or **Shift**. **Mouse 3** (middle), **Mouse 4** and **Mouse 5**
   work too, but only together with Ctrl, Alt or Shift (for example **Ctrl+Mouse 4**): on their
@@ -81,7 +83,7 @@ Each macro can have its own hotkey. In the macro editor, next to **Hotkey:**, cl
 > [Advanced options](Advanced-Options). While it's off, a
 > cooldown you set is kept but ignored.
 
-Under the hotkey, **Cooldown:** sets how many seconds the hotkey waits before it sends that
+In the editor's **Advanced** section at the bottom, **Cooldown:** sets how many seconds the hotkey waits before it sends that
 macro again: 0 (off, the default) up to 600 (10 minutes).
 
 - It counts from when the macro was last sent, **from anywhere**: a hotkey, the quick menu or

@@ -5,7 +5,7 @@ bar, from the addon's page in Nexus options ("Open macro library"), or with the 
 Messages library" keybind.
 
 The window has two parts: the **tree** on the left, and the **details** of the selected item on
-the right. A folder's details show its level, what's in it, a **Favourite** box (see
+the right (laid out as described in [Editing macros](Editing-Macros#the-editor)). A folder's details show its level, what's in it, a **Favourite** box (see
 [Favourites and recently sent](Sending-Macros#favourites-and-recently-sent)), **Where it's
 active** (its [filter](Filters#filters-on-folders), for everything inside it) and buttons for a
 new folder or macro inside it.

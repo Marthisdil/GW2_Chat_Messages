@@ -292,11 +292,12 @@ reading a newer one (someone going back a version, or importing a friend's expor
   - Default: off, for everyone (owner, 2026-11-25: there are no users yet, so no update rule).
     Only a saved `true` turns it on.
 
-## Macro editor layout (decided 2026-11-26, not built yet)
+## Macro editor layout (decided and built 2026-11-26)
 
 *(Owner's pick from five drawn options, to-do "Look at the layout of the macro settings": layout
-B, one column, most-used first. Build it before the `Ui.cpp` cleanup, so that cleanup works on
-the final layout. A tabbed layout as a choice on the options page is in `docs/todo.md`, section
+B, one column, most-used first. Built in `Ui.cpp` (`DrawDetailsHeader`, `DrawMacroEditor`,
+`DrawAdvanced`); the folding state is `src/EditorLayout.*`, saved as `"editor_sections"` in
+`settings.json` (`where`, `hotkey`, `note`, `advanced`; Hotkey and Note open by default). A tabbed layout as a choice on the options page is in `docs/todo.md`, section
 5.)*
 
 The details pane for a selected macro, top to bottom:

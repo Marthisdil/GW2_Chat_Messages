@@ -7,9 +7,32 @@ A macro has a **title**, one or more **lines**, an optional **hotkey** (see
 [quick menu](Sending-Macros#favourites-and-recently-sent)), **where it's active** (see
 [Filters](Filters)) and a **note**.
 
+## The editor
+
+From top to bottom:
+
+- **The header:** the macro's name, with **Send now**, **Preview** (see
+  [Sending macros](Sending-Macros)) and **...** on the same row. **...** has **Rename**,
+  **Duplicate** and **Delete**. Under the name, in grey: the folder it's in, its hotkey and where
+  it's active.
+- **Lines (n):** one row per line (see [Lines](#lines)), and **Add line** under them.
+- Three sections that fold open and closed, each showing a summary when closed:
+  **Where it's active** (see [Filters](Filters)), **Hotkey and favourite**, and **Note**. A
+  problem shows in yellow even when its section is closed, like "(the hotkey is shared)" or
+  "(can't be active anywhere)". The addon remembers which sections you keep open, for every
+  macro.
+- **Advanced**, at the bottom, only with [Advanced options](Advanced-Options) ticked: Raw text,
+  the hotkey cooldown and the text file link.
+
+<!-- screenshot: editor-advanced.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the Advanced section of a macro, with Advanced options ticked.*
+
+A folder's details have the same header (with **...** for Rename and Delete), then its level,
+what's in it, **Favourite** and **Where it's active**.
+
 ## Note
 
-**Note (never sent)** is a box for what the macro is for, or when to use it ("Before each boss,
+The **Note** section is a box for what the macro is for, or when to use it ("Before each boss,
 needs a commander tag"). It's never typed into chat. You see it in grey above the lines when you
 hover over the macro in the [quick menu](Sending-Macros#quick-menu), and the library's
 [search](The-Macro-Library#search) finds it. A note can have up to 10 lines and 1000 bytes
@@ -35,8 +58,11 @@ There are two ways to edit lines. Switching between them loses nothing.
 
 ### The "Lines" tab
 
-Each line has a channel dropdown and a message box, with arrow buttons to change its order and a **Remove** button.
-**Add line** adds one at the end.
+Each line is one row: its number, a channel dropdown, the message box, its
+[character count](#the-199-character-limit), arrows to move it up or down, and **X** to remove
+it. A whisper line has its **Recipient** box in the row, and a squad line its **Broadcast** box.
+In a narrow window the message box gets a row of its own. **Add line** adds one at the end, on
+the same channel as the last line.
 
 <!-- screenshot: macro-editor-lines.png (docs/screenshots.md) -->
 > 📷 *Screenshot to come: the Lines tab.*
@@ -64,7 +90,8 @@ Each line has a channel dropdown and a message box, with arrow buttons to change
 ### The "Raw text" tab
 
 > **Advanced option:** only with **Advanced options** ticked on the addon's options page; see
-> [Advanced options](Advanced-Options).
+> [Advanced options](Advanced-Options). Pick it in the editor's **Advanced** section, under
+> **Edit the lines as:**.
 
 Type one message per row, the way you'd type it in game:
 
@@ -88,10 +115,10 @@ Just a line in the current channel
 
 ## The 199-character limit
 
-GW2 chat takes at most 199 characters per message, counting the channel command. Under each
-message box a counter shows `23/199 characters`. It turns **yellow from 150** and **bright red
-from 180**, so you see the limit coming. A line over 199 says "too long, this line won't be sent"
-and is refused. In Raw text the count is next to each row of **Will send**. If a line has
+GW2 chat takes at most 199 characters per message, counting the channel command. Next to each
+message box a counter shows `23/199`. It turns **yellow from 150** and **bright red from 180**,
+so you see the limit coming. A line over 199 gets a red line under it, "Over 199 characters: this
+line won't be sent", and is refused. In Raw text the count is next to each row of **Will send**. If a line has
 placeholders, the count is shown with "~", because the real length is only known when it's sent.
 
 ## Chat links

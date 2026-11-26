@@ -157,6 +157,10 @@ to the todo list", add it there (don't start building it). Move agreed items int
   in effect (`CooldownSec`), and the `"advanced_options"` setting (`FromSettings`, off unless
   saved as true). `Ui.cpp` hides the features while it's off. Settings are always kept. A new feature behind the box: add its
   rule here, and hide it in the UI. No Nexus or ImGui dependency. Tested by `tests/AdvancedTests.cpp`.
+- `src/EditorLayout.*`: the macro editor's folding sections (which are open, saved as
+  `"editor_sections"` in `settings.json`) and the note's one-line summary (`ShortNote`). No Nexus
+  or ImGui dependency. Tested by `tests/EditorLayoutTests.cpp`. The layout itself is in `Ui.cpp`
+  (`docs/design.md`, "Macro editor layout").
 - `src/Cooldown.*`: the hotkey cooldown and the 1-second guard after a send (`Tracker`), per
   macro; only hotkeys wait. No Nexus or ImGui dependency. Tested by `tests/CooldownTests.cpp`.
 - `src/Placeholders.*`: fills in `{time}`, `{random}`, `{map}` and the other placeholders. The

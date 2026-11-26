@@ -44,7 +44,7 @@ changes a macro while you play, for example). Keeping them behind one box means:
 |---|---|---|
 | **Text file links**: keep a macro in step with a `.txt` file | Hidden. A linked macro can't be sent, and isn't kept in step with its file. | [below](#text-file-links) |
 | **Cooldown**: how long a macro's hotkey waits before it sends again | Hidden and ignored: the hotkey only waits the usual 1 second. The editor shows the cooldown greyed out, and keeps it. | [Sending macros](Sending-Macros#cooldown) |
-| **Raw text** tab: edit a macro's lines as plain text | Hidden: the editor shows the Lines tab only. | [Editing macros](Editing-Macros#the-raw-text-tab) |
+| **Raw text** tab: edit a macro's lines as plain text | Hidden: the editor shows the lines only. | [Editing macros](Editing-Macros#the-raw-text-tab) |
 | Import **A whole library**: someone else's `macros.json` into a folder of its own | Hidden: the Import window imports macros only. | [Import and export](Import-and-Export#importing-a-whole-library) |
 | Import **Keep hotkeys** | Hidden and off: imported macros come without hotkeys. | [Import and export](Import-and-Export#2-choose-where-it-goes) |
 | **Refresh map list** button | Hidden. The map list still refreshes by itself (first run, weekly, on a language change). | [Filters](Filters#the-map-list) |
@@ -62,8 +62,8 @@ A macro can be kept in step with a `.txt` file, so you can edit it in Notepad (o
 editor) while the game runs. The file uses the same format as the Raw text tab: one chat line per
 row.
 
-Tick **Advanced options** first. Then open **Text file link** in the macro editor, type a file
-name and click **Link**:
+Tick **Advanced options** first. Then open **Advanced** at the bottom of the macro editor; under
+**Text file link: none**, type a file name and click **Link**:
 
 - A name alone, like `callouts.txt`, goes in `<GW2>\addons\GW2_Chat_Messages\links\`. A full path,
   like `C:\Users\Me\Documents\raid.txt`, works too. The name must end in `.txt`.
