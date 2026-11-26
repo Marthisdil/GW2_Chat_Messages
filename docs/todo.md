@@ -41,27 +41,6 @@ the [?] wiki page is enough, is to discuss. The welcome itself isn't an advanced
 Work through `docs/in-game-tests.md` (A1 passed, A2 mostly; the rest is still to do). Session B,
 whether the game takes the addon's keys and text, matters most: everything else depends on it.
 
-### Plan ahead for changes to the saved files (added 2026-11-24)
-
-Before the first release, decide how the addon deals with changes to what it saves
-(`macros.json`, `settings.json`, `maps.json`, exports), so a feature added, removed or changed
-later never loses or garbles a user's library. Until now the owner, the only tester, starts with
-a fresh library when the format changes (folder filters were added this way, 2026-11-24).
-
-- Points to settle:
-  - A **format number** in `macros.json` (exports already have `"format": 1`), raised whenever a
-    change means an older build would read the file wrongly, and what a build does with a
-    **newer** file than it knows: refuse to save over it (read-only, with a message), or open
-    it and drop what it doesn't know.
-  - **Unknown keys:** keep them when saving (so an older build doesn't strip a newer feature's
-    data), or drop them. Today they're dropped.
-  - **Upgrades:** a step per format number that turns an old file into the new shape, with a
-    backup (`macros.json.vN.bak` or the Backups folder) written first, and tests that load a
-    saved file from every old format.
-  - **Removed features:** what happens to their data (like the `{txt}`/`{json}` lines, refused
-    with a notice instead of being deleted).
-  - The same questions for exports someone else made with an older or newer build.
-
 ### VirusTotal scan for every released DLL (added 2026-11-21)
 
 If there's a way to automate it, submit every DLL that's to be released to virustotal.com, and

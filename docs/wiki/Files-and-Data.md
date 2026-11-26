@@ -7,8 +7,8 @@ when it loads.
 |---|---|
 | `macros.json` | Your library: folders, macros, hotkeys, favourites, filters, and the trash bin. |
 | `macros.json.bak` | The previous version of `macros.json`, kept on every save. |
-| `settings.json` | Addon settings: the text size, the language, whether the trash bin is on, the backup schedule, and the quick menu's recently sent macros. Safe to delete (back to the defaults). |
-| `maps.json` | Map names and regions from the GW2 API (in the addon's language), the API's full list of map ids for the map search, and the maps you've been to. Safe to delete: it's fetched again (only the "Maps you've been to" list starts over). |
+| `settings.json` | Addon settings: the text size, the language, whether the trash bin is on, the backup schedule, the quick menu's recently sent macros, and the maps you've been to. Safe to delete (back to the defaults; the "Maps you've been to" list starts over). |
+| `maps.json` | Map names and regions from the GW2 API (in the addon's language) and the API's full list of map ids for the map search. Safe to delete: it's fetched again. |
 | `exports\` | Files saved by Export. Created when the addon loads; **Exports folder** in the toolbar opens it. |
 | `imports\` | Put files here to see them in the Import window. Created when the addon loads; **Open imports folder** in the Import window opens it. |
 | `backups\` | Copies of your library, named with the date and time in UTC (see [Backups and restore](Backups-and-Restore)). Created when the addon loads. |
@@ -22,6 +22,19 @@ when it loads.
   old one is kept as `macros.json.bak`.
 - If saving fails, the library window says so and keeps retrying. Check the Nexus log for the
   reason.
+
+## Older and newer versions of the addon
+
+- **After an update**, your library keeps working: every older file is read and brought up to
+  date. When the file's format changes, the old file is kept once as `macros.json.v<N>.bak`
+  before the first save.
+- **If you go back to an older version**, nothing is lost: what it doesn't know (new settings,
+  a new channel) is kept and saved back untouched. A line for a channel it doesn't know is
+  shown as **? name** in red and isn't sent.
+- **If your library was saved by a newer version** in a way this one can't fully read, the
+  library window says it's **read-only**: you can send your macros, but changes aren't saved,
+  so the newer file is never damaged. Update the addon to edit it.
+- Each file records which version of the addon saved it.
 
 ## If `macros.json` can't be read
 

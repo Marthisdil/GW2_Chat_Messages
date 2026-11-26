@@ -21,7 +21,7 @@ change means a done check must be run again, it moves back here and into its ses
 |---|---|---|
 | A1 | Passed (PR #15 build) | Re-check with the current build: the log and the options page show its version and build stamp, the two links and the folders are new (A1's last part), and so is the icon (the quick bubble, 2026-11-25). |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text wraps and errors open the error window. Re-check those two points only (marked *Re-check* in A2), then go on to A3. |
-| A3 to R | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (H9 and H10, filters on folders, are the newest; then S, the Advanced options box (new 2026-11-25; tick it first, see "Before you start"); then J11, export a selection; G4 to G6, favourites and recently sent, with G4 and G6 new for favourites shown everywhere, and R, backups and restore, are the newest; A1b, the example macros, and F9, the hotkey cooldown, came just before). |
+| A3 to T | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (T, saved files from older and newer versions, is the newest (2026-11-26); H9 and H10, filters on folders, are the newest; then S, the Advanced options box (new 2026-11-25; tick it first, see "Before you start"); then J11, export a selection; G4 to G6, favourites and recently sent, with G4 and G6 new for favourites shown everywhere, and R, backups and restore, are the newest; A1b, the example macros, and F9, the hotkey cooldown, came just before). |
 
 ## How to report
 
@@ -612,7 +612,7 @@ sub-folder `Sub` and a macro `Junk` (one line) inside `Sub`.
 
 **O1. Delete and restore.** Select `Junk`, click **Delete**: no question, it's gone from `Sub`, the
 message under the toolbar says it's in the trash bin, and **Trash bin (1)** at the bottom of the
-tree holds it, counted as **Trash bin (0/1)** (folders/macros). Click it: the details show when and where from, its line, and no editor. Its
+tree holds it, counted as **Trash bin (0/1)** (folders/macros). Click it: the details show when (your local time) and where from, its line, and no editor. Its
 hotkey (give it one first, e.g. Ctrl+F11) does nothing and it's not in the quick menu.
 Right-click it > **Restore**: it's back in `Sub`, in its old place, and its hotkey works again.
 
@@ -824,6 +824,51 @@ same one. Untick **Advanced options**:
 delete the `"advanced_options"` entry (keep the JSON valid). Start the game: **Advanced options**
 is unticked, even though `Two` is linked (a new install, or a settings file without it, starts
 with it off). Tick it again if you have more checks to do.
+
+## T. Saved files: older and newer versions (new 2026-11-26)
+
+Run each check with **Advanced options** off, then once more with it on (T3's Raw text and link
+file points only apply with it on). Close the game before each edit of `macros.json`, keep a copy
+of the file first, and put it back after the check. Edit with Notepad and keep the JSON valid.
+
+**T1. A newer library opens read-only.** In `macros.json`, change `"format": 1` to `"format": 2`.
+Start the game and open the library:
+- a yellow line under the toolbar says it's read-only (saved by a newer version), and the error
+  window says the same once;
+- send `Say` (Send now and its hotkey): it's sent;
+- rename `Say` to `Say 2` and wait 10 seconds, then unload the addon (or close the game): the
+  file still has `"format": 2` and the name `Say`; the Nexus log says it wasn't saved;
+- on the options page, **Back up now**: the new file in `backups\` is a copy of `macros.json` as
+  it was (`"format": 2`).
+
+**T2. Fields from a newer version are kept.** Put `"format": 1` back. Add `"colour": "red",` to a
+folder's object and `"delay_ms": 250,` to one of `Two`'s lines. Start the game, rename `Two` to
+`Two b`, wait for the save, close the game: both fields are still in `macros.json`, unchanged.
+The file starts with `"format": 1`, `"saved_by"` (this build's version) and `"kind": "library"`.
+
+**T3. An unknown channel.** Change one of `Two`'s lines to `"channel": "guild_hall"`. Start the
+game:
+- that line's channel box shows **? guild_hall** in red, with an error under it: it won't be
+  sent;
+- **Send now**: nothing is sent, and the error window names the line and the channel; the
+  hotkey and the quick menu send nothing either;
+- Advanced options on: the **Raw text** tab shows a note instead of the text; right-click >
+  Export > as .txt is refused with its own message; if `Two` is linked to a file, the link
+  section says it isn't kept in step (the file doesn't change);
+- save something else, close the game: the line still has `"channel": "guild_hall"`;
+- pick **Say** in that line's channel box: the error goes, and **Send now** sends both lines.
+
+**T4. Importing a newer export.** Export `Two` (as .json). In the file, change `"format": 1` to
+`"format": 2` and add `"pinned_at": 5,` to the macro. Import it: the import window warns it was
+saved by a newer version, the preview marks `Two` **NEWER VERSION** (hover: why), and the line
+above the preview counts it. Import it: it comes in, and after the next save `pinned_at` is in
+`macros.json` with it.
+
+**T5. Trash bin times and maps visited.** Delete a macro to the trash bin and click it there: the
+time is your **local** time. In `macros.json`, its `"deleted_at"` is in UTC with a `Z`
+(`"2026-11-26T18:03:00Z"`). Then change map once, close the game and delete `maps.json`: start
+the game again, and a filter's **Maps you've been to** still lists your maps (they're in
+`settings.json`, `"visited_maps"`); `settings.json` has `"format": 1`.
 
 ## Report template
 

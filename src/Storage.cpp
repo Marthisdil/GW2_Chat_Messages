@@ -213,6 +213,11 @@ bool Storage::LoadMacros(MacroTree::Tree& aTree, std::vector<std::string>& aMess
     switch (ReadLibrary(file, aTree, warnings))
     {
     case ERead::Ok:
+        if (aTree.FromNewerVersion())
+            aMessages.push_back(Localization::Fmt(TR("Your macros were saved by a newer version of the addon (%s). They're open "
+                                                     "read-only: you can send them, but changes aren't saved. Update the addon "
+                                                     "to edit them."),
+                                                  aTree.SavedBy().empty() ? "?" : aTree.SavedBy().c_str()));
         for (auto& w : warnings) aMessages.push_back(std::move(w));
         return false;
     case ERead::Missing:
@@ -249,7 +254,43 @@ bool Storage::LoadMacros(MacroTree::Tree& aTree, std::vector<std::string>& aMess
 
 bool Storage::SaveMacros(const MacroTree::Tree& aTree)
 {
-    return WriteJson(LibraryFile(), aTree.ToJson(), true);
+    // A newer version's file is never written over: this build would lose what it doesn't
+    // understand of a breaking change (docs/design.md, "Saved files").
+    if (aTree.FromNewerVersion())
+    {
+        LogF(LOGL_WARNING, "macros.json is from a newer version of the addon (format %d); it isn't saved.", aTree.FormatRead());
+        return false;
+    }
+    const fs::path file = LibraryFile();
+    // An older format, upgraded as it was read: keep the file as it was, once, before the first save.
+    if (!file.empty() && aTree.FormatRead() < MacroTree::kFormatVersion)
+    {
+        const fs::path old = WithSuffix(file, ".v" + std::to_string(aTree.FormatRead()) + ".bak");
+        std::error_code ec;
+        if (fs::exists(file, ec) && !fs::exists(old, ec))
+        {
+            fs::copy_file(file, old, ec);
+            if (ec) LogF(LOGL_WARNING, "Could not keep the old macros.json as %s: %s", PathText::Utf8(old.filename()).c_str(),
+                         ec.message().c_str());
+        }
+    }
+    return WriteJson(file, aTree.ToJson(), true);
+}
+
+bool Storage::ReadLibraryText(std::string& aText)
+{
+    aText.clear();
+    const fs::path file = LibraryFile();
+    std::error_code ec;
+    if (file.empty()) return false;
+    const auto size = fs::file_size(file, ec);
+    if (ec || size > kMaxBackupBytes) return false;
+    std::ifstream in(file, std::ios::binary);
+    if (!in) return false;
+    aText.resize(static_cast<size_t>(size));
+    in.read(aText.data(), static_cast<std::streamsize>(aText.size()));
+    aText.resize(static_cast<size_t>(in.gcount()));
+    return !in.bad();
 }
 
 std::string Storage::LibraryText(const MacroTree::Tree& aTree) { return Dump(aTree.ToJson()); }
@@ -367,5 +408,13 @@ bool Storage::SaveSettings(const nlohmann::json& aSettings)
 {
     const fs::path dir = AddonDir();
     if (dir.empty()) return false;
+    // "format": added when missing; a newer number is kept (each setting is checked on its own
+    // and unknown ones are kept, so a newer file reads fine).
+    if (aSettings.is_object() && !aSettings.contains("format"))
+    {
+        nlohmann::json withFormat = aSettings;
+        withFormat["format"] = kSettingsFormat;
+        return WriteJson(dir / kSettingsFile, withFormat, false);
+    }
     return WriteJson(dir / kSettingsFile, aSettings, false);
 }

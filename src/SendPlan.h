@@ -61,6 +61,7 @@ namespace SendPlan
 
     // Checks every line first, so a macro is either sent whole or not at all.
     // Lines with an empty message are skipped (chat ignores them anyway).
+    // Refused: a line for a channel from a newer version (Line::UnknownChannel), even an empty one.
     // Refused (SEC-013):
     //  - typed text with a control character (C0, DEL, C1), so our own Enter and Tab are the only
     //    ones the game ever gets;

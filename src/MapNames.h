@@ -32,7 +32,8 @@ namespace MapNames
     bool Get(uint32_t aMapId, std::string& aName, std::string& aError);
 
     // The player arrived on this map (the render thread, on a map change): remembered for the
-    // picker's "Maps you've been to", and its name is looked up.
+    // picker's "Maps you've been to", and its name is looked up. When the list changed, it's
+    // saved in settings.json ("visited_maps"), on this thread like every other setting.
     void NoteVisit(uint32_t aMapId);
 
     struct Entry

@@ -121,6 +121,7 @@ them (hover a mark to see why):
 
 | Mark | Means |
 |---|---|
+| **NEWER VERSION** | It was made with a newer version of the addon and has settings this one doesn't know. They're kept (and work again once you update), but aren't used here; a line for a channel this version doesn't know isn't sent. |
 | **REMOVED PLACEHOLDER** | It uses `{txt}` or `{json}`, which this addon no longer has (see [Placeholders](Placeholders)). It won't be sent until you edit those out. |
 | **KEY WITHOUT CTRL/ALT/SHIFT** | (Keep hotkeys ticked) Its hotkey is a plain key, so it sends whenever you press that key while playing. |
 | **YOUR HOTKEY** | (Keep hotkeys ticked) One of your macros already has this hotkey, and both can be active at once (their filters overlap): there, the key sends nothing. |

@@ -105,19 +105,6 @@ bool MapCatalog::FromJson(const std::string& aText, const std::string& aLang, Ca
     if (format == j.end() || !format->is_number_integer() || format->get<long long>() != kFormat) return false;
 
     bool any = false;
-    const auto visited = j.find("visited");
-    if (visited != j.end() && visited->is_array())
-        for (const json& v : *visited)
-        {
-            if (aOut.Visited.size() >= kMaxVisited) break;
-            if (!v.is_number_unsigned()) continue;
-            const uint64_t raw = v.get<uint64_t>();
-            if (raw == 0 || raw > 0xFFFFFFFFull) continue;
-            const uint32_t id = static_cast<uint32_t>(raw);
-            if (std::find(aOut.Visited.begin(), aOut.Visited.end(), id) == aOut.Visited.end()) aOut.Visited.push_back(id);
-            any = true;
-        }
-
     const auto lang = j.find("lang");
     if (lang == j.end() || !lang->is_string() || lang->get_ref<const std::string&>() != aLang) return any;
 
@@ -158,8 +145,7 @@ std::string MapCatalog::ToJson(const Cache& aCache)
         if (!m.Region.empty()) o["region_name"] = m.Region;
         maps.push_back(std::move(o));
     }
-    json j = {{"format", kFormat}, {"lang", aCache.Lang}, {"maps", std::move(maps)},
-              {"visited", aCache.Visited}};
+    json j = {{"format", kFormat}, {"lang", aCache.Lang}, {"maps", std::move(maps)}};
     if (!aCache.Listed.empty())
     {
         j["listed"] = std::vector<uint32_t>(aCache.Listed.begin(), aCache.Listed.end());
@@ -168,6 +154,24 @@ std::string MapCatalog::ToJson(const Cache& aCache)
     // Names come from the API and may hold any UTF-8; a bad sequence is replaced, not thrown.
     return j.dump(1, '\t', false, json::error_handler_t::replace);
 }
+
+std::vector<uint32_t> MapCatalog::VisitedFromJson(const json& aValue)
+{
+    std::vector<uint32_t> out;
+    if (!aValue.is_array()) return out;
+    for (const json& v : aValue)
+    {
+        if (out.size() >= kMaxVisited) break;
+        if (!v.is_number_unsigned()) continue;
+        const uint64_t raw = v.get<uint64_t>();
+        if (raw == 0 || raw > 0xFFFFFFFFull) continue;
+        const uint32_t id = static_cast<uint32_t>(raw);
+        if (std::find(out.begin(), out.end(), id) == out.end()) out.push_back(id);
+    }
+    return out;
+}
+
+json MapCatalog::VisitedToJson(const Cache& aCache) { return aCache.Visited; }
 
 bool MapCatalog::RefreshDue(const Cache& aCache, int64_t aNow)
 {

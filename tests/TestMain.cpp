@@ -23,6 +23,7 @@ void RunExamplesTests();
 void RunBackupsTests();
 void RunQuickListsTests();
 void RunAdvancedTests();
+void RunFormatTests();
 
 int main()
 {
@@ -47,6 +48,7 @@ int main()
     RunBackupsTests();
     RunQuickListsTests();
     RunAdvancedTests();
+    RunFormatTests();
     std::printf("%d checks, %d failures\n", g_TestChecks, g_TestFailures);
     return g_TestFailures == 0 ? 0 : 1;
 }

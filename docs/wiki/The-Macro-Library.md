@@ -133,7 +133,7 @@ mistake can be undone. You can also drag an item onto the bin. Its counter shows
 **Trash bin (1/4)** is 1 folder and 4 macros, counting everything inside deleted folders.
 The trash bin is never exported, and isn't imported from someone else's `macros.json`.
 
-- Click an item in the bin to see what it is, when it was deleted and where from. Items in the
+- Click an item in the bin to see what it is, when it was deleted (in your local time) and where from. Items in the
   bin can't be sent, edited or used by a hotkey, and don't show in the quick menu.
 - **Restore** (button, or right-click the item): it goes back where it was. If its folder has
   been deleted since, you choose: **Recreate the folders** or **Put it at the top level**. If an

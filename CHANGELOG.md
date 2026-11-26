@@ -14,6 +14,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   closed.
 
 ### Changed
+- **Saved files work across versions:** what the addon saves now records its format and the
+  version that saved it, so updates never lose your library and going back a version doesn't
+  either. Settings a newer version added are kept and saved back untouched. A library saved by a
+  newer version opens **read-only** (you can send, but changes aren't saved, so the newer file is
+  never damaged). A line for a channel this version doesn't know is kept as it is, shown as
+  **? name** in red, and never sent. An import from a newer version still works, with its items
+  marked **NEWER VERSION** in the preview. Trash bin times are saved in UTC and shown in your
+  local time, and the maps you've been to are kept in `settings.json`, so deleting `maps.json`
+  no longer clears them.
 - **Advanced options:** a new checkbox on the addon's options page (General tab), with **[?]**
   opening its wiki page. Features most players never need are kept behind it, so the addon stays
   simple: text file links, hotkey cooldowns, the Raw text tab, importing a whole library, Keep

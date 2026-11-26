@@ -106,6 +106,15 @@ namespace SendPlan
         for (size_t i = 0; i < aLines.size(); i++)
         {
             const Line& l = aLines[i];
+            // A newer version's channel (MacroTree::Line::UnknownChannel): never sent, not even
+            // empty, and never to the current channel instead.
+            if (!l.UnknownChannel.empty())
+            {
+                plan.Error = Localization::Fmt(TR("Line %zu: its channel \"%s\" is from a newer version of the addon. "
+                                                  "Update the addon, or pick another channel for it."),
+                                               static_cast<size_t>(i + 1), l.UnknownChannel.c_str());
+                return plan;
+            }
             if (l.Message.empty()) continue;
             const std::string where = Localization::Fmt(TR("Line %zu: "), static_cast<size_t>(i + 1));
             if (ChatLine::Utf16Length(ChatLine::TypedText(l)) > ChatLine::kMaxChatLength)
@@ -206,6 +215,9 @@ namespace SendPlan
     Plan Prepare(const std::vector<Line>& aLines, bool aIsCommander, const Placeholders::Context& aContext,
                  const std::function<bool()>& aStop)
     {
+        // A line that can't be sent at all is refused before any placeholder is filled in.
+        for (const Line& l : aLines)
+            if (!l.UnknownChannel.empty()) return Build(aLines, aIsCommander, {});
         std::vector<Line> lines = aLines;
         std::vector<Origin> origins(lines.size()); // which bytes came from values
         for (size_t i = 0; i < lines.size(); i++)
