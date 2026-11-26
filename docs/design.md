@@ -292,6 +292,48 @@ reading a newer one (someone going back a version, or importing a friend's expor
   - Default: off, for everyone (owner, 2026-11-25: there are no users yet, so no update rule).
     Only a saved `true` turns it on.
 
+## Macro editor layout (decided 2026-11-26, not built yet)
+
+*(Owner's pick from five drawn options, to-do "Look at the layout of the macro settings": layout
+B, one column, most-used first. Build it before the `Ui.cpp` cleanup, so that cleanup works on
+the final layout. A tabbed layout as a choice on the options page is in `docs/todo.md`, section
+5.)*
+
+The details pane for a selected macro, top to bottom:
+
+- **Header:** the name, with **Send now**, **Preview** and a **...** menu (Rename, Delete,
+  Duplicate) on the same row (they wrap under it when the pane is narrow). Under it one grey
+  line: the folder path, the hotkey and where it's active ("Examples > Basics · Ctrl+F1 ·
+  Everywhere"). It replaces today's "Macro" / name / "In: ..." / Rename and Delete rows.
+- **Lines** first, under a "Lines (n)" header with **Placeholders (?)** on its right. One row per
+  line: its number, the channel drop-down (in the channel's colour), the message box, the
+  character count, move up/down arrows and a delete **x**. A Whisper line has a narrow
+  **Recipient** box in the same row, a Squad line its **Broadcast** tick box. A line over 199
+  characters gets a red count and one red sentence under the row. A wide **+ Add line** below.
+  Today each line takes three rows (arrows, channel and Remove; the text; the count).
+- **Three folding sections**, each showing a summary in its header when closed:
+  **Where it's active:** Everywhere / PvE, 3 maps ...; **Hotkey and favourite:** Ctrl+F1;
+  **Note:** its first words. A warning shows in the closed header too (a shared hotkey, "can't
+  be active anywhere"), so folding never hides a problem.
+- **Advanced**, one folding section at the bottom, only while the Advanced options box is
+  ticked: the Lines / Raw text choice, the cooldown and the text file link (later timed lines,
+  a schedule ...). With the box off it isn't there at all, with no gap. A macro that uses an
+  advanced feature while the box is off keeps its yellow note under the header and a faded
+  **Send now**, as today, and a cooldown keeps its grey "kept, ignored" line.
+
+Defaults (owner, 2026-11-26):
+
+- **Folding:** each section's open or closed state is remembered between macros (one state per
+  section for the whole library, not per macro), saved in `settings.json`.
+- **Send now and Preview** stay in the header only (no second copy under the lines).
+- **Moving lines:** the up/down arrows, as now. A drag handle is in `docs/todo.md` (section 2).
+- **Folders:** the same header (name, **...** menu, path and summary) plus **Where it's active**
+  and the folder's other settings; a folder has no lines, hotkey or note.
+- Works at small window sizes and big text sizes: one column, rows wrap (`UiFont::Row`), sizes
+  from `Px()` or measured text.
+- When built: new screenshots of the pane with the box off, and with it on where it differs;
+  the in-game checks for the screens it changes.
+
 ## Starter library
 
 Built 2026-11-23 (todo section 2). On the **first run** (no `macros.json` yet), the library starts
