@@ -44,6 +44,6 @@ The addon only goes online for:
 - map names, from `https://api.guildwars2.com/v2/maps` (no API key, nothing about you is sent):
   the map you arrive on, when its name isn't saved yet, and the full map list (about 10 short
   requests) on the first run, once a week, when you change the language, and when you click
-  **Refresh map list**.
+  **Refresh map list** (an [advanced option](Advanced-Options)).
 
 No macro can make it go anywhere else.

@@ -186,7 +186,18 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
   Features most players never need sit behind it, so the editor stays short and nothing
   surprising happens unless the user turned it on. *(`src/Advanced.*`, tested in
   `tests/AdvancedTests.cpp`.)*
-  - Behind it now: text file links.
+  - Behind it now, and what "off" means for each:
+    - text file links: hidden, not synced, and a linked macro is blocked (below);
+    - a macro's hotkey cooldown: the row is hidden (a grey line shows a set value) and the
+      cooldown is ignored (`Advanced::CooldownSec`); the 1-second guard still applies;
+    - the Raw text tab: hidden; the editor is always on Lines;
+    - Import's **A whole library**: hidden, macros only;
+    - Import's **Keep hotkeys**: hidden and forced off;
+    - your own language files: the folder isn't read (`Languages::UseFolder`), and its buttons
+      and text are hidden; a language chosen from a file shows English until it's back on;
+    - **Refresh map list**: hidden (the automatic refreshes go on), and the map picker's hint no
+      longer points at it.
+    The options page counts the macros that use one (linked, with a cooldown) while it's off.
   - Planned behind it (owner, 2026-11-25; each in `docs/todo.md`): timed lines, scheduled and
     repeating macros, copy to the clipboard as a fallback, your own text values (`{v:...}`),
     `{pick a|b|c}`, and reading the player's real keybinds. A per-macro feature (a placeholder,
@@ -199,8 +210,8 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
     faded and unclickable (search Enter skips it), Send now shows the error window, and the
     library dims it with a note in its editor. Its settings, hotkey included, are kept; the
     hotkey still counts in the "Also set on" warning.
-  - Default: off for a new install. With no saved value, it's on if the library already uses an
-    advanced feature (an update never stops a link working), and that value is saved at once.
+  - Default: off, for everyone (owner, 2026-11-25: there are no users yet, so no update rule).
+    Only a saved `true` turns it on.
 
 ## Starter library
 

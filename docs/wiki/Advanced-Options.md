@@ -9,22 +9,23 @@ Messages page, **General** tab). The **[?]** next to it opens this page.
 
 ## What the checkbox does
 
-- **On:** the advanced features show in the library and work like any other.
-- **Off** (the default for a new install): they're hidden, and they don't work. A macro that
-  uses one:
-  - can't be sent: its hotkey does nothing (a Nexus alert says why), it's faded and can't be
-    clicked in the quick menu, and **Send now** explains instead of sending;
-  - is dimmed in the library, and its editor says why it can't be sent;
-  - keeps all its settings, so nothing is lost. Its hotkey is kept too, and still counts when
-    the editor warns that another macro uses the same key.
+- **On:** the advanced features show and work like any other.
+- **Off** (the default): they're hidden, and they don't work. Nothing you set with them is
+  deleted, so turning the box back on brings everything back where it left off. Each feature
+  below says what "doesn't work" means for it. Under the checkbox, the options page also counts
+  your macros that use one (linked to a text file, or with a cooldown).
+
+A macro linked to a text file can't be sent at all while the box is off:
+- its hotkey does nothing (a Nexus alert says why), it's faded and can't be clicked in the quick
+  menu, and **Send now** explains instead of sending;
+- it's dimmed in the library, and its editor says why it can't be sent;
+- it keeps all its settings. Its hotkey is kept too, and still counts when the editor warns that
+  another macro uses the same key.
 
 <!-- screenshot: advanced-off-macro.png (docs/screenshots.md) -->
 > 📷 *Screenshot to come: a linked macro in the library while Advanced options is off.*
 
 Turn the box back on and everything works again where it left off.
-
-If you used an advanced feature before this checkbox existed (a macro linked to a text file),
-the box starts ticked, so nothing stops working after an update.
 
 ## Why some features are hidden
 
@@ -39,7 +40,15 @@ changes a macro while you play, for example). Keeping them behind one box means:
 
 ## Features behind the checkbox
 
-- [Text file links](#text-file-links): keep a macro in step with a `.txt` file.
+| Feature | While the box is off | Described in |
+|---|---|---|
+| **Text file links**: keep a macro in step with a `.txt` file | Hidden. A linked macro can't be sent, and isn't kept in step with its file. | [below](#text-file-links) |
+| **Cooldown**: how long a macro's hotkey waits before it sends again | Hidden and ignored: the hotkey only waits the usual 1 second. The editor shows the cooldown greyed out, and keeps it. | [Sending macros](Sending-Macros#cooldown) |
+| **Raw text** tab: edit a macro's lines as plain text | Hidden: the editor shows the Lines tab only. | [Editing macros](Editing-Macros#the-raw-text-tab) |
+| Import **A whole library**: someone else's `macros.json` into a folder of its own | Hidden: the Import window imports macros only. | [Import and export](Import-and-Export#importing-a-whole-library) |
+| Import **Keep hotkeys** | Hidden and off: imported macros come without hotkeys. | [Import and export](Import-and-Export#2-choose-where-it-goes) |
+| **Your own language files** (`localization` folder, **Open localization folder**, **Reload language files**) | Hidden, and the files aren't read: only the built-in languages are offered. A language you'd chosen from a file shows in English until the box is back on. | [Languages](Languages#more-languages) |
+| **Refresh map list** button | Hidden. The map list still refreshes by itself (first run, weekly, on a language change). | [Filters](Filters#the-map-list) |
 
 Features added later that fit here (for example timed or scheduled lines) will be behind the
 checkbox too, and listed here when they're built.

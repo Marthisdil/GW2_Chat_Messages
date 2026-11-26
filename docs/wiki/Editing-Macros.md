@@ -44,6 +44,9 @@ Each line has a channel dropdown and a message box, with arrow buttons to change
 
 ### The "Raw text" tab
 
+> **Advanced option:** only with **Advanced options** ticked on the addon's options page; see
+> [Advanced options](Advanced-Options).
+
 Type one message per row, the way you'd type it in game:
 
 ```

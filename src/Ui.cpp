@@ -439,7 +439,8 @@ namespace
         {
             // Still cooling down: the 1 s guard alone is silent; a macro's own cooldown shows one
             // alert, on the first ignored press.
-            const Cooldown::Wait wait = s_Cooldowns.ForHotkey(aMacro.Id, aMacro.CooldownSec, ImGui::GetTime());
+            // A macro's own cooldown is an advanced option (ignored while off); the 1 s guard always applies.
+            const Cooldown::Wait wait = s_Cooldowns.ForHotkey(aMacro.Id, Advanced::CooldownSec(aMacro, s_AdvancedOn), ImGui::GetTime());
             if (wait.Seconds > 0.0)
             {
                 if (wait.ByCooldown && s_Cooldowns.TakeAlert(aMacro.Id))
@@ -677,6 +678,12 @@ namespace
     // Cooldown: how long the hotkey waits before sending this macro again (0 = off).
     void DrawCooldownRow(Node& aMacro)
     {
+        if (!s_AdvancedOn) // an advanced option: hidden, and ignored, while they're off
+        {
+            if (aMacro.CooldownSec > 0)
+                ImGui::TextDisabled(T("Cooldown: %d s, ignored while advanced options are off."), aMacro.CooldownSec);
+            return;
+        }
         UiFont::Row row;
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted(T("Cooldown:"));
@@ -766,9 +773,12 @@ namespace
         {
             const MapNames::State st = MapNames::GetState();
             if (st.Listed == 0 && st.Refreshing) ImGui::TextDisabled(T("The map list is still loading from the GW2 API..."));
-            else if (st.Listed == 0)
+            else if (st.Listed == 0 && s_AdvancedOn)
                 ImGui::TextDisabled(T("The map list isn't loaded yet (it comes from the GW2 API). Try Refresh map list "
                                     "on the addon's options page, or add the map by its id."));
+            else if (st.Listed == 0)
+                ImGui::TextDisabled(T("The map list isn't loaded yet (it comes from the GW2 API). Try again later, or add "
+                                    "the map by its id."));
             else ImGui::TextDisabled(T("No map matches."));
             return;
         }
@@ -2415,13 +2425,23 @@ namespace
         ImGui::Separator();
 
         UiFont::Row modeRow;
-        int mode = static_cast<int>(s_EditMode);
-        if (ImGui::RadioButton(T("Lines"), &mode, static_cast<int>(EEditMode::Lines))) s_RawForId = 0;
-        modeRow.Next(UiFont::CheckboxWidth(T("Raw text")));
-        if (ImGui::RadioButton(T("Raw text"), &mode, static_cast<int>(EEditMode::Raw))) s_RawForId = 0;
-        s_EditMode = static_cast<EEditMode>(mode);
+        // The Raw text tab is an advanced option: while they're off, the editor is always Lines.
+        if (!s_AdvancedOn && s_EditMode == EEditMode::Raw)
+        {
+            s_EditMode = EEditMode::Lines;
+            s_RawForId = 0;
+        }
         const std::string count = Fmt(T("%zu line(s)"), aMacro.Lines.size());
-        modeRow.Next(UiFont::TextWidth(count.c_str()));
+        if (s_AdvancedOn)
+        {
+            int mode = static_cast<int>(s_EditMode);
+            if (ImGui::RadioButton(T("Lines"), &mode, static_cast<int>(EEditMode::Lines))) s_RawForId = 0;
+            modeRow.Next(UiFont::CheckboxWidth(T("Raw text")));
+            if (ImGui::RadioButton(T("Raw text"), &mode, static_cast<int>(EEditMode::Raw))) s_RawForId = 0;
+            s_EditMode = static_cast<EEditMode>(mode);
+            modeRow.Next(UiFont::TextWidth(count.c_str()));
+        }
+        else ImGui::AlignTextToFramePadding();
         ImGui::TextDisabled("%s", count.c_str());
         modeRow.Next(UiFont::TextWidth(T("Placeholders (?)")));
         ImGui::TextDisabled(T("Placeholders (?)"));
@@ -3032,13 +3052,18 @@ namespace
     void DrawImportSource()
     {
         ImGui::TextUnformatted(T("1. Choose what to import"));
-        if (ImGui::RadioButton(T("Macros"), !s_ImportLibrary)) SetImportLibrary(false);
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip(T("A .json export, a .txt file (one macro), or a folder of .txt files."));
-        ImGui::SameLine();
-        if (ImGui::RadioButton(T("A whole library"), s_ImportLibrary)) SetImportLibrary(true);
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip(T("Someone else's macros.json (or macros.json.bak), as they sent it to you.\n"
-                              "It goes into a new folder of its own, so it never mixes with your folders."));
+        // Importing a whole library is an advanced option: while they're off, only macros.
+        if (!s_AdvancedOn) SetImportLibrary(false);
+        else
+        {
+            if (ImGui::RadioButton(T("Macros"), !s_ImportLibrary)) SetImportLibrary(false);
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip(T("A .json export, a .txt file (one macro), or a folder of .txt files."));
+            ImGui::SameLine();
+            if (ImGui::RadioButton(T("A whole library"), s_ImportLibrary)) SetImportLibrary(true);
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip(T("Someone else's macros.json (or macros.json.bak), as they sent it to you.\n"
+                                  "It goes into a new folder of its own, so it never mixes with your folders."));
+        }
         if (s_ImportLibrary)
             ImGui::TextDisabled(T("Someone's macros.json or macros.json.bak. Rename it (e.g. Alex.json) so it's easy to tell apart. "
                                 "It goes into a new folder at the top level. Their trash bin and text file links aren't taken."));
@@ -3308,10 +3333,15 @@ namespace
         ImGui::Checkbox(T("Move the contents of too-deep folders up a level"), &s_ImportOpt.Flatten);
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip(T("Folders can be nested at most %d deep. Unticked, folders that would go deeper are left out."), kMaxFolderDepth);
-        ImGui::Checkbox(T("Keep hotkeys"), &s_ImportOpt.KeepHotkeys);
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("%s", s_ImportLibrary ? T("Off by default for someone else's library, so their keys don't clash with yours.")
-                                                    : T("Off at first, so macros from someone else come without their hotkeys. Tick it for your own exports; the preview then shows each macro's hotkey."));
+        // Keep hotkeys is an advanced option: while they're off, imports never bring hotkeys.
+        if (!s_AdvancedOn) s_ImportOpt.KeepHotkeys = false;
+        else
+        {
+            ImGui::Checkbox(T("Keep hotkeys"), &s_ImportOpt.KeepHotkeys);
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("%s", s_ImportLibrary ? T("Off by default for someone else's library, so their keys don't clash with yours.")
+                                                        : T("Off at first, so macros from someone else come without their hotkeys. Tick it for your own exports; the preview then shows each macro's hotkey."));
+        }
         for (const std::string& w : s_ImportPkg->Warnings) ImGui::TextColored(kWarnColor, "%s", w.c_str());
 
         // Built every frame against the live library, so the preview is always what Import does.
@@ -3663,7 +3693,8 @@ namespace
         if (ImGui::Checkbox(T("Advanced options"), &s_AdvancedOn))
         {
             if (!Storage::SaveSetting(Advanced::kSetting, s_AdvancedOn)) LogF(LOGL_WARNING, "The advanced options setting couldn't be saved.");
-            if (s_AdvancedOn) SyncLinks(true); // catch up with files changed while it was off
+            Languages::UseFolder(s_AdvancedOn); // your own language files load only while it's on
+            if (s_AdvancedOn) SyncLinks(true);  // catch up with files changed while it was off
         }
         ImGui::SameLine();
         if (ImGui::SmallButton("[?]##advanced_help")) Storage::OpenWebPage(kAdvancedHelpUrl);
@@ -3672,11 +3703,17 @@ namespace
             ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
             ImGui::SetTooltip(T("Opens the wiki page about advanced options:\n%s"), kAdvancedHelpUrl);
         }
-        ImGui::TextWrapped(T("Shows extra features most players never need: for now, linking a macro to a text file. "
-                           "Off: they're hidden, and a macro that uses one can't be sent (its hotkey does nothing), "
-                           "but it keeps its settings, hotkey included."));
-        if (!s_AdvancedOn && Advanced::AnyUses(s_Tree))
-            ImGui::TextColored(kWarnColor, "%s", T("Some of your macros are linked to text files: they can't be sent while this is off."));
+        ImGui::TextWrapped(T("Shows extra features most players never need: text file links, hotkey cooldowns, the Raw "
+                           "text tab, importing a whole library, Keep hotkeys on import, your own language files and "
+                           "Refresh map list. Off: they're hidden and don't work, but nothing you set is deleted."));
+        if (!s_AdvancedOn)
+        {
+            const Advanced::InUse in = Advanced::Count(s_Tree);
+            if (in.Linked > 0)
+                ImGui::TextColored(kWarnColor, T("%zu macro(s) linked to a text file: they can't be sent while this is off."), in.Linked);
+            if (in.Cooldowns > 0)
+                ImGui::TextColored(kWarnColor, T("%zu macro(s) with a cooldown: it's ignored while this is off."), in.Cooldowns);
+        }
     }
 
     // The options page's map list: when the GW2 API's list was last fetched, and a button to do
@@ -3696,7 +3733,7 @@ namespace
             if (localtime_s(&local, &t) == 0) std::strftime(when, sizeof(when), "%Y-%m-%d %H:%M", &local);
             ImGui::Text(T("Map list: %zu maps, from %s."), st.Listed, when);
         }
-        if (!st.Refreshing)
+        if (!st.Refreshing && s_AdvancedOn) // an advanced option: the list refreshes by itself anyway
         {
             row.Next(UiFont::ButtonWidth(T("Refresh map list")));
             if (ImGui::SmallButton(T("Refresh map list"))) MapNames::RefreshNow();
@@ -3741,6 +3778,7 @@ namespace
         ImGui::TextDisabled("%s", T("The language of this addon's text. \"Follow Nexus\" uses the language set in Nexus' own options."));
         if (Languages::ActiveId() == "en" && nexusId != "en" && choice == Languages::kFollowNexus)
             ImGui::TextDisabled("%s", T("This addon has no translation for that language yet, so it's shown in English."));
+        if (!s_AdvancedOn) return; // language files of your own are an advanced option
         UiFont::Row row;
         if (ImGui::SmallButton(T("Open localization folder"))) Storage::OpenFolder(Languages::Folder());
         row.Next(UiFont::ButtonWidth(T("Reload language files")));
@@ -4110,6 +4148,7 @@ void Ui::Init()
         s_RecentCount = recentCount != settings.end() ? QuickLists::CountFromJson(*recentCount) : QuickLists::kDefaultRecent;
         const auto backups = settings.find(kBackupsSetting);
         s_Backup = backups != settings.end() ? Backups::FromJson(*backups) : Backups::Settings{};
+        s_AdvancedOn = Advanced::FromSettings(settings); // off unless the user turned it on
     }
     s_TrashSelId = 0;
     // The imports and exports folders exist from the start, so there's never one to make by hand.
@@ -4123,14 +4162,6 @@ void Ui::Init()
     s_Mumble = static_cast<Mumble::Data*>(g_Api->DataLink_Get(DL_MUMBLE_LINK));
     s_LoadMessages.clear();
     const bool noLibrary = Storage::LoadMacros(s_Tree, s_LoadMessages);
-    {
-        // The default depends on the library (a link already in use turns it on), so it's read here.
-        const nlohmann::json settings = Storage::LoadSettings();
-        s_AdvancedOn = Advanced::FromSettings(settings, s_Tree);
-        // Saved the first time, so the choice stays put (e.g. after the last link is removed).
-        if (!settings.is_object() || !settings.contains(Advanced::kSetting))
-            if (!Storage::SaveSetting(Advanced::kSetting, s_AdvancedOn)) LogF(LOGL_WARNING, "The advanced options setting couldn't be saved.");
-    }
     // The starter library, once: on the first run (no macros.json yet). A library that already
     // exists counts too, so removing macros.json later starts empty, as before.
     bool saveExamples = false;

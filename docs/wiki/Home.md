@@ -22,8 +22,8 @@ chat macros in folders and types them into chat for you.
 - [Files and data](Files-and-Data): where your macros are saved.
 - [Backups and restore](Backups-and-Restore): backups on a schedule you choose, and putting
   one back.
-- [Advanced options](Advanced-Options): the features kept behind one checkbox (text file links),
-  and why.
+- [Advanced options](Advanced-Options): the features kept behind one checkbox (text file links,
+  cooldowns, Raw text and more), and why.
 - [Safety and troubleshooting](Safety-and-Troubleshooting): how sending stays safe, and what the
   error messages mean.
 - [ArenaNet's policies](ArenaNet-Policies): the macro policy, what the addon is for (and not

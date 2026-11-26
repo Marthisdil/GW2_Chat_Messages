@@ -15,11 +15,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 - **Advanced options:** a new checkbox on the addon's options page (General tab), with **[?]**
-  opening its wiki page. Features most players never need are kept behind it, so the macro
-  editor stays simple; for now that's **text file links**. While it's off (the default for a new
-  install) they're hidden, and a macro that uses one can't be sent: its hotkey does nothing, it's
-  faded in the quick menu, and Send now explains why. Its settings, hotkey included, are kept.
-  If you already have a linked macro, the box starts ticked, so nothing stops working.
+  opening its wiki page. Features most players never need are kept behind it, so the addon stays
+  simple: text file links, hotkey cooldowns, the Raw text tab, importing a whole library, Keep
+  hotkeys on import, your own language files and the Refresh map list button. It's off by
+  default: they're hidden and don't work, and nothing you set is deleted. A macro linked to a
+  text file can't be sent while it's off (its hotkey does nothing, it's faded in the quick menu,
+  and Send now explains why); a cooldown is kept but ignored.
 - **New icon:** the Quick Access icon in the Nexus bar is now a speech bubble with a lightning
   bolt (it was a scroll), so it reads as "chat, fast" even at small sizes.
 

@@ -35,6 +35,10 @@ tooltip, follow Nexus' language.
 
 ## More languages
 
+> **Advanced option:** only with **Advanced options** ticked on the addon's options page; see
+> [Advanced options](Advanced-Options). While it's off, the
+> files in the `localization` folder aren't read.
+
 Other languages can be added with a language file (a `.json` file).
 
 1. Get the file from the `localization` folder of the addon's

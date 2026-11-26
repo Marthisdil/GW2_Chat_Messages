@@ -11,6 +11,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "Advanced.h"
 #include "Globals.h"
 #include "Localization.h"
 #include "MapNames.h"
@@ -47,6 +48,7 @@ namespace
     std::string                     s_ActiveId = "en";
     bool                            s_Apply  = false;
     bool                            s_Reload = false;
+    bool                            s_UseFolder = false; // advanced options on (Advanced.h)
     DWORD                           s_LastPoll = 0;
 
     HMODULE ThisModule()
@@ -124,6 +126,7 @@ namespace
     // <addon>\localization\*.json: plain files only (no links), at most kMaxFiles, each checked.
     void LoadFolder()
     {
+        if (!s_UseFolder) return;    // an advanced option: not even read while it's off
         if (s_Known.empty()) return; // without the English list nothing can be checked
         const fs::path dir = Languages::Folder();
         if (dir.empty()) return;
@@ -245,6 +248,7 @@ void Languages::Init()
     const auto it = settings.find(kSetting);
     if (it != settings.end() && it->is_string() && (it->get<std::string>() == kFollowNexus || Localization::ValidId(it->get<std::string>())))
         s_Choice = it->get<std::string>();
+    s_UseFolder = Advanced::FromSettings(settings);
     LoadAll();
     s_Nexus = AskNexus(); // Nexus applies our probe texts on its next frame: Update corrects this
     Apply();
@@ -297,6 +301,13 @@ void Languages::Choose(const std::string& aId)
 }
 
 void Languages::RequestReload() { s_Reload = true; }
+
+void Languages::UseFolder(bool aOn)
+{
+    if (aOn == s_UseFolder) return;
+    s_UseFolder = aOn;
+    s_Reload = true;
+}
 std::string Languages::NexusLanguage() { return s_Nexus; }
 std::string Languages::ActiveId() { return s_ActiveId; }
 fs::path Languages::Folder() { return Storage::LocalizationDir(); }

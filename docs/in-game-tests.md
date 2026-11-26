@@ -21,7 +21,7 @@ change means a done check must be run again, it moves back here and into its ses
 |---|---|---|
 | A1 | Passed (PR #15 build) | Re-check with the current build: the log and the options page show its version and build stamp, the two links and the folders are new (A1's last part), and so is the icon (the quick bubble, 2026-11-25). |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text wraps and errors open the error window. Re-check those two points only (marked *Re-check* in A2), then go on to A3. |
-| A3 to R | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (H9 and H10, filters on folders, are the newest; then K7 and K8, the Advanced options box (new 2026-11-25); then J11, export a selection; G4 to G6, favourites and recently sent, with G4 and G6 new for favourites shown everywhere, and R, backups and restore, are the newest; A1b, the example macros, and F9, the hotkey cooldown, came just before). |
+| A3 to R | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (H9 and H10, filters on folders, are the newest; then S, the Advanced options box (new 2026-11-25; tick it first, see "Before you start"); then J11, export a selection; G4 to G6, favourites and recently sent, with G4 and G6 new for favourites shown everywhere, and R, backups and restore, are the newest; A1b, the example macros, and F9, the hotkey cooldown, came just before). |
 
 ## How to report
 
@@ -51,6 +51,9 @@ describe what you saw even if nothing went wrong. A copy-paste template is at th
    Chat Messages quick menu** (any free keys, e.g. Ctrl+Shift+M and Ctrl+Shift+Q).
 4. Stand somewhere quiet in the open world (PvE), near an enemy you can target with Tab, but not
    in combat.
+5. On the addon's page in **Nexus > Options** (General tab), tick **Advanced options** (new
+   2026-11-25; it's off on a new install). Several checks use a feature behind it: they're marked
+   *(advanced option)*. Session S checks the box itself, turned off.
 
 ## A. Loading and the library
 
@@ -119,7 +122,7 @@ under their old names, and start again: your own library, no examples added.
 | `Accents` | Say: `héllo wörld ñ ü – “quotes” 日本` |
 
 **A4. The line editor.** On `Two`:
-- Switch to **Raw text**: it shows `/m test map` and `/p test party`. Add a row `/sagen hallo`
+- *(advanced option)* Switch to **Raw text**: it shows `/m test map` and `/p test party`. Add a row `/sagen hallo`
   (German) and a row `/dire salut` (French); back in **Lines** they show as Say lines.
 - The counter is **under** each message box: `23/199 characters`. On `Long` it shows 199/199 (196
   plus `/s `) in bright red. Delete characters: it's yellow from 150 to 179 and grey below 150
@@ -249,7 +252,7 @@ Set **Alt+1**: a squad location marker. Set **Ctrl+1**: no default-key note. Set
 that isn't a default key (for example **K**): the older "plain letters are usually game keys"
 note shows instead. Clear the hotkey afterwards.
 
-**F9. Cooldown.** On `Say` (Ctrl+F1), set **Cooldown:** to `10`. Close the library and press
+**F9. Cooldown.** *(advanced option)* On `Say` (Ctrl+F1), set **Cooldown:** to `10`. Close the library and press
 Ctrl+F1: `Say` is sent. Press it again at once: nothing is sent and one Nexus alert says
 `Say: cooldown, wait N s.` Press it a few more times: still nothing, and no more alerts. Open the
 library: the row shows `(N s left)`, counting down. During the cooldown, **Send now** and the
@@ -328,7 +331,7 @@ Restart the game: the list is still there.
 **H7. A map the API doesn't list.** **Add id** `99999`: it's shown in yellow with **(!)**, and
 hovering it says the GW2 API doesn't list that map. Remove it.
 
-**H8. The map list on the options page.** On the addon's page in **Nexus > Options**: "Map list:
+**H8. The map list on the options page.** *(advanced option: Refresh map list)* On the addon's page in **Nexus > Options**: "Map list:
 N maps, from (date)." Click **Refresh map list**: it says it's loading, then shows the new date,
 and the game doesn't stutter. Disconnect from the internet and click it again: the old count stays
 and a yellow line says the refresh failed and why. Reconnect.
@@ -401,7 +404,7 @@ button under it that opens the folder (it goes away with the message). The toolb
 folder** opens it too. **Save as a .txt file** and
 **Copy the lines as text** give the raw lines, one per row (paste into Notepad to check).
 
-**J2. Import with conflicts.** Right-click the `Test` folder > Export > **Copy to the clipboard**.
+**J2. Import with conflicts.** *(advanced option: Keep hotkeys)* Right-click the `Test` folder > Export > **Copy to the clipboard**.
 Then toolbar **Import...** > **Paste from clipboard**, with `Test`'s parent as the target. The
 preview shows `Test` as "goes into the existing folder" and the macros as conflicts. **Keep
 hotkeys** is unticked and the preview shows no hotkeys. Tick it: each macro with a hotkey shows it
@@ -435,7 +438,7 @@ after exporting say the same. Then copy `macros.json` from the addon folder into
 open it in the Import window: a warning says its trash bin isn't imported, and the preview shows
 only the library. Cancel.
 
-**J7. A whole library.** Copy `macros.json` from the addon folder into `imports\` and rename the
+**J7. A whole library.** *(advanced option)* Copy `macros.json` from the addon folder into `imports\` and rename the
 copy `Alex.json` (pretend a friend sent it; give one of its macros a hotkey first). Also copy
 `macros.json.bak` into `imports\`. Open **Import...** and pick **A whole library**: the list shows
 only `.json` and `.bak` files (no folders or `.txt`). Click `Alex.json`:
@@ -484,7 +487,7 @@ PowerShell in the addon folder:
 
 Delete `broken.json`, `braces.txt`, `long.json` and `far.json` afterwards.
 
-**J10. Preview marks.** Give `Say` the hotkey Ctrl+F1. In `Test`, make these macros: `Old`
+**J10. Preview marks.** *(advanced option: Keep hotkeys)* Give `Say` the hotkey Ctrl+F1. In `Test`, make these macros: `Old`
 with the line `/s {txt notes.txt}`; `Key` with the line `/s key` and the plain hotkey F8; and
 `Plain` with hotkey Ctrl+F1 too (yes, the same as `Say`) and the line `/s plain`. Export `Test`
 to the clipboard, then delete `Old` and `Key` and change `Plain`'s hotkey to Ctrl+F2. **Paste
@@ -516,9 +519,7 @@ exported. Keys and Tab still work in the game afterwards.
 ## K. Text file links
 
 Have Notepad ready. "Within a second" means after you save, not after you switch back. Text file
-links are an advanced option: first tick **Advanced options** on the addon's options page
-(Nexus > Options, Chat Messages, **General** tab). K7 and K8 check the box itself (new
-2026-11-25).
+links are an advanced option: **Advanced options** must be ticked (see "Before you start").
 
 **K1. New file.** On `Two`, open **Text file link**, type `test.txt`, click **Link**:
 `<GW2>\addons\GW2_Chat_Messages\links\test.txt` appears with `Two`'s lines, and the status says the
@@ -544,32 +545,6 @@ Encoding **ANSI**. Make a new macro `Ansi` in `Test` and link it to `ansi.txt`: 
 without editing: the file isn't rewritten (Notepad doesn't ask to reload). Edit `Ansi` in the
 addon: the file is rewritten as UTF-8, with `�` for the `ä`. Delete `Ansi`.
 
-**K7. Advanced options off (new 2026-11-25).** Link `Two` to `test.txt` again if K5 unlinked it,
-and give `Two` a hotkey (e.g. Ctrl+F7). Give `Say` the same hotkey. Untick **Advanced options**:
-- the options page shows the yellow "Some of your macros are linked to text files..." line;
-- no macro's editor has a **Text file link** section any more;
-- `Two` is dimmed in the library; its editor shows the yellow note that it's linked to a text
-  file and can't be sent, and **Send now** is faded. Click it: the error window explains, nothing
-  is sent;
-- `Two`'s **Hotkey:** row still shows Ctrl+F7, and `Say`'s editor still warns that the key is
-  also set on `Two`;
-- press Ctrl+F7 with the library closed: `Say` is sent, `Two` isn't. Clear `Say`'s hotkey and
-  press Ctrl+F7 again: nothing is sent, and a Nexus alert says `Two` is linked to a text file;
-- in the quick menu `Two` is faded and can't be clicked; hovering it says why. Search for `Two`
-  in the quick menu and press Enter: nothing is sent;
-- edit `test.txt` in Notepad and save: `Two` doesn't change. Edit `Two` in the addon: the file
-  doesn't change.
-
-Tick **Advanced options** again: within a second `Two` has the lines you saved in Notepad (the
-file wins, as when both change), the **Text file link** section is back, and Ctrl+F7 sends `Two`.
-Click **[?]** next to the box: the browser opens the wiki's **Advanced options** page.
-
-**K8. After an update (new 2026-11-25).** Close the game. In
-`<GW2>\addons\GW2_Chat_Messages\settings.json`, delete the `"advanced_options"` entry (keep the
-JSON valid). Start the game: **Advanced options** is ticked, because `Two` is linked. Unlink every
-macro, close the game, delete the entry again and start: the box is unticked (a new install
-starts with it off). Tick it again for the rest of the tests.
-
 ## L. Final checks
 
 **L1. Game input after everything.** Movement keys, skills, Tab targeting, Shift/Ctrl/Alt combos,
@@ -591,7 +566,7 @@ window stays on screen. Pick the smallest, then the biggest again: the window sh
 back to about the same size.
 
 **M2. Everything follows.** At the biggest size, check: the tree, the macro editor (lines, Raw
-text, Where it's active, Text file link with **Advanced options** ticked), the Rename and Delete pop-ups, the Import window, the
+text, Where it's active, Text file link), the Rename and Delete pop-ups, the Import window, the
 quick menu pop-up, the Quick Access right-click menu, and tooltips (hover a macro in the quick
 menu, the Placeholders (?) label). All use the big text. Nexus' own options page doesn't.
 
@@ -734,7 +709,7 @@ correctly (no `?` boxes) in the library, the menus and the tooltips.
 **Q5. Names in Nexus.** With Nexus set to Deutsch, **Nexus > Options > Keybinds** shows the
 addon's two keybinds in German, and hovering the chat bubble icon shows a German tooltip.
 
-**Q6. A file of your own.** Click **Open localization folder**: Explorer opens
+**Q6. A file of your own.** *(advanced option)* Click **Open localization folder**: Explorer opens
 `<GW2>\addons\GW2_Chat_Messages\localization\`. Copy `localization\template.json` from the
 repository into it as `nl.json`, set `"Identifier": "nl"`, `"DisplayName": "Nederlands"`, and
 translate one text, e.g. `"Open macro library": "Macrobibliotheek openen"`. Click **Reload
@@ -797,6 +772,56 @@ more backups than you keep: `notes.txt` is never deleted. Delete both files afte
 restore a backup from before the edit: the macro shows the file's text, and the file isn't
 changed.
 
+## S. Advanced options (new 2026-11-25)
+
+The checkbox at the bottom of the options page's **General** tab. Have K's `test.txt` linked to
+`Two`, and `Say` with Ctrl+F1 and a **Cooldown:** of `10`.
+
+**S1. Linked macros with the box off.** Give `Two` a hotkey (e.g. Ctrl+F7) and give `Emote` the
+same one. Untick **Advanced options**:
+- the options page shows two yellow lines: 1 macro linked to a text file, 1 macro with a cooldown;
+- no macro's editor has a **Text file link** section any more;
+- `Two` is dimmed in the library; its editor shows the yellow note that it's linked to a text
+  file and can't be sent, and **Send now** is faded. Click it: the error window explains, nothing
+  is sent;
+- `Two`'s **Hotkey:** row still shows Ctrl+F7, and `Emote`'s editor still warns that the key is
+  also set on `Two`;
+- press Ctrl+F7 with the library closed: `Emote` is sent, `Two` isn't. Clear `Emote`'s hotkey and
+  press Ctrl+F7 again: nothing is sent, and a Nexus alert says `Two` is linked to a text file;
+- in the quick menu `Two` is faded and can't be clicked; hovering it says why. Search for `Two`
+  in the quick menu and press Enter: nothing is sent;
+- edit `test.txt` in Notepad and save: `Two` doesn't change. Edit `Two` in the addon: the file
+  doesn't change.
+
+**S2. The other features with the box off.** Still unticked:
+- `Say`'s editor has no **Cooldown:** row, only a grey "Cooldown: 10 s, ignored while advanced
+  options are off." Press Ctrl+F1, wait 2 seconds, press it again: sent both times (only the
+  1-second guard applies);
+- no macro's editor has the **Lines / Raw text** choice: just the lines, with the line count and
+  **Placeholders (?)** on one row. If Raw text was showing before you unticked the box, the
+  editor is back on Lines;
+- **Import...**: no **Macros / A whole library** choice (macros only), and no **Keep hotkeys**
+  box. Import an export of `Say`: it comes without its hotkey;
+- the options page has no **Refresh map list** button (the map list line is still there), and no
+  **Open localization folder**, **Reload language files** or the text about adding a language.
+  The Language dropdown no longer lists Q6's file (if you chose it, the addon is in English);
+- in a filter's map search with no map list loaded, the hint says "Try again later" instead of
+  pointing at Refresh map list (only if you can make the list empty, e.g. offline on a first
+  run: skip otherwise).
+
+**S3. Back on.** Tick **Advanced options** again:
+- within a second `Two` has the lines you saved in Notepad in S1 (the file wins, as when both
+  change), its **Text file link** section is back, and Ctrl+F7 sends it;
+- `Say`'s **Cooldown:** row shows `10` again and the hotkey waits 10 seconds;
+- Raw text, A whole library, Keep hotkeys, Refresh map list and the language buttons are back;
+  Q6's language is listed again (and shown again if you'd chosen it);
+- click **[?]** next to the box: the browser opens the wiki's **Advanced options** page.
+
+**S4. Off by default.** Close the game. In `<GW2>\addons\GW2_Chat_Messages\settings.json`,
+delete the `"advanced_options"` entry (keep the JSON valid). Start the game: **Advanced options**
+is unticked, even though `Two` is linked (a new install, or a settings file without it, starts
+with it off). Tick it again if you have more checks to do.
+
 ## Report template
 
 ```
@@ -818,6 +843,7 @@ O1  O2  O3 (long name too)  O4  O5
 P1  P2  P3  P4 (did Ctrl+F / Escape reach the game?):  P5  P6 (label at character select):  P7 (did typing or Enter reach the game?):  P8
 Q1  Q2  Q3 (anything cut off?):  Q4  Q5  Q6  Q7  Q8   Translations that read oddly:
 R1  R2  R3  R4  R5  R6  R7
+S1  S2  S3  S4
 Nexus log warnings:
 ```
 

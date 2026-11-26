@@ -61,7 +61,8 @@ folder...**. The Import window has three steps.
 ### 1. Choose what to import
 
 At the top, choose **Macros** (the usual) or **A whole library** (someone else's `macros.json`,
-see [Importing a whole library](#importing-a-whole-library) below).
+see [Importing a whole library](#importing-a-whole-library) below). **A whole library** is an
+[advanced option](Advanced-Options): without it, the Import window imports macros only.
 
 With **Macros**, you can import:
 
@@ -100,7 +101,8 @@ Pick it in one of these ways:
   Unticked, a folder that would go deeper is left out with everything inside. Ticked, that
   folder is left out but its contents go into the folder above (without that folder's filter,
   so they may be active in more places).
-- **Keep hotkeys**: off at first, for every import, so macros from someone else come without
+- **Keep hotkeys** ([advanced option](Advanced-Options); without it, imports never bring
+  hotkeys): off at first, for every import, so macros from someone else come without
   their hotkeys (a hotkey sends its macro whenever you press that key, and could clash with
   yours). Tick it for your own exports; the preview then shows each macro's hotkey next to its
   name, like `Stack  [Ctrl+F1]`.
@@ -144,6 +146,9 @@ click **Import selected**.
 > 📷 *Screenshot to come: the Import window with its preview.*
 
 ## Importing a whole library
+
+> **Advanced option:** only with **Advanced options** ticked on the addon's options page; see
+> [Advanced options](Advanced-Options).
 
 A friend can send you their whole library: the `macros.json` file from their
 `<GW2>\addons\GW2_Chat_Messages\` folder (or its backup, `macros.json.bak`). It's best to rename
