@@ -2087,25 +2087,21 @@ namespace
     }
 
     // Room to leave on the right of a message box for its LengthLabel.
-    // The character counter: "23/199" (with " characters" and a warning when aLong), grey, then
-    // yellow from 150, bright red from 180 (ChatLine::LengthLevel). Placeholders make it "~".
-    void LengthLabel(const Line& aLine, bool aLong = false)
+    // The character counter: "23/199", grey, then yellow from 150, bright red from 180
+    // (ChatLine::LengthLevel). Placeholders make it "~".
+    void LengthLabel(const Line& aLine)
     {
         const std::string typed = ChatLine::TypedText(aLine);
         const size_t len = ChatLine::Utf16Length(typed);
         const bool placeholders = Placeholders::HasPlaceholders(typed);
         const ChatLine::ELengthLevel level = ChatLine::LengthLevel(len);
-        const std::string tail = !aLong ? std::string()
-                         : std::string(" ") + (level == ChatLine::ELengthLevel::Over ? T("characters: too long, this line won't be sent")
-                                             : level == ChatLine::ELengthLevel::Close ? T("characters: nearly at the limit")
-                                                                                      : T("characters"));
         // With placeholders the final length is only known when sending: show it as approximate.
         const char* approx = placeholders ? "~" : "";
         if (level == ChatLine::ELengthLevel::Normal)
-            ImGui::TextDisabled("%s%zu/%zu%s", approx, len, ChatLine::kMaxChatLength, tail.c_str());
+            ImGui::TextDisabled("%s%zu/%zu", approx, len, ChatLine::kMaxChatLength);
         else
             ImGui::TextColored(level == ChatLine::ELengthLevel::Near ? kCountNearColor : kCountCloseColor,
-                               "%s%zu/%zu%s", approx, len, ChatLine::kMaxChatLength, tail.c_str());
+                               "%s%zu/%zu", approx, len, ChatLine::kMaxChatLength);
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip(T("Characters typed into chat, including the channel command.\n"
                               "Chat allows at most %zu. Longer lines won't be sent.%s"), ChatLine::kMaxChatLength,
@@ -2625,6 +2621,10 @@ namespace
         if (Hotkey::NeedsModifier(aMacro.Hotkey)) return T("(the hotkey doesn't work)");
         for (const Node* n : s_Tree.MacrosWithHotkey(aMacro.Hotkey))
             if (n != &aMacro && FiltersOverlap(aMacro, *n)) return T("(the hotkey is shared)");
+        // The same hints as DrawHotkeyRow: a GW2 default key, or a plain letter or number.
+        if (GameKeys::DefaultUse(aMacro.Hotkey) ||
+            (!aMacro.Hotkey.HasModifier() && aMacro.Hotkey.Key < 0x60 && aMacro.Hotkey.Key > Hotkey::kVkXButton2))
+            return T("(it may be a game key)");
         return nullptr;
     }
 
@@ -2665,7 +2665,12 @@ namespace
 
         DrawFilters(aMacro);
 
-        if (s_CaptureFor == aMacro.Id && Hotkeys::IsCapturing()) s_Sections.Hotkey = true; // keep the prompt in view
+        if (s_CaptureFor == aMacro.Id && Hotkeys::IsCapturing() && !s_Sections.Hotkey) // keep the prompt in view
+        {
+            s_Sections.Hotkey = true;
+            if (!Storage::SaveSetting(EditorLayout::kSetting, EditorLayout::ToJson(s_Sections)))
+                LogF(LOGL_WARNING, "The editor's open sections couldn't be saved.");
+        }
         if (Section(Fmt(T("Hotkey and favourite: %s"), HotkeySummary(aMacro).c_str()), HotkeyWarning(aMacro),
                     s_Sections.Hotkey, "##sec_hotkey"))
         {

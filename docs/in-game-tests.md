@@ -972,7 +972,8 @@ favourite: no hotkey** (or `Ctrl+F1`, `Ctrl+F1, favourite`), **Note: none**:
 - each opens and closes with a click; select another macro: the same sections are open; close
   the game and start it again: still the same (`settings.json` has `"editor_sections"`);
 - give `Emote` the same hotkey as `Say` and fold **Hotkey and favourite**: its header still says
-  "(the hotkey is shared)" in yellow; clear it again;
+  "(the hotkey is shared)" in yellow; clear it again; give a macro plain `F` (a game key): the
+  folded header says "(it may be a game key)"; give it Ctrl+F1 again;
 - give a macro the map list of another game mode so it can't be active anywhere (e.g. PvP only in
   a WvW-only folder): the folded **Where it's active** header says "(can't be active anywhere)";
   a macro that's only inactive on this map says "(not here)";
