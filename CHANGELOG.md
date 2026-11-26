@@ -14,6 +14,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   closed.
 
 ### Changed
+- **A clearer macro editor:** the name sits at the top with **Send now**, **Preview** and a
+  **...** menu (Rename, Duplicate, Delete), and a grey line under it shows the folder, the hotkey
+  and where it's active. The lines come first, one compact row each (channel, message, count,
+  up/down, **X**), with **Add line** under them. **Where it's active**, **Hotkey and favourite**
+  and **Note** fold open and closed, show a summary when closed, and still show a problem in
+  yellow (like a shared hotkey). The addon remembers which ones you keep open. With Advanced
+  options ticked, an **Advanced** section at the bottom holds Raw text, the cooldown and the text
+  file link.
 - **Saved files work across versions:** what the addon saves now records its format and the
   version that saved it, so updates never lose your library and going back a version doesn't
   either. Settings a newer version added are kept and saved back untouched. A library saved by a

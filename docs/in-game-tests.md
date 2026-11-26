@@ -21,7 +21,7 @@ change means a done check must be run again, it moves back here and into its ses
 |---|---|---|
 | A1 | Passed (PR #15 build) | Re-check with the current build: the log and the options page show its version and build stamp, the two links and the folders are new (A1's last part), and so is the icon (the quick bubble, 2026-11-25). |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text wraps and errors open the error window. Re-check those two points only (marked *Re-check* in A2), then go on to A3. |
-| A3 to T | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (U, duplicate, notes and the map list after a game update, is the newest (2026-11-26); Q6 changed and Q9 is new: your own language files have their own box now, and files from other versions (2026-11-26); T, saved files from older and newer versions, is the newest (2026-11-26); H9 and H10, filters on folders, are the newest; then S, the Advanced options box (new 2026-11-25; tick it first, see "Before you start"); then J11, export a selection; G4 to G6, favourites and recently sent, with G4 and G6 new for favourites shown everywhere, and R, backups and restore, are the newest; A1b, the example macros, and F9, the hotkey cooldown, came just before). |
+| A3 to T | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (V, the new macro editor layout, is the newest (2026-11-26), and A4, F9, K1, M2, S1 to S3 and U2 changed with it; U, duplicate, notes and the map list after a game update, is the newest (2026-11-26); Q6 changed and Q9 is new: your own language files have their own box now, and files from other versions (2026-11-26); T, saved files from older and newer versions, is the newest (2026-11-26); H9 and H10, filters on folders, are the newest; then S, the Advanced options box (new 2026-11-25; tick it first, see "Before you start"); then J11, export a selection; G4 to G6, favourites and recently sent, with G4 and G6 new for favourites shown everywhere, and R, backups and restore, are the newest; A1b, the example macros, and F9, the hotkey cooldown, came just before). |
 
 ## How to report
 
@@ -122,12 +122,14 @@ under their old names, and start again: your own library, no examples added.
 | `Accents` | Say: `héllo wörld ñ ü – “quotes” 日本` |
 
 **A4. The line editor.** On `Two`:
-- *(advanced option)* Switch to **Raw text**: it shows `/m test map` and `/p test party`. Add a row `/sagen hallo`
-  (German) and a row `/dire salut` (French); back in **Lines** they show as Say lines.
-- The counter is **under** each message box: `23/199 characters`. On `Long` it shows 199/199 (196
-  plus `/s `) in bright red. Delete characters: it's yellow from 150 to 179 and grey below 150
-  (question: are yellow and red easy to see in game?). Type one more than 199: it says "too long,
-  this line won't be sent". Put `Long` back to 196 characters.
+- *(advanced option)* Open **Advanced** at the bottom and pick **Edit the lines as: Raw text**: it
+  shows `/m test map` and `/p test party`. Add a row `/sagen hallo` (German) and a row
+  `/dire salut` (French); back in **Lines** they show as Say lines.
+- The counter is **right of** each message box: `23/199`. On `Long` it shows 199/199 (196 plus
+  `/s `) in bright red. Delete characters: it's yellow from 150 to 179 and grey below 150
+  (question: are yellow and red easy to see in game?). Type one more than 199: the count is red
+  and a red line under the row says "Over 199 characters: this line won't be sent." Put `Long`
+  back to 196 characters.
 - **Add line** stops at 50 lines (try on a scratch macro, then delete it).
 
 **A5. Saving.** Close the game normally (or unload the addon in Nexus > Addons), start it again:
@@ -252,7 +254,7 @@ Set **Alt+1**: a squad location marker. Set **Ctrl+1**: no default-key note. Set
 that isn't a default key (for example **K**): the older "plain letters are usually game keys"
 note shows instead. Clear the hotkey afterwards.
 
-**F9. Cooldown.** *(advanced option)* On `Say` (Ctrl+F1), set **Cooldown:** to `10`. Close the library and press
+**F9. Cooldown.** *(advanced option)* On `Say` (Ctrl+F1), open **Advanced** at the bottom and set **Cooldown:** to `10`. Close the library and press
 Ctrl+F1: `Say` is sent. Press it again at once: nothing is sent and one Nexus alert says
 `Say: cooldown, wait N s.` Press it a few more times: still nothing, and no more alerts. Open the
 library: the row shows `(N s left)`, counting down. During the cooldown, **Send now** and the
@@ -521,7 +523,7 @@ exported. Keys and Tab still work in the game afterwards.
 Have Notepad ready. "Within a second" means after you save, not after you switch back. Text file
 links are an advanced option: **Advanced options** must be ticked (see "Before you start").
 
-**K1. New file.** On `Two`, open **Text file link**, type `test.txt`, click **Link**:
+**K1. New file.** On `Two`, open **Advanced** at the bottom; under **Text file link: none**, type `test.txt`, click **Link**:
 `<GW2>\addons\GW2_Chat_Messages\links\test.txt` appears with `Two`'s lines, and the status says the
 file was created.
 
@@ -565,8 +567,8 @@ biggest: within a frame the library's text, buttons, title bar and window all ge
 window stays on screen. Pick the smallest, then the biggest again: the window shrinks and grows
 back to about the same size.
 
-**M2. Everything follows.** At the biggest size, check: the tree, the macro editor (lines, Raw
-text, Where it's active, Text file link), the Rename and Delete pop-ups, the Import window, the
+**M2. Everything follows.** At the biggest size, check: the tree, the macro editor (the header and its **...** menu, lines,
+Where it's active, Hotkey and favourite, Note, and Advanced with Raw text and the text file link), the Rename and Delete pop-ups, the Import window, the
 quick menu pop-up, the Quick Access right-click menu, and tooltips (hover a macro in the quick
 menu, the Placeholders (?) label). All use the big text. Nexus' own options page doesn't.
 
@@ -801,12 +803,12 @@ The checkbox at the bottom of the options page's **General** tab. Have K's `test
 **S1. Linked macros with the box off.** Give `Two` a hotkey (e.g. Ctrl+F7) and give `Emote` the
 same one. Untick **Advanced options**:
 - the options page shows two yellow lines: 1 macro linked to a text file, 1 macro with a cooldown;
-- no macro's editor has a **Text file link** section any more;
+- no macro's editor has the **Advanced** section any more (no text file link, cooldown or Raw text);
 - `Two` is dimmed in the library; its editor shows the yellow note that it's linked to a text
   file and can't be sent, and **Send now** is faded. Click it: the error window explains, nothing
   is sent;
-- `Two`'s **Hotkey:** row still shows Ctrl+F7, and `Emote`'s editor still warns that the key is
-  also set on `Two`;
+- `Two`'s **Hotkey and favourite** header still shows Ctrl+F7, and `Emote`'s says "(the hotkey is
+  shared)" in yellow, even when folded;
 - press Ctrl+F7 with the library closed: nothing is sent, and the alert says Ctrl+F7 is set on 2
   macros (`Two` still counts, as the warning says). Clear `Emote`'s hotkey and press Ctrl+F7
   again: nothing is sent, and a Nexus alert says `Two` is linked to a text file. Press it a few
@@ -818,11 +820,11 @@ same one. Untick **Advanced options**:
 
 **S2. The other features with the box off.** Still unticked:
 - `Say`'s editor has no **Cooldown:** row, only a grey "Cooldown: 10 s, ignored while advanced
-  options are off." Press Ctrl+F1, wait 2 seconds, press it again: sent both times (only the
+  options are off." under the header. Press Ctrl+F1, wait 2 seconds, press it again: sent both times (only the
   1-second guard applies);
-- no macro's editor has the **Lines / Raw text** choice: just the lines, with the line count and
-  **Placeholders (?)** on one row. If Raw text was showing before you unticked the box, the
-  editor is back on Lines;
+- no macro's editor has the **Edit the lines as: Lines / Raw text** choice (it's in Advanced): just
+  the lines under **Lines (n)** and **Placeholders (?)**. If Raw text was showing before you
+  unticked the box, the editor is back on Lines;
 - **Import...**: no **Macros / A whole library** choice (macros only), and no **Keep hotkeys**
   box. Import an export of `Say`: it comes without its hotkey;
 - the options page has no **Refresh map list** button (the map list line is still there). The
@@ -834,8 +836,10 @@ same one. Untick **Advanced options**:
 
 **S3. Back on.** Tick **Advanced options** again:
 - within a second `Two` has the lines you saved in Notepad in S1 (the file wins, as when both
-  change), its **Text file link** section is back, and Ctrl+F7 sends it;
-- `Say`'s **Cooldown:** row shows `10` again and the hotkey waits 10 seconds;
+  change), the **Advanced** section is back at the bottom with its text file link, and Ctrl+F7
+  sends it;
+- `Say`'s **Cooldown:** row (in Advanced) shows `10` again, the grey line under the header is
+  gone, and the hotkey waits 10 seconds;
 - Raw text, A whole library, Keep hotkeys and Refresh map list are back; the language box and
   its buttons are as they were (this box doesn't change them);
 - click **[?]** next to the box: the browser opens the wiki's **Advanced options** page.
@@ -910,8 +914,8 @@ PvP). Right-click `Say` > **Duplicate** (hover first: the tooltip says what isn'
 - a folder's right-click menu has no **Duplicate**;
 - close the game and start it again: the copies are still there; delete them.
 
-**U2. Notes.** Select `Two`. Under the filters there's **Note (never sent):** with a box about 3
-lines tall (hover the label: what it's for):
+**U2. Notes.** Select `Two`. Open the **Note: none** section: a grey line says what it's for
+(never typed into chat), with a box about 3 lines tall under it:
 - type `Before each boss`, Enter, `Needs commander tag`; select another macro and come back:
   the note is still there; spaces you type at the end stay while you're typing;
 - open the quick menu and hover `Two`: the note is in grey above the lines, with a line between
@@ -923,6 +927,8 @@ lines tall (hover the label: what it's for):
   elsewhere: the note is cut;
 - export `Two` (as .json), delete it, import the file: the note came back; close the game:
   `macros.json` has `"note"` for `Two` and none for macros without one.
+- Fold the section: its header shows "Note: Before each boss..." (the first line, cut, with
+  "...").
 - With a big text size (Text size, the largest): the box and the warning fit the pane.
 
 **U3. The map list after a game update** (only on a patch day, or skip). Before the update, note
@@ -931,6 +937,58 @@ minute or two: the Nexus log (Advanced options on: **Nexus > Log**, filter "Chat
 "Map list: the game was updated (build ...)", and within a couple of minutes the options page
 shows a new time. In `maps.json`, `"build"` and `"listed_build"` are the new build. A day later
 the time changes once more. On a first start with no `maps.json`, the list is fetched only once.
+
+## V. The macro editor layout (new 2026-11-26)
+
+The details pane was rearranged (`docs/design.md`, "Macro editor layout"). Run V1 to V4 with
+**Advanced options** off, then V5 with it on.
+
+**V1. The header.** Select `Two`:
+- the name is at the top, with **Send now**, **Preview** and **...** on its row; under it in grey
+  "Top level > ... · Everywhere" (the folder path, the hotkey if it has one, where it's active);
+- **...** opens a small menu: **Rename** and **Delete** open their usual pop-ups, **Duplicate**
+  makes `Two (2)`; delete the copy;
+- **Send now** sends both lines; **Preview** shows the preview under the header; sending shows
+  "Sending line 1 of 2..." under the header;
+- select a folder: the same header with only **...** (Rename, Delete), the grey path and where
+  it's active, then the folder level, what it contains, **Favourite**, **Where it's active** and
+  the New folder/macro buttons;
+- rename `Two` to something long (80 characters): the buttons go under the name, nothing runs off
+  the right; rename it back.
+
+**V2. Line rows.** On `Two`:
+- under **Lines (2)** (with **Placeholders (?)** on the right; hover it: the list), each line is
+  one row: its number, the channel, the message, the count, up/down arrows and **X**;
+- hover the arrows and **X**: they say what they do; move line 2 up and back; **X** removes a
+  line (add it back);
+- change a line to **Whisper**: a **Recipient** box appears in the row; to **Squad**: a
+  **Broadcast** box;
+- **Add line** is as wide as the pane and adds a row with the last line's channel;
+- make the library window narrow: the message box goes on its own row under the channel, the
+  count and buttons stay at its right; nothing overlaps.
+
+**V3. Folding sections.** Under the lines: **Where it's active: Everywhere**, **Hotkey and
+favourite: no hotkey** (or `Ctrl+F1`, `Ctrl+F1, favourite`), **Note: none**:
+- each opens and closes with a click; select another macro: the same sections are open; close
+  the game and start it again: still the same (`settings.json` has `"editor_sections"`);
+- give `Emote` the same hotkey as `Say` and fold **Hotkey and favourite**: its header still says
+  "(the hotkey is shared)" in yellow; clear it again;
+- give a macro the map list of another game mode so it can't be active anywhere (e.g. PvP only in
+  a WvW-only folder): the folded **Where it's active** header says "(can't be active anywhere)";
+  a macro that's only inactive on this map says "(not here)";
+- open **Hotkey and favourite**, click **Set...**, then fold it while it waits for a key: it opens
+  again so the prompt stays visible; press Escape.
+
+**V4. Big text.** Pick the biggest text size: the header, rows and sections fit and wrap; nothing
+is cut off.
+
+**V5. Advanced on.** Tick **Advanced options**:
+- an **Advanced** section is at the bottom (folded at first): **Edit the lines as:** Lines /
+  Raw text, **Cooldown:**, and **Text file link: none** with its box and **Link**;
+- a linked macro whose file is missing: the folded **Advanced** header says "(needs attention)"
+  in yellow;
+- untick the box: the section is gone with no gap; a macro with a cooldown shows the grey "kept,
+  ignored" line under the header instead.
 
 ## Report template
 
