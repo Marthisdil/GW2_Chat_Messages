@@ -400,6 +400,31 @@ From MumbleLink's identity (already read for the map), e.g. "LF2M, {spec} here".
 
 **Advanced option?** No (2026-11-26): like `{map}`, it fills in text from MumbleLink.
 
+### A tabbed macro editor, chosen in the settings (added 2026-11-26)
+
+From the layout brainstorm for "Look at the layout of the macro settings" (section 1): the owner
+picked layout **B** (one column, most-used first: the lines, then folding sections for where
+it's active, hotkey and favourite, and the note, with one Advanced section at the bottom) as the
+default. Layout **C**, tabs, should be offered too, as a choice on the options page (e.g.
+**Macro editor:** One page / Tabs), saved in `settings.json`.
+
+- **Tabs:** the header keeps the name, **Send now** and **Preview**, and a summary line (folder
+  path, hotkey, where it's active). Under it the tabs **Lines (n)**, **Where**, **Hotkey**,
+  **Note**, and **Advanced** only while the Advanced options box is ticked. The shortest pane:
+  good for small windows and big text sizes.
+- Points to settle: a mark on a tab that holds a warning (a shared hotkey, "can't be active
+  anywhere", a line over 199 characters), so a problem isn't hidden on a tab you're not on;
+  whether the open tab is remembered between macros; what a folder shows (no Lines, Hotkey or
+  Note tabs); and that a macro using an advanced feature while the box is off still shows its
+  note and faded Send now above the tabs.
+- Build it after layout B, sharing B's pieces (the line rows and each section's contents), so
+  both layouts draw the same controls and only the arrangement differs. Every UI check and
+  screenshot then needs both layouts, with the Advanced options box off and on.
+
+**Advanced option?** No (2026-11-26): a display preference on the options page, useful to
+anyone with a small window or a big text size; nothing surprising, and nothing to do with
+sending.
+
 ### More ideas (suggested 2026-11-23, not ranked yet)
 
 - **Ask before sending to a big channel:** a per-macro "ask first" box, so a macro for Map,
