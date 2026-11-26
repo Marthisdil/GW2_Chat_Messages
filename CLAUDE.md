@@ -295,6 +295,11 @@ to the todo list", add it there (don't start building it). Move agreed items int
   `ultra` unless the owner asks (ultra is billed). Check every finding before acting on it, fix
   the real ones on the same branch, and put the result in the PR body ("Code review (medium):
   2 findings fixed" or "none"), next to the audit line. Docs-only PRs get neither.
+- **Wait for CI (owner, 2026-11-25):** never ask whether a PR is merged while its CI is still
+  running or failing. All green: ask. Still running (normal runs take 7-12 minutes): say so and
+  check again when the user asks. Failing: fix it on the branch first. The build job stops
+  itself after 30 minutes (`timeout-minutes` in `.github/workflows/build.yml`); a run that hit
+  it or hangs is re-run (`gh run rerun`) or cancelled only on the user's OK.
 - **`/simplify`:** not on the existing code, and not on every PR. Only on a larger feature PR,
   before `/code-review`, and never on `Sender`, `SendPlan`, `Hotkeys`, `Placeholders` or
   `vendor/` without the owner's OK (it may "simplify" a safety rule away). Its edits go in their
