@@ -149,10 +149,25 @@ static void TestActiveOnly()
     CHECK(!r.Active && r.Shows(gors->Id) && r.Shows(empty->Id));
 }
 
+// A note is searched too (folded like the rest).
+static void TestNoteSearch()
+{
+    Tree t;
+    Node* m = t.AddMacro(nullptr, "Pull").Target;
+    m->Note = "Für den Kommandeur";
+    CHECK(Search::NodeMatches(*m, Search::Fold("kommandeur")));
+    CHECK(Search::NodeMatches(*m, Search::Fold("fur den")));
+    CHECK(!Search::NodeMatches(*m, Search::Fold("raid")));
+    Node* f = t.AddFolder(nullptr, "Folder").Target;
+    f->Note = "kommandeur"; // folders don't have notes: never matched by one
+    CHECK(!Search::NodeMatches(*f, Search::Fold("kommandeur")));
+}
+
 void RunSearchTests()
 {
     TestFold();
     TestFindRange();
     TestRun();
     TestActiveOnly();
+    TestNoteSearch();
 }

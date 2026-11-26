@@ -28,6 +28,8 @@ namespace MapCatalog
     constexpr size_t  kMaxNameBytes   = 200;
     constexpr size_t  kMaxVisited     = 200;
     constexpr int64_t kRefreshSeconds = 7 * 24 * 60 * 60; // the full list is fetched again after a week
+    constexpr int64_t kRecheckSeconds = 24 * 60 * 60;     // after a game update, once more a day later
+                                                          // (the API may list new maps late)
 
     struct Map
     {
@@ -43,6 +45,10 @@ namespace MapCatalog
         std::set<uint32_t> Listed;                  // the API's full list of ids (empty: not fetched yet)
         int64_t ListedAt = 0;                       // when the full list was fetched (UTC, seconds)
         std::vector<uint32_t> Visited;              // maps the player has been to, most recent first
+        // The game's build (MumbleLink's BuildID), so a game update fetches the list again:
+        uint32_t Build = 0;                         // the newest build seen (0: none yet)
+        int64_t  BuildSeenAt = 0;                   // when it was first seen (UTC, seconds; 0: no recheck)
+        uint32_t ListedBuild = 0;                   // the build when the full list was fetched
     };
 
     // The API language for the addon's language: "de", "fr", "es" and "zh" have map names in the
@@ -65,9 +71,18 @@ namespace MapCatalog
     std::vector<uint32_t> VisitedFromJson(const nlohmann::json& aValue);
     nlohmann::json        VisitedToJson(const Cache& aCache);
 
-    // Whether the full list should be fetched (again): never fetched, older than a week, or
-    // apparently from the future (a clock change).
+    // Whether the full list should be fetched (again): never fetched, older than a week,
+    // apparently from the future (a clock change), fetched before the game's newest build, or a
+    // day after a new build was first seen when it hasn't been fetched since (the recheck).
     bool RefreshDue(const Cache& aCache, int64_t aNow);
+
+    // The game's build, as read now (0 = not known yet, ignored). Returns true when it's a new
+    // one (the cache changed and should be saved). The very first build ever seen is only
+    // remembered: a list fetched before it (an older addon version, or before MumbleLink had it)
+    // counts as that build's, so a first start doesn't fetch twice.
+    bool NoteBuild(Cache& aCache, uint32_t aBuild, int64_t aNow);
+    // A full list was fetched now: it's the current build's.
+    void ListFetched(Cache& aCache, int64_t aNow);
 
     // Puts aMapId first in the visited list (0 is ignored). Returns false if it was already first.
     bool NoteVisit(Cache& aCache, uint32_t aMapId);

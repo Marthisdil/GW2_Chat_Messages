@@ -54,6 +54,7 @@ namespace
         CHECK(raids && raids->MapIds == std::vector<int>({1062}));
         const Node* ready = raids ? Child(*raids, "Ready check") : nullptr;
         CHECK(ready && ready->IsMacro() && ready->Favourite && ready->CooldownSec == 30);
+        CHECK(ready && ready->Note == "Before each boss\nNeeds commander tag");
         CHECK(ready && ready->Lines.size() == 3);
         if (ready && ready->Lines.size() == 3)
         {

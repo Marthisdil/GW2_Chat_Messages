@@ -21,7 +21,7 @@ change means a done check must be run again, it moves back here and into its ses
 |---|---|---|
 | A1 | Passed (PR #15 build) | Re-check with the current build: the log and the options page show its version and build stamp, the two links and the folders are new (A1's last part), and so is the icon (the quick bubble, 2026-11-25). |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text wraps and errors open the error window. Re-check those two points only (marked *Re-check* in A2), then go on to A3. |
-| A3 to T | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (Q6 changed and Q9 is new: your own language files have their own box now, and files from other versions (2026-11-26); T, saved files from older and newer versions, is the newest (2026-11-26); H9 and H10, filters on folders, are the newest; then S, the Advanced options box (new 2026-11-25; tick it first, see "Before you start"); then J11, export a selection; G4 to G6, favourites and recently sent, with G4 and G6 new for favourites shown everywhere, and R, backups and restore, are the newest; A1b, the example macros, and F9, the hotkey cooldown, came just before). |
+| A3 to T | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (U, duplicate, notes and the map list after a game update, is the newest (2026-11-26); Q6 changed and Q9 is new: your own language files have their own box now, and files from other versions (2026-11-26); T, saved files from older and newer versions, is the newest (2026-11-26); H9 and H10, filters on folders, are the newest; then S, the Advanced options box (new 2026-11-25; tick it first, see "Before you start"); then J11, export a selection; G4 to G6, favourites and recently sent, with G4 and G6 new for favourites shown everywhere, and R, backups and restore, are the newest; A1b, the example macros, and F9, the hotkey cooldown, came just before). |
 
 ## How to report
 
@@ -895,6 +895,42 @@ time is your **local** time. In `macros.json`, its `"deleted_at"` is in UTC with
 (`"2026-11-26T18:03:00Z"`). Then change map once, close the game and delete `maps.json`: start
 the game again, and a filter's **Maps you've been to** still lists your maps (they're in
 `settings.json`, `"visited_maps"`); `settings.json` has `"format": 1`.
+
+## U. Duplicate, notes, and the map list after a game update (new 2026-11-26)
+
+Run U1 and U2 with **Advanced options** off, then once more with it on.
+
+**U1. Duplicate.** Give `Say` a hotkey, tick **Favourite**, and add a game mode filter (untick
+PvP). Right-click `Say` > **Duplicate** (hover first: the tooltip says what isn't copied):
+- `Say (2)` appears right below `Say`, selected, with the same line and filter;
+- it has no hotkey, **Favourite** is off, and with Advanced options on it isn't linked to a
+  file even if `Say` is; `Say` keeps its hotkey and favourite;
+- duplicate `Say (2)`: the new one is `Say (3)`; duplicate `Say` again: `Say (4)`, right below
+  `Say`;
+- a folder's right-click menu has no **Duplicate**;
+- close the game and start it again: the copies are still there; delete them.
+
+**U2. Notes.** Select `Two`. Under the filters there's **Note (never sent):** with a box about 3
+lines tall (hover the label: what it's for):
+- type `Before each boss`, Enter, `Needs commander tag`; select another macro and come back:
+  the note is still there; spaces you type at the end stay while you're typing;
+- open the quick menu and hover `Two`: the note is in grey above the lines, with a line between
+  them;
+- search `commander`: `Two` shows with "(found in its note)"; search `test map`: "(found in its
+  lines)";
+- **Send now**: only the lines are sent, never the note;
+- paste over 1000 letters into the box: a yellow warning says the rest isn't kept; click
+  elsewhere: the note is cut;
+- export `Two` (as .json), delete it, import the file: the note came back; close the game:
+  `macros.json` has `"note"` for `Two` and none for macros without one.
+- With a big text size (Text size, the largest): the box and the warning fit the pane.
+
+**U3. The map list after a game update** (only on a patch day, or skip). Before the update, note
+the map list's time on the options page. After the game updates and you're in a map for a
+minute or two: the Nexus log (Advanced options on: **Nexus > Log**, filter "Chat Messages") says
+"Map list: the game was updated (build ...)", and within a couple of minutes the options page
+shows a new time. In `maps.json`, `"build"` and `"listed_build"` are the new build. A day later
+the time changes once more. On a first start with no `maps.json`, the list is fetched only once.
 
 ## Report template
 

@@ -104,6 +104,23 @@ bool MapCatalog::FromJson(const std::string& aText, const std::string& aLang, Ca
     const auto format = j.find("format");
     if (format == j.end() || !format->is_number_integer() || format->get<long long>() != kFormat) return false;
 
+    // The game's build: about the game, not the language, so it's kept whatever the language.
+    const auto readU32 = [&j](const char* aKey, uint32_t& aOut) {
+        const auto it = j.find(aKey);
+        if (it != j.end() && it->is_number_unsigned() && it->get<uint64_t>() <= 0xFFFFFFFFull)
+            aOut = static_cast<uint32_t>(it->get<uint64_t>());
+    };
+    readU32("build", aOut.Build);
+    readU32("listed_build", aOut.ListedBuild);
+    const auto seen = j.find("build_seen_at");
+    // Only a plausible time (up to the year 3000), so RefreshDue's sums can't overflow.
+    constexpr int64_t kLatest = 32503680000;
+    if (seen != j.end() && seen->is_number_integer() && aOut.Build != 0)
+    {
+        const int64_t at = seen->get<int64_t>();
+        if (at > 0 && at <= kLatest) aOut.BuildSeenAt = at;
+    }
+
     bool any = false;
     const auto lang = j.find("lang");
     if (lang == j.end() || !lang->is_string() || lang->get_ref<const std::string&>() != aLang) return any;
@@ -146,6 +163,12 @@ std::string MapCatalog::ToJson(const Cache& aCache)
         maps.push_back(std::move(o));
     }
     json j = {{"format", kFormat}, {"lang", aCache.Lang}, {"maps", std::move(maps)}};
+    if (aCache.Build != 0)
+    {
+        j["build"] = aCache.Build;
+        if (aCache.BuildSeenAt > 0) j["build_seen_at"] = aCache.BuildSeenAt;
+    }
+    if (aCache.ListedBuild != 0) j["listed_build"] = aCache.ListedBuild;
     if (!aCache.Listed.empty())
     {
         j["listed"] = std::vector<uint32_t>(aCache.Listed.begin(), aCache.Listed.end());
@@ -177,7 +200,33 @@ bool MapCatalog::RefreshDue(const Cache& aCache, int64_t aNow)
 {
     if (aCache.Listed.empty() || aCache.ListedAt <= 0) return true;
     if (aCache.ListedAt > aNow + 24 * 60 * 60) return true; // from the future: the clock changed
-    return aNow - aCache.ListedAt >= kRefreshSeconds;
+    if (aNow - aCache.ListedAt >= kRefreshSeconds) return true;
+    if (aCache.Build != 0 && aCache.Build != aCache.ListedBuild) return true; // a game update since
+    // A day after the update, once more, unless it was fetched since then.
+    return aCache.BuildSeenAt > 0 && aNow >= aCache.BuildSeenAt + kRecheckSeconds &&
+           aCache.ListedAt < aCache.BuildSeenAt + kRecheckSeconds;
+}
+
+bool MapCatalog::NoteBuild(Cache& aCache, uint32_t aBuild, int64_t aNow)
+{
+    if (aBuild == 0 || aBuild == aCache.Build) return false;
+    const bool first = aCache.Build == 0 && aCache.ListedBuild == 0;
+    aCache.Build = aBuild;
+    if (first)
+    {
+        // Nothing to compare with: take the list we have (if any) as this build's.
+        aCache.BuildSeenAt = 0;
+        if (!aCache.Listed.empty()) aCache.ListedBuild = aBuild;
+        return true;
+    }
+    aCache.BuildSeenAt = aNow;
+    return true;
+}
+
+void MapCatalog::ListFetched(Cache& aCache, int64_t aNow)
+{
+    aCache.ListedAt = aNow;
+    aCache.ListedBuild = aCache.Build;
 }
 
 bool MapCatalog::NoteVisit(Cache& aCache, uint32_t aMapId)

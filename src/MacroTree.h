@@ -35,6 +35,8 @@ namespace MacroTree
     constexpr size_t kMaxExtraValues   = 256;
     constexpr size_t kMaxChannelKeyLen = 32; // an unknown channel's name, as kept
     constexpr size_t kMaxLines = 50; // lines in one macro
+    constexpr size_t kMaxNoteLength = 1000; // bytes of UTF-8 in a macro's note (never sent)
+    constexpr size_t kMaxNoteLines  = 10;   // lines in a note; later line breaks become spaces
     // Problems listed from one file (FromJson, an import); the rest are only counted, so a crafted
     // file can't fill memory or the preview with millions of lines (SEC-022).
     constexpr size_t kMaxWarnings = 200;
@@ -99,6 +101,7 @@ namespace MacroTree
         std::string       LinkFile;
         Hotkey::Combo     Hotkey;   // empty = none
         int               CooldownSec = 0; // hotkey cooldown, 0 = off, at most Cooldown::kMaxSec
+        std::string       Note;     // what it's for, shown in the editor and the quick menu; never sent
 
         MacroTree::Extra  Extra; // fields from a newer version (the root's: the file's own)
 
@@ -261,6 +264,17 @@ namespace MacroTree
         const std::string& SavedBy() const { return m_SavedBy; }
 
         static std::string CleanName(const std::string& aName); // trims spaces, cuts to kMaxNameLength
+        // A note as kept: control characters but '\n' become spaces ("\r\n" becomes "\n"), at
+        // most kMaxNoteLines lines, trailing spaces and line breaks go, cut to kMaxNoteLength
+        // (never inside a character).
+        // aCut (optional): set to whether text was cut off (not just spaces trimmed).
+        static std::string CleanNote(const std::string& aNote, bool* aCut = nullptr);
+
+        // Copies a macro right after itself: "Name (2)" (a name already ending in " (n)" gets the
+        // next free number instead), with its lines, filters, cooldown, note and a newer version's
+        // fields, but no hotkey (it must stay unique), favourite mark or text file link, and a new
+        // id. Result::Target is the copy. Folders are refused.
+        Result Duplicate(Node& aMacro);
 
         // Gives aFolder the reserved Examples id. False (and nothing changes) if aFolder isn't a
         // folder in the tree, or a folder in the tree or the bin already has it.

@@ -57,7 +57,9 @@ anyway).
 ### The map list
 
 The map search uses the GW2 API's full list of maps. The addon fetches it in the background on
-the first run, once a week, and when you change the language. The addon's page in **Nexus >
+the first run, once a week, when you change the language, and after a game update (a minute
+after the addon notices the new game build, and once more a day later, since new maps can reach
+the API a little after the patch). The addon's page in **Nexus >
 Options** shows how many maps it knows and from when. With [Advanced options](Advanced-Options)
 ticked it also has a **Refresh map list** button to fetch it again now. If a refresh fails (no internet, the API is down), the old list is kept and
 the page says why.

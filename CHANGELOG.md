@@ -43,6 +43,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   bolt (it was a scroll), so it reads as "chat, fast" even at small sizes.
 
 ### Added
+- **Duplicate a macro:** right-click a macro > **Duplicate** makes a copy right below it, named
+  "Hello (2)" (a copy of "Hello (2)" is "Hello (3)"). It has the same lines, filters, cooldown
+  and note, but no hotkey, isn't a favourite and isn't linked to a text file.
+- **Notes on a macro:** a **Note (never sent)** box in the macro's editor, for what it's for or
+  when to use it. It's shown in grey above the lines when you hover over the macro in the quick
+  menu, the library's search finds it ("(found in its note)"), and it's exported and imported
+  with the macro. Never typed into chat.
+- **The map list follows game updates:** after the game is updated, the addon fetches the GW2
+  API's map list again (a minute after it notices, and once more a day later), so new maps show
+  up in the map search without waiting for the weekly refresh.
 - **Filters on folders:** a folder can be limited to game modes and maps, like a macro, and
   everything inside it follows. The filters add up: a macro is active only where its own filter
   and every folder above it allow, so a "WvW only" folder means nothing in it fires in PvE. Set a

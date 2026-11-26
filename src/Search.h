@@ -3,7 +3,7 @@
 // The library's search box (docs/design.md, "Search"): which folders and macros match what was
 // typed. No Nexus or ImGui dependency, so it can be unit-tested (tests/SearchTests.cpp).
 // Matching ignores case and accents ("cafe" finds "Café"). A macro matches on its name, the text
-// of its lines, a whisper's recipient, or its hotkey ("ctrl+f1"); a folder on its name.
+// of its lines, a whisper's recipient, its note, or its hotkey ("ctrl+f1"); a folder on its name.
 
 #include <cstdint>
 #include <string>

@@ -140,34 +140,8 @@ Refilled 2026-11-26 (owner): six items moved up from section 5, all small, low r
 to everyone, smallest first.
 Own language files outside Advanced options (their own opt-in) and the future compatibility of
 language files were built on 2026-11-26 ("Languages", in `docs/design.md`).
-
-### Duplicate a macro
-
-Right-click > **Duplicate** makes "Name (2)" next to it, with the same lines and filters but no
-hotkey (a hotkey must stay unique). Quick to build; handy for variants of one callout.
-
-**Advanced option?** No (2026-11-26): an everyday edit, nothing surprising.
-
-### Refresh the map list after a game update (added 2026-11-25)
-
-The map list (`maps.json`) is fetched on the first run, once a week, on a language change, and by
-**Refresh map list**. New maps arrive with game updates, so fetch it again soon after the game is
-updated. Possible signal: MumbleLink's `Context.BuildID` (the game's build number, in
-`vendor/mumble`): remember the last one seen in `maps.json` or `settings.json`, and when it
-changes, start a background refresh (the same one as the weekly refresh, on the worker thread).
-Points to settle: whether `BuildID` is filled in before the first map load, a small delay so a
-refresh doesn't start during the loading screen, and that the GW2 API may list a new map a little
-after the patch (maybe refresh again a day later).
-
-**Advanced option?** No: it's automatic and invisible, and helps everyone. With it, the
-**Refresh map list** button matters even less.
-
-### Notes on a macro (suggested 2026-11-23)
-
-A free-text note that's never sent (what it's for, when to use it), shown in the editor and in
-the quick menu's hover preview.
-
-**Advanced option?** No (2026-11-26): never sent, useful to anyone.
+Duplicate a macro, notes on a macro and refreshing the map list after a game update were built
+on 2026-11-26 ("Features" and "Map names", in `docs/design.md`).
 
 ### Split a long line (suggested 2026-11-23)
 

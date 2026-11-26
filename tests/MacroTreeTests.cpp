@@ -578,6 +578,125 @@ static void TestNumberedName()
     CHECK(n.size() <= kMaxNameLength && n == std::string(umlauts, 0, 96) + " (2)");
 }
 
+// Right-click > Duplicate: the copy goes right after the original, numbered, with no hotkey,
+// favourite or link file.
+static void TestDuplicate()
+{
+    Tree t;
+    Node* folder = t.AddFolder(nullptr, "Raids").Target;
+    Node* hello = t.AddMacro(folder, "Hello").Target;
+    Node* after = t.AddMacro(folder, "Zed").Target;
+    hello->Lines.push_back({EChannel::Say, "Hi"});
+    hello->GameModes = GM_WvW;
+    hello->MapIds = {38, 95};
+    hello->CooldownSec = 20;
+    hello->Note = "for raids";
+    hello->Hotkey = Hotkey::FromString("Ctrl+F1");
+    hello->Favourite = true;
+    hello->LinkFile = "hello.txt";
+    hello->Extra = std::make_shared<const json>(json{{"future", 1}});
+
+    Result r = t.Duplicate(*hello);
+    CHECK(r.Ok && r.Target && r.Target != hello);
+    Node* copy = r.Target;
+    if (!copy) return;
+    CHECK(copy->Name == "Hello (2)" && copy->Parent == folder && copy->IsMacro());
+    CHECK(copy->Id != hello->Id && t.Find(copy->Id) == copy);
+    CHECK(folder->Children.size() == 3 && folder->Children[1].get() == copy && folder->Children[2].get() == after);
+    CHECK(copy->Lines.size() == 1 && copy->Lines[0].Message == "Hi" && copy->Lines[0].Channel == EChannel::Say);
+    CHECK(copy->GameModes == GM_WvW && copy->MapIds == std::vector<int>({38, 95}));
+    CHECK(copy->CooldownSec == 20 && copy->Note == "for raids" && copy->Extra == hello->Extra);
+    CHECK(copy->Hotkey.Empty() && !copy->Favourite && copy->LinkFile.empty());
+    CHECK(t.MacrosWithHotkey(hello->Hotkey).size() == 1);
+    // The original is untouched.
+    CHECK(!hello->Hotkey.Empty() && hello->Favourite && hello->LinkFile == "hello.txt");
+
+    // "Hello (2)" again: "Hello (3)", not "Hello (2) (2)"; and the next free number.
+    CHECK(t.Duplicate(*copy).Target && t.Duplicate(*copy).Target);
+    CHECK(folder->Children.size() == 5);
+    CHECK(folder->Children[2]->Name == "Hello (4)" && folder->Children[3]->Name == "Hello (3)");
+    CHECK(t.Duplicate(*hello).Target->Name == "Hello (5)");
+
+    // Names that only look numbered keep their text.
+    Node* odd = t.AddMacro(folder, "Wing (02)").Target;
+    CHECK(odd && t.Duplicate(*odd).Target->Name == "Wing (02) (2)");
+    Node* bare = t.AddMacro(folder, "(7)").Target;
+    CHECK(bare && t.Duplicate(*bare).Target->Name == "(7) (2)");
+    Node* big = t.AddMacro(folder, "Big (1234567)").Target;
+    CHECK(big && t.Duplicate(*big).Target->Name == "Big (1234567) (2)");
+    // A long name still fits.
+    Node* longOne = t.AddMacro(nullptr, std::string(100, 'a')).Target;
+    Result rl = t.Duplicate(*longOne);
+    CHECK(rl.Ok && rl.Target->Name.size() <= kMaxNameLength && rl.Target->Name != longOne->Name);
+
+    // Folders and the root are refused.
+    CHECK(!t.Duplicate(*folder).Ok);
+    CHECK(!t.Duplicate(t.Root()).Ok);
+
+    // The copy is saved like any macro, and loads back.
+    Tree back;
+    CHECK(back.FromJson(t.ToJson()));
+    const Node* f = back.Root().Children.empty() ? nullptr : back.Root().Children[0].get();
+    // Order: Hello, Hello (5) (the last copy of Hello goes right after it), Hello (2), ...
+    CHECK(f && f->Children.size() >= 3 && f->Children[1]->Name == "Hello (5)" && f->Children[2]->Name == "Hello (2)");
+    CHECK(f && f->Children.size() >= 3 && f->Children[2]->Note == "for raids" && f->Children[2]->Hotkey.Empty());
+}
+
+// A macro's note: never sent, cleaned and capped.
+static void TestNotes()
+{
+    CHECK(Tree::CleanNote("") == "");
+    CHECK(Tree::CleanNote("Use in raids") == "Use in raids");
+    CHECK(Tree::CleanNote("a\r\nb\rc\nd") == "a\nb\nc\nd");
+    CHECK(Tree::CleanNote("tab\there\x01x\x7F") == "tab here x");
+    CHECK(Tree::CleanNote("x   \n  y  \n\n") == "x\n  y");
+    CHECK(Tree::CleanNote("\xC2\x85" "C1") == " C1");
+    // At most kMaxNoteLines lines: later breaks become spaces.
+    std::string many;
+    for (int i = 0; i < 15; i++) many += "l" + std::to_string(i) + "\n";
+    const std::string kept = Tree::CleanNote(many);
+    CHECK(std::count(kept.begin(), kept.end(), '\n') == static_cast<std::ptrdiff_t>(kMaxNoteLines - 1));
+    CHECK(kept.find("l14") != std::string::npos);
+    // At most kMaxNoteLength bytes, never inside a character.
+    std::string umlauts;
+    for (int i = 0; i < 600; i++) umlauts += "\xC3\xA4";
+    const std::string cut = Tree::CleanNote(umlauts);
+    CHECK(cut.size() <= kMaxNoteLength && cut.size() % 2 == 0);
+    // Only real text cut off counts; spaces trimmed at the end don't.
+    bool wasCut = true;
+    CHECK(Tree::CleanNote(std::string(900, 'x') + std::string(200, ' '), &wasCut).size() == 900 && !wasCut);
+    CHECK(Tree::CleanNote(umlauts, &wasCut).size() <= kMaxNoteLength && wasCut);
+
+    // Saved only when there is one; read back cleaned; a too-long one shortened with a warning.
+    Tree t;
+    Node* m = t.AddMacro(nullptr, "M").Target;
+    Node* plain = t.AddMacro(nullptr, "Plain").Target;
+    m->Note = "line 1\nline 2";
+    json j = t.ToJson();
+    const std::string dumped = j.dump();
+    CHECK(dumped.find("\"note\":\"line 1\\nline 2\"") != std::string::npos);
+    CHECK(dumped.find("\"note\"") == dumped.rfind("\"note\"")); // only M's
+    (void)plain;
+    j["root"]["children"][0]["note"] = std::string("bad\tnote ") + std::string(2000, 'x');
+    j["root"]["children"][1]["note"] = 42; // not text: no note
+    Tree back;
+    std::vector<std::string> w;
+    CHECK(back.FromJson(j, &w));
+    CHECK(back.Root().Children.size() == 2);
+    if (back.Root().Children.size() == 2)
+    {
+        const std::string& note = back.Root().Children[0]->Note;
+        CHECK(note.size() == kMaxNoteLength && note.compare(0, 9, "bad note ") == 0);
+        CHECK(back.Root().Children[1]->Note.empty());
+    }
+    CHECK(w.size() == 1);
+    // A folder never has one (it isn't read there).
+    json jf = Tree().ToJson();
+    jf["root"]["children"] = json::array({json{{"type", "folder"}, {"id", "0000000000000005"}, {"name", "F"}, {"note", "x"}, {"children", json::array()}}});
+    Tree tf;
+    CHECK(tf.FromJson(jf) && tf.Root().Children.size() == 1 && tf.Root().Children[0]->Note.empty());
+}
+
 void RunMacroTreeTests()
 {
     TestDepthLimit();
@@ -598,4 +717,6 @@ void RunMacroTreeTests()
     TestChannels();
     TestManyMissingIds();
     TestNumberedName();
+    TestDuplicate();
+    TestNotes();
 }
