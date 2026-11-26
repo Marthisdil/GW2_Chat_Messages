@@ -22,6 +22,14 @@ $hhmm = $now.Hour * 100 + $now.Minute
 $num  = "{0}.{1:D2}.{2:D2}.{3:D4}" -f $y, $m, $d, $hhmm
 $text = "$num.$Channel"
 
+# CHANGELOG.md is checked first, so a missing [Unreleased] section changes nothing.
+$logPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\CHANGELOG.md"))
+$log = [System.IO.File]::ReadAllText($logPath)
+$nl = if ($log.Contains("`r`n")) { "`r`n" } else { "`n" }
+$marker = "## [Unreleased]"
+$at = $log.IndexOf($marker)
+if ($at -lt 0) { throw "CHANGELOG.md has no '## [Unreleased]' section." }
+
 $header = @"
 #pragma once
 
@@ -46,12 +54,6 @@ Write-Output "Version: $text  (GitHub release tag: $num)"
 # CHANGELOG.md: what's under "## [Unreleased]" becomes this version's section, with a new empty
 # "## [Unreleased]" above it. The DLL carries the changelog, and "What's new" after an update shows
 # the running version's section (docs/design.md, "Update notes"), so commit it with Version.h.
-$logPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\CHANGELOG.md"))
-$log = [System.IO.File]::ReadAllText($logPath)
-$nl = if ($log.Contains("`r`n")) { "`r`n" } else { "`n" }
-$marker = "## [Unreleased]"
-$at = $log.IndexOf($marker)
-if ($at -lt 0) { throw "CHANGELOG.md has no '## [Unreleased]' section." }
 $date = "{0}-{1:D2}-{2:D2}" -f $y, $m, $d
 $log = $log.Substring(0, $at) + "$marker$nl$nl## [$num] - $date" + $log.Substring($at + $marker.Length)
 [System.IO.File]::WriteAllText($logPath, $log, (New-Object System.Text.UTF8Encoding($false)))

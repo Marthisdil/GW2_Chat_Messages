@@ -124,6 +124,14 @@ static void TestParseAndSince()
     CHECK(Since(sections, "2026.12.02.0900", "2026.12.02.0900").empty());
     // A version with no section of its own (a Dev build).
     CHECK(Since(sections, "", "2026.12.05.0000").empty());
+    // A release with no notes (an empty section) shows nothing, but the others still show.
+    {
+        const auto withEmpty = Parse("## [2026.12.03.0800] - 2026-12-03\n\n## [2026.12.02.0900] - 2026-12-02\n- Two.\n");
+        CHECK(withEmpty.size() == 2);
+        CHECK(Since(withEmpty, "2026.12.02.0900", "2026.12.03.0800").empty());
+        const auto both = Since(withEmpty, "2026.11.21.1412", "2026.12.03.0800");
+        CHECK(both.size() == 1 && both[0].Version == "2026.12.02.0900");
+    }
     CHECK(Parse("").empty());
     CHECK(Parse("## [Unreleased]\n- x\n").empty());
 }

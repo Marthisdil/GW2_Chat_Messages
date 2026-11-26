@@ -842,14 +842,23 @@ namespace
     ImVec2 s_TourMax[kTourTargets];
     bool   s_TourSeen[kTourTargets] = {};
     ImVec2 s_TourBoxSize; // the box's size last frame, to place it
+    Welcome::ETarget s_TourScrollTo = Welcome::ETarget::None; // scroll this part into view once
 
-    // After the item (or group, or child window) that a step points at.
+    // After the item (or group, or child window) that a step points at. Only the part its pane
+    // shows counts; when a step starts, a part scrolled out of its pane is scrolled into view.
     void TourMark(Welcome::ETarget aTarget)
     {
         const size_t i = static_cast<size_t>(aTarget);
         if (!s_TourOn || i == 0 || i >= kTourTargets) return;
-        s_TourMin[i]  = ImGui::GetItemRectMin();
-        s_TourMax[i]  = ImGui::GetItemRectMax();
+        const ImRect clip = ImGui::GetCurrentWindow()->ClipRect;
+        const ImVec2 min = ImGui::GetItemRectMin(), max = ImGui::GetItemRectMax();
+        if (s_TourScrollTo == aTarget)
+        {
+            s_TourScrollTo = Welcome::ETarget::None;
+            if (min.y < clip.Min.y || min.y > clip.Max.y) ImGui::SetScrollHereY(0.0f);
+        }
+        s_TourMin[i]  = ImVec2(std::clamp(min.x, clip.Min.x, clip.Max.x), std::clamp(min.y, clip.Min.y, clip.Max.y));
+        s_TourMax[i]  = ImVec2(std::clamp(max.x, clip.Min.x, clip.Max.x), std::clamp(max.y, clip.Min.y, clip.Max.y));
         s_TourSeen[i] = true;
     }
 
@@ -4079,13 +4088,17 @@ namespace
         ImGui::EndPopup();
     }
 
-    // The first macro in a folder (depth first), for the tour's editor steps.
+    // The first macro in a folder (depth first) that the search box lets the tree show, for the
+    // tour's editor steps (the library unselects a macro the search hides).
     Node* FirstMacroIn(Node& aFolder)
     {
         for (const auto& c : aFolder.Children)
         {
-            if (c->IsMacro()) return c.get();
-            if (Node* m = FirstMacroIn(*c)) return m;
+            if (c->IsMacro())
+            {
+                if (!s_Search.Active || s_Search.Shows(c->Id)) return c.get();
+            }
+            else if (Node* m = FirstMacroIn(*c)) return m;
         }
         return nullptr;
     }
@@ -4096,6 +4109,7 @@ namespace
     {
         s_TourEntered = false;
         const Welcome::Step& st = Welcome::Steps()[s_TourStep];
+        s_TourScrollTo = st.Target;
         if (!Welcome::NeedsMacro(st.Target)) return;
         const Node* sel = s_Tree.Find(s_SelectedId);
         if (sel && sel->IsMacro()) return;
@@ -4170,7 +4184,7 @@ namespace
         ImGui::SetNextWindowSizeConstraints(ImVec2(boxW, 0.0f), ImVec2(boxW, FLT_MAX));
         const ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
                                        ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings |
-                                       ImGuiWindowFlags_AlwaysAutoResize;
+                                       ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing;
         if (ImGui::Begin("###chatmsg_tour", nullptr, flags))
         {
             // In front of the library, as the error window is, without taking the keyboard.

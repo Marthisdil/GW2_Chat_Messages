@@ -457,8 +457,8 @@ its own box.
     every version since the one seen (newest first; only the running version's for an update
     from before this feature, which has no `"notes_seen"`). `"notes_seen"` is saved when it's
     closed;
-  - a first run (the welcome shows instead), notes turned off, or no section for this version (a
-    Dev build between releases): nothing shows and `"notes_seen"` is set now;
+  - a first run (the welcome shows instead), notes turned off, or no section with notes for this version
+    (a Dev build between releases; an empty section counts as none): nothing shows and `"notes_seen"` is set now;
   - the same version or an older DLL: nothing, and the newer mark is kept.
 - **The window** (`###chatmsg_notes`, about 540x440, resizable): the notes in a scrolling box
   (each version's title, its `###` headings, bullets with their indent, wrapped; `**`, backticks

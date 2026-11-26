@@ -141,6 +141,7 @@ std::vector<ReleaseNotes::Section> ReleaseNotes::Since(const std::vector<Section
     {
         Version v;
         if (!ParseVersion(s.Version, v)) continue;
+        if (s.Body.find_first_not_of(" \t\r\n") == std::string::npos) continue; // nothing to show
         if (current < v) continue;                           // newer than this DLL
         if (hasSeen ? !(seen < v) : !(v == current)) continue; // already seen, or only the current one
         out.push_back(s);
