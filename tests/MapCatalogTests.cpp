@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include <nlohmann/json.hpp>
+
 #include "MapCatalog.h"
 #include "TestCheck.h"
 
@@ -71,13 +73,22 @@ static void TestJsonRoundTrip()
     CHECK(back.Maps[1155].Name == "Lion's Arch Aerodrome" && back.Maps[1155].Region == "Kryta");
     CHECK(back.Maps[900].Folded == "cafe map");
     CHECK(back.Listed == c.Listed && back.ListedAt == 1000);
-    CHECK(back.Visited.size() == 2 && back.Visited[0] == 15 && back.Visited[1] == 50);
+    // The maps visited aren't in maps.json (a cache): they're in settings.json.
+    CHECK(back.Visited.empty() && text.find("visited") == std::string::npos);
+    const std::vector<uint32_t> visited = VisitedFromJson(VisitedToJson(c));
+    CHECK(visited.size() == 2 && visited[0] == 15 && visited[1] == 50);
+    CHECK(VisitedFromJson(nlohmann::json::parse(R"([3,3,"z",0,4,-1,4294967296,5.5])")) == std::vector<uint32_t>({3, 4}));
+    CHECK(VisitedFromJson(nlohmann::json::parse(R"({"a":1})")).empty());
+    {
+        nlohmann::json many = nlohmann::json::array();
+        for (uint32_t i = 1; i <= kMaxVisited + 5; i++) many.push_back(i);
+        CHECK(VisitedFromJson(many).size() == kMaxVisited);
+    }
 
-    // Another language: names and the list are thrown away, the visited maps kept.
+    // Another language: names and the list are thrown away (nothing usable is left).
     Cache de;
-    CHECK(FromJson(text, "de", de));
+    CHECK(!FromJson(text, "de", de));
     CHECK(de.Lang == "de" && de.Maps.empty() && de.Listed.empty() && de.ListedAt == 0);
-    CHECK(de.Visited.size() == 2);
 
     // Damaged or old files.
     Cache bad;
@@ -85,8 +96,8 @@ static void TestJsonRoundTrip()
     CHECK(!FromJson("[1,2]", "en", bad));
     CHECK(!FromJson(R"({"format":1,"lang":"en","names":{"15":"Queensdale"}})", "en", bad)); // the old format
     CHECK(!FromJson(R"({"format":"2"})", "en", bad));
-    CHECK(FromJson(R"({"format":2,"lang":"en","maps":"x","listed":5,"listed_at":"y","visited":[3,3,"z",0,4]})", "en", bad));
-    CHECK(bad.Maps.empty() && bad.Listed.empty() && bad.Visited.size() == 2);
+    CHECK(!FromJson(R"({"format":2,"lang":"en","maps":"x","listed":5,"listed_at":"y","visited":[3,4]})", "en", bad));
+    CHECK(bad.Maps.empty() && bad.Listed.empty() && bad.Visited.empty());
     CHECK(FromJson(R"({"format":2,"lang":"en","maps":[{"id":5,"name":"Five"},{"id":5.5,"name":"x"},7],"listed":[5],"listed_at":3})",
                    "en", bad));
     CHECK(bad.Maps.size() == 1 && bad.Maps[5].Name == "Five" && bad.Listed.count(5) && bad.ListedAt == 3);

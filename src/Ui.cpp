@@ -161,6 +161,8 @@ namespace
     void SaveNow()
     {
         if (!s_Dirty) return;
+        // A newer version's library is read-only (DrawMessages says so): never saved over.
+        if (s_Tree.FromNewerVersion()) { s_Dirty = false; return; }
         const bool failedBefore = s_SaveFailed;
         s_SaveFailed = !Storage::SaveMacros(s_Tree);
         if (!s_SaveFailed) s_Dirty = false;
@@ -279,6 +281,29 @@ namespace
         char buf[32];
         std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &local);
         return buf;
+    }
+
+    // When a bin item was deleted, in local time ("2026-11-21 14:03"). Saved in UTC (UtcStamp);
+    // anything else in the file is shown as it is.
+    std::string DeletedText(const MacroTree::TrashItem& aItem)
+    {
+        std::time_t when = 0;
+        if (!MacroTree::ParseUtcStamp(aItem.DeletedAt, when)) return aItem.DeletedAt;
+        std::tm local{};
+        if (localtime_s(&local, &when) != 0) return aItem.DeletedAt;
+        char buf[32];
+        std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M", &local);
+        return buf;
+    }
+
+    // One line as it's typed, in its channel's colour; a newer version's channel as "? key", in red
+    // (that line is never sent).
+    void DrawLinePreview(const Line& aLine)
+    {
+        if (aLine.UnknownChannel.empty())
+            ImGui::TextColored(ChannelColorVec(aLine.Channel), "%s", ChatLine::TypedText(aLine).c_str());
+        else
+            ImGui::TextColored(kErrorColor, "? %s  %s", aLine.UnknownChannel.c_str(), aLine.Message.c_str());
     }
 
     std::string WhereText()
@@ -950,7 +975,7 @@ namespace
         if (a.size() != b.size()) return false;
         for (size_t i = 0; i < a.size(); i++)
             if (a[i].Channel != b[i].Channel || a[i].Message != b[i].Message || a[i].WhisperTo != b[i].WhisperTo ||
-                a[i].SquadBroadcast != b[i].SquadBroadcast) return false;
+                a[i].SquadBroadcast != b[i].SquadBroadcast || a[i].UnknownChannel != b[i].UnknownChannel) return false;
         return true;
     }
 
@@ -1062,11 +1087,18 @@ namespace
 
     // The export's text. False (logged) if it couldn't be made: an exception must never leave
     // the render callback.
-    bool MakeExportText(const std::vector<const Node*>& aNodes, bool aAsText, std::string& aText)
+    bool MakeExportText(const std::vector<const Node*>& aNodes, bool aAsText, std::string& aText, std::string& aError)
     {
+        aError = T("The export couldn't be written. Check the Nexus log.");
+        // As text, a newer version's channel would become the current channel.
+        if (aAsText && MacroTree::HasUnknownChannel(*aNodes.front()))
+        {
+            aError = T("A line's channel is from a newer version of the addon, which a .txt file can't hold. Export it as .json.");
+            return false;
+        }
         try
         {
-            aText = aAsText ? Exchange::ExportText(*aNodes.front()) : Exchange::ExportJsonText(aNodes);
+            aText = aAsText ? Exchange::ExportText(*aNodes.front()) : Exchange::ExportJsonText(aNodes, s_Tree.Format());
             return true;
         }
         catch (const std::exception& e)
@@ -1084,10 +1116,15 @@ namespace
             ShowError(Fmt(T("Exported \"%s\""), aName.c_str()), T("The exports folder isn't available."));
             return;
         }
-        std::string text;
-        const bool made = MakeExportText(aNodes, aAsText, text);
+        std::string text, error;
+        const bool made = MakeExportText(aNodes, aAsText, text, error);
+        if (!made)
+        {
+            ShowError(Fmt(T("Exported \"%s\" as a %s file"), aName.c_str(), aAsText ? ".txt" : ".json"), error);
+            return;
+        }
         const std::filesystem::path file = Storage::FreeFile(dir, Exchange::FileNameFor(aName, aAsText ? ".txt" : ".json"));
-        if (made && Storage::WriteText(file, text))
+        if (Storage::WriteText(file, text))
             SetInfo(WithTrashNote(Fmt(T("Exported to %s."), ("<GW2>\\addons\\GW2_Chat_Messages\\exports\\" + PathText::Utf8(file.filename())).c_str())), true);
         else ShowError(Fmt(T("Exported \"%s\" as a %s file"), aName.c_str(), aAsText ? ".txt" : ".json"),
                        T("The export couldn't be written. Check the Nexus log."));
@@ -1096,10 +1133,10 @@ namespace
     void ExportToClipboard(const std::vector<const Node*>& aNodes, bool aAsText)
     {
         if (aNodes.empty() || !aNodes.front()) return;
-        std::string text;
-        if (!MakeExportText(aNodes, aAsText, text))
+        std::string text, error;
+        if (!MakeExportText(aNodes, aAsText, text, error))
         {
-            ShowError(Fmt(T("Exported \"%s\""), aNodes.front()->Name.c_str()), T("The export couldn't be written. Check the Nexus log."));
+            ShowError(Fmt(T("Exported \"%s\""), aNodes.front()->Name.c_str()), error);
             return;
         }
         ImGui::SetClipboardText(text.c_str());
@@ -1464,7 +1501,7 @@ namespace
             ImGui::PopStyleColor();
             if (ImGui::IsItemClicked()) { s_TrashSelId = id; s_SelectedId = 0; }
             if (ImGui::IsItemHovered())
-                ImGui::SetTooltip(T("Deleted %s from %s"), t.DeletedAt.c_str(), Tree::FromPathText(t).c_str());
+                ImGui::SetTooltip(T("Deleted %s from %s"), DeletedText(t).c_str(), Tree::FromPathText(t).c_str());
             if (ImGui::BeginPopupContextItem("##trashitemctx"))
             {
                 s_TrashSelId = id;
@@ -1492,7 +1529,7 @@ namespace
             if (sel == &aNode || Tree::IsAncestorOf(aNode, *sel)) s_SelectedId = 0;
         const std::string name = aNode.Name;
         const uint64_t id = aNode.Id;
-        if (s_Tree.MoveToTrash(aNode, NowText().substr(0, 16)).Ok)
+        if (s_Tree.MoveToTrash(aNode, MacroTree::UtcStamp(std::time(nullptr))).Ok)
         {
             if (s_SelectedId == 0) s_TrashSelId = id;
             MarkDirty();
@@ -1525,7 +1562,7 @@ namespace
         const Node& n = *aItem.Item;
         ImGui::TextDisabled("%s", n.IsFolder() ? T("Folder in the trash bin") : T("Macro in the trash bin"));
         ImGui::TextWrapped("%s", n.Name.c_str());
-        ImGui::TextDisabled(T("Deleted %s from %s"), aItem.DeletedAt.c_str(), Tree::FromPathText(aItem).c_str());
+        ImGui::TextDisabled(T("Deleted %s from %s"), DeletedText(aItem).c_str(), Tree::FromPathText(aItem).c_str());
         const int idx = s_Tree.TrashIndexOf(n.Id);
         if (idx >= 0 && !s_Tree.OriginalFolderExists(static_cast<size_t>(idx)))
             ImGui::TextColored(kWarnColor, T("That folder no longer exists. Restoring asks where to put it."));
@@ -1545,7 +1582,7 @@ namespace
         else
         {
             if (n.Lines.empty()) ImGui::TextDisabled(T("No lines."));
-            for (const Line& l : n.Lines) ImGui::TextColored(ChannelColorVec(l.Channel), "%s", ChatLine::TypedText(l).c_str());
+            for (const Line& l : n.Lines) DrawLinePreview(l);
             if (!n.Hotkey.Empty()) ImGui::TextDisabled(T("Hotkey (not active in the bin): %s"), Hotkey::Display(n.Hotkey).c_str());
         }
     }
@@ -1916,7 +1953,7 @@ namespace
             if (Node* sel = s_Tree.Find(s_SelectedId))
                 if (sel == old || Tree::IsAncestorOf(*old, *sel)) s_SelectedId = 0;
             const bool toTrash = s_TrashOn;
-            if (Node* fresh = Examples::Replace(s_Tree, *old, toTrash, NowText().substr(0, 16)))
+            if (Node* fresh = Examples::Replace(s_Tree, *old, toTrash, MacroTree::UtcStamp(std::time(nullptr))))
                 ShowNewExamples(*fresh, toTrash ? T("Replaced the Examples folder with a fresh copy. The old one is in the trash bin.")
                                                 : T("Replaced the Examples folder with a fresh copy."));
             else
@@ -1988,11 +2025,13 @@ namespace
                                          ImGuiInputTextFlags_CallbackResize, StringResizeCallback, &aStr);
     }
 
-    bool ChannelCombo(const char* aLabel, EChannel& aChannel)
+    // aUnknown: a newer version's channel the line has (Line::UnknownChannel), shown as "? name".
+    bool ChannelCombo(const char* aLabel, EChannel& aChannel, const std::string& aUnknown = {})
     {
         bool changed = false;
-        ImGui::PushStyleColor(ImGuiCol_Text, ChannelColorVec(aChannel));
-        const bool open = ImGui::BeginCombo(aLabel, Localization::Lookup(ChannelLabel(aChannel)));
+        ImGui::PushStyleColor(ImGuiCol_Text, aUnknown.empty() ? ChannelColorVec(aChannel) : kErrorColor);
+        const std::string unknown = "? " + aUnknown;
+        const bool open = ImGui::BeginCombo(aLabel, aUnknown.empty() ? Localization::Lookup(ChannelLabel(aChannel)) : unknown.c_str());
         ImGui::PopStyleColor();
         if (!open) return false;
         for (int i = 0; i < static_cast<int>(EChannel::Count); i++)
@@ -2036,6 +2075,9 @@ namespace
 
     void LineWarnings(const Line& aLine)
     {
+        if (!aLine.UnknownChannel.empty())
+            ImGui::TextColored(kErrorColor, T("Its channel \"%s\" is from a newer version of the addon: this line won't be sent. "
+                                              "Pick a channel to change it."), aLine.UnknownChannel.c_str());
         if (aLine.Channel == EChannel::Whisper && aLine.WhisperTo.empty())
             ImGui::TextColored(kWarnColor, T("Whisper needs a recipient."));
         if (aLine.Channel == EChannel::Whisper && ChatLine::Utf16Length(aLine.WhisperTo) > ChatLine::kMaxRecipientLength)
@@ -2068,7 +2110,7 @@ namespace
             if (ImGui::ArrowButton("##down", ImGuiDir_Down) && i + 1 < static_cast<int>(lines.size())) { moveFrom = i; moveTo = i + 1; }
             row.Next(Px(110.0f));
             ImGui::SetNextItemWidth(Px(110.0f));
-            if (ChannelCombo("##channel", l.Channel)) MarkDirty();
+            if (ChannelCombo("##channel", l.Channel, l.UnknownChannel)) { l.UnknownChannel.clear(); MarkDirty(); }
             if (l.Channel == EChannel::Whisper)
             {
                 row.Next(Px(150.0f));
@@ -2118,6 +2160,14 @@ namespace
 
     void DrawRawEditor(Node& aMacro)
     {
+        // Raw text has no way to write a newer version's channel: editing it here would turn that
+        // line into a current-channel line.
+        if (MacroTree::HasUnknownChannel(aMacro))
+        {
+            ImGui::TextColored(kErrorColor, T("A line's channel is from a newer version of the addon, which raw text can't show. "
+                                              "Edit this macro on the Lines tab."));
+            return;
+        }
         if (s_RawForId != aMacro.Id)
         {
             s_RawText  = ChatLine::SerializeRaw(aMacro.Lines);
@@ -2242,8 +2292,25 @@ namespace
 
         for (Node* m : linked)
         {
+            // Its file is raw text, which can't hold a newer version's channel: syncing would turn
+            // that line into a current-channel line. Paused until the line gets another channel.
             const std::filesystem::path file = LinkSync::Resolve(dir, m->LinkFile);
             LinkSync::State& st = s_LinkStates[m->Id];
+            if (MacroTree::HasUnknownChannel(*m))
+            {
+                // The file as it is now counts as agreed: when the line gets a channel again, the
+                // macro's edits go to the file instead of the file replacing them (a first sync
+                // would load the file). A later change to the file still wins, as always.
+                if (!st.Known)
+                {
+                    bool exists = false;
+                    st.Mtime = FileMtime(file, exists);
+                    st.Text  = ChatLine::SerializeRaw(m->Lines);
+                    st.Known = exists;
+                }
+                s_LinkProblems[m->Id] = T("Not kept in step with its file: a line's channel is from a newer version of the addon.");
+                continue;
+            }
             const LinkSync::State before = st;
             LinkSync::File view;
             view.Mtime = FileMtime(file, view.Exists);
@@ -2294,6 +2361,12 @@ namespace
         const std::string action = Fmt(T("Linked \"%s\" to the file \"%s\""), aMacro.Name.c_str(), aPath.c_str());
         const std::string bad = LinkSync::CheckPath(aPath);
         if (!bad.empty()) { ShowError(action, bad); return; }
+        // A text file can't hold a newer version's channel: it would become a current-channel line.
+        if (MacroTree::HasUnknownChannel(aMacro))
+        {
+            ShowError(action, T("A line's channel is from a newer version of the addon, which a text file can't hold. Pick a channel for it first."));
+            return;
+        }
         const std::filesystem::path dir = Storage::AddonDir();
         if (dir.empty()) { ShowError(action, T("The addon folder isn't available.")); return; }
         const std::filesystem::path file = LinkSync::Resolve(dir, aPath);
@@ -2565,7 +2638,7 @@ namespace
         for (size_t i = 0; i < aMacro.Lines.size() && i < kPreviewLines; i++)
         {
             const Line& l = aMacro.Lines[i];
-            ImGui::TextColored(ChannelColorVec(l.Channel), "%s", ChatLine::TypedText(l).c_str());
+            DrawLinePreview(l);
         }
         if (aMacro.Lines.size() > kPreviewLines)
             ImGui::TextDisabled(T("...and %zu more line(s)"), aMacro.Lines.size() - kPreviewLines);
@@ -2981,6 +3054,9 @@ namespace
         using Exchange::EHotkeyRisk;
         if (aItem.UsesRemoved)
             PlanFlag(T("[REMOVED PLACEHOLDER]"), T("It uses {txt} or {json}, which this addon no longer has.\nIt won't be sent until you edit those out."));
+        if (aItem.FromNewer)
+            PlanFlag(T("[NEWER VERSION]"), T("It has settings from a newer version of the addon. They're kept, but this version can't use them.\n"
+                                             "A line for a channel this version doesn't know isn't sent."));
         if (s_ImportOpt.KeepHotkeys && !aItem.HotkeyCleared)
         {
             if (aItem.HotkeyRisk == EHotkeyRisk::NoModifier)
@@ -3374,6 +3450,9 @@ namespace
             ImGui::TextColored(kCountNearColor, T("%zu name(s) are already taken (marked NAME TAKEN): choose what happens to each one below."), plan.Conflicts);
         if (plan.UsesRemoved)
             ImGui::TextColored(kWarnColor, T("%zu macro(s) use {txt} or {json}, which were removed (marked REMOVED PLACEHOLDER): they won't be sent until you edit those out."), plan.UsesRemoved);
+        if (plan.FromNewer)
+            ImGui::TextColored(kWarnColor, T("%zu item(s) have settings from a newer version of the addon (marked NEWER VERSION): they're kept, but not used here."),
+                               plan.FromNewer);
         if (s_ImportOpt.KeepHotkeys && plan.HotkeysNoModifier)
             ImGui::TextColored(kWarnColor, T("%zu hotkey(s) have no Ctrl, Alt or Shift (marked KEY WITHOUT CTRL/ALT/SHIFT): they send their macro whenever you press that key while playing."),
                                plan.HotkeysNoModifier);
@@ -3529,6 +3608,9 @@ namespace
     {
         if (s_SaveFailed) // stays until a save works (the error window said why)
             ImGui::TextColored(kErrorColor, T("Your macros couldn't be saved. Check the Nexus log. Retrying..."));
+        if (s_Tree.FromNewerVersion()) // stays: the file is never saved over (Storage::SaveMacros)
+            ImGui::TextColored(kWarnColor, T("Read-only: your macros were saved by a newer version of the addon. "
+                                             "You can send them, but changes aren't saved. Update the addon to edit them."));
         if (!s_Status.empty() && ImGui::GetTime() < s_StatusUntil)
         {
             ImGui::TextWrapped("%s", s_Status.c_str());
@@ -3857,7 +3939,11 @@ namespace
     {
         if (Storage::BackupsDir().empty()) return EBackup::Failed;
         RefreshBackupNames();
-        const std::string text = Storage::LibraryText(s_Tree);
+        // A newer version's library: copy its file as it is, since this build would write it in
+        // its own way (and changes here aren't saved anyway).
+        std::string text;
+        if (!s_Tree.FromNewerVersion()) text = Storage::LibraryText(s_Tree);
+        else if (!Storage::ReadLibraryText(text)) return EBackup::Failed;
         if (!aForce)
         {
             const std::time_t newest = Backups::Newest(s_BackupNames, aKind);
@@ -4007,6 +4093,14 @@ namespace
     void RestoreBackup(const std::string& aName)
     {
         const char* action = T("Clicked Restore on the Restore tab of the addon's options");
+        // Read-only: a restore would be saved over the newer version's macros.json, and Undo
+        // restore couldn't write it back (a read-only library is never saved).
+        if (s_Tree.FromNewerVersion())
+        {
+            ShowError(action, T("Your macros were saved by a newer version of the addon, so they're read-only and a backup "
+                                "can't be restored over them. Update the addon first."));
+            return;
+        }
         Backups::EKind kind;
         std::time_t when = 0;
         MacroTree::Tree tree;
@@ -4205,7 +4299,7 @@ void Ui::Init()
 void Ui::Shutdown()
 {
     SyncLinks(true); // last edits to linked macros reach their files
-    if (s_Dirty && !Storage::SaveMacros(s_Tree))
+    if (s_Dirty && !s_Tree.FromNewerVersion() && !Storage::SaveMacros(s_Tree))
         LogF(LOGL_WARNING, "Unsaved macro changes could not be written on unload.");
     s_Dirty = false;
     s_Tree  = Tree();

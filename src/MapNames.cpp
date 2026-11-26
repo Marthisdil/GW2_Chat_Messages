@@ -282,6 +282,12 @@ void MapNames::Init()
     const std::filesystem::path dir = Storage::AddonDir();
     s_File = dir.empty() ? std::filesystem::path() : dir / "maps.json";
     LoadFile();
+    // The maps visited are the player's own, in settings.json; maps.json is only a cache.
+    {
+        const nlohmann::json settings = Storage::LoadSettings();
+        const auto visited = settings.find(MapCatalog::kVisitedSetting);
+        if (visited != settings.end()) s_Cache.Visited = MapCatalog::VisitedFromJson(*visited);
+    }
     s_Stop = false;
     s_Thread = std::thread(ThreadMain);
 }
@@ -380,10 +386,16 @@ bool MapNames::Get(uint32_t aMapId, std::string& aName, std::string& aError)
 
 void MapNames::NoteVisit(uint32_t aMapId)
 {
+    nlohmann::json visited;
+    bool changed = false;
     {
         std::lock_guard<std::mutex> lock(s_Mutex);
-        if (MapCatalog::NoteVisit(s_Cache, aMapId)) s_Dirty = true; // saved with the next lookup or at unload
+        changed = MapCatalog::NoteVisit(s_Cache, aMapId);
+        if (changed) visited = MapCatalog::VisitedToJson(s_Cache);
     }
+    // Outside the lock: a settings write never holds up the lookup thread.
+    if (changed && !Storage::SaveSetting(MapCatalog::kVisitedSetting, visited))
+        LogF(LOGL_WARNING, "The maps visited couldn't be saved.");
     Request(aMapId);
 }
 

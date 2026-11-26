@@ -12,6 +12,7 @@
 #include "ChatLine.h"
 #include "PathText.h"
 #include "Placeholders.h"
+#include "Version.h"
 
 namespace fs = std::filesystem;
 using nlohmann::json;
@@ -278,6 +279,7 @@ namespace
             using Exchange::EHotkeyRisk;
             aItem.UsesRemoved = UsesRemoved(aSrc);
             if (aItem.UsesRemoved) Out.UsesRemoved++;
+            FlagNewer(aSrc, aItem);
             if (!aSrc.Hotkey.Empty())
             {
                 if (!aSrc.Hotkey.HasModifier()) aItem.HotkeyRisk = EHotkeyRisk::NoModifier;
@@ -304,6 +306,14 @@ namespace
             aItem.LosesOwnHotkey = !aReplaced->Hotkey.Empty() && !(brings && aSrc.Hotkey == aReplaced->Hotkey);
             if (aItem.LosesOwnHotkey) Out.OwnHotkeysLost++;
             if (aItem.HotkeyCleared || aItem.LosesOwnHotkey) Out.HotkeysChanged++;
+        }
+
+        // Something from a newer version: a macro's own fields or lines, a folder's own fields (what's
+        // inside a folder is flagged on its own items).
+        void FlagNewer(const Node& aSrc, Exchange::PlanItem& aItem)
+        {
+            aItem.FromNewer = aSrc.IsMacro() ? MacroTree::HasNewerData(aSrc) : aSrc.Extra != nullptr;
+            if (aItem.FromNewer) Out.FromNewer++;
         }
 
         Exchange::EChoice ChoiceFor(const Node& aSrc) const
@@ -394,6 +404,7 @@ namespace
                     aItem.Outcome = EOutcome::Replaced;
                     aItem.Name    = existing->Name;
                     Out.Replaced++;
+                    FlagNewer(aSrc, aItem);
                     MarkGone(*existing); // their hotkeys don't clash with what comes in
                     Dest inner(nullptr, level); // its old contents go
                     Children(aSrc, inner, aItem.Children);
@@ -408,6 +419,7 @@ namespace
             }
             aDest.Folders.insert(Lower(aItem.Name));
             Out.NewFolders++;
+            FlagNewer(aSrc, aItem);
             Dest inner(nullptr, level);
             Children(aSrc, inner, aItem.Children);
         }
@@ -478,6 +490,7 @@ namespace
         aDst.LinkFile.clear();
         aDst.Hotkey    = aKeepHotkey ? aSrc.Hotkey : Hotkey::Combo();
         aDst.CooldownSec = aSrc.CooldownSec;
+        aDst.Extra     = aSrc.Extra; // a newer version's fields come along (the lines keep theirs)
     }
 
     // Adds a folder or macro, with "Name (2)" if the plan's name is taken after all.
@@ -527,6 +540,7 @@ namespace
                         existing->Expanded  = src.Expanded;
                         existing->GameModes = src.GameModes; // a replaced folder takes the import's filter
                         existing->MapIds    = src.MapIds;
+                        existing->Extra     = src.Extra;
                         ApplyItems(aTree, *existing, item.Children, aOpt, aCount);
                     }
                     else CopyMacro(src, *existing, aOpt.KeepHotkeys && !item.HotkeyCleared);
@@ -546,6 +560,7 @@ namespace
                 added->Expanded  = src.Expanded;
                 added->GameModes = src.GameModes; // its filter comes along
                 added->MapIds    = src.MapIds;
+                added->Extra     = src.Extra;
                 ApplyItems(aTree, *added, item.Children, aOpt, aCount);
             }
             else CopyMacro(src, *added, aOpt.KeepHotkeys && !item.HotkeyCleared);
@@ -555,7 +570,7 @@ namespace
 
 namespace Exchange
 {
-    json ExportJson(const std::vector<const Node*>& aNodes)
+    json ExportJson(const std::vector<const Node*>& aNodes, int aFormat)
     {
         json children = json::array();
         for (const Node* n : aNodes)
@@ -576,13 +591,14 @@ namespace Exchange
             }
             children.push_back(std::move(j));
         }
-        return json{{"format", kFormatVersion}, {"root", {{"children", std::move(children)}}}};
+        return json{{"format", aFormat}, {"saved_by", CHATMSG_VER_TEXT}, {"kind", "export"},
+                    {"root", {{"children", std::move(children)}}}};
     }
 
-    std::string ExportJsonText(const std::vector<const Node*>& aNodes)
+    std::string ExportJsonText(const std::vector<const Node*>& aNodes, int aFormat)
     {
         // Text that isn't UTF-8 is written as U+FFFD instead of throwing.
-        return ExportJson(aNodes).dump(2, ' ', false, json::error_handler_t::replace);
+        return ExportJson(aNodes, aFormat).dump(2, ' ', false, json::error_handler_t::replace);
     }
 
     std::string ExportText(const Node& aMacro) { return ChatLine::SerializeRaw(aMacro.Lines); }
@@ -674,7 +690,7 @@ namespace Exchange
         std::vector<const Node*> top;
         for (const auto& c : aTree.Root().Children)
             if (IsPicked(aPick, *c)) top.push_back(c.get());
-        json j = ExportJson(top);
+        json j = ExportJson(top, aTree.Format());
         json& children = j["root"]["children"];
         for (size_t i = 0; i < top.size() && i < children.size(); i++) Prune(children[i], *top[i], aPick);
         return j;
@@ -738,6 +754,11 @@ namespace Exchange
                 p.NotOurFormat = true;
                 return p;
             }
+            if (p.Items.FromNewerVersion())
+                p.Warnings.push_back(p.Items.SavedBy().empty()
+                    ? std::string(TR("It was saved by a newer version of the addon. What this version doesn't know is kept, but not used."))
+                    : Localization::Fmt(TR("It was saved by a newer version of the addon (%s). What this version doesn't know is kept, but not used."),
+                                        p.Items.SavedBy().c_str()));
             for (std::string& w : warnings)
                 if (!IsNewIdsWarning(w)) p.Warnings.push_back(std::move(w)); // ids are always new on import
             if (!p.Items.Trash().empty())

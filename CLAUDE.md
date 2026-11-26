@@ -110,7 +110,10 @@ to the todo list", add it there (don't start building it). Move agreed items int
   `FiltersOverlap`; a folder's filter adds to everything inside it), tested by
   `tests/FilterTests.cpp`, and the trash bin (`MoveToTrash`, `Restore`, saved under `"trash"`),
   tested by `tests/TrashTests.cpp`.
-  Every tree rule change needs a test.
+  Every tree rule change needs a test. The saved-file rules (`docs/design.md`, "Saved files"):
+  `kFormatVersion`, fields from a newer version kept (`Extra`, size-limited), an unknown channel
+  kept and never sent (`Line::UnknownChannel`), a newer file read-only (`FromNewerVersion`),
+  tested by `tests/FormatTests.cpp` with a sample file per format in `tests/samples/`.
 - `src/ChatLine.*`: the raw text format (parse and serialize, with English, German, French and
   Spanish commands), the text typed into chat, channel colours, and the 199-unit length (UTF-16
   units, as the game counts). No Nexus or ImGui dependency. Tested by `tests/ChatLineTests.cpp`.
@@ -118,7 +121,9 @@ to the todo list", add it there (don't start building it). Move agreed items int
   files and their sources to `tools/run_tests.ps1`.
 - `src/Storage.*`: the addon folder, atomic JSON writes (temp + rename, `.bak` of the previous
   file), and `LoadMacros`/`SaveMacros`. An unreadable `macros.json` is renamed aside, never
-  overwritten. Don't name functions `LoadLibrary` etc.: `windows.h` macros clash.
+  overwritten; a newer one is never saved over, and an older one is copied to
+  `macros.json.v<N>.bak` before its first save. `settings.json` has `"format"`
+  (`kSettingsFormat`). Don't name functions `LoadLibrary` etc.: `windows.h` macros clash.
 - `src/Hotkey.*`: the hotkey combo (key + Ctrl/Alt/Shift), its text form for `macros.json`, and
   which keys are refused (`Refusal`; plain Mouse 3/4/5 are kept on load but never fire:
   `KeepOnLoad`, `Fires`). `ToString` is the stored (English) form; `Display` is what the user
@@ -161,8 +166,9 @@ to the todo list", add it there (don't start building it). Move agreed items int
 - `src/Http.*`: a small blocking WinHTTP GET (worker threads only), only for addresses built into
   the addon. `src/MapNames.*`: GW2 API map names cached in `maps.json`, looked up on a background
   thread, plus the API's full map list (fetched weekly, on a language change and on request) and
-  the maps visited. Link `winhttp.lib`. `src/MapCatalog.*`: its rules (parsing the API, the
-  `maps.json` format, the map picker's search, visited maps), no Nexus or ImGui dependency,
+  the maps visited (saved in `settings.json`, `visited_maps`: `maps.json` is only a cache). Link
+  `winhttp.lib`. `src/MapCatalog.*`: its rules (parsing the API, the `maps.json` format, the map
+  picker's search, visited maps), no Nexus or ImGui dependency,
   tested by `tests/MapCatalogTests.cpp`.
 - `src/PathText.*`: paths to and from UTF-8 without throwing (a bad sequence becomes U+FFFD).
   Never call `path::u8string()`, `path::string()` or `fs::u8path()`: use `PathText::Utf8` and
@@ -288,6 +294,11 @@ to the todo list", add it there (don't start building it). Move agreed items int
 - **Never push to `main`.** Work on a branch named `feature/<short-name>`.
 - Commit messages are imperative and under 72 characters.
 - Update `CHANGELOG.md` for every user-visible change.
+- **Saved files (owner, 2026-11-26):** every PR that changes what's saved (`macros.json`,
+  `settings.json`, exports) says in its description whether the change is **additive** or
+  **breaking** (`docs/design.md`, "Saved files"). A breaking one raises
+  `MacroTree::kFormatVersion`, adds the upgrade step and a `tests/samples/macros_format<N>.json`.
+  Never give a setting a new meaning under the same name.
 - Do not commit build output (`.dll`, `.pdb`, `.obj`, `.exe`, ...).
 - **Code review (owner, 2026-11-24):** on a PR that changes code, after the build and
   `run_tests.ps1` pass, run `/code-review` on the branch: **medium**, or **high** when it

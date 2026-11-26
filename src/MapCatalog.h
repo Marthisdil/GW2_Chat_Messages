@@ -2,13 +2,14 @@
 
 // The map list behind the filter editor's map picker and {map} (docs/design.md, "Filters" and
 // "Placeholders"): map names and regions from the official GW2 API (/v2/maps, no API key), the
-// API's full list of map ids, and the maps the player has been to. Kept in
-// <GW2>\addons\GW2_Chat_Messages\maps.json. No Nexus, ImGui or windows.h dependency: the network
-// and the threads are in MapNames.* (tests/MapCatalogTests.cpp).
+// API's full list of map ids, and the maps the player has been to. The names and the list are a
+// cache in <GW2>\addons\GW2_Chat_Messages\maps.json; the maps visited are the player's own, so
+// they're in settings.json ("visited_maps") and survive the cache being thrown away. No Nexus,
+// ImGui or windows.h dependency: the network and the threads are in MapNames.*
+// (tests/MapCatalogTests.cpp).
 //
 // maps.json is rebuilt from the API, so it's only trusted as far as its shape: a file that
-// doesn't parse, has another format number or wrongly typed fields is thrown away (its visited
-// maps are kept when they read correctly).
+// doesn't parse, has another format number or wrongly typed fields is thrown away.
 
 #include <cstddef>
 #include <cstdint>
@@ -17,9 +18,12 @@
 #include <unordered_map>
 #include <vector>
 
+#include <nlohmann/json_fwd.hpp>
+
 namespace MapCatalog
 {
     constexpr int     kFormat         = 2;
+    constexpr const char* kVisitedSetting = "visited_maps"; // settings.json: the maps visited
     constexpr size_t  kMaxMaps        = 20000;    // the API lists about 1,500
     constexpr size_t  kMaxNameBytes   = 200;
     constexpr size_t  kMaxVisited     = 200;
@@ -52,9 +56,14 @@ namespace MapCatalog
     bool ParseMaps(const std::string& aBody, std::unordered_map<uint32_t, Map>& aOut);
 
     // Reads maps.json. The names and the full list are only kept when the file's language is
-    // aLang; the visited maps always are. False when nothing usable was in it.
+    // aLang. False when nothing usable was in it. Neither reads or writes the maps visited.
     bool FromJson(const std::string& aText, const std::string& aLang, Cache& aOut);
     std::string ToJson(const Cache& aCache);
+
+    // The maps visited, as kept in settings.json (kVisitedSetting): ids, most recent first, at
+    // most kMaxVisited. Anything that isn't a map id is skipped.
+    std::vector<uint32_t> VisitedFromJson(const nlohmann::json& aValue);
+    nlohmann::json        VisitedToJson(const Cache& aCache);
 
     // Whether the full list should be fetched (again): never fetched, older than a week, or
     // apparently from the future (a clock change).

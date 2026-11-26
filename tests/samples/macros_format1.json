@@ -1,0 +1,42 @@
+{
+  "format": 1,
+  "saved_by": "2026.11.26.0000.Dev",
+  "kind": "library",
+  "root": {
+    "type": "folder",
+    "id": "0000000000000001",
+    "name": "",
+    "children": [
+      {
+        "type": "folder",
+        "id": "0000000000000010",
+        "name": "Raids",
+        "expanded": false,
+        "game_modes": ["pve"],
+        "map_ids": [1062],
+        "children": [
+          {
+            "type": "macro",
+            "id": "0000000000000011",
+            "name": "Ready check",
+            "favourite": true,
+            "hotkey": "Ctrl+Alt+R",
+            "cooldown_sec": 30,
+            "lines": [
+              { "channel": "squad", "message": "Ready check in 10s", "squad_broadcast": true },
+              { "channel": "whisper", "message": "You're up", "whisper_to": "Some Name.1234" },
+              { "channel": "party", "message": "{time}" }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "macro",
+        "id": "0000000000000020",
+        "name": "Hello",
+        "lines": [ { "channel": "say", "message": "Hello!" } ]
+      }
+    ]
+  },
+  "trash": []
+}

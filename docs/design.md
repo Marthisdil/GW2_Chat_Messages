@@ -35,6 +35,54 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
 - Messages are limited to 199 characters each, after placeholders are filled in. This is the same
   limit bhm uses. The editor shows a live character count.
 
+## Saved files (2026-11-26)
+
+How the addon changes what it saves (`macros.json`, `settings.json`, exports) without ever losing
+or garbling a library, in either direction: an update reading an old file, or an old build
+reading a newer one (someone going back a version, or importing a friend's export).
+
+- **Additive vs breaking.** A new field, a new channel or a new setting is **additive**: it
+  doesn't change the format number, because older builds keep it (below) and simply don't use
+  it. Only a **breaking** change raises the number: a field renamed or given another meaning, a
+  value stored another way, something moved. A setting is never given a new meaning under the
+  same name: a new name is used instead. **Every PR that changes a saved file says in its
+  description whether the change is additive or breaking** (and a breaking one raises
+  `MacroTree::kFormatVersion`, adds the upgrade step and a sample file, below).
+- **Unknown fields are kept.** Fields this build doesn't know are kept as they are, on the top
+  level, on every folder and macro and on every line, and written back on save, so an older
+  build never strips a newer feature's data (`MacroTree::Extra`). They're kept only while small
+  (at most 32 per object, 8 levels deep, 256 values each; the rest are dropped with a warning),
+  because the file is an untrusted input.
+- **An unknown channel** (a newer version's) keeps its line as written: its channel key, message
+  and recipient are kept and saved, the editor shows it as "? key" in red with an error, and the
+  line is **never sent** (`SendPlan` refuses it; Raw text, .txt export and link files refuse
+  such a macro, so the line can't turn into a current-channel line). Picking a channel in the
+  editor replaces it.
+- **A newer `macros.json` opens read-only.** A format number above this build's is read (what
+  it knows), the library window says it's read-only, and nothing is saved over it: sending
+  works, edits aren't saved (backups copy the file as it is). Update the addon to edit it.
+- **Upgrades.** An older format is upgraded as it's read, one step per format number (the
+  parser branches on `Format`), and before the first save in the new format the old file is
+  copied once to `macros.json.v<N>.bak`. Every format has a sample file in `tests/samples/`
+  (`macros_format<N>.json`) that the tests read, so an old format can never stop working.
+- **Exports** follow the same rules: they carry `format`, `saved_by` and `"kind": "export"`. A
+  newer export still imports: what this build knows is used, the rest kept, the import window
+  warns, and the preview marks such items **NEWER VERSION**.
+- **`settings.json`** has `"format": 1` (`Storage::kSettingsFormat`), added when it's missing;
+  a newer number is kept. Unknown settings are always kept (the file is read and written whole).
+- **Format 1** (the first release's) is:
+  - top level: `format`, `saved_by` (the addon version that wrote it), `kind` (`"library"` or
+    `"export"`), `root`, `trash` (left out when empty);
+  - folders and macros: `type`, `id`, `name`, `favourite`, `expanded` (folders), `game_modes`
+    and `map_ids` (left out when empty: everywhere), `children` (folders), `lines`,
+    `link_file`, `hotkey`, `cooldown_sec` (macros, each only when set);
+  - lines: `channel`, `message`, `whisper_to` (whispers), `squad_broadcast` (squad);
+  - trash items: `item`, `from_ids`, `from_names`, `from_index`, `deleted_at` (UTC,
+    `"2026-11-21T14:03:00Z"`, shown in local time).
+- **Maps visited** are the player's own, so they're in `settings.json` (`visited_maps`), not in
+  `maps.json`, which is only a cache that may be thrown away.
+- Advanced options: no. This is invisible plumbing, the same with the box off and on.
+
 ## Features carried over from bhm-chat-macros
 
 - Per-line channel dropdown plus message box (the "fancy" editor). It has add, remove and
@@ -93,7 +141,7 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
     "Find a map by name or id" box lists up to 12 matches from the GW2 API's full map list
     ("Name - Region (id)", case and accents ignored; maps you've been to first, then by name), and
     a "Maps you've been to" dropdown lists the last 30 maps you visited (every map change is
-    remembered, at most 200, in `maps.json`). Clicking one adds it; one already in the list is
+    remembered, at most 200, in `settings.json` as `visited_maps`). Clicking one adds it; one already in the list is
     shown greyed. A map id the full list doesn't have is drawn in yellow with "(!)" and a tooltip:
     removed or replaced in a game update (the filter then never matches) or an instance the API
     doesn't list. Filters keep storing ids, so a rename only changes the label. Rules in
@@ -125,7 +173,7 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
     for 5 minutes. A bad cache file is just rebuilt. The filter editor shows names instead of ids.
   - **Names follow the addon's language** (2026-11-23): German, French, Spanish and Chinese where
     the API has them, English otherwise (`MapCatalog::ApiLang`). `{map}` types the name in that
-    language. Changing the language throws the names away (the visited maps are kept) and fetches
+    language. Changing the language throws the names away (the visited maps, in `settings.json`, stay) and fetches
     them again.
   - **The full list** (2026-11-23): `/v2/maps` (every id), then the names 200 ids at a time with a
     short pause between requests, on a background thread: on the first run (10 seconds after
@@ -133,7 +181,8 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
     and with **Refresh map list** on the options page (which also shows how many maps and from
     when, or why the last refresh failed). The list and names are only replaced when every
     request worked. `maps.json` is format 2: `lang`, `maps` (id, name, region), `listed`,
-    `listed_at` (UTC seconds) and `visited`; a file in format 1 is rebuilt. Names and regions must
+    `listed_at` (UTC seconds); a file in another format is rebuilt. The maps visited moved to
+    `settings.json` (`visited_maps`, 2026-11-26): `maps.json` is only a cache. Names and regions must
     pass `Localization::SafeText` and be at most 200 bytes; the file is read only up to 4 MB.
   - Syntax: `{name arg arg}`, case-insensitive, arguments separated by spaces.
   - Differences from bhm, on purpose: an unknown `{word}` is sent as typed (bhm drops the whole
@@ -563,7 +612,8 @@ keeps the existing item's id and place. Since 2026-11-23 the addon creates `impo
 folder**.)*
 
 - **Export**: the whole tree, one folder, one macro, or a selection. The format is
-  `ChatMessages.export.json` (`{ "format": 1, "root": Node }`). A single macro can also be
+  `ChatMessages.export.json` (`{ "format": 1, "saved_by": ..., "kind": "export", "root": Node }`;
+  see "Saved files"). A single macro can also be
   exported as raw `.txt`.
   - **A selection** (built 2026-11-24 from the todo list): **Export some...** in the toolbar, or
     right-click > Export > **Choose more to export...**, opens the **Export** window (it starts
@@ -731,7 +781,7 @@ Rules this addon follows:
   - The window thread only queues the press. The render thread matches it against the tree and
     starts the sender. A hotkey set on more than one macro sends nothing and shows an alert.
   - **Cooldown** (built 2026-11-23 from the todo list): each macro has a cooldown, 0 to 600
-    whole seconds, **off (0) by default**, saved as `"cooldown"` in `macros.json` only when it's
+    whole seconds, **off (0) by default**, saved as `"cooldown_sec"` in `macros.json` only when it's
     on (exported and imported with the macro). Longer values are cut to 600 and anything else is
     dropped on load, each with a warning. It counts from the **start** of the macro's last send,
     from anywhere, but **only the hotkey waits**: Send now and the quick menu always send (the

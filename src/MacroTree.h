@@ -5,6 +5,7 @@
 // Not thread-safe: only the render thread touches the tree.
 
 #include <cstdint>
+#include <ctime>
 #include <memory>
 #include <string>
 #include <set>
@@ -19,7 +20,20 @@ namespace MacroTree
     // Folders may nest this deep (root -> level 1 -> ... -> level 6). Macros can live in any folder.
     constexpr int kMaxFolderDepth = 6;
     constexpr size_t kMaxNameLength = 100; // bytes of UTF-8, same as bhm-chat-macros' title limit
+
+    // --- Saved files (docs/design.md, "Saved files") ---
+    // The format of macros.json and of exports. Raised only by a *breaking* change: one an older
+    // build would read wrongly. A new field is not breaking: older builds keep fields they don't
+    // know (Extra) and write them back. Every older format stays readable: FromJson reads it by
+    // its number (Parser::Format), and tests/FormatTests.cpp loads a saved file of each one.
     constexpr int kFormatVersion = 1;
+    // Unknown fields kept per object: at most this many keys, nested this deep, with this many
+    // values in all. More is dropped with a warning, so a crafted file can't make every save slow
+    // or nest deep enough to overflow the stack when it's written back.
+    constexpr size_t kMaxExtraKeys     = 32;
+    constexpr int    kMaxExtraDepth    = 8;
+    constexpr size_t kMaxExtraValues   = 256;
+    constexpr size_t kMaxChannelKeyLen = 32; // an unknown channel's name, as kept
     constexpr size_t kMaxLines = 50; // lines in one macro
     // Problems listed from one file (FromJson, an import); the rest are only counted, so a crafted
     // file can't fill memory or the preview with millions of lines (SEC-022).
@@ -47,12 +61,21 @@ namespace MacroTree
     // Bit flags; a macro with no mode set behaves like all modes.
     enum EGameMode : uint8_t { GM_None = 0, GM_PvE = 1, GM_WvW = 2, GM_PvP = 4, GM_All = 7 };
 
+    // Fields a file had that this build doesn't know (a newer version's), kept as they were and
+    // written back on save. Shared and never changed, so copying a node or line is cheap.
+    using Extra = std::shared_ptr<const nlohmann::json>;
+
     struct Line
     {
         EChannel    Channel        = EChannel::Current;
         std::string Message;
         std::string WhisperTo;      // Whisper only
         bool        SquadBroadcast = false; // Squad only
+        // A channel this build doesn't know (from a newer version), as written in the file. Such a
+        // line is kept and saved as it is, but never sent (SendPlan refuses it). Empty = Channel.
+        // Picking a channel in the editor clears it.
+        std::string UnknownChannel;
+        MacroTree::Extra Extra;
     };
 
     struct Node
@@ -76,6 +99,8 @@ namespace MacroTree
         std::string       LinkFile;
         Hotkey::Combo     Hotkey;   // empty = none
         int               CooldownSec = 0; // hotkey cooldown, 0 = off, at most Cooldown::kMaxSec
+
+        MacroTree::Extra  Extra; // fields from a newer version (the root's: the file's own)
 
         bool IsFolder() const { return Type == ENodeType::Folder; }
         bool IsMacro() const  { return Type == ENodeType::Macro; }
@@ -135,6 +160,16 @@ namespace MacroTree
     // One folder (with everything inside) or macro, in the macros.json format. Used by export.
     nlohmann::json NodeToJson(const Node& aNode);
 
+    // A macro with a line for a channel this build doesn't know (it can't be sent or written as
+    // text), and an item with anything from a newer version (unknown fields or such a line), for
+    // a folder anywhere inside it.
+    bool HasUnknownChannel(const Node& aMacro);
+    bool HasNewerData(const Node& aNode);
+
+    // Times in the files are UTC, "2026-11-21T14:03:00Z". False if aText isn't one.
+    std::string UtcStamp(std::time_t aWhen);
+    bool        ParseUtcStamp(const std::string& aText, std::time_t& aWhen);
+
     // --- Trash bin (docs/design.md, "Trash bin") ---
     // A deleted folder or macro, kept until it's restored or deleted for good. Items in the bin
     // aren't in the tree, so they can't be sent, edited or triggered by a hotkey.
@@ -144,7 +179,8 @@ namespace MacroTree
         std::vector<uint64_t>    FromIds;   // the folders it was in, top level first (empty = top level)
         std::vector<std::string> FromNames; // their names, same order (to recreate them)
         size_t                   FromIndex = 0; // its place in that folder
-        std::string              DeletedAt; // local time, "2026-11-21 14:03"
+        std::string              DeletedAt; // UTC, "2026-11-21T14:03:00Z" (UtcStamp)
+        MacroTree::Extra         Extra;     // the entry's fields from a newer version
     };
 
     enum class ERestoreTo : uint8_t
@@ -190,7 +226,7 @@ namespace MacroTree
         // Sorts a folder's children: folders first, then macros, each A-Z (case-insensitive).
         void   SortChildren(Node& aFolder, bool aRecursive);
         // --- Trash bin ---
-        // Takes aNode out of the tree into the bin (newest first). aWhen is shown in the bin.
+        // Takes aNode out of the tree into the bin (newest first). aWhen (UtcStamp) is shown in the bin.
         Result MoveToTrash(Node& aNode, const std::string& aWhen);
         const std::vector<TrashItem>& Trash() const { return m_Trash; }
         // Index of the bin item whose top node has this id, or -1.
@@ -208,10 +244,21 @@ namespace MacroTree
         // Every macro using this hotkey, in tree order (more than one = a conflict). Empty combo -> none.
         std::vector<Node*> MacrosWithHotkey(const Hotkey::Combo& aCombo) const;
 
-        nlohmann::json ToJson() const;
+        // "kind": "library" (macros.json, backups) or "export". The format written is Format().
+        nlohmann::json ToJson(const char* aKind = "library") const;
         // Replaces the tree. Bad nodes are skipped, missing or duplicate ids are regenerated.
         // aWarnings collects what was fixed. Returns false (tree unchanged) if aJson isn't a tree at all.
         bool FromJson(const nlohmann::json& aJson, std::vector<std::string>* aWarnings = nullptr);
+
+        // The format it's written in: kFormatVersion (an older file is upgraded as it's read), or
+        // a newer version's number. Newer: it's read-only (Storage never saves it over the file).
+        int  Format() const { return m_FormatRead > kFormatVersion ? m_FormatRead : kFormatVersion; }
+        bool FromNewerVersion() const { return m_FormatRead > kFormatVersion; }
+        // The format the file had (kFormatVersion for a new tree). Older: Storage keeps a copy of
+        // that file ("macros.json.v1.bak") before it first saves over it.
+        int  FormatRead() const { return m_FormatRead; }
+        // "saved_by" from the file: the version that wrote it (empty if it didn't say).
+        const std::string& SavedBy() const { return m_SavedBy; }
 
         static std::string CleanName(const std::string& aName); // trims spaces, cuts to kMaxNameLength
 
@@ -228,6 +275,9 @@ namespace MacroTree
     private:
         std::unique_ptr<Node> m_Root;
         std::vector<TrashItem> m_Trash;
+        Extra                  m_RootExtra; // the "root" object's own fields from a newer version
+        int                    m_FormatRead = kFormatVersion;
+        std::string            m_SavedBy;
         // Every id in the tree or the bin (plus some since deleted, which is harmless), filled on the
         // first NewId, so a new id is one lookup instead of a walk over the whole tree (SEC-017).
         mutable std::set<uint64_t> m_UsedIds;

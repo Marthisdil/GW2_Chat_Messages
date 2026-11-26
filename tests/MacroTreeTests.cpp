@@ -194,7 +194,7 @@ static void TestJsonRoundTrip()
     CHECK(m2 && m2->Lines[1].WhisperTo == "Some Name");
     CHECK(m2 && m2->Parent && !m2->Parent->Expanded);
     CHECK(m2 && m2->CooldownSec == 30);
-    CHECK(j.dump().find("\"cooldown\":30") != std::string::npos);
+    CHECK(j.dump().find("\"cooldown_sec\":30") != std::string::npos);
     m->CooldownSec = 0; // off: not written at all
     CHECK(t.ToJson().dump().find("cooldown") == std::string::npos);
     CHECK(m2 && m2->Parent->Parent && m2->Parent->Parent->Parent == &u.Root());
@@ -413,11 +413,12 @@ static void TestJsonFormat()
         Tree t;
         w.clear();
         CHECK(ReadWithFormat(t, newer, &w, threw) && !threw);
-        CHECK(w.size() == 1 && w[0].find("newer version") != std::string::npos && t.Root().Children.size() == 1);
+        // Read, and marked as a newer version's (the caller tells the user: read-only, or a warning).
+        CHECK(w.empty() && t.Root().Children.size() == 1 && t.FromNewerVersion() && t.Format() == 2);
     }
 }
 
-// "cooldown": whole seconds, 0 to Cooldown::kMaxSec. Longer is cut with a warning; anything else
+// "cooldown_sec": whole seconds, 0 to Cooldown::kMaxSec. Longer is cut with a warning; anything else
 // is dropped with a warning. Missing is 0 (off).
 static void TestJsonCooldown()
 {
@@ -430,7 +431,7 @@ static void TestJsonCooldown()
     for (const Case& c : cases)
     {
         std::string text = R"({"format":1,"root":{"children":[{"type":"macro","id":"00000000000000aa","name":"M")";
-        if (c.Value) text += std::string(R"(,"cooldown":)") + c.Value;
+        if (c.Value) text += std::string(R"(,"cooldown_sec":)") + c.Value;
         text += "}]}}";
         Tree t;
         std::vector<std::string> w;

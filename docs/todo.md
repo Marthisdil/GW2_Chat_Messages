@@ -41,27 +41,6 @@ the [?] wiki page is enough, is to discuss. The welcome itself isn't an advanced
 Work through `docs/in-game-tests.md` (A1 passed, A2 mostly; the rest is still to do). Session B,
 whether the game takes the addon's keys and text, matters most: everything else depends on it.
 
-### Plan ahead for changes to the saved files (added 2026-11-24)
-
-Before the first release, decide how the addon deals with changes to what it saves
-(`macros.json`, `settings.json`, `maps.json`, exports), so a feature added, removed or changed
-later never loses or garbles a user's library. Until now the owner, the only tester, starts with
-a fresh library when the format changes (folder filters were added this way, 2026-11-24).
-
-- Points to settle:
-  - A **format number** in `macros.json` (exports already have `"format": 1`), raised whenever a
-    change means an older build would read the file wrongly, and what a build does with a
-    **newer** file than it knows: refuse to save over it (read-only, with a message), or open
-    it and drop what it doesn't know.
-  - **Unknown keys:** keep them when saving (so an older build doesn't strip a newer feature's
-    data), or drop them. Today they're dropped.
-  - **Upgrades:** a step per format number that turns an old file into the new shape, with a
-    backup (`macros.json.vN.bak` or the Backups folder) written first, and tests that load a
-    saved file from every old format.
-  - **Removed features:** what happens to their data (like the `{txt}`/`{json}` lines, refused
-    with a notice instead of being deleted).
-  - The same questions for exports someone else made with an older or newer build.
-
 ### VirusTotal scan for every released DLL (added 2026-11-21)
 
 If there's a way to automate it, submit every DLL that's to be released to virustotal.com, and
@@ -173,6 +152,30 @@ any of the other advanced features. Points to settle:
 
 **Advanced option?** That's the question itself: leaning towards no (useful to many, nothing
 surprising once chosen), with its own small opt-in.
+
+### Future compatibility of language files (added 2026-11-26)
+
+Give the language files (`localization/*.json`, built in and your own) the same care as
+`macros.json` got in "Saved files" (`docs/design.md`), so a translation made for one version of
+the addon keeps working with the next, and an older or newer file never breaks the UI. Points to
+settle:
+- a `"format"` number in the file (today it has `Identifier`, `DisplayName`, `AddonVersion` and
+  `Texts`), raised only by a breaking change, and what a build does with a newer one (use what it
+  understands, with a note on the options page);
+- fields this build doesn't know: ignored, never an error, so a newer translator's tool can add
+  some;
+- the English text is the key, so a reworded text drops its translation: whether to keep a
+  stable id for texts that change (or a "this text changed" hint for translators), and how a
+  file shows which texts are missing or no longer used (`tools\localization.ps1` already counts
+  them);
+- a translation whose `%`-codes no longer match the English text is already refused
+  (`ParseCatalog`); check that a file for an older version falls back to English text by text,
+  not as a whole;
+- the same rules in `CONTRIBUTING.md` (the translators' guide), and a test sample file per
+  format, as for `macros.json`.
+
+**Advanced option?** No: invisible plumbing, the same with the box off and on (own language
+files themselves are behind it today, see the item above).
 
 ### Notes on a macro (suggested 2026-11-23)
 

@@ -47,11 +47,16 @@ namespace Storage
     // the user removed both).
     bool LoadMacros(MacroTree::Tree& aTree, std::vector<std::string>& aMessages);
 
-    // Returns false if the file couldn't be written (the reason is logged).
+    // Returns false if the file couldn't be written (the reason is logged), and always for a tree
+    // from a newer version (Tree::FromNewerVersion): that file is never written over. A tree read
+    // from an older format first keeps the file as "macros.json.v<N>.bak" (once).
     bool SaveMacros(const MacroTree::Tree& aTree);
 
     // The library as it's written to macros.json (and to a backup).
     std::string LibraryText(const MacroTree::Tree& aTree);
+    // macros.json as it is on disk (at most kMaxBackupBytes); false if it can't be read. Backups
+    // of a read-only library copy this, not LibraryText.
+    bool ReadLibraryText(std::string& aText);
 
     // Backups (Backups.h). aName is always a file name that Backups::ParseFileName accepts;
     // anything else is refused, so these never touch another file.
@@ -65,6 +70,9 @@ namespace Storage
     bool ReadBackup(const std::string& aName, MacroTree::Tree& aTree, std::string& aError);
 
     // settings.json as an object; an empty object if it's missing or can't be read (logged).
+    // It has "format" (kSettingsFormat). Settings never need a new number: a changed setting
+    // gets a new name instead (docs/design.md, "Saved files").
+    constexpr int kSettingsFormat = 1;
     nlohmann::json LoadSettings();
     bool SaveSetting(const char* aKey, const nlohmann::json& aValue); // reads, changes one key, writes
     bool SaveSettings(const nlohmann::json& aSettings);

@@ -71,6 +71,10 @@ one in the copy. The library window opens and says which backup was restored. Un
 the game, **Undo restore** there puts your library back as it was. After the restore, your
 previous `macros.json` is also kept as `macros.json.bak` (see [Files and data](Files-and-Data)).
 
+If your library was saved by a newer version of the addon (it's read-only, see
+[Files and data](Files-and-Data#older-and-newer-versions-of-the-addon)), Restore is refused:
+it would be saved over the newer file. Update the addon first.
+
 Macros linked to a text file (see [Advanced options](Advanced-Options#text-file-links)) take that file's text after
 a restore, just as when the game starts. A restore never writes old lines into your text files.
 

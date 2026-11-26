@@ -3,10 +3,12 @@
 #include "ChatLine.h"
 #include "Cooldown.h"
 #include "Localization.h"
+#include "Version.h"
 
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
+#include <ctime>
 #include <iterator>
 #include <random>
 #include <map>
@@ -45,6 +47,13 @@ namespace MacroTree
 
         // Guards against stack overflow on hostile or corrupt files. Far above kMaxFolderDepth.
         constexpr int kMaxParseDepth = 64;
+
+        bool KnownChannel(const std::string& aKey)
+        {
+            for (const ChannelInfo& c : kChannels)
+                if (aKey == c.Key) return true;
+            return false;
+        }
 
         std::string Lower(const std::string& s)
         {
@@ -106,6 +115,58 @@ namespace MacroTree
             return modes;
         }
 
+        // The fields each object of the format knows. Anything else is a newer version's, kept in
+        // Extra and written back.
+        constexpr const char* kTopKeys[]  = {"format", "saved_by", "kind", "root", "trash"};
+        constexpr const char* kNodeKeys[] = {"type", "id", "name", "favourite", "expanded", "game_modes", "map_ids",
+                                             "children", "lines", "link_file", "hotkey", "cooldown_sec"};
+        constexpr const char* kLineKeys[] = {"channel", "message", "whisper_to", "squad_broadcast"};
+        constexpr const char* kRootKeys[] = {"children"}; // the "root" object itself
+        constexpr const char* kTrashKeys[] = {"item", "from_ids", "from_names", "from_index", "deleted_at"};
+
+        template <size_t N>
+        bool IsKnown(const std::string& aKey, const char* const (&aKnown)[N])
+        {
+            for (const char* k : aKnown)
+                if (aKey == k) return true;
+            return false;
+        }
+
+        // Writes back the fields kept from a newer version. A field this build writes itself wins.
+        void MergeExtra(json& aOut, const Extra& aExtra)
+        {
+            if (!aExtra || !aExtra->is_object()) return;
+            for (auto it = aExtra->begin(); it != aExtra->end(); ++it)
+                if (!aOut.contains(it.key())) aOut[it.key()] = it.value(); // small: checked by SmallEnough
+        }
+
+        // Whether aValue nests at most kMaxExtraDepth deep, counting its values into aValues
+        // (at most kMaxExtraValues). Without recursion: the value is untrusted.
+        bool SmallEnough(const json& aValue, size_t& aValues)
+        {
+            std::vector<std::pair<const json*, int>> stack{{&aValue, 1}};
+            while (!stack.empty())
+            {
+                const auto [v, depth] = stack.back();
+                stack.pop_back();
+                if (++aValues > kMaxExtraValues || depth > kMaxExtraDepth) return false;
+                if (!v->is_structured()) continue;
+                if (v->size() > kMaxExtraValues) return false;
+                for (const json& c : *v) stack.push_back({&c, depth + 1});
+            }
+            return true;
+        }
+
+        // At most aMax bytes of UTF-8, never cut inside a character.
+        std::string CutUtf8(std::string aText, size_t aMax)
+        {
+            if (aText.size() <= aMax) return aText;
+            size_t cut = aMax;
+            while (cut > 0 && (static_cast<unsigned char>(aText[cut]) & 0xC0) == 0x80) cut--;
+            aText.resize(cut);
+            return aText;
+        }
+
         json NodeJson(const Node& n)
         {
             json j;
@@ -113,14 +174,12 @@ namespace MacroTree
             j["id"]   = IdToString(n.Id);
             j["name"] = n.Name;
             if (n.Favourite) j["favourite"] = true;
+            // Filters (folders and macros): left out when they don't limit anything.
+            if (n.GameModes != GM_All) j["game_modes"] = ModesJson(n.GameModes);
+            if (!n.MapIds.empty()) j["map_ids"] = n.MapIds;
             if (n.IsFolder())
             {
                 j["expanded"] = n.Expanded;
-                if (HasFilter(n)) // a folder without a filter keeps the format it had before
-                {
-                    j["game_modes"] = ModesJson(n.GameModes);
-                    j["map_ids"]    = n.MapIds;
-                }
                 json children = json::array();
                 for (const auto& c : n.Children) children.push_back(NodeJson(*c));
                 j["children"] = std::move(children);
@@ -130,18 +189,21 @@ namespace MacroTree
                 json lines = json::array();
                 for (const Line& l : n.Lines)
                 {
-                    json jl = {{"channel", ChannelKey(l.Channel)}, {"message", l.Message}};
-                    if (l.Channel == EChannel::Whisper) jl["whisper_to"] = l.WhisperTo;
-                    if (l.Channel == EChannel::Squad) jl["squad_broadcast"] = l.SquadBroadcast;
+                    const bool unknown = !l.UnknownChannel.empty();
+                    json jl = {{"channel", unknown ? l.UnknownChannel : std::string(ChannelKey(l.Channel))},
+                               {"message", l.Message}};
+                    // A newer version's channel: keep what the line had, whatever it means there.
+                    if (l.Channel == EChannel::Whisper || (unknown && !l.WhisperTo.empty())) jl["whisper_to"] = l.WhisperTo;
+                    if (l.Channel == EChannel::Squad || (unknown && l.SquadBroadcast)) jl["squad_broadcast"] = l.SquadBroadcast;
+                    MergeExtra(jl, l.Extra);
                     lines.push_back(std::move(jl));
                 }
                 j["lines"] = std::move(lines);
-                j["game_modes"] = ModesJson(n.GameModes);
-                j["map_ids"]    = n.MapIds;
                 if (!n.LinkFile.empty()) j["link_file"] = n.LinkFile;
                 if (!n.Hotkey.Empty()) j["hotkey"] = Hotkey::ToString(n.Hotkey);
-                if (n.CooldownSec > 0) j["cooldown"] = n.CooldownSec;
+                if (n.CooldownSec > 0) j["cooldown_sec"] = n.CooldownSec;
             }
+            MergeExtra(j, n.Extra);
             return j;
         }
 
@@ -157,6 +219,10 @@ namespace MacroTree
             std::vector<Node*>           NeedIdNodes; // given ids after parsing, so fresh ids can't collide
             std::vector<std::string>*    Warnings = nullptr;
             bool                         WarnedDepth = false;
+            // The file's format. A later format that renames or changes a field reads the old
+            // one here by this number ("format N" next to each such read), so every old file
+            // still loads (tests/FormatTests.cpp keeps a saved file of each format).
+            int                          Format = kFormatVersion;
 
             size_t                       Dropped = 0; // warnings past kMaxWarnings
 
@@ -165,6 +231,32 @@ namespace MacroTree
                 if (!Warnings) return;
                 if (Warnings->size() < kMaxWarnings) Warnings->push_back(std::move(s));
                 else Dropped++;
+            }
+
+            // The fields of aObj this build doesn't know, within the kMaxExtra limits. aOwner names
+            // the item in the warning when some are too big to keep (null: the file itself).
+            template <size_t N>
+            Extra KeepExtra(const json& aObj, const char* const (&aKnown)[N], const std::string* aOwner)
+            {
+                json out = json::object();
+                size_t values = 0;
+                bool dropped = false;
+                for (auto it = aObj.begin(); it != aObj.end(); ++it)
+                {
+                    if (IsKnown(it.key(), aKnown)) continue;
+                    // Counted on its own first: a value too big to keep doesn't use up the budget
+                    // of the small ones after it.
+                    size_t mine = values;
+                    if (out.size() >= kMaxExtraKeys || !SmallEnough(it.value(), mine)) { dropped = true; continue; }
+                    values = mine;
+                    out[it.key()] = it.value(); // checked first, so the copy is small and shallow
+                }
+                if (dropped)
+                    Warn(aOwner ? Localization::Fmt(TR("\"%s\": some details from a newer version of the addon were too big to keep and were removed."),
+                                                    aOwner->c_str())
+                                : std::string(TR("Some details from a newer version of the addon were too big to keep and were removed.")));
+                if (out.empty()) return nullptr;
+                return std::make_shared<const json>(std::move(out));
             }
 
             // Parses the children of a folder json into aFolder. aLevel = aFolder's folder level.
@@ -224,6 +316,7 @@ namespace MacroTree
                     ParseMacro(jc, *node);
                 }
                 ParseFilter(jc, *node);
+                node->Extra = KeepExtra(jc, kNodeKeys, &node->Name);
                 // "favourite" (folders and macros): true or false; anything else is dropped.
                 auto fav = jc.find("favourite");
                 if (fav != jc.end())
@@ -288,7 +381,13 @@ namespace MacroTree
                             break;
                         }
                         Line l;
-                        l.Channel        = ChannelFromKey(StringField(jl, "channel"));
+                        const std::string channel = StringField(jl, "channel");
+                        l.Channel        = ChannelFromKey(channel);
+                        // A channel this build doesn't know is a newer version's: the line keeps it
+                        // and is never sent here (never to the current channel instead).
+                        if (!channel.empty() && !KnownChannel(channel))
+                            l.UnknownChannel = ChatLine::ControlsToSpaces(CutUtf8(channel, kMaxChannelKeyLen));
+                        l.Extra          = KeepExtra(jl, kLineKeys, &n.Name);
                         // From a file (maybe someone else's): no control characters to type.
                         l.Message        = ChatLine::ControlsToSpaces(StringField(jl, "message"));
                         l.WhisperTo      = ChatLine::ControlsToSpaces(StringField(jl, "whisper_to"));
@@ -314,7 +413,7 @@ namespace MacroTree
                 }
                 // Whole seconds, 0 to Cooldown::kMaxSec. Longer is cut to the maximum; anything
                 // else (negative, a fraction, text) is dropped, so the macro has no cooldown.
-                auto cd = j.find("cooldown");
+                auto cd = j.find("cooldown_sec");
                 if (cd != j.end())
                 {
                     // Parsed text gives unsigned numbers; a json built in memory (ToJson) signed ones.
@@ -408,6 +507,68 @@ namespace MacroTree
     }
 
     json NodeToJson(const Node& aNode) { return NodeJson(aNode); }
+
+    bool HasUnknownChannel(const Node& aMacro)
+    {
+        for (const Line& l : aMacro.Lines)
+            if (!l.UnknownChannel.empty()) return true;
+        return false;
+    }
+
+    bool HasNewerData(const Node& aNode)
+    {
+        if (aNode.Extra) return true;
+        for (const Line& l : aNode.Lines)
+            if (l.Extra || !l.UnknownChannel.empty()) return true;
+        for (const auto& c : aNode.Children)
+            if (HasNewerData(*c)) return true;
+        return false;
+    }
+
+    std::string UtcStamp(std::time_t aWhen)
+    {
+        std::tm utc{};
+        if (gmtime_s(&utc, &aWhen) != 0) return {};
+        char buf[32];
+        std::strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", &utc);
+        return buf;
+    }
+
+    bool ParseUtcStamp(const std::string& aText, std::time_t& aWhen)
+    {
+        // Exactly "YYYY-MM-DDTHH:MM:SSZ".
+        if (aText.size() != 20 || aText[4] != '-' || aText[7] != '-' || aText[10] != 'T' || aText[13] != ':' ||
+            aText[16] != ':' || aText[19] != 'Z')
+            return false;
+        auto num = [&aText](size_t aAt, size_t aLen, int& aOut)
+        {
+            aOut = 0;
+            for (size_t i = aAt; i < aAt + aLen; i++)
+            {
+                if (aText[i] < '0' || aText[i] > '9') return false;
+                aOut = aOut * 10 + (aText[i] - '0');
+            }
+            return true;
+        };
+        int y, mo, d, h, mi, s;
+        if (!num(0, 4, y) || !num(5, 2, mo) || !num(8, 2, d) || !num(11, 2, h) || !num(14, 2, mi) || !num(17, 2, s))
+            return false;
+        if (y < 1970 || mo < 1 || mo > 12 || d < 1 || d > 31 || h > 23 || mi > 59 || s > 59) return false;
+        std::tm tm{};
+        tm.tm_year = y - 1900;
+        tm.tm_mon  = mo - 1;
+        tm.tm_mday = d;
+        tm.tm_hour = h;
+        tm.tm_min  = mi;
+        tm.tm_sec  = s;
+        const std::time_t t = _mkgmtime(&tm);
+        if (t == static_cast<std::time_t>(-1)) return false;
+        // A date that doesn't exist (February 31) is moved on by _mkgmtime: refuse it instead.
+        std::tm back{};
+        if (gmtime_s(&back, &t) != 0 || back.tm_year != y - 1900 || back.tm_mon != mo - 1 || back.tm_mday != d) return false;
+        aWhen = t;
+        return true;
+    }
 
     Tree::Tree() : m_Root(std::make_unique<Node>())
     {
@@ -828,13 +989,16 @@ namespace MacroTree
         return {};
     }
 
-    json Tree::ToJson() const
+    json Tree::ToJson(const char* aKind) const
     {
         json root = json::object();
         json children = json::array();
         for (const auto& c : m_Root->Children) children.push_back(NodeJson(*c));
         root["children"] = std::move(children);
-        json out{{"format", kFormatVersion}, {"root", std::move(root)}};
+        MergeExtra(root, m_RootExtra);
+        json out{{"format", Format()}, {"saved_by", CHATMSG_VER_TEXT}, {"kind", aKind ? aKind : "library"},
+                 {"root", std::move(root)}};
+        MergeExtra(out, m_Root->Extra);
         if (!m_Trash.empty())
         {
             json trash = json::array();
@@ -842,8 +1006,10 @@ namespace MacroTree
             {
                 json ids = json::array();
                 for (uint64_t id : t.FromIds) ids.push_back(IdToString(id));
-                trash.push_back({{"item", NodeJson(*t.Item)}, {"from_ids", std::move(ids)}, {"from_names", t.FromNames},
-                                 {"from_index", t.FromIndex}, {"deleted_at", t.DeletedAt}});
+                json je{{"item", NodeJson(*t.Item)}, {"from_ids", std::move(ids)}, {"from_names", t.FromNames},
+                        {"from_index", t.FromIndex}, {"deleted_at", t.DeletedAt}};
+                MergeExtra(je, t.Extra);
+                trash.push_back(std::move(je));
             }
             out["trash"] = std::move(trash);
         }
@@ -856,20 +1022,30 @@ namespace MacroTree
         auto root = aJson.find("root");
         if (root == aJson.end() || !root->is_object()) return false;
 
-        // "format" is untrusted, and value() throws on a type get<int>() can't read. Those types
-        // (null, text, an object or array) aren't a file we can read; missing means 0, and
-        // numbers and true/false are read as get<int>() always read them.
+        // "format" is untrusted. Null, text, an object or an array isn't a file we can read.
+        // Missing (a hand-written file) or below 1: read as format 1, the first one. A number
+        // too big for an int is a newer one (never narrowed, so it can't read as old).
         auto jf = aJson.find("format");
         if (jf != aJson.end() && !jf->is_number() && !jf->is_boolean()) return false;
-        const int format = jf != aJson.end() ? jf->get<int>() : 0;
-        if (format > kFormatVersion && aWarnings)
-            aWarnings->push_back(TR("This file was saved by a newer version of the addon. Some details may be lost."));
+        int format = kFormatVersion;
+        if (jf != aJson.end())
+        {
+            constexpr double kMaxFormat = 1000000.0;
+            const double f = jf->is_boolean() ? (jf->get<bool>() ? 1.0 : 0.0) : jf->get<double>();
+            format = f >= kMaxFormat ? static_cast<int>(kMaxFormat) : f < 1.0 ? 1 : static_cast<int>(f);
+        }
+        // A newer format is told by the caller (FromNewerVersion): read-only for the library, a
+        // warning for an import.
+        const std::string savedBy = ChatLine::ControlsToSpaces(CutUtf8(StringField(aJson, "saved_by"), 64));
 
         auto fresh = std::make_unique<Node>();
         fresh->Type = ENodeType::Folder;
         Parser p;
         p.Warnings = aWarnings;
+        p.Format   = format;
         p.ParseChildren(*root, *fresh, 0);
+        fresh->Extra = p.KeepExtra(aJson, kTopKeys, nullptr);
+        Extra rootExtra = p.KeepExtra(*root, kRootKeys, nullptr);
 
         // The trash bin, parsed with the same parser so an id can't be both in the tree and the bin.
         std::vector<TrashItem> trash;
@@ -897,6 +1073,7 @@ namespace MacroTree
                 auto idx = je.find("from_index");
                 if (idx != je.end() && idx->is_number_unsigned()) t.FromIndex = idx->get<size_t>();
                 t.DeletedAt = StringField(je, "deleted_at");
+                t.Extra     = p.KeepExtra(je, kTrashKeys, nullptr);
                 Node holder;
                 holder.Type = ENodeType::Folder;
                 p.ParseNode(*item, holder, static_cast<int>(t.FromIds.size())); // in place: no json copy
@@ -907,8 +1084,11 @@ namespace MacroTree
             }
         }
 
-        m_Root  = std::move(fresh);
-        m_Trash = std::move(trash);
+        m_Root    = std::move(fresh);
+        m_Trash   = std::move(trash);
+        m_RootExtra  = std::move(rootExtra);
+        m_FormatRead = format;
+        m_SavedBy    = savedBy;
         // The parser saw every id kept in the tree and the bin: NewId starts from those instead of
         // walking the tree once per new id, which froze the game on many id-less nodes (SEC-017).
         m_UsedIds      = std::move(p.SeenIds);

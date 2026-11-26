@@ -33,9 +33,12 @@ namespace Exchange
 
     // The export format: the same as macros.json, with these nodes at the top level. Link files
     // are left out (they're paths on this PC), and so is the trash bin (it isn't in the tree).
-    nlohmann::json ExportJson(const std::vector<const Node*>& aNodes);
-    std::string    ExportJsonText(const std::vector<const Node*>& aNodes); // pretty-printed
-    // A macro as raw text, one line per row ("/s hi").
+    // "kind" is "export"; aFormat is the format of the library they come from (Tree::Format), so
+    // items read from a newer version's file keep its number.
+    nlohmann::json ExportJson(const std::vector<const Node*>& aNodes, int aFormat = MacroTree::kFormatVersion);
+    std::string    ExportJsonText(const std::vector<const Node*>& aNodes, int aFormat = MacroTree::kFormatVersion); // pretty-printed
+    // A macro as raw text, one line per row ("/s hi"). Not for a macro with a line for an unknown
+    // channel (MacroTree::HasUnknownChannel): text has no way to write that channel.
     std::string    ExportText(const Node& aMacro);
     // A safe Windows file name from a folder or macro name, with the extension (".json", ".txt").
     std::string    FileNameFor(const std::string& aName, const std::string& aExt);
@@ -158,6 +161,9 @@ namespace Exchange
         std::vector<PlanItem> Children;       // folders: what happens inside
         // Macros that are imported (new, renamed or replacing), for the preview's flags:
         bool        UsesRemoved = false;      // a line uses {txt} or {json}, which were removed: it isn't sent
+        // It has something from a newer version (MacroTree::HasNewerData; a folder: its own fields):
+        // kept, but not used, and a line for an unknown channel isn't sent.
+        bool        FromNewer = false;
         EHotkeyRisk HotkeyRisk = EHotkeyRisk::None; // its hotkey, whether or not Keep hotkeys is ticked
         // Replace with Keep hotkeys ticked and a risky hotkey: the macro comes without it.
         bool        HotkeyCleared = false;
@@ -174,6 +180,7 @@ namespace Exchange
         // Counts of the PlanItem flags above, over the macros that are imported. HotkeysNoModifier
         // and HotkeysClash count only hotkeys that aren't cleared (they come along if kept).
         size_t UsesRemoved = 0, HotkeysNoModifier = 0, HotkeysClash = 0, HotkeysCleared = 0, OwnHotkeysLost = 0;
+        size_t FromNewer = 0; // folders and macros imported with FromNewer
         size_t HotkeysChanged = 0; // replaced macros with HotkeyCleared or LosesOwnHotkey (the notice after Import)
 
         size_t Changes() const { return NewFolders + NewMacros + Replaced; }
