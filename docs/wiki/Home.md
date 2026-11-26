@@ -12,8 +12,7 @@ chat macros in folders and types them into chat for you.
 
 - [Installation](Installation): install the addon and set the keys it needs.
 - [The macro library](The-Macro-Library): folders, macros, drag and drop.
-- [Editing macros](Editing-Macros): lines, channels, whispers, squad broadcasts, raw text, text
-  file links.
+- [Editing macros](Editing-Macros): lines, channels, whispers, squad broadcasts, raw text.
 - [Sending macros](Sending-Macros): Send now, hotkeys and the quick menu.
 - [Filters](Filters): limit a macro, or a whole folder, to game modes and maps.
 - [Placeholders](Placeholders): `{time}`, `{random}`, `{map}` and more.
@@ -23,6 +22,8 @@ chat macros in folders and types them into chat for you.
 - [Files and data](Files-and-Data): where your macros are saved.
 - [Backups and restore](Backups-and-Restore): backups on a schedule you choose, and putting
   one back.
+- [Advanced options](Advanced-Options): the features kept behind one checkbox (text file links),
+  and why.
 - [Safety and troubleshooting](Safety-and-Troubleshooting): how sending stays safe, and what the
   error messages mean.
 - [ArenaNet's policies](ArenaNet-Policies): the macro policy, what the addon is for (and not

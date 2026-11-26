@@ -71,7 +71,7 @@ one in the copy. The library window opens and says which backup was restored. Un
 the game, **Undo restore** there puts your library back as it was. After the restore, your
 previous `macros.json` is also kept as `macros.json.bak` (see [Files and data](Files-and-Data)).
 
-Macros linked to a text file (see [Editing macros](Editing-Macros)) take that file's text after
+Macros linked to a text file (see [Advanced options](Advanced-Options#text-file-links)) take that file's text after
 a restore, just as when the game starts. A restore never writes old lines into your text files.
 
 <!-- screenshot: options-restore.png (docs/screenshots.md) -->

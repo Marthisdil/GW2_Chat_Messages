@@ -46,7 +46,7 @@ starts with the item you had selected (or right-clicked) ticked.
 <!-- screenshot: export-window.png (docs/screenshots.md) -->
 > 📷 *Screenshot to come: the Export window with some folders and macros ticked.*
 
-[Text file links](Editing-Macros) are never exported or imported, because they're paths on your
+[Text file links](Advanced-Options#text-file-links) are never exported or imported, because they're paths on your
 own PC. The [trash bin](The-Macro-Library) isn't exported either: while it holds anything, the
 export message and the Export menu remind you.
 
@@ -156,7 +156,7 @@ it after them first, for example `Alex.json`.
    or `Imported library` for a file still called `macros.json`); change it if you like. If you
    already have a folder with that name, the new one gets " (2)".
 3. **Keep hotkeys** is off at first, as for any import, so their keys don't clash with yours.
-   Their trash bin and [text file links](Editing-Macros) are never taken.
+   Their trash bin and [text file links](Advanced-Options#text-file-links) are never taken.
 4. The preview and the checkboxes work as above: untick anything you don't want. Their folders are
    one level deeper inside the new folder, so a folder that would end up more than 6 deep is
    shown as too deep.

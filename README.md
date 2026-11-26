@@ -44,8 +44,9 @@ chat for you, from a hotkey, a menu or a button.
   or `.txt` files or through the clipboard. Imports show a preview first (new, merged, renamed,
   replaced), and the last import can be undone. A friend's whole library (their `macros.json`)
   can be imported into a folder of its own.
-- **Text file links:** keep a macro in step with a `.txt` file, both ways: edit it in Notepad
-  and the macro follows, edit the macro and the file follows.
+- **Advanced options:** extras most players never need stay hidden behind one checkbox, so the
+  editor stays simple. For now that's **text file links**: keep a macro in step with a `.txt`
+  file, both ways (edit it in Notepad and the macro follows, edit the macro and the file follows).
 - **Trash bin:** deleted folders and macros can be restored, until you empty the bin (can be
   turned off).
 - **Backups:** copies of your library every few hours, days, weeks or months, as many as you

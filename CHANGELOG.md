@@ -14,6 +14,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   closed.
 
 ### Changed
+- **Advanced options:** a new checkbox on the addon's options page (General tab), with **[?]**
+  opening its wiki page. Features most players never need are kept behind it, so the macro
+  editor stays simple; for now that's **text file links**. While it's off (the default for a new
+  install) they're hidden, and a macro that uses one can't be sent: its hotkey does nothing, it's
+  faded in the quick menu, and Send now explains why. Its settings, hotkey included, are kept.
+  If you already have a linked macro, the box starts ticked, so nothing stops working.
 - **New icon:** the Quick Access icon in the Nexus bar is now a speech bubble with a lightning
   bolt (it was a scroll), so it reads as "chat, fast" even at small sizes.
 

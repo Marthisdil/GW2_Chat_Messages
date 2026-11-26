@@ -178,6 +178,22 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
     "Recreate the file". A file that can't be read is never overwritten. Over 50 lines: the first
     50 are used and the file's extra lines are kept until the macro is edited.
   - The sync state is in memory only. Unload does a last sync.
+  - An advanced option (see "Advanced options"): hidden, not synced and not sendable while the
+    box is off. The sync state is kept meanwhile, so turning it back on in the same session
+    resolves as usual (a file changed meanwhile wins, otherwise the macro is written).
+- **Advanced options** (2026-11-25): one checkbox on the options page (General tab),
+  settings.json `"advanced_options"`, with **[?]** opening the wiki page `Advanced-Options`.
+  Features most players never need sit behind it, so the editor stays short and nothing
+  surprising happens unless the user turned it on. *(`src/Advanced.*`, tested in
+  `tests/AdvancedTests.cpp`.)*
+  - Behind it now: text file links. Ideas for more are in `docs/todo.md`.
+  - Off: the feature's UI is hidden, and a macro that uses one is blocked: its hotkey never
+    fires (one Nexus alert per press when no other macro takes the key), the quick menu shows it
+    faded and unclickable (search Enter skips it), Send now shows the error window, and the
+    library dims it with a note in its editor. Its settings, hotkey included, are kept; the
+    hotkey still counts in the "Also set on" warning.
+  - Default: off for a new install. With no saved value, it's on if the library already uses an
+    advanced feature (an update never stops a link working), and that value is saved at once.
 
 ## Starter library
 

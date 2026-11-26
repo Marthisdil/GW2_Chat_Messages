@@ -21,7 +21,7 @@ change means a done check must be run again, it moves back here and into its ses
 |---|---|---|
 | A1 | Passed (PR #15 build) | Re-check with the current build: the log and the options page show its version and build stamp, the two links and the folders are new (A1's last part), and so is the icon (the quick bubble, 2026-11-25). |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text wraps and errors open the error window. Re-check those two points only (marked *Re-check* in A2), then go on to A3. |
-| A3 to R | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (H9 and H10, filters on folders, are the newest; then J11, export a selection; G4 to G6, favourites and recently sent, with G4 and G6 new for favourites shown everywhere, and R, backups and restore, are the newest; A1b, the example macros, and F9, the hotkey cooldown, came just before). |
+| A3 to R | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (H9 and H10, filters on folders, are the newest; then K7 and K8, the Advanced options box (new 2026-11-25); then J11, export a selection; G4 to G6, favourites and recently sent, with G4 and G6 new for favourites shown everywhere, and R, backups and restore, are the newest; A1b, the example macros, and F9, the hotkey cooldown, came just before). |
 
 ## How to report
 
@@ -515,7 +515,10 @@ exported. Keys and Tab still work in the game afterwards.
 
 ## K. Text file links
 
-Have Notepad ready. "Within a second" means after you save, not after you switch back.
+Have Notepad ready. "Within a second" means after you save, not after you switch back. Text file
+links are an advanced option: first tick **Advanced options** on the addon's options page
+(Nexus > Options, Chat Messages, **General** tab). K7 and K8 check the box itself (new
+2026-11-25).
 
 **K1. New file.** On `Two`, open **Text file link**, type `test.txt`, click **Link**:
 `<GW2>\addons\GW2_Chat_Messages\links\test.txt` appears with `Two`'s lines, and the status says the
@@ -541,6 +544,32 @@ Encoding **ANSI**. Make a new macro `Ansi` in `Test` and link it to `ansi.txt`: 
 without editing: the file isn't rewritten (Notepad doesn't ask to reload). Edit `Ansi` in the
 addon: the file is rewritten as UTF-8, with `�` for the `ä`. Delete `Ansi`.
 
+**K7. Advanced options off (new 2026-11-25).** Link `Two` to `test.txt` again if K5 unlinked it,
+and give `Two` a hotkey (e.g. Ctrl+F7). Give `Say` the same hotkey. Untick **Advanced options**:
+- the options page shows the yellow "Some of your macros are linked to text files..." line;
+- no macro's editor has a **Text file link** section any more;
+- `Two` is dimmed in the library; its editor shows the yellow note that it's linked to a text
+  file and can't be sent, and **Send now** is faded. Click it: the error window explains, nothing
+  is sent;
+- `Two`'s **Hotkey:** row still shows Ctrl+F7, and `Say`'s editor still warns that the key is
+  also set on `Two`;
+- press Ctrl+F7 with the library closed: `Say` is sent, `Two` isn't. Clear `Say`'s hotkey and
+  press Ctrl+F7 again: nothing is sent, and a Nexus alert says `Two` is linked to a text file;
+- in the quick menu `Two` is faded and can't be clicked; hovering it says why. Search for `Two`
+  in the quick menu and press Enter: nothing is sent;
+- edit `test.txt` in Notepad and save: `Two` doesn't change. Edit `Two` in the addon: the file
+  doesn't change.
+
+Tick **Advanced options** again: within a second `Two` has the lines you saved in Notepad (the
+file wins, as when both change), the **Text file link** section is back, and Ctrl+F7 sends `Two`.
+Click **[?]** next to the box: the browser opens the wiki's **Advanced options** page.
+
+**K8. After an update (new 2026-11-25).** Close the game. In
+`<GW2>\addons\GW2_Chat_Messages\settings.json`, delete the `"advanced_options"` entry (keep the
+JSON valid). Start the game: **Advanced options** is ticked, because `Two` is linked. Unlink every
+macro, close the game, delete the entry again and start: the box is unticked (a new install
+starts with it off). Tick it again for the rest of the tests.
+
 ## L. Final checks
 
 **L1. Game input after everything.** Movement keys, skills, Tab targeting, Shift/Ctrl/Alt combos,
@@ -562,7 +591,7 @@ window stays on screen. Pick the smallest, then the biggest again: the window sh
 back to about the same size.
 
 **M2. Everything follows.** At the biggest size, check: the tree, the macro editor (lines, Raw
-text, Where it's active, Text file link), the Rename and Delete pop-ups, the Import window, the
+text, Where it's active, Text file link with **Advanced options** ticked), the Rename and Delete pop-ups, the Import window, the
 quick menu pop-up, the Quick Access right-click menu, and tooltips (hover a macro in the quick
 menu, the Placeholders (?) label). All use the big text. Nexus' own options page doesn't.
 

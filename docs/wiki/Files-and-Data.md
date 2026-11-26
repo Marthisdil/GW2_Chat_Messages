@@ -12,7 +12,7 @@ when it loads.
 | `exports\` | Files saved by Export. Created when the addon loads; **Exports folder** in the toolbar opens it. |
 | `imports\` | Put files here to see them in the Import window. Created when the addon loads; **Open imports folder** in the Import window opens it. |
 | `backups\` | Copies of your library, named with the date and time in UTC (see [Backups and restore](Backups-and-Restore)). Created when the addon loads. |
-| `links\` | Text files linked to macros (when you give just a file name). |
+| `links\` | Text files linked to macros (when you give just a file name; see [Advanced options](Advanced-Options#text-file-links)). |
 | `localization\` | Extra language files (see [Languages](Languages)). |
 
 ## Saving

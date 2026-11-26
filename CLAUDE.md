@@ -137,6 +137,11 @@ to the todo list", add it there (don't start building it). Move agreed items int
 - `src/QuickLists.*`: the quick menu's Favourites and Recently sent lists (`Recent`, `Build`) and
   the `"recently_sent"` / `"recent_count"` settings. No Nexus or ImGui dependency. Tested by
   `tests/QuickListsTests.cpp`. The favourite mark itself is `Node::Favourite` (`MacroTree`).
+- `src/Advanced.*`: the "Advanced options" checkbox's rules: which macros use a feature behind it
+  (`Uses`), which can't be sent while it's off (`Blocked`), and the `"advanced_options"` setting
+  with its default (`FromSettings`). Off hides those features in `Ui.cpp` and blocks those macros
+  everywhere (hotkey, quick menu, Send now); their settings are kept. A new feature behind the
+  box goes into `Uses`. No Nexus or ImGui dependency. Tested by `tests/AdvancedTests.cpp`.
 - `src/Cooldown.*`: the hotkey cooldown and the 1-second guard after a send (`Tracker`), per
   macro; only hotkeys wait. No Nexus or ImGui dependency. Tested by `tests/CooldownTests.cpp`.
 - `src/Placeholders.*`: fills in `{time}`, `{random}`, `{map}` and the other placeholders. The

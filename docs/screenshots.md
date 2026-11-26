@@ -39,6 +39,7 @@ its picture is out of date).
 
 | # | File name | What to capture | Used in | Status |
 |---|---|---|---|---|
+| 1 | `library-window.png` | The whole library window: a few folders (e.g. *Raids › Wing 3*, *WvW*, *Guild*) with one expanded, and a macro selected so the editor shows on the right (with **Advanced options** off, so no **Text file link** section). The empty **Search (Ctrl+F)** box and the unticked **Only active in ...** checkbox show above the tree. | README, wiki Home, The macro library | Captured (2026-11-25), retake |
 | 2 | `chat-result.png` | The game's chat box right after sending a multi-line macro, showing two or three lines in different channels (e.g. squad, party, map). | README | Captured (2026-11-25), retake |
 | 3 | `quick-menu.png` | The quick menu open from right-clicking the chat bubble icon: the empty search box at the top, nested folders under it, and the mouse over a macro so its line preview shows. | README, Sending macros | Captured (2026-11-25), retake |
 | 5 | `nexus-game-keybinds.png` | Nexus > Options > Game Keybinds, showing the **Chat** (and **Squad Broadcast**) keys set. | Installation | Needed |
@@ -52,7 +53,7 @@ its picture is out of date).
 | 13 | `export-menu.png` | Right-click a macro > **Export** submenu open. | Import and export | Needed |
 | 14 | `import-window.png` | The Import window with something loaded: the target folder, the options, **Select all / Deselect all**, and the preview with its checkboxes (one item unticked), at least one **NAME TAKEN** item and its choice box, a macro marked **REMOVED PLACEHOLDER**, and (with **Keep hotkeys** ticked) one marked **YOUR HOTKEY** with its notice above the preview. In-game check J10 sets this up (use **Keep both (rename)**). | Import and export | Needed |
 | 15 | `send-alert.png` | A Nexus alert on screen from a hotkey that couldn't send, with the error window it also opens. Easiest: give two macros that are both active here the same hotkey, then press it with the library closed. | Safety and troubleshooting | Needed |
-| 16 | `link-file.png` | A macro's **Text file link** section opened, with a file linked ("In step") and the Open file / Open folder / Unlink buttons. | Editing macros | Needed |
+| 16 | `link-file.png` | With **Advanced options** ticked on the options page: a macro's **Text file link** section opened, with a file linked ("In step") and the Open file / Open folder / Unlink buttons. | Advanced options | Needed |
 | 17 | `text-size.png` | The library window at the biggest text size, with the **Text size** dropdown (end of the toolbar) open. | The macro library | Needed |
 | 18 | `error-window.png` | The error window with "What you did" and the OK / Copy to clipboard buttons. Easiest: toolbar **Export all** with an empty library, or select a folder 6 levels deep and click **New folder**. (A duplicate name shows it as a pop-up over the name box, which works too.) | Safety and troubleshooting | Needed |
 | 19 | `trash-bin.png` | The library with the **Trash bin (F/M)** opened at the bottom of the tree (two or three items, one a folder), one item selected so the details pane shows **Restore** / **Delete permanently...**. | The macro library | Needed |
@@ -74,6 +75,8 @@ its picture is out of date).
 | 35 | `quick-menu-favourites.png` | The quick menu with 2-3 **Favourites** (one a folder opened as a sub-menu, one faded because it isn't active on this map) and 2-3 **Recently sent** macros above the folders (each with its folders in brackets), and the library behind it showing a favourite with `*` after its name. | Sending macros | Needed |
 | 36 | `export-window.png` | The **Export** window: the library as a tree with tick boxes, one folder ticked with a sub-folder showing **[some]**, a macro outside it ticked, the "N folder(s) and M macro(s) ticked" line, a file name typed, and the **Save as a .json file** / **Copy to the clipboard** buttons. | Import and export | Needed |
 | 37 | `folder-filters.png` | The library with two or three folders that have filters, showing their tags (`Roaming  [WvW]`, `LA  [1 map]`), one of them dimmed because it isn't active here, and that folder selected: its details show **Where it's active** open with WvW ticked, a map listed, and "Not active here". | Filters | Needed |
+| 39 | `options-advanced.png` | The addon's page in Nexus > Options, **General** tab, scrolled to the bottom: the **Advanced options** checkbox (unticked) with **[?]** next to it (the mouse over **[?]**, so its tooltip with the wiki address shows), the text under it, and the yellow "Some of your macros are linked to text files..." line (have one linked macro). | Advanced options | Needed |
+| 40 | `advanced-off-macro.png` | With **Advanced options** off: a macro linked to a text file selected in the library, dimmed in the tree, its editor showing the yellow "This macro is linked to a text file, which is an advanced option..." note above a faded **Send now**, and no **Text file link** section. | Advanced options | Needed |
 | 38 | `new-folder-modes.png` | The **New folder** name box with a name typed and **Active in:** PvE / WvW / PvP below it (WvW only ticked), and the "Maps: in the folder's details" line. | The macro library | Needed |
 
 ## Retakes
@@ -86,6 +89,7 @@ its row in the list moves to Done.
 | Image | What to change | Noted |
 |---|---|---|
 | `chat-result.png` | The middle line is the game's red "No one hears you." because nobody was near for the **Say** line. Retake with someone nearby, or with a macro whose lines go to Party and Squad, so every line shows as sent. | 2026-11-25 |
+| `library-window.png` | It shows the **Text file link: none** header in the editor, which is now hidden unless **Advanced options** is ticked (2026-11-25). Retake the same view with the box off (the default). | 2026-11-25 |
 | `quick-menu.png` | No line preview shows: retake with the mouse resting over a macro (e.g. **Two channels**) so its lines appear next to the menu, as the row asks. The search box's hint is also cut off ("Search (Enter sends the f..."); retake after that's fixed. | 2026-11-25 |
 
 ## Done
@@ -95,5 +99,4 @@ its row goes back to **Needed** in the list above.
 
 | # | File name | What to capture | Used in | Status |
 |---|---|---|---|---|
-| 1 | `library-window.png` | The whole library window: a few folders (e.g. *Raids › Wing 3*, *WvW*, *Guild*) with one expanded, and a macro selected so the editor shows on the right. The empty **Search (Ctrl+F)** box and the unticked **Only active in ...** checkbox show above the tree. | README, wiki Home, The macro library | Captured (2026-11-25) |
 | 4 | `nexus-quick-access.png` | The Nexus Quick Access bar with the chat bubble icon (the quick bubble, since 2026-11-25), mouse over it so the tooltip shows. A small crop is fine. | Installation | Captured (2026-11-25) |
