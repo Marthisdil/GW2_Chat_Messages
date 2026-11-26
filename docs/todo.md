@@ -334,6 +334,37 @@ starter library and backups moved up to section 2. Filters by character or profe
 dropped (not needed), and timed lines moved to section 3 for more discussion (owner,
 2026-11-23).
 
+### Own language files outside Advanced options? (added 2026-11-25)
+
+Your own language files (the `localization` folder, **Open localization folder**, **Reload
+language files**) went behind the **Advanced options** box on 2026-11-25. Consider moving them
+back out: players who speak several languages may use a language file regularly without wanting
+any of the other advanced features. Points to settle:
+- whether the files are read only after a separate, smaller opt-in (for example a "Use language
+  files from the localization folder" box next to the Language dropdown), since they're an
+  untrusted input (`docs/security-review.md`) and the folder isn't read at all while the box is
+  off today;
+- what the Language dropdown shows meanwhile, so the feature is easy to find;
+- the wiki's Advanced options and Languages pages, the S2/S3 and Q6 in-game checks, and the
+  `language-options.png` row change with it.
+
+**Advanced option?** That's the question itself: leaning towards no (useful to many, nothing
+surprising once chosen), with its own small opt-in.
+
+### Refresh the map list after a game update (added 2026-11-25)
+
+The map list (`maps.json`) is fetched on the first run, once a week, on a language change, and by
+**Refresh map list**. New maps arrive with game updates, so fetch it again soon after the game is
+updated. Possible signal: MumbleLink's `Context.BuildID` (the game's build number, in
+`vendor/mumble`): remember the last one seen in `maps.json` or `settings.json`, and when it
+changes, start a background refresh (the same one as the weekly refresh, on the worker thread).
+Points to settle: whether `BuildID` is filled in before the first map load, a small delay so a
+refresh doesn't start during the loading screen, and that the GW2 API may list a new map a little
+after the patch (maybe refresh again a day later).
+
+**Advanced option?** No: it's automatic and invisible, and helps everyone. With it, the
+**Refresh map list** button matters even less.
+
 ### Duplicate a macro
 
 Right-click > **Duplicate** makes "Name (2)" next to it, with the same lines and filters but no
