@@ -56,6 +56,10 @@ the first release.
 
 ### Look at the layout of the macro settings (added 2026-11-25)
 
+**Decided 2026-11-26:** layout B (one column, most-used first), with the owner's defaults, is in
+`docs/design.md`, "Macro editor layout". What's left here is building it (before the `Ui.cpp`
+cleanup below). The notes below are how it started.
+
 Go over the layout of a macro's settings in the library window (the details pane on the right:
 name, lines, hotkey, filters, link file, the Send now / Preview buttons and the rest) to see
 whether it can be clearer: what goes where, in what order, what's grouped or folded away, and
@@ -156,6 +160,17 @@ Up/down arrows to move through the search results and Enter to send the highligh
 Enter sends the first). Must never let the keys reach the game.
 
 **Advanced option?** No (2026-11-26): plain menu navigation.
+
+### Drag lines by a grab handle (added 2026-11-26)
+
+In the macro editor's line rows ("Macro editor layout" in `docs/design.md`), a grab handle at the
+row's end to drag a line to another place, as the Blish HUD module does, next to (or instead of)
+the up/down arrows. Points to settle: whether the arrows stay (they work with big text sizes and
+small windows, where dragging is fiddly), a clear drop marker between rows, and that a drag never
+starts from a click in the message box. Only reorders lines within the macro; the tree's own
+drag and drop is unchanged.
+
+**Advanced option?** No (2026-11-26): plain editing, nothing surprising.
 
 ## 3. Bigger features
 
