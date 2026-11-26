@@ -11,31 +11,6 @@ priority order too.
 
 ## 1. Before a first public release
 
-### A first-run welcome: ask about the examples, then offer a tour (added 2026-11-25, top priority)
-
-The first time the addon opens in game:
-
-1. **Ask before adding the example macros.** Today the Examples folder is added on the first
-   run without asking (`src/Examples.*`). Instead, offer it at that point (for example "Add some
-   example folders and macros to start with?" with Yes / No). Saying No adds nothing, and the
-   options page's "Add the example macros" still works later.
-2. **Then offer a short click-through tutorial.** Text boxes, one at a time, each pointing at a
-   part of the interface (the tree, the search box, the details pane, New folder / New macro,
-   Send now, the quick bubble icon, the options page), with Next / Back and a way to cancel at
-   any step. It can stay generic. If we build it, the options page gets a button to run the
-   tutorial again.
-
-To discuss: what counts as the "first time" (no `macros.json` yet? a saved "welcome shown"
-setting, so an upgrade from an older version doesn't show it?); whether the tour uses the
-example macros if they were added; how the text boxes point at things in ImGui 1.80 (arrows or
-highlights drawn over our own windows, not the game's); translations for every step; and new
-in-game checks and screenshots for both.
-
-**Advanced options (2026-11-25):** the tour follows the box. With it off (the default on a new
-install) it never points at anything hidden behind it; at most one step points at the box itself
-("more features for experienced players"). Whether the tour has extra steps when it's on, or
-the [?] wiki page is enough, is to discuss. The welcome itself isn't an advanced option.
-
 ### In-game testing
 
 Work through `docs/in-game-tests.md` (A1 passed, A2 mostly; the rest is still to do). Session B,

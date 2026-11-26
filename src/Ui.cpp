@@ -43,12 +43,15 @@
 #include "Mumble.h"
 #include "Placeholders.h"
 #include "QuickLists.h"
+#include "ReleaseNotes.h"
+#include "resource.h"
 #include "Search.h"
 #include "SendPlan.h"
 #include "Sender.h"
 #include "PathText.h"
 #include "Storage.h"
 #include "UiFont.h"
+#include "Welcome.h"
 
 using namespace MacroTree;
 using UiFont::Px;
@@ -64,6 +67,7 @@ namespace
     constexpr char kPurgePopup[]   = TX("Delete permanently?###chatmsg_purge");
     constexpr char kExamplesReplacePopup[] = TX("Replace the examples?###chatmsg_examples_replace");
     constexpr char kExamplesAgainPopup[]   = TX("Add the examples again?###chatmsg_examples_again");
+    constexpr char kWelcomePopup[]         = TX("Welcome to Chat Messages###chatmsg_welcome");
     constexpr const char* kTrashSetting    = "trash_bin";
     // settings.json "examples_added": the starter library was added (or a library already
     // existed), so a macros.json removed later on purpose doesn't bring the examples back.
@@ -824,6 +828,40 @@ namespace
         ImGui::EndChild();
         if (s_MapResults.size() >= kMapResults) ImGui::TextDisabled(T("Only the first %zu matches are shown."), kMapResults);
     }
+
+    // --- The tour (docs/design.md, "First-run welcome and tour") -------------------------------
+    // While it runs, the parts of the library window a step can point at note where they were drawn
+    // this frame (TourMark); DrawTour then outlines the current step's part and puts its box beside it.
+
+    constexpr size_t kTourTargets = static_cast<size_t>(Welcome::ETarget::Count);
+    bool   s_TourOn           = false;
+    size_t s_TourStep         = 0;
+    bool   s_TourEntered      = false; // the step's setup (selecting a macro) is still to do
+    bool   s_TourStartRequest = false; // the options page's "Take the tour"
+    ImVec2 s_TourMin[kTourTargets];
+    ImVec2 s_TourMax[kTourTargets];
+    bool   s_TourSeen[kTourTargets] = {};
+    ImVec2 s_TourBoxSize; // the box's size last frame, to place it
+
+    // After the item (or group, or child window) that a step points at.
+    void TourMark(Welcome::ETarget aTarget)
+    {
+        const size_t i = static_cast<size_t>(aTarget);
+        if (!s_TourOn || i == 0 || i >= kTourTargets) return;
+        s_TourMin[i]  = ImGui::GetItemRectMin();
+        s_TourMax[i]  = ImGui::GetItemRectMax();
+        s_TourSeen[i] = true;
+    }
+
+    void StartTour()
+    {
+        s_TourOn      = true;
+        s_TourStep    = 0;
+        s_TourEntered = true;
+    }
+
+    void HandleWelcomeRequest(); // the first-run welcome, below with the tour's box
+    void DrawWelcomePopup();
 
     // --- Folding sections of the details pane (docs/design.md, "Macro editor layout") --------------
 
@@ -2658,11 +2696,15 @@ namespace
             s_EditMode = EEditMode::Lines;
             s_RawForId = 0;
         }
+        ImGui::BeginGroup();
         DrawLinesHeader(aMacro);
         if (s_EditMode == EEditMode::Lines) DrawLinesEditor(aMacro);
         else DrawRawEditor(aMacro);
+        ImGui::EndGroup();
+        TourMark(Welcome::ETarget::Lines);
         ImGui::Spacing();
 
+        ImGui::BeginGroup();
         DrawFilters(aMacro);
 
         if (s_CaptureFor == aMacro.Id && Hotkeys::IsCapturing() && !s_Sections.Hotkey) // keep the prompt in view
@@ -2688,6 +2730,8 @@ namespace
             DrawNote(aMacro);
             ImGui::Unindent();
         }
+        ImGui::EndGroup();
+        TourMark(Welcome::ETarget::Sections);
 
         if (s_AdvancedOn) DrawAdvanced(aMacro);
     }
@@ -2699,6 +2743,7 @@ namespace
     void DrawDetailsHeader(Node& aNode)
     {
         const bool macro = aNode.IsMacro();
+        ImGui::BeginGroup(); // the tour points at the name, its buttons and the grey line
         UiFont::Row head;
         ImGui::TextWrapped("%s", aNode.Name.c_str());
         if (macro)
@@ -2738,6 +2783,8 @@ namespace
         ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
         ImGui::TextWrapped("%s", summary.c_str());
         ImGui::PopStyleColor();
+        ImGui::EndGroup();
+        if (macro) TourMark(Welcome::ETarget::Header);
 
         if (macro)
         {
@@ -3885,6 +3932,7 @@ namespace
 
     void DrawMainWindow()
     {
+        std::fill(std::begin(s_TourSeen), std::end(s_TourSeen), false); // marked again while drawing
         UiFont::BeforeBegin(s_MainFit, ImVec2(820.0f, 500.0f), ImVec2(560.0f, 300.0f));
         const bool shown = ImGui::Begin(Ui::kMainWindowName, &s_ShowMainWindow, ImGuiWindowFlags_NoCollapse);
         UiFont::AfterBegin(s_MainFit);
@@ -3902,7 +3950,10 @@ namespace
             s_SearchFocus = true;
 
         DrawMessages();
+        ImGui::BeginGroup();
         DrawToolbar();
+        ImGui::EndGroup();
+        TourMark(Welcome::ETarget::Toolbar);
         ImGui::Separator();
 
         // Both panes scroll sideways too, for long names and rows that can't wrap.
@@ -3910,7 +3961,10 @@ namespace
         const float treeWidth = ImGui::GetContentRegionAvail().x * 0.38f;
         UpdateSearch();
         ImGui::BeginGroup();
+        ImGui::BeginGroup();
         DrawSearchBox(treeWidth);
+        ImGui::EndGroup();
+        TourMark(Welcome::ETarget::Search);
         ImGui::BeginChild("##tree", ImVec2(treeWidth, 0.0f), true, ImGuiWindowFlags_HorizontalScrollbar);
         ImGui::PushTextWrapPos(0.0f);
         DrawSearchSummary();
@@ -3921,6 +3975,7 @@ namespace
         DrawTree();
         ImGui::PopTextWrapPos();
         ImGui::EndChild();
+        TourMark(Welcome::ETarget::Tree);
         ImGui::EndGroup();
 
         ImGui::SameLine();
@@ -3938,9 +3993,320 @@ namespace
         HandleExamplesRequest();
         DrawExamplesReplacePopup();
         DrawExamplesAgainPopup();
+        HandleWelcomeRequest();
+        DrawWelcomePopup();
 
         ImGui::PopTextWrapPos();
         ImGui::End();
+    }
+
+    // --- First-run welcome (docs/design.md, "First-run welcome and tour") ---------------------
+
+    NexusLinkData_t* s_NexusLink = nullptr;
+    bool InGameplay() { return s_NexusLink && s_NexusLink->IsGameplay; } // not the loading screen or character select
+
+    bool s_WelcomeShown   = false; // settings.json "welcome_shown"
+    bool s_WelcomePending = false; // a first run: open the library and the welcome once in gameplay
+    bool s_WelcomeRequest = false; // open the pop-up (at the library window's ID level)
+    int  s_WelcomePage    = 0;     // 0: the examples question, 1: the tour
+
+    void NoteWelcomeShown()
+    {
+        if (s_WelcomeShown) return;
+        s_WelcomeShown = true;
+        if (!Storage::SaveSetting(Welcome::kShownSetting, true)) LogF(LOGL_WARNING, "The \"welcome shown\" setting couldn't be saved.");
+    }
+
+    void HandleWelcomeRequest()
+    {
+        if (!s_WelcomeRequest) return;
+        s_WelcomeRequest = false;
+        s_WelcomePage    = 0;
+        ImGui::OpenPopup(kWelcomePopup);
+    }
+
+    // Two pages: the example macros (Add / Start empty), then the tour (Take the tour / Not now).
+    // "welcome_shown" is saved with the first answer; closing the game before it asks again.
+    void DrawWelcomePopup()
+    {
+        ImGui::SetNextWindowSize(ImVec2(Px(460.0f), 0.0f), ImGuiCond_Always);
+        if (!ImGui::BeginPopupModal(T(kWelcomePopup), nullptr, ImGuiWindowFlags_NoResize)) return;
+        ImGui::PushTextWrapPos(0.0f);
+        if (s_WelcomePage == 0)
+        {
+            ImGui::TextWrapped(T("Chat Messages keeps your chat macros: one or more lines, each typed into its own chat "
+                               "channel, sorted into folders."));
+            ImGui::Spacing();
+            ImGui::TextWrapped(T("Add some example folders and macros to start with? They show several lines, channels, "
+                               "a whisper, placeholders and filters, and have no hotkeys. You can change or delete them, "
+                               "and add them again later from the addon's options page."));
+            ImGui::Spacing();
+            UiFont::Row row;
+            if (ImGui::Button(T("Add the examples")))
+            {
+                NoteWelcomeShown();
+                if (Node* ex = Examples::Add(s_Tree))
+                {
+                    ShowNewExamples(*ex, T("Added the example macros in a new Examples folder."));
+                    LogF(LOGL_INFO, "First run: added the example macros.");
+                }
+                else ShowError(T("Clicked \"Add the examples\" in the welcome"), T("The example macros couldn't be added."));
+                s_WelcomePage = 1;
+            }
+            row.Next(UiFont::ButtonWidth(T("Start empty")));
+            if (ImGui::Button(T("Start empty")))
+            {
+                NoteWelcomeShown();
+                s_WelcomePage = 1;
+            }
+        }
+        else
+        {
+            ImGui::TextWrapped(T("Take a short tour of the library window? It points at each part, one step at a time "
+                               "(%zu steps). You can stop at any time, and take it again from the addon's options page."),
+                               Welcome::Steps().size());
+            ImGui::Spacing();
+            UiFont::Row row;
+            if (ImGui::Button(T("Take the tour")))
+            {
+                StartTour();
+                ImGui::CloseCurrentPopup();
+            }
+            row.Next(UiFont::ButtonWidth(T("Not now")));
+            if (ImGui::Button(T("Not now"))) ImGui::CloseCurrentPopup();
+        }
+        ImGui::PopTextWrapPos();
+        ImGui::EndPopup();
+    }
+
+    // The first macro in a folder (depth first), for the tour's editor steps.
+    Node* FirstMacroIn(Node& aFolder)
+    {
+        for (const auto& c : aFolder.Children)
+        {
+            if (c->IsMacro()) return c.get();
+            if (Node* m = FirstMacroIn(*c)) return m;
+        }
+        return nullptr;
+    }
+
+    // A step about the editor selects a macro when none is: the first example ("Hello"), else the
+    // first macro in the library. With none at all, the step explains it in words.
+    void EnterTourStep()
+    {
+        s_TourEntered = false;
+        const Welcome::Step& st = Welcome::Steps()[s_TourStep];
+        if (!Welcome::NeedsMacro(st.Target)) return;
+        const Node* sel = s_Tree.Find(s_SelectedId);
+        if (sel && sel->IsMacro()) return;
+        Node* m = nullptr;
+        if (Node* ex = Examples::Find(s_Tree)) m = FirstMacroIn(*ex);
+        if (!m) m = FirstMacroIn(s_Tree.Root());
+        if (!m) return;
+        s_SelectedId = m->Id;
+        s_TrashSelId = 0;
+        bool expanded = false;
+        for (Node* p = m->Parent; p && p->Parent; p = p->Parent)
+            if (!p->Expanded) { p->Expanded = true; expanded = true; }
+        if (expanded) MarkDirty(); // folders' open state is saved
+    }
+
+    // The step's box, and an outline around the part it's about. Drawn after the library window
+    // (so the marks are this frame's); hidden while a pop-up is open; closing the library ends it.
+    void DrawTour()
+    {
+        if (!s_TourOn) return;
+        const auto& steps = Welcome::Steps();
+        if (!s_ShowMainWindow || s_TourStep >= steps.size())
+        {
+            s_TourOn = false;
+            return;
+        }
+        if (s_TourEntered) EnterTourStep();
+        const ImGuiWindow* main = ImGui::FindWindowByName(Ui::kMainWindowName);
+        if (!main || !main->Active || ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopup)) return;
+
+        const Welcome::Step& st = steps[s_TourStep];
+        const size_t ti  = static_cast<size_t>(st.Target);
+        const bool   has = ti > 0 && ti < kTourTargets && s_TourSeen[ti];
+        const ImVec2 screen = ImGui::GetIO().DisplaySize;
+        const ImVec2 wMin = main->Pos;
+        const ImVec2 wMax(main->Pos.x + main->Size.x, main->Pos.y + main->Size.y);
+        ImVec2 tMin, tMax;
+        if (has)
+        {
+            // Only the part inside the library window (a pane can scroll it out of view).
+            tMin = ImVec2(std::clamp(s_TourMin[ti].x, wMin.x, wMax.x), std::clamp(s_TourMin[ti].y, wMin.y, wMax.y));
+            tMax = ImVec2(std::clamp(s_TourMax[ti].x, wMin.x, wMax.x), std::clamp(s_TourMax[ti].y, wMin.y, wMax.y));
+            const float pad = Px(4.0f);
+            ImGui::GetForegroundDrawList()->AddRect(ImVec2(tMin.x - pad, tMin.y - pad), ImVec2(tMax.x + pad, tMax.y + pad),
+                                                    IM_COL32(255, 200, 60, 255), Px(4.0f), ImDrawCornerFlags_All, Px(3.0f));
+        }
+
+        // Below the part, else above, right or left of it; else in the middle of the library.
+        const float  boxW = std::min(Px(340.0f), screen.x);
+        const ImVec2 size(boxW, s_TourBoxSize.y > 0.0f ? s_TourBoxSize.y : Px(160.0f));
+        const float  gap = Px(12.0f);
+        const float  maxX = std::max(0.0f, screen.x - size.x), maxY = std::max(0.0f, screen.y - size.y);
+        ImVec2 pos(std::clamp((wMin.x + wMax.x - size.x) * 0.5f, 0.0f, maxX),
+                   std::clamp((wMin.y + wMax.y - size.y) * 0.5f, 0.0f, maxY));
+        if (has)
+        {
+            const ImVec2 tries[] = {
+                ImVec2(std::clamp(tMin.x, 0.0f, maxX), tMax.y + gap),
+                ImVec2(std::clamp(tMin.x, 0.0f, maxX), tMin.y - gap - size.y),
+                ImVec2(tMax.x + gap, std::clamp(tMin.y, 0.0f, maxY)),
+                ImVec2(tMin.x - gap - size.x, std::clamp(tMin.y, 0.0f, maxY)),
+            };
+            for (const ImVec2& c : tries)
+                if (c.x >= 0.0f && c.y >= 0.0f && c.x <= maxX && c.y <= maxY)
+                {
+                    pos = c;
+                    break;
+                }
+        }
+
+        ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
+        ImGui::SetNextWindowSizeConstraints(ImVec2(boxW, 0.0f), ImVec2(boxW, FLT_MAX));
+        const ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+                                       ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings |
+                                       ImGuiWindowFlags_AlwaysAutoResize;
+        if (ImGui::Begin("###chatmsg_tour", nullptr, flags))
+        {
+            // In front of the library, as the error window is, without taking the keyboard.
+            if (OurWindowAboveError(ImGui::GetCurrentWindow())) ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
+            ImGui::PushTextWrapPos(0.0f);
+            ImGui::TextColored(kWarnColor, "%s", Localization::Lookup(st.Title));
+            ImGui::TextWrapped("%s", Localization::Lookup(st.Text));
+            if (Welcome::NeedsMacro(st.Target) && !has)
+                ImGui::TextDisabled(T("Make a macro, or select one in the library, to see this part."));
+            ImGui::TextDisabled(T("Step %zu of %zu"), s_TourStep + 1, steps.size());
+            const bool  last = s_TourStep + 1 == steps.size();
+            const char* next = last ? T("Finish") : T("Next");
+            UiFont::Row row;
+            size_t go = s_TourStep;
+            bool   end = false;
+            if (s_TourStep > 0)
+            {
+                if (ImGui::Button(T("Back"))) go = s_TourStep - 1;
+                row.Next(UiFont::ButtonWidth(next));
+            }
+            if (ImGui::Button(next))
+            {
+                if (last) end = true;
+                else go = s_TourStep + 1;
+            }
+            if (!last)
+            {
+                row.Next(UiFont::ButtonWidth(T("Skip the tour")));
+                if (ImGui::Button(T("Skip the tour"))) end = true;
+            }
+            ImGui::PopTextWrapPos();
+            s_TourBoxSize = ImGui::GetWindowSize();
+            if (end) s_TourOn = false;
+            else if (go != s_TourStep)
+            {
+                s_TourStep    = go;
+                s_TourEntered = true;
+            }
+        }
+        ImGui::End();
+    }
+
+    // --- What's new after an update (docs/design.md, "Update notes") ---------------------------
+
+    bool s_ShowNotes    = true;  // settings.json "show_update_notes"
+    bool s_NotesPending = false; // shown once in gameplay
+    bool s_NotesOpen    = false;
+    std::vector<ReleaseNotes::Section>              s_Notes;
+    std::vector<std::vector<ReleaseNotes::Block>>   s_NoteBlocks;
+
+    // CHANGELOG.md, built into the DLL (resource type NOTES).
+    std::string ReadChangelog()
+    {
+        HMODULE module = nullptr;
+        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                           reinterpret_cast<LPCWSTR>(&ReadChangelog), &module);
+        HRSRC res = module ? FindResourceW(module, MAKEINTRESOURCEW(IDR_CHANGELOG), L"NOTES") : nullptr;
+        HGLOBAL data = res ? LoadResource(module, res) : nullptr;
+        const void* bytes = data ? LockResource(data) : nullptr;
+        if (!bytes) return std::string();
+        return std::string(static_cast<const char*>(bytes), SizeofResource(module, res));
+    }
+
+    void RememberNotesSeen()
+    {
+        if (!Storage::SaveSetting(ReleaseNotes::kSeenSetting, std::string(kVersionTag)))
+            LogF(LOGL_WARNING, "The \"notes seen\" setting couldn't be saved.");
+    }
+
+    void SaveShowNotes()
+    {
+        if (!Storage::SaveSetting(ReleaseNotes::kShowSetting, s_ShowNotes))
+            LogF(LOGL_WARNING, "The \"show update notes\" setting couldn't be saved.");
+    }
+
+    void DrawNotesWindow()
+    {
+        if (!s_NotesOpen) return;
+        const ImVec2 screen = ImGui::GetIO().DisplaySize;
+        ImGui::SetNextWindowPos(ImVec2(screen.x * 0.5f, screen.y * 0.45f), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowSize(ImVec2(std::min(Px(540.0f), screen.x * 0.9f), std::min(Px(440.0f), screen.y * 0.8f)),
+                                 ImGuiCond_Appearing);
+        bool open = true;
+        if (ImGui::Begin(T("What's new in Chat Messages###chatmsg_notes"), &open,
+                         ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings))
+        {
+            ImGui::PushTextWrapPos(0.0f);
+            const bool  english = Languages::ActiveId() == "en";
+            const ImGuiStyle& style = ImGui::GetStyle();
+            const float footer = ImGui::GetFrameHeightWithSpacing() * 2.0f + style.ItemSpacing.y +
+                                 (english ? 0.0f : ImGui::GetTextLineHeightWithSpacing());
+            ImGui::BeginChild("##notes", ImVec2(0.0f, -footer), true);
+            ImGui::PushTextWrapPos(0.0f);
+            for (size_t i = 0; i < s_Notes.size() && i < s_NoteBlocks.size(); i++)
+            {
+                if (i > 0)
+                {
+                    ImGui::Spacing();
+                    ImGui::Separator();
+                }
+                ImGui::TextColored(kWarnColor, T("Version %s"), s_Notes[i].Version.c_str());
+                for (const ReleaseNotes::Block& b : s_NoteBlocks[i])
+                {
+                    if (b.Kind == ReleaseNotes::EKind::Heading)
+                    {
+                        ImGui::Spacing();
+                        ImGui::TextColored(kFolderColor, "%s", b.Text.c_str());
+                    }
+                    else if (b.Kind == ReleaseNotes::EKind::Bullet)
+                    {
+                        const float in = Px(16.0f) * static_cast<float>(std::min(b.Indent, 4));
+                        if (in > 0.0f) ImGui::Indent(in);
+                        ImGui::Bullet();
+                        ImGui::BeginGroup(); // wrapped lines line up after the bullet
+                        ImGui::TextWrapped("%s", b.Text.c_str());
+                        ImGui::EndGroup();
+                        if (in > 0.0f) ImGui::Unindent(in);
+                    }
+                    else ImGui::TextWrapped("%s", b.Text.c_str());
+                }
+            }
+            ImGui::PopTextWrapPos();
+            ImGui::EndChild();
+            if (!english) ImGui::TextDisabled(T("The notes are in English."));
+            if (ImGui::Checkbox(T("Show what's new after each update"), &s_ShowNotes)) SaveShowNotes();
+            if (ImGui::Button(T("Close"))) open = false;
+            ImGui::PopTextWrapPos();
+        }
+        ImGui::End();
+        if (!open)
+        {
+            s_NotesOpen = false;
+            RememberNotesSeen();
+            s_Notes.clear();
+            s_NoteBlocks.clear();
+        }
     }
 
     // --- Language (Nexus options page) -------------------------------------------------------
@@ -4455,6 +4821,7 @@ namespace
 void Ui::Init()
 {
     UiFont::Init();
+    std::string notesSeen; // settings.json "notes_seen"
     {
         const nlohmann::json settings = Storage::LoadSettings();
         const auto it = settings.find(kTrashSetting);
@@ -4463,6 +4830,11 @@ void Ui::Init()
         s_ActiveOnly = active != settings.end() && active->is_boolean() && active->get<bool>(); // off by default
         const auto examples = settings.find(kExamplesSetting);
         s_ExamplesAdded = examples != settings.end() && examples->is_boolean() && examples->get<bool>();
+        const auto welcome = settings.find(Welcome::kShownSetting);
+        s_WelcomeShown = welcome != settings.end() && welcome->is_boolean() && welcome->get<bool>();
+        s_ShowNotes = ReleaseNotes::ShowFromSettings(settings);
+        const auto seen = settings.find(ReleaseNotes::kSeenSetting);
+        notesSeen = seen != settings.end() && seen->is_string() ? seen->get<std::string>() : std::string();
         const auto recent = settings.find(kRecentSetting);
         if (recent != settings.end()) s_Recent.FromJson(*recent);
         else s_Recent.Clear();
@@ -4484,21 +4856,45 @@ void Ui::Init()
     s_BackupInfos.clear();
     s_BackupInfo.clear();
     s_Mumble = static_cast<Mumble::Data*>(g_Api->DataLink_Get(DL_MUMBLE_LINK));
+    s_NexusLink = static_cast<NexusLinkData_t*>(g_Api->DataLink_Get(DL_NEXUS_LINK));
     s_LoadMessages.clear();
     const bool noLibrary = Storage::LoadMacros(s_Tree, s_LoadMessages);
-    // The starter library, once: on the first run (no macros.json yet). A library that already
-    // exists counts too, so removing macros.json later starts empty, as before.
-    bool saveExamples = false;
+    // A first run (no macros.json yet) gets the welcome: it asks about the example macros, then
+    // offers the tour. A library that already exists counts as seen, so removing macros.json
+    // later starts empty, as before (docs/design.md, "First-run welcome and tour").
     s_ExamplesRequest = false;
-    if (!s_ExamplesAdded && !Storage::AddonDir().empty())
+    s_WelcomePending  = false;
+    s_WelcomeRequest  = false;
+    s_TourOn          = false;
+    s_TourStartRequest = false;
+    Welcome::Start start;
+    if (!Storage::AddonDir().empty())
     {
-        if (noLibrary && s_Tree.Root().Children.empty() && Examples::Add(s_Tree))
+        start = Welcome::Decide(s_ExamplesAdded, s_WelcomeShown, noLibrary, s_Tree.Root().Children.empty());
+        s_WelcomePending = start.ShowWelcome;
+        if (start.ShowWelcome) LogF(LOGL_INFO, "First run: the welcome will ask about the example macros.");
+        if (start.MarkExamplesAdded)
         {
-            saveExamples = true;
-            LogF(LOGL_INFO, "First run: added the example macros.");
+            s_ExamplesAdded = true;
+            if (!Storage::SaveSetting(kExamplesSetting, true)) LogF(LOGL_WARNING, "The \"examples added\" setting couldn't be saved.");
         }
-        s_ExamplesAdded = true;
-        if (!Storage::SaveSetting(kExamplesSetting, true)) LogF(LOGL_WARNING, "The \"examples added\" setting couldn't be saved.");
+        if (start.MarkShown) NoteWelcomeShown();
+
+        // What's new: once after an update, from the changelog built into the DLL.
+        const std::vector<ReleaseNotes::Section> notes =
+            ReleaseNotes::Since(ReleaseNotes::Parse(ReadChangelog()), notesSeen, kVersionTag);
+        const ReleaseNotes::Start show =
+            ReleaseNotes::Decide(s_ShowNotes, start.ShowWelcome, notesSeen, kVersionTag, !notes.empty());
+        s_Notes.clear();
+        s_NoteBlocks.clear();
+        s_NotesOpen    = false;
+        s_NotesPending = show.Show;
+        if (show.Remember) RememberNotesSeen();
+        if (show.Show)
+        {
+            s_Notes = notes;
+            for (const ReleaseNotes::Section& s : s_Notes) s_NoteBlocks.push_back(ReleaseNotes::ToBlocks(s.Body));
+        }
     }
     for (const std::string& m : s_LoadMessages)
     {
@@ -4508,7 +4904,6 @@ void Ui::Init()
     s_LoadMessages.clear();
     ShowLanguageProblems();
     s_Dirty = false;
-    if (saveExamples) MarkDirty(); // saved like any edit
 }
 
 void Ui::Shutdown()
@@ -4527,6 +4922,15 @@ void Ui::Shutdown()
     s_Cooldowns.Clear();
     s_Recent.Clear();
     s_ExamplesRequest = false;
+    s_WelcomePending  = false;
+    s_WelcomeRequest  = false;
+    s_TourOn          = false;
+    s_TourStartRequest = false;
+    s_NotesPending    = false;
+    s_NotesOpen       = false;
+    s_Notes.clear();
+    s_NoteBlocks.clear();
+    s_NexusLink       = nullptr;
     s_BackupNames.clear();
     s_BackupInfos.clear();
     s_RestoreName.clear();
@@ -4544,7 +4948,26 @@ void Ui::Render()
     HandleHotkeys();
     UiFont::NewFrame();
     UiFont::Push(); // the chosen text size, for our windows only
+    if (s_WelcomePending && InGameplay()) // a first run: the library opens with the welcome in it
+    {
+        s_WelcomePending = false;
+        s_ShowMainWindow = true;
+        s_WelcomeRequest = true;
+    }
+    if (s_NotesPending && InGameplay())
+    {
+        s_NotesPending = false;
+        s_NotesOpen    = true;
+    }
+    if (s_TourStartRequest)
+    {
+        s_TourStartRequest = false;
+        s_ShowMainWindow   = true;
+        StartTour();
+    }
     if (s_ShowMainWindow) DrawMainWindow();
+    DrawTour();
+    DrawNotesWindow();
     DrawImportWindow();
     DrawExportWindow();
     DrawQuickMenuPopup();
@@ -4578,6 +5001,11 @@ void Ui::RenderOptions()
                               "channels, a whisper, placeholders and filters. If you already have it, the library\n"
                               "asks whether to replace it with a fresh copy. Your own macros aren't changed.\n"
                               "The examples have no hotkeys."));
+        ImGui::SameLine();
+        if (ImGui::Button(T("Take the tour"))) s_TourStartRequest = true;
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip(T("Opens the library and shows its parts, one step at a time."));
+        if (ImGui::Checkbox(T("Show what's new after each update"), &s_ShowNotes)) SaveShowNotes();
+        ImGui::TextDisabled(T("Once after each update, a window lists what changed (in English)."));
         ImGui::Spacing();
         UiFont::DrawCombo(T("Text size"));
         ImGui::TextDisabled(T("The size of the text in this addon's windows (not this page)."));

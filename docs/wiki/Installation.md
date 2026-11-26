@@ -42,7 +42,13 @@ Neither has a key by default. Your macro hotkeys are set in the addon itself (se
 
 ## Updating and removing
 
-- To update, replace the DLL. Your macros are kept, because they're stored in a separate folder
-  (see [Files and data](Files-and-Data)).
+- To update, replace the DLL (or let Nexus update it). Your macros are kept, because they're
+  stored in a separate folder (see [Files and data](Files-and-Data)).
+- **What's new:** once after each update, a window lists what changed in that version (in
+  English; it scrolls when it's long). Untick **Show what's new after each update**, in the window
+  or on the addon's page in Nexus options, to turn it off.
+
+<!-- screenshot: whats-new.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the What's new window after an update.*
 - To remove the addon, delete the DLL. Delete `<GW2>\addons\GW2_Chat_Messages\` too if you don't want
   to keep your macros.

@@ -13,6 +13,9 @@ IDR_LANG_DE     LOCALE "..\\localization\\de.json"
 IDR_LANG_FR     LOCALE "..\\localization\\fr.json"
 IDR_LANG_ES     LOCALE "..\\localization\\es.json"
 
+// The changelog, for "What's new" after an update (docs/design.md, "Update notes").
+IDR_CHANGELOG   NOTES  "..\\CHANGELOG.md"
+
 // Shown in the DLL's Properties > Details. The numbers are YYYY, MM, DD, HHMM, all UTC.
 VS_VERSION_INFO VERSIONINFO
  FILEVERSION    CHATMSG_VER_YEAR, CHATMSG_VER_MONTH, CHATMSG_VER_DAY, CHATMSG_VER_TIME

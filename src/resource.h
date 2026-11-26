@@ -10,3 +10,6 @@
 #define IDR_LANG_DE     202
 #define IDR_LANG_FR     203
 #define IDR_LANG_ES     204
+
+// CHANGELOG.md (resource type "NOTES"), for "What's new" after an update (docs/design.md, "Update notes").
+#define IDR_CHANGELOG   301

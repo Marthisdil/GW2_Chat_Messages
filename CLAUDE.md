@@ -161,6 +161,12 @@ to the todo list", add it there (don't start building it). Move agreed items int
   `"editor_sections"` in `settings.json`) and the note's one-line summary (`ShortNote`). No Nexus
   or ImGui dependency. Tested by `tests/EditorLayoutTests.cpp`. The layout itself is in `Ui.cpp`
   (`docs/design.md`, "Macro editor layout").
+- `src/Welcome.*`: the first-run welcome (`Decide`: a real first run only, `"welcome_shown"`)
+  and the library tour's steps (`Steps`, `TX` texts, `NeedsMacro`). `src/ReleaseNotes.*`: "What's
+  new" after an update, from `CHANGELOG.md` built in as resource type `NOTES` (`Parse`, `Since`,
+  `Decide`, `ToBlocks`; `"notes_seen"`, `"show_update_notes"`). No Nexus or ImGui dependency.
+  Both tested by `tests/WelcomeTests.cpp`. `Ui.cpp` draws them: tour targets call `TourMark`
+  after they're drawn (`docs/design.md`, "First-run welcome and tour", "Update notes").
 - `src/Cooldown.*`: the hotkey cooldown and the 1-second guard after a send (`Tracker`), per
   macro; only hotkeys wait. No Nexus or ImGui dependency. Tested by `tests/CooldownTests.cpp`.
 - `src/Placeholders.*`: fills in `{time}`, `{random}`, `{map}` and the other placeholders. The
@@ -229,7 +235,8 @@ to the todo list", add it there (don't start building it). Move agreed items int
   only touched on the render thread. Never change the tree while drawing it: queue an `Action`
   and apply it after. Open popups at the main window's ID level, not from inside a child window.
 - `src/resource.h` + `src/GW2_Chat_Messages.rc`: Quick Access icons embedded as resource type
-  `PNG`, and the built-in language files (`localization/en|de|fr|es.json`) as type `LOCALE`. The icon is a speech bubble with a lightning bolt (the "quick bubble"); regenerate it with `tools/draw_chat_icon.ps1 -OutDir resources\icons`.
+  `PNG`, the built-in language files (`localization/en|de|fr|es.json`) as type `LOCALE`, and
+  `CHANGELOG.md` as type `NOTES` (for "What's new"). The icon is a speech bubble with a lightning bolt (the "quick bubble"); regenerate it with `tools/draw_chat_icon.ps1 -OutDir resources\icons`.
   The other icon concepts that were considered are in `docs/icon-suggestions/` (README + SVGs).
 - `vendor/`: submodules `nexus`, `mumble`, `imgui` (tag v1.80) and `json` (nlohmann v3.11.3,
   shallow). Include json as `<nlohmann/json.hpp>`.
@@ -259,7 +266,8 @@ to the todo list", add it there (don't start building it). Move agreed items int
 - The GitHub updater ships only the DLL, so assets (icons etc.) must be embedded as resources.
 - Versions are `YYYY.MM.DD.HHMM.Channel` (date and time both UTC; Channel `Dev` until initial development is done,
   then `Beta` or `Rel`). For every release run `tools\set_version.ps1 -Channel Dev` and commit
-  `src/Version.h`. The GitHub release tag is the numbers only (`2026.11.21.1412`; Nexus ignores
+  `src/Version.h` and `CHANGELOG.md` (it moves the `[Unreleased]` notes under the new version,
+  which "What's new" shows after the update). The GitHub release tag is the numbers only (`2026.11.21.1412`; Nexus ignores
   suffixed tags); Dev and Beta releases are GitHub pre-releases.
 
 ## Building (local notes)
