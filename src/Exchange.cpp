@@ -490,6 +490,7 @@ namespace
         aDst.LinkFile.clear();
         aDst.Hotkey    = aKeepHotkey ? aSrc.Hotkey : Hotkey::Combo();
         aDst.CooldownSec = aSrc.CooldownSec;
+        aDst.Note      = aSrc.Note;
         aDst.Extra     = aSrc.Extra; // a newer version's fields come along (the lines keep theirs)
     }
 

@@ -22,6 +22,7 @@
             "favourite": true,
             "hotkey": "Ctrl+Alt+R",
             "cooldown_sec": 30,
+            "note": "Before each boss\nNeeds commander tag",
             "lines": [
               { "channel": "squad", "message": "Ready check in 10s", "squad_broadcast": true },
               { "channel": "whisper", "message": "You're up", "whisper_to": "Some Name.1234" },

@@ -77,13 +77,14 @@ of:
 
 - a folder's or macro's **name**,
 - the **text of a macro's lines**, or a whisper's **recipient**,
-- a **hotkey**, like `ctrl+f1`.
+- a **hotkey**, like `ctrl+f1`,
+- a macro's [note](Editing-Macros#note).
 
 Case and accents don't matter: `cafe` finds `Café`. While you search:
 
 - The tree shows only what matches, with the folders above each match opened. Matched text in a
-  name is highlighted; a macro found by its lines or hotkey says "(found in its lines)" or
-  "(found in its hotkey)". A matching folder shows everything inside it.
+  name is highlighted; a macro found by its lines, hotkey or note says "(found in its lines)",
+  "(found in its hotkey)" or "(found in its note)". A matching folder shows everything inside it.
 - A line above the tree counts the matches, or says nothing matches.
 - Dragging, **Move up** and **Move down** are off, because the tree isn't complete. The trash bin
   isn't searched or shown.
@@ -112,6 +113,8 @@ Right-click any item in the tree for:
 
 - **New folder inside** / **New macro inside** (folders)
 - **Send now** (macros)
+- **Duplicate** (macros): a copy right below it, without the hotkey, see
+  [Editing macros](Editing-Macros#duplicate)
 - **Favourite**: ticks or unticks it (folders and macros, up to 10), see [Favourites and recently sent](Sending-Macros#favourites-and-recently-sent)
 - **Rename**
 - **Move up** / **Move down** (not while [searching](#search))

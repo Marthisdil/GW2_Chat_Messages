@@ -155,6 +155,56 @@ static void TestFind()
     CHECK(Find(c, "zzz", 10).empty());
 }
 
+// A game update (MumbleLink's BuildID) fetches the list again, and once more a day later.
+static void TestBuilds()
+{
+    const int64_t day = kRecheckSeconds;
+    Cache c;
+    c.Listed = {15, 50};
+    c.ListedAt = 1000; // an older addon's list, with no build
+    // The first build ever seen is only remembered: no second fetch on a first start.
+    CHECK(!NoteBuild(c, 0, 2000));
+    CHECK(NoteBuild(c, 100, 2000));
+    CHECK(c.Build == 100 && c.ListedBuild == 100 && c.BuildSeenAt == 0);
+    CHECK(!RefreshDue(c, 2000) && !RefreshDue(c, 2000 + 2 * day));
+    CHECK(!NoteBuild(c, 100, 3000)); // the same build again: nothing new
+
+    // A game update: due at once.
+    CHECK(NoteBuild(c, 101, 5000));
+    CHECK(c.Build == 101 && c.BuildSeenAt == 5000 && c.ListedBuild == 100);
+    CHECK(RefreshDue(c, 5000));
+    ListFetched(c, 5060);
+    CHECK(c.ListedBuild == 101 && c.ListedAt == 5060);
+    CHECK(!RefreshDue(c, 5060) && !RefreshDue(c, 5000 + day - 1));
+    // A day later, once more; then not again.
+    CHECK(RefreshDue(c, 5000 + day));
+    ListFetched(c, 5000 + day + 30);
+    CHECK(!RefreshDue(c, 5000 + day + 60) && !RefreshDue(c, 5000 + 3 * day));
+    // The weekly refresh still applies.
+    CHECK(RefreshDue(c, 5000 + day + 30 + kRefreshSeconds));
+
+    // An update before the first list was fetched: the first fetch is the build's.
+    Cache fresh;
+    CHECK(NoteBuild(fresh, 7, 100) && fresh.ListedBuild == 0 && RefreshDue(fresh, 100));
+    fresh.Listed = {15};
+    ListFetched(fresh, 160);
+    CHECK(fresh.ListedBuild == 7 && !RefreshDue(fresh, 200));
+
+    // Saved in maps.json and read back, whatever the language.
+    const std::string text = ToJson(c);
+    Cache back;
+    FromJson(text, "de", back);
+    CHECK(back.Build == 101 && back.BuildSeenAt == 5000 && back.ListedBuild == 101);
+    Cache same;
+    CHECK(FromJson(text, c.Lang, same) && same.Build == 101 && same.ListedBuild == 101);
+    // Bad values are ignored.
+    Cache bad;
+    FromJson("{\"format\":2,\"lang\":\"en\",\"build\":-1,\"listed_build\":\"x\",\"build_seen_at\":5}", "en", bad);
+    CHECK(bad.Build == 0 && bad.ListedBuild == 0 && bad.BuildSeenAt == 0);
+    FromJson("{\"format\":2,\"lang\":\"en\",\"build\":99999999999}", "en", bad);
+    CHECK(bad.Build == 0);
+}
+
 void RunMapCatalogTests()
 {
     TestApiLang();
@@ -162,4 +212,5 @@ void RunMapCatalogTests()
     TestJsonRoundTrip();
     TestRefreshAndVisits();
     TestFind();
+    TestBuilds();
 }

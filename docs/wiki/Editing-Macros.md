@@ -4,8 +4,27 @@ Select a macro in the library to edit it on the right. Changes are saved automat
 
 A macro has a **title**, one or more **lines**, an optional **hotkey** (see
 [Sending macros](Sending-Macros)), a **Favourite** box (favourites are at the top of the
-[quick menu](Sending-Macros#favourites-and-recently-sent)) and **where it's active** (see
-[Filters](Filters)).
+[quick menu](Sending-Macros#favourites-and-recently-sent)), **where it's active** (see
+[Filters](Filters)) and a **note**.
+
+## Note
+
+**Note (never sent)** is a box for what the macro is for, or when to use it ("Before each boss,
+needs a commander tag"). It's never typed into chat. You see it in grey above the lines when you
+hover over the macro in the [quick menu](Sending-Macros#quick-menu), and the library's
+[search](The-Macro-Library#search) finds it. A note can have up to 10 lines and 1000 bytes
+(about 1000 letters, fewer with accents); it's exported and imported with the macro.
+
+<!-- screenshot: editor-note.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: a macro's editor with a note.*
+
+## Duplicate
+
+Right-click a macro in the library > **Duplicate** to make a variant of it. The copy goes right
+below it and is selected, named "Hello (2)" (a copy of "Hello (2)" is "Hello (3)", or the next
+free number). It has the same lines, filters, cooldown and note. It has **no hotkey** (a hotkey
+belongs to one macro), isn't a favourite, and isn't linked to a text file. Folders can't be
+duplicated.
 
 ## Lines
 

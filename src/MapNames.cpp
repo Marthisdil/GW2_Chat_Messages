@@ -33,6 +33,8 @@ namespace
     constexpr auto        kRetryAfter   = std::chrono::minutes(5);  // after a failed lookup
     constexpr auto        kRefreshDelay = std::chrono::seconds(10); // let the language settle at load
     constexpr auto        kListPause    = std::chrono::milliseconds(250); // between list requests
+    constexpr auto        kBuildDelay   = std::chrono::minutes(1);  // after a new game build: past the loading screen
+    constexpr auto        kListRetry    = std::chrono::minutes(30); // a failed list fetch: Check waits this long
 
     std::mutex                                      s_Mutex;
     std::condition_variable                         s_Cv;
@@ -45,6 +47,7 @@ namespace
     bool                                            s_RefreshWanted = false;
     Clock::time_point                               s_RefreshAt;
     bool                                            s_Refreshing = false;
+    Clock::time_point                               s_ListRetryAt;  // Check starts no list fetch before this
     std::string                                     s_LastError;
     std::filesystem::path                           s_File;
 
@@ -153,6 +156,7 @@ namespace
         s_Refreshing = false;
         if (!error.empty())
         {
+            s_ListRetryAt = Clock::now() + kListRetry;
             s_LastError = error;
             LogF(LOGL_WARNING, "Map list: %s", error.c_str());
             return;
@@ -161,7 +165,7 @@ namespace
         s_LastError.clear();
         for (auto& kv : found) s_Cache.Maps[kv.first] = std::move(kv.second);
         s_Cache.Listed = std::set<uint32_t>(ids.begin(), ids.end());
-        s_Cache.ListedAt = NowUtc();
+        MapCatalog::ListFetched(s_Cache, NowUtc());
         s_Dirty = true;
         SaveFile();
         LogF(LOGL_INFO, "Map list: %zu maps from the GW2 API.", ids.size());
@@ -278,6 +282,7 @@ void MapNames::Init()
     s_LangSet = false;
     s_RefreshWanted = false;
     s_Refreshing = false;
+    s_ListRetryAt = Clock::time_point();
     s_LastError.clear();
     const std::filesystem::path dir = Storage::AddonDir();
     s_File = dir.empty() ? std::filesystem::path() : dir / "maps.json";
@@ -312,11 +317,16 @@ void MapNames::SetLanguage(const std::string& aAddonLang)
         std::lock_guard<std::mutex> lock(s_Mutex);
         if (lang != s_Cache.Lang)
         {
-            // Names in another language: start again, keeping the maps you've been to.
+            // Names in another language: start again, keeping the maps you've been to and the
+            // game build seen.
             std::vector<uint32_t> visited = std::move(s_Cache.Visited);
+            const uint32_t build = s_Cache.Build;
+            const int64_t seenAt = s_Cache.BuildSeenAt;
             s_Cache = MapCatalog::Cache();
             s_Cache.Lang = lang;
             s_Cache.Visited = std::move(visited);
+            s_Cache.Build = build;
+            s_Cache.BuildSeenAt = seenAt;
             s_NotBefore.clear();
             s_Dirty = true;
             WantRefresh(kRefreshDelay);
@@ -423,6 +433,27 @@ bool MapNames::Unlisted(uint32_t aMapId)
 {
     std::lock_guard<std::mutex> lock(s_Mutex);
     return MapCatalog::Unlisted(s_Cache, aMapId);
+}
+
+void MapNames::Check(uint32_t aGameBuild)
+{
+    {
+        std::lock_guard<std::mutex> lock(s_Mutex);
+        const int64_t now = NowUtc();
+        if (MapCatalog::NoteBuild(s_Cache, aGameBuild, now))
+        {
+            s_Dirty = true;
+            SaveFile();
+            if (s_Cache.BuildSeenAt == now)
+                LogF(LOGL_INFO, "Map list: the game was updated (build %u), so the map list is fetched again.", aGameBuild);
+        }
+        // Only once the language is known (SetLanguage), never while one runs or is queued, and
+        // not again soon after a failed one.
+        if (!s_LangSet || s_Refreshing || s_RefreshWanted || Clock::now() < s_ListRetryAt) return;
+        if (!MapCatalog::RefreshDue(s_Cache, now)) return;
+        WantRefresh(kBuildDelay);
+    }
+    s_Cv.notify_one();
 }
 
 void MapNames::RefreshNow()

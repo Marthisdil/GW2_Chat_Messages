@@ -20,7 +20,7 @@ A Nexus addon that sends pre-written chat messages. It is modelled on the Blish 
 ```
 Node   = Folder | Macro            (each has a stable id: 64-bit random, hex in JSON)
 Folder = { id, name, children: [Node], expanded }
-Macro  = { id, title, lines: [Line], gameModes: PvE|WvW|PvP, mapIds: [int], linkFile? }
+Macro  = { id, title, lines: [Line], gameModes: PvE|WvW|PvP, mapIds: [int], linkFile?, note? }
 Line   = { channel, message, whisperTo?, squadBroadcast? }
 channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
           Guild, Guild1..Guild6
@@ -84,6 +84,25 @@ reading a newer one (someone going back a version, or importing a friend's expor
 - Advanced options: no. This is invisible plumbing, the same with the box off and on.
 
 ## Features carried over from bhm-chat-macros
+
+- **Duplicate** (built 2026-11-26 from the todo list; `Tree::Duplicate`, tested in
+  `tests/MacroTreeTests.cpp`): right-click a macro > **Duplicate**. The copy goes right below it
+  and is selected. It keeps the lines, filters, cooldown, note and a newer version's fields
+  (`Extra`); it has no hotkey (a hotkey stays unique), isn't a favourite (at most 10, your choice)
+  and isn't linked to a file (one file, one macro). Names: "Hello" > "Hello (2)", and "Hello (2)"
+  > "Hello (3)", the next free number. Only a trailing " (n)" with 1 to 6 digits and no leading 0
+  counts as a number ("Wing (02)" > "Wing (02) (2)"). Folders can't be duplicated. Not behind
+  Advanced options: an everyday edit.
+- **Notes** (built 2026-11-26 from the todo list): a macro's **Note (never sent)**, a box about 3
+  lines tall in the editor, under the link file. It's shown in grey above the lines in the quick
+  menu's hover preview, found by the search ("(found in its note)"), copied by Duplicate,
+  exported and imported. Saved as `"note"` in `macros.json` and exports, only when there is one
+  (additive, the format stays 1). `Tree::CleanNote` cleans it, also when it's read from a file:
+  "\r\n" and "\r" become "\n", other control characters (tabs, C1) become spaces, at most 10
+  lines (later breaks become spaces) and 1000 bytes (cut on a character boundary; a longer one
+  from a file is shortened with a warning), no spaces at the end of a line, no blank lines at
+  the end. The editor's box keeps what's typed while it's being edited and shows a warning past
+  1000 bytes. Folders have no note. Not behind Advanced options: never sent, useful to anyone.
 
 - Per-line channel dropdown plus message box (the "fancy" editor). It has add, remove and
   reorder buttons.
@@ -184,6 +203,16 @@ reading a newer one (someone going back a version, or importing a friend's expor
     `listed_at` (UTC seconds); a file in another format is rebuilt. The maps visited moved to
     `settings.json` (`visited_maps`, 2026-11-26): `maps.json` is only a cache. Names and regions must
     pass `Localization::SafeText` and be at most 200 bytes; the file is read only up to 4 MB.
+  - **After a game update** (built 2026-11-26 from the todo list): once a minute the render thread
+    passes MumbleLink's `Context.BuildID` to `MapNames::Check`. A new build (`MapCatalog::NoteBuild`)
+    fetches the full list again a minute later (past the loading screen), and once more a day
+    after (the API may list a new map a little after the patch); the weekly refresh goes on. The
+    first build ever seen (a first run, or an older addon's `maps.json`) is only remembered, so a
+    first start doesn't fetch twice; 0 (MumbleLink not filled in yet) is ignored. A failed fetch
+    is tried again after 30 minutes. `maps.json` gains `build` (the last build seen),
+    `build_seen_at` (when it was first seen, UTC seconds) and `listed_build` (the build the list
+    was fetched under), written when not 0 and kept on a language change (additive). Not behind
+    Advanced options: automatic and invisible.
   - Syntax: `{name arg arg}`, case-insensitive, arguments separated by spaces.
   - Differences from bhm, on purpose: an unknown `{word}` is sent as typed (bhm drops the whole
     line), and a known placeholder that fails stops the whole macro with a message (bhm silently
@@ -532,14 +561,14 @@ Examples
 - A **Search (Ctrl+F)** box above the tree, in the tree pane's width, with an **x** button while
   it holds text.
 - **What matches:** a folder by its name; a macro by its name, the text of any line, a whisper
-  recipient, or its hotkey's text (`ctrl+f1`). The whole trimmed query is looked for as one piece
+  recipient, its hotkey's text (`ctrl+f1`), or its note. The whole trimmed query is looked for as one piece
   of text. Case and accents are ignored (`Search::Fold`: Latin-1 letters and œ lose their accents,
   ß is `ss`). The trash bin isn't searched.
 - **Results: a filtered tree.** Only matches, the folders above them and everything inside a
   matching folder are shown. Folders above a match are held open while searching without changing
   their saved open state, so clearing the search brings the tree back as it was. Matched text in
-  a name is highlighted; a macro found by its lines or hotkey gets "(found in its lines)" /
-  "(found in its hotkey)". A line above the tree counts folder and macro matches, or says nothing
+  a name is highlighted; a macro found by its lines, hotkey or note gets "(found in its lines)" /
+  "(found in its hotkey)" / "(found in its note)" (a macro also matches by its note, 2026-11-26). A line above the tree counts folder and macro matches, or says nothing
   matches.
 - **While searching:** dragging and dropping, Move up and Move down are off (hidden neighbours);
   the trash bin is hidden; a selected item that's no longer shown is unselected. Editing still

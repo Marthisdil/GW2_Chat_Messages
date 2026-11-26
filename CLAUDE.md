@@ -109,7 +109,9 @@ to the todo list", add it there (don't start building it). Move agreed items int
   It also holds the filter rules (`GameModeOfMapType`, `ReachOf`, `IsActive`, `NeverActive`,
   `FiltersOverlap`; a folder's filter adds to everything inside it), tested by
   `tests/FilterTests.cpp`, and the trash bin (`MoveToTrash`, `Restore`, saved under `"trash"`),
-  tested by `tests/TrashTests.cpp`.
+  tested by `tests/TrashTests.cpp`. A macro's note (`Node::Note`, never sent, cleaned by
+  `Tree::CleanNote`: 10 lines, 1000 bytes) and `Tree::Duplicate` (no hotkey, favourite or link
+  file) are tested in `tests/MacroTreeTests.cpp`.
   Every tree rule change needs a test. The saved-file rules (`docs/design.md`, "Saved files"):
   `kFormatVersion`, fields from a newer version kept (`Extra`, size-limited), an unknown channel
   kept and never sent (`Line::UnknownChannel`), a newer file read-only (`FromNewerVersion`),
@@ -131,7 +133,7 @@ to the todo list", add it there (don't start building it). Move agreed items int
 - `src/GameKeys.*`: GW2's default keybinds (from the GW2 wiki), so the hotkey editor can warn
   about a shared key. No Nexus or ImGui dependency. Tested by `tests/GameKeysTests.cpp`.
 - `src/Search.*`: the library's search box: what matches (names, line text, whisper recipients,
-  hotkeys; case and accents ignored) and which tree nodes show, plus the "only active here" filter (`Where`), also used by the
+  hotkeys, notes; case and accents ignored) and which tree nodes show, plus the "only active here" filter (`Where`), also used by the
   quick menu search. No Nexus or ImGui dependency.
   Tested by `tests/SearchTests.cpp`.
 - `src/Hotkeys.*`: the WndProc hook that reads presses and captures a new hotkey. It only queues
@@ -164,10 +166,12 @@ to the todo list", add it there (don't start building it). Move agreed items int
   add a placeholder that reads files or fetches an address written in a macro.
 - `src/Http.*`: a small blocking WinHTTP GET (worker threads only), only for addresses built into
   the addon. `src/MapNames.*`: GW2 API map names cached in `maps.json`, looked up on a background
-  thread, plus the API's full map list (fetched weekly, on a language change and on request) and
+  thread, plus the API's full map list (fetched weekly, on a language change, after a game
+  update (MumbleLink's `BuildID`, `MapNames::Check`, and once more a day later) and on request) and
   the maps visited (saved in `settings.json`, `visited_maps`: `maps.json` is only a cache). Link
   `winhttp.lib`. `src/MapCatalog.*`: its rules (parsing the API, the `maps.json` format, the map
-  picker's search, visited maps), no Nexus or ImGui dependency,
+  picker's search, visited maps, when a game build makes a refresh due: `NoteBuild`,
+  `ListFetched`), no Nexus or ImGui dependency,
   tested by `tests/MapCatalogTests.cpp`.
 - `src/PathText.*`: paths to and from UTF-8 without throwing (a bad sequence becomes U+FFFD).
   Never call `path::u8string()`, `path::string()` or `fs::u8path()`: use `PathText::Utf8` and

@@ -8,7 +8,8 @@
 //  - Get() returns a name, looking it up right away if needed (blocks: worker threads only).
 //  - Lookup()/Label()/Find()/Visited()/Unlisted()/State() only read the cache (render thread OK).
 //  - The API's full list of maps is fetched in the background on the first run, once a week, when
-//    the language changes, and on RefreshNow(). It's what the filter editor's map search uses.
+//    the language changes, after a game update (Check), and on RefreshNow(). It's what the
+//    filter editor's map search uses.
 
 #include <cstdint>
 #include <string>
@@ -52,6 +53,10 @@ namespace MapNames
 
     // Fetch the full list again now (the options page's button).
     void RefreshNow();
+    // About once a minute (render thread): the game's build (MumbleLink's BuildID; 0 = not known
+    // yet). A new build (a game update) fetches the list again a minute later, and once more a
+    // day after (MapCatalog::RefreshDue); so does a weekly refresh that came due while playing.
+    void Check(uint32_t aGameBuild);
     struct State
     {
         bool        Refreshing = false;

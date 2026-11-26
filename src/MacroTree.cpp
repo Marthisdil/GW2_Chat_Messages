@@ -119,7 +119,7 @@ namespace MacroTree
         // Extra and written back.
         constexpr const char* kTopKeys[]  = {"format", "saved_by", "kind", "root", "trash"};
         constexpr const char* kNodeKeys[] = {"type", "id", "name", "favourite", "expanded", "game_modes", "map_ids",
-                                             "children", "lines", "link_file", "hotkey", "cooldown_sec"};
+                                             "children", "lines", "link_file", "hotkey", "cooldown_sec", "note"};
         constexpr const char* kLineKeys[] = {"channel", "message", "whisper_to", "squad_broadcast"};
         constexpr const char* kRootKeys[] = {"children"}; // the "root" object itself
         constexpr const char* kTrashKeys[] = {"item", "from_ids", "from_names", "from_index", "deleted_at"};
@@ -202,6 +202,7 @@ namespace MacroTree
                 if (!n.LinkFile.empty()) j["link_file"] = n.LinkFile;
                 if (!n.Hotkey.Empty()) j["hotkey"] = Hotkey::ToString(n.Hotkey);
                 if (n.CooldownSec > 0) j["cooldown_sec"] = n.CooldownSec;
+                if (!n.Note.empty()) j["note"] = n.Note;
             }
             MergeExtra(j, n.Extra);
             return j;
@@ -404,6 +405,12 @@ namespace MacroTree
                     }
                 }
                 n.LinkFile = StringField(j, "link_file");
+                // A note (maybe someone else's): never sent, but drawn, so it's cleaned and capped.
+                const std::string note = StringField(j, "note");
+                n.Note = Tree::CleanNote(note);
+                if (note.size() > kMaxNoteLength)
+                    Warn(Localization::Fmt(TR("Macro \"%s\": its note was longer than %zu bytes and was shortened."),
+                                           n.Name.c_str(), kMaxNoteLength));
                 const std::string hk = StringField(j, "hotkey");
                 if (!hk.empty())
                 {
@@ -636,6 +643,83 @@ namespace MacroTree
             s.resize(last == std::string::npos ? 0 : last + 1);
         }
         return s;
+    }
+
+    std::string Tree::CleanNote(const std::string& aNote)
+    {
+        std::string s;
+        s.reserve(aNote.size());
+        size_t lines = 1;
+        for (size_t i = 0; i < aNote.size(); i++)
+        {
+            char c = aNote[i];
+            if (c == '\r')
+            {
+                if (i + 1 < aNote.size() && aNote[i + 1] == '\n') continue; // "\r\n": the '\n' follows
+                c = '\n';
+            }
+            if (c == '\n')
+            {
+                while (!s.empty() && s.back() == ' ') s.pop_back(); // no spaces at a line's end
+                if (lines >= kMaxNoteLines) { s += ' '; continue; }
+                lines++;
+            }
+            s += c;
+        }
+        // Everything but the line breaks: tabs and other control characters become spaces.
+        std::string out;
+        size_t start = 0;
+        for (;;)
+        {
+            const size_t nl = s.find('\n', start);
+            out += ChatLine::ControlsToSpaces(s.substr(start, nl == std::string::npos ? std::string::npos : nl - start));
+            if (nl == std::string::npos) break;
+            out += '\n';
+            start = nl + 1;
+        }
+        out = CutUtf8(std::move(out), kMaxNoteLength);
+        while (!out.empty() && (out.back() == ' ' || out.back() == '\n')) out.pop_back();
+        return out;
+    }
+
+    Result Tree::Duplicate(Node& aMacro)
+    {
+        if (!aMacro.IsMacro() || !aMacro.Parent) return Result::Fail(TR("Only a macro can be duplicated."));
+        Node& parent = *aMacro.Parent;
+        // "Hello (2)" -> "Hello (3)", not "Hello (2) (2)".
+        std::string base = aMacro.Name;
+        int n = 2;
+        const size_t open = base.rfind(" (");
+        if (open != std::string::npos && open > 0 && base.size() > open + 3 && base.back() == ')')
+        {
+            const std::string digits = base.substr(open + 2, base.size() - open - 3);
+            if (digits.size() <= 6 && digits.find_first_not_of("0123456789") == std::string::npos && digits[0] != '0')
+            {
+                n = std::stoi(digits) + 1;
+                base.resize(open);
+            }
+        }
+        // NumberedName gives a new name for every n, so this ends.
+        std::string name = NumberedName(base, n);
+        while (!CheckName(parent, ENodeType::Macro, name, nullptr).Ok) name = NumberedName(base, ++n);
+
+        auto copy = std::make_unique<Node>();
+        copy->Id          = NewId();
+        copy->Type        = ENodeType::Macro;
+        copy->Name        = name;
+        copy->Parent      = &parent;
+        copy->GameModes   = aMacro.GameModes;
+        copy->MapIds      = aMacro.MapIds;
+        copy->Lines       = aMacro.Lines;
+        copy->CooldownSec = aMacro.CooldownSec;
+        copy->Note        = aMacro.Note;
+        copy->Extra       = aMacro.Extra;
+        // Left out: Hotkey (unique), Favourite (at most 10, your choice), LinkFile (one file, one macro).
+        Result r;
+        r.Target = copy.get();
+        auto& siblings = parent.Children;
+        siblings.insert(siblings.begin() + static_cast<std::ptrdiff_t>(IndexInParent(aMacro) + 1), std::move(copy));
+        return r;
     }
 
     std::string Tree::NumberedName(const std::string& aName, int aN)

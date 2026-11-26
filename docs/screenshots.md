@@ -43,7 +43,7 @@ its picture is out of date).
 |---|---|---|---|---|
 | 1 | `library-window.png` | The whole library window: a few folders (e.g. *Raids › Wing 3*, *WvW*, *Guild*) with one expanded, and a macro selected so the editor shows on the right (with **Advanced options** off, so no **Cooldown** row, **Lines / Raw text** choice or **Text file link** section). The empty **Search (Ctrl+F)** box and the unticked **Only active in ...** checkbox show above the tree. | README, wiki Home, The macro library | Captured (2026-11-25), retake |
 | 2 | `chat-result.png` | The game's chat box right after sending a multi-line macro, showing two or three lines in different channels (e.g. squad, party, map). | README | Captured (2026-11-25), retake |
-| 3 | `quick-menu.png` | The quick menu open from right-clicking the chat bubble icon: the empty search box at the top, nested folders under it, and the mouse over a macro so its line preview shows. | README, Sending macros | Captured (2026-11-25), retake |
+| 3 | `quick-menu.png` | The quick menu open from right-clicking the chat bubble icon: the empty search box at the top, nested folders under it, and the mouse over a macro (one with a note) so its note and line preview show. | README, Sending macros | Captured (2026-11-25), retake |
 | 5 | `nexus-game-keybinds.png` | Nexus > Options > Game Keybinds, showing the **Chat** (and **Squad Broadcast**) keys set. | Installation | Needed |
 | 6 | `tree-context-menu.png` | Right-click menu on a folder in the library tree (shows Export, Import into this folder, Sort...). | The macro library | Needed |
 | 7 | `macro-editor-lines.png` | With **Advanced options** off (the default): the macro editor's lines (no Lines / Raw text choice above them) with 3-4 lines: a say line, a whisper with a recipient, a squad line with **Broadcast** ticked, and the character counters under the message boxes (ideally one long line with a yellow counter). | Editing macros | Needed |
@@ -80,6 +80,7 @@ its picture is out of date).
 | 37 | `folder-filters.png` | The library with two or three folders that have filters, showing their tags (`Roaming  [WvW]`, `LA  [1 map]`), one of them dimmed because it isn't active here, and that folder selected: its details show **Where it's active** open with WvW ticked, a map listed, and "Not active here". | Filters | Needed |
 | 39 | `options-advanced.png` | The addon's page in Nexus > Options, **General** tab, scrolled to the bottom: the **Advanced options** checkbox (unticked) with **[?]** next to it (the mouse over **[?]**, so its tooltip with the wiki address shows), the text under it listing the features behind it, and the two yellow lines "1 macro(s) linked to a text file..." and "1 macro(s) with a cooldown..." (have one of each). | Advanced options | Needed |
 | 40 | `advanced-off-macro.png` | With **Advanced options** off: a macro linked to a text file selected in the library, dimmed in the tree, its editor showing the yellow "This macro is linked to a text file, which is an advanced option..." note above a faded **Send now**, and no **Text file link** section. | Advanced options | Needed |
+| 42 | `editor-note.png` | A macro selected in the library, its editor showing **Note (never sent):** with a two-line note in the box (e.g. "Before each boss" / "Needs commander tag") under the filters, and the lines below. | Editing macros | Needed |
 | 38 | `new-folder-modes.png` | The **New folder** name box with a name typed and **Active in:** PvE / WvW / PvP below it (WvW only ticked), and the "Maps: in the folder's details" line. | The macro library | Needed |
 
 ## Retakes
@@ -92,8 +93,8 @@ its row in the list moves to Done.
 | Image | What to change | Noted |
 |---|---|---|
 | `chat-result.png` | The middle line is the game's red "No one hears you." because nobody was near for the **Say** line. Retake with someone nearby, or with a macro whose lines go to Party and Squad, so every line shows as sent. | 2026-11-25 |
-| `library-window.png` | It shows the **Cooldown:** row, the **Lines / Raw text** choice and the **Text file link: none** header in the editor, which are now hidden unless **Advanced options** is ticked (2026-11-25). Retake the same view with the box off (the default). | 2026-11-25 |
-| `quick-menu.png` | No line preview shows: retake with the mouse resting over a macro (e.g. **Two channels**) so its lines appear next to the menu, as the row asks. The search box's hint is also cut off ("Search (Enter sends the f..."); retake after that's fixed. | 2026-11-25 |
+| `library-window.png` | It shows the **Cooldown:** row, the **Lines / Raw text** choice and the **Text file link: none** header in the editor, which are now hidden unless **Advanced options** is ticked (2026-11-25). Retake the same view with the box off (the default); the editor now also has the **Note (never sent)** box (2026-11-26). | 2026-11-25 |
+| `quick-menu.png` | No line preview shows: retake with the mouse resting over a macro (e.g. **Two channels**, given a short note first) so its note (in grey) and lines appear next to the menu, as the row asks. The search box's hint is also cut off ("Search (Enter sends the f..."); retake after that's fixed. | 2026-11-25 |
 
 ## Done
 

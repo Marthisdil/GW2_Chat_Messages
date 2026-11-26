@@ -5,7 +5,7 @@ when it loads.
 
 | File | What it is |
 |---|---|
-| `macros.json` | Your library: folders, macros, hotkeys, favourites, filters, and the trash bin. |
+| `macros.json` | Your library: folders, macros, hotkeys, favourites, filters, notes, and the trash bin. |
 | `macros.json.bak` | The previous version of `macros.json`, kept on every save. |
 | `settings.json` | Addon settings: the text size, the language, whether the trash bin is on, the backup schedule, the quick menu's recently sent macros, and the maps you've been to. Safe to delete (back to the defaults; the "Maps you've been to" list starts over). |
 | `maps.json` | Map names and regions from the GW2 API (in the addon's language) and the API's full list of map ids for the map search. Safe to delete: it's fetched again. |
@@ -56,7 +56,8 @@ The addon only goes online for:
 
 - map names, from `https://api.guildwars2.com/v2/maps` (no API key, nothing about you is sent):
   the map you arrive on, when its name isn't saved yet, and the full map list (about 10 short
-  requests) on the first run, once a week, when you change the language, and when you click
+  requests) on the first run, once a week, when you change the language, after a game update
+  (and a day later), and when you click
   **Refresh map list** (an [advanced option](Advanced-Options)).
 
 No macro can make it go anywhere else.

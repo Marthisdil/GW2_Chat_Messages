@@ -131,7 +131,7 @@ namespace
 
     // Requests raised while drawing the tree, handled after it (never change the tree mid-draw).
     enum class EAction { None, Move, Shift, Sort, OpenName, OpenDelete, ExpandAll,
-                         Trash, OpenRestore, RestoreNow, OpenPurge, OpenEmpty, Favourite };
+                         Trash, OpenRestore, RestoreNow, OpenPurge, OpenEmpty, Favourite, Duplicate };
     struct Action
     {
         EAction  Type   = EAction::None;
@@ -1278,6 +1278,10 @@ namespace
         else
         {
             if (ImGui::MenuItem(T("Send now"), nullptr, false, !Sender::IsBusy())) SendMacro(aNode); // doesn't change the tree
+            if (ImGui::MenuItem(T("Duplicate"))) s_Pending = {EAction::Duplicate, aNode.Id};
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip(T("Makes a copy right below it, with the same lines, filters and note.\n"
+                                  "The copy has no hotkey, isn't a favourite and isn't linked to a file."));
         }
         if (ImGui::MenuItem(T("Favourite"), nullptr, aNode.Favourite)) s_Pending = {EAction::Favourite, aNode.Id};
         if (ImGui::IsItemHovered()) ImGui::SetTooltip(T("Favourites are listed at the top of the quick menu, on every map."));
@@ -1330,6 +1334,15 @@ namespace
         if (Search::FindRange(aNode.Name, s_SearchBuf, at, len)) return {};
         if (!aNode.Hotkey.Empty() && Search::FindRange(Hotkey::Display(aNode.Hotkey), s_SearchBuf, at, len))
             return std::string("  ") + T("(found in its hotkey)");
+        bool inLines = false;
+        for (const Line& l : aNode.Lines)
+            if (Search::FindRange(l.Message, s_SearchBuf, at, len) || Search::FindRange(l.WhisperTo, s_SearchBuf, at, len))
+            {
+                inLines = true;
+                break;
+            }
+        if (!inLines && Search::FindRange(aNode.Note, s_SearchBuf, at, len))
+            return std::string("  ") + T("(found in its note)");
         return std::string("  ") + T("(found in its lines)");
     }
 
@@ -1761,6 +1774,14 @@ namespace
         case EAction::Favourite:
             if (Node* node = s_Tree.Find(a.Id))
                 SetFavourite(*node, !node->Favourite, T("Clicked Favourite (right-click menu)"));
+            break;
+        case EAction::Duplicate:
+            if (Node* node = s_Tree.Find(a.Id))
+            {
+                Result r = s_Tree.Duplicate(*node);
+                if (r.Ok && r.Target) { s_SelectedId = r.Target->Id; MarkDirty(); }
+                else ShowError(Fmt(T("Clicked Duplicate on \"%s\""), node->Name.c_str()), r.Error);
+            }
             break;
         }
     }
@@ -2477,6 +2498,41 @@ namespace
         ImGui::Unindent();
     }
 
+    // The note: what the macro is for, never sent. The box keeps what's typed (spaces at the end
+    // too) while it's being edited; the macro gets the cleaned text (Tree::CleanNote).
+    std::string s_NoteBuf;
+    uint64_t    s_NoteForId   = 0;
+    bool        s_NoteEditing = false;
+
+    void DrawNote(Node& aMacro)
+    {
+        if (s_NoteForId != aMacro.Id || (!s_NoteEditing && Tree::CleanNote(s_NoteBuf) != aMacro.Note))
+        {
+            s_NoteBuf     = aMacro.Note;
+            s_NoteForId   = aMacro.Id;
+            s_NoteEditing = false;
+        }
+        ImGui::TextUnformatted(T("Note (never sent):"));
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip(T("What this macro is for, or when to use it. It's shown in the quick menu's\n"
+                              "preview and found by the search, but never typed into chat.\n"
+                              "At most %zu lines and %zu bytes."), kMaxNoteLines, kMaxNoteLength);
+        const ImGuiStyle& style = ImGui::GetStyle();
+        const float height = ImGui::GetTextLineHeight() * 3.0f + style.FramePadding.y * 2.0f;
+        if (InputStringMultiline("##note", s_NoteBuf, ImVec2(-1.0f, height)))
+        {
+            const std::string clean = Tree::CleanNote(s_NoteBuf);
+            if (clean != aMacro.Note)
+            {
+                aMacro.Note = clean;
+                MarkDirty();
+            }
+        }
+        s_NoteEditing = ImGui::IsItemActive();
+        if (s_NoteBuf.size() > kMaxNoteLength)
+            ImGui::TextColored(kWarnColor, T("A note can be at most %zu bytes long: the rest isn't kept."), kMaxNoteLength);
+    }
+
     void DrawMacroEditor(Node& aMacro)
     {
         const bool busy = Sender::IsBusy();
@@ -2505,6 +2561,7 @@ namespace
         DrawFavouriteRow(aMacro);
         DrawFilters(aMacro);
         DrawLinkFile(aMacro);
+        DrawNote(aMacro);
         ImGui::Separator();
 
         UiFont::Row modeRow;
@@ -2634,6 +2691,11 @@ namespace
         ImGui::BeginTooltip();
         UiFont::PushTooltipWrap(); // a chat line can be 199 characters long
         if (aInactive) ImGui::TextDisabled("%s", T("Not set for this map or game mode. Clicking still sends it."));
+        if (!aMacro.Note.empty())
+        {
+            ImGui::TextDisabled("%s", aMacro.Note.c_str()); // never sent: grey, above the lines
+            ImGui::Separator();
+        }
         if (aMacro.Lines.empty()) ImGui::TextDisabled(T("No lines yet."));
         for (size_t i = 0; i < aMacro.Lines.size() && i < kPreviewLines; i++)
         {
@@ -3980,6 +4042,17 @@ namespace
         return EBackup::Made;
     }
 
+    constexpr double kMapCheckSec = 60.0;
+    double           s_MapCheckAt = 0.0;
+
+    // Once a minute: the game's build, so a game update fetches the map list again (MapNames).
+    void CheckMapList()
+    {
+        if (ImGui::GetTime() < s_MapCheckAt) return;
+        s_MapCheckAt = ImGui::GetTime() + kMapCheckSec;
+        MapNames::Check(s_Mumble ? s_Mumble->Context.BuildID : 0);
+    }
+
     // Once a minute: the user's schedule, or the weekly safety copy while backups are off.
     void CheckBackups()
     {
@@ -4348,6 +4421,7 @@ void Ui::Render()
     UiFont::Pop();
     if (s_Dirty && ImGui::GetTime() >= s_SaveAt) SaveNow();
     CheckBackups();
+    CheckMapList();
 }
 
 void Ui::RenderOptions()

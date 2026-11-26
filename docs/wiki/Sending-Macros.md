@@ -109,7 +109,8 @@ The quick menu shows your library as nested menus, so you can pick a macro with 
   pop-up.
 
 It lists only the macros that are active where you are, and hides folders with none. Macros are
-coloured by channel, show their hotkey, and preview their lines when you hover over them. The
+coloured by channel, show their hotkey, and preview their lines when you hover over them (with
+the macro's [note](Editing-Macros#note) in grey above them, if it has one). The
 bottom item opens or hides the library.
 
 ### Favourites and recently sent
