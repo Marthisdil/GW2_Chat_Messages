@@ -200,6 +200,10 @@ be clicked into a message.
 
 ### Timed lines ("Pull in 5... 4... 3...") (moved from section 5, 2026-11-23, for more discussion)
 
+**Advanced option (owner, 2026-11-25):** when it's built, it goes behind the **Advanced options**
+checkbox (`src/Advanced.*`; `docs/design.md`, "Advanced options"): hidden, and not working, while
+the box is off.
+
 A delay per line (e.g. one second between lines) for countdowns. Raid leaders would like it, but
 it's the idea closest to ArenaNet's macro policy. The policy was read on 2026-11-23 (see the
 wiki's ArenaNet's policies page): it's about gameplay (skills, farming, bots, playing while
@@ -208,6 +212,10 @@ press sending chat lines once, but it runs on its own for several seconds, so de
 care (and say so when registering with Raidcore).
 
 ### Scheduled and repeating macros (added 2026-11-24)
+
+**Advanced option (owner, 2026-11-25):** when it's built, it goes behind the **Advanced options**
+checkbox (`src/Advanced.*`; `docs/design.md`, "Advanced options"): hidden, and not working, while
+the box is off.
 
 - **Scheduled:** the user sets a date and time, and the macro sends itself then (for example a
   guild event reminder at 19:55).
@@ -279,6 +287,10 @@ doesn't pass the test).
 
 ### Read the player's real keybinds (left from the default-key warning, 2026-11-23)
 
+**Advanced option (owner, 2026-11-25):** when it's built, it goes behind the **Advanced options**
+checkbox (`src/Advanced.*`; `docs/design.md`, "Advanced options"): hidden, and not working, while
+the box is off.
+
 The hotkey editor only knows GW2's default keys. Reading the player's own binds: a newer Nexus
 API with a getter for its game-bind table (API v6 has none; ask Raidcore?), or the newest saved
 profile in `Documents\Guild Wars 2\InputBinds\` (can be out of date). Also: secondary binds,
@@ -315,6 +327,10 @@ hotkey (a hotkey must stay unique). Quick to build; handy for variants of one ca
 
 ### A random pick inside the macro: `{pick a|b|c}`
 
+**Advanced option (owner, 2026-11-25):** when it's built, it goes behind the **Advanced options**
+checkbox (`src/Advanced.*`; `docs/design.md`, "Advanced options"): hidden, and not working, while
+the box is off.
+
 Sends one of the choices at random, e.g. `/s {pick hi|hello|o/}`. It brings back the most-used
 part of `{txt}` (a random line) with no file reading: every choice is written in the macro.
 
@@ -323,6 +339,10 @@ part of `{txt}` (a random line) with no file reading: every choice is written in
   mask applies (it can't start a command), and the length check uses the longest choice.
 
 ### Copy to clipboard as a fallback
+
+**Advanced option (owner, 2026-11-25):** when it's built, it goes behind the **Advanced options**
+checkbox (`src/Advanced.*`; `docs/design.md`, "Advanced options"): hidden, and not working, while
+the box is off.
 
 When a send is refused (game not focused, a text box already open...), offer "Copy the text"
 so the user can paste it themselves. The sender itself still never uses the clipboard; this is
@@ -368,6 +388,7 @@ player moving from Blish HUD to Nexus doesn't have to type them all again?
 - **Your own text values:** placeholders you define once on the options page, like
   `{v:guild}` = "[TAG] My Guild" or `{v:raid}` = "Wing 4", used in many macros and changed in one
   place. Text only, never files or addresses (the SEC-013 mask applies, as for `{map}`).
+  **Advanced option (owner, 2026-11-25):** behind the **Advanced options** checkbox when built.
 - **Split a long line:** when a line is over 199 characters, offer to split it into two lines on
   the same channel at a word break, instead of only showing it in red.
 - **Send to another channel once:** right-click a macro in the quick menu > "Send to..." with a

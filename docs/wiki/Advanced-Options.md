@@ -41,6 +41,9 @@ changes a macro while you play, for example). Keeping them behind one box means:
 
 - [Text file links](#text-file-links): keep a macro in step with a `.txt` file.
 
+Features added later that fit here (for example timed or scheduled lines) will be behind the
+checkbox too, and listed here when they're built.
+
 ## Text file links
 
 A macro can be kept in step with a `.txt` file, so you can edit it in Notepad (or any text

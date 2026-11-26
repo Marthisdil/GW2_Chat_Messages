@@ -186,7 +186,14 @@ channel ∈ Current, Emote, Say, Map, Party, Squad, Team, Reply, Whisper,
   Features most players never need sit behind it, so the editor stays short and nothing
   surprising happens unless the user turned it on. *(`src/Advanced.*`, tested in
   `tests/AdvancedTests.cpp`.)*
-  - Behind it now: text file links. Ideas for more are in `docs/todo.md`.
+  - Behind it now: text file links.
+  - Planned behind it (owner, 2026-11-25; each in `docs/todo.md`): timed lines, scheduled and
+    repeating macros, copy to the clipboard as a fallback, your own text values (`{v:...}`),
+    `{pick a|b|c}`, and reading the player's real keybinds. A per-macro feature (a placeholder,
+    timed or scheduled lines) goes into `Advanced::Uses`, so a macro using it is blocked while
+    the box is off; one that isn't per-macro (the clipboard offer, real keybinds) is simply hidden
+    and not used while it's off. A placeholder behind the box is left as typed while it's off,
+    so the macro is blocked rather than sending a raw `{v:guild}`.
   - Off: the feature's UI is hidden, and a macro that uses one is blocked: its hotkey never
     fires (one Nexus alert per press when no other macro takes the key), the quick menu shows it
     faded and unclickable (search Enter skips it), Send now shows the error window, and the
