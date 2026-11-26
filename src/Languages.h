@@ -42,6 +42,9 @@ namespace Languages
     std::string NexusLanguage();      // what Nexus uses now ("en" if unknown)
     std::string ActiveId();           // what's shown now
     std::filesystem::path Folder();   // <addon>\localization, created on first call
+    // Advanced options (Advanced.h): the folder's files are only loaded while they're on. A change
+    // reloads the languages next frame.
+    void UseFolder(bool aOn);
 
     // Problems found while loading (a file that was refused, texts skipped), in plain words, for
     // the error window. Taken once.

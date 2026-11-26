@@ -12,7 +12,7 @@ when it loads.
 | `exports\` | Files saved by Export. Created when the addon loads; **Exports folder** in the toolbar opens it. |
 | `imports\` | Put files here to see them in the Import window. Created when the addon loads; **Open imports folder** in the Import window opens it. |
 | `backups\` | Copies of your library, named with the date and time in UTC (see [Backups and restore](Backups-and-Restore)). Created when the addon loads. |
-| `links\` | Text files linked to macros (when you give just a file name). |
+| `links\` | Text files linked to macros (when you give just a file name; see [Advanced options](Advanced-Options#text-file-links)). |
 | `localization\` | Extra language files (see [Languages](Languages)). |
 
 ## Saving
@@ -44,6 +44,6 @@ The addon only goes online for:
 - map names, from `https://api.guildwars2.com/v2/maps` (no API key, nothing about you is sent):
   the map you arrive on, when its name isn't saved yet, and the full map list (about 10 short
   requests) on the first run, once a week, when you change the language, and when you click
-  **Refresh map list**.
+  **Refresh map list** (an [advanced option](Advanced-Options)).
 
 No macro can make it go anywhere else.

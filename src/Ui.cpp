@@ -25,6 +25,7 @@
 #include "Languages.h"
 #include "Localization.h"
 
+#include "Advanced.h"
 #include "Backups.h"
 #include "BuildStamp.h"
 #include "ChatLine.h"
@@ -410,6 +411,18 @@ namespace
     QuickLists::Recent s_Recent;
     int                s_RecentCount = QuickLists::kDefaultRecent;
 
+    // Advanced options (Advanced.h): settings.json "advanced_options". Off hides the features
+    // behind it, and a macro that uses one can't be sent; its settings are kept.
+    bool s_AdvancedOn = false;
+    constexpr const char* kAdvancedHelpUrl = "https://github.com/Marthisdil/GW2_Chat_Messages/wiki/Advanced-Options";
+
+    bool IsBlocked(const Node& aMacro) { return Advanced::Blocked(aMacro, s_AdvancedOn); }
+
+    // The last "its hotkey does nothing" alert for a blocked macro (HandleHotkeys).
+    uint64_t         s_BlockedAlertId = 0;
+    double           s_BlockedAlertAt = 0.0;
+    constexpr double kBlockedAlertEverySec = 5.0;
+
     void SaveRecent()
     {
         if (!Storage::SaveSetting(kRecentSetting, s_Recent.ToJson()))
@@ -431,7 +444,8 @@ namespace
         {
             // Still cooling down: the 1 s guard alone is silent; a macro's own cooldown shows one
             // alert, on the first ignored press.
-            const Cooldown::Wait wait = s_Cooldowns.ForHotkey(aMacro.Id, aMacro.CooldownSec, ImGui::GetTime());
+            // A macro's own cooldown is an advanced option (ignored while off); the 1 s guard always applies.
+            const Cooldown::Wait wait = s_Cooldowns.ForHotkey(aMacro.Id, Advanced::CooldownSec(aMacro, s_AdvancedOn), ImGui::GetTime());
             if (wait.Seconds > 0.0)
             {
                 if (wait.ByCooldown && s_Cooldowns.TakeAlert(aMacro.Id))
@@ -444,6 +458,14 @@ namespace
                                  : aFrom == ESendFrom::Menu   ? Fmt(T("Sent %s from the quick menu"), name.c_str())
                                                               : Fmt(T("Sent %s from the library (Send now)"), name.c_str());
         std::string error;
+        if (IsBlocked(aMacro))
+        {
+            error = T("This macro is linked to a text file, which is an advanced option, and advanced options are off. "
+                      "Turn on \"Advanced options\" on the addon's options page to send it.");
+            ShowError(action, error, !alert);
+            if (alert) Alert(aMacro.Name + ": " + error);
+            return;
+        }
         if (Sender::Start(aMacro.Id, aMacro.Lines, error))
         {
             s_Cooldowns.Started(aMacro.Id, ImGui::GetTime());
@@ -537,10 +559,25 @@ namespace
             if (!Hotkey::Fires(combo)) continue;
             // Only macros active here count: the same hotkey can be used for, say, a WvW macro and a PvE one.
             const Here here = WhereAmI();
+            // A macro blocked by Advanced options still counts here, so a shared key sends nothing,
+            // as the hotkey editor's "Also set on" warning says.
             std::vector<Node*> macros;
             for (Node* m : s_Tree.MacrosWithHotkey(combo))
                 if (IsActiveHere(*m, here)) macros.push_back(m);
             if (macros.empty()) continue;
+            if (macros.size() == 1 && IsBlocked(*macros[0]))
+            {
+                // One alert per macro every few seconds, so mashing the key doesn't stack them.
+                const double now = ImGui::GetTime();
+                if (s_BlockedAlertId != macros[0]->Id || now - s_BlockedAlertAt >= kBlockedAlertEverySec)
+                {
+                    s_BlockedAlertId = macros[0]->Id;
+                    s_BlockedAlertAt = now;
+                    Alert(Fmt(T("%s is linked to a text file, an advanced option that's off, so its hotkey does nothing."),
+                              macros[0]->Name.c_str()));
+                }
+                continue;
+            }
             if (macros.size() > 1)
             {
                 const std::string why = Fmt(T("%s is set on %zu macros, so nothing was sent. Give each macro its own hotkey."),
@@ -651,6 +688,12 @@ namespace
     // Cooldown: how long the hotkey waits before sending this macro again (0 = off).
     void DrawCooldownRow(Node& aMacro)
     {
+        if (!s_AdvancedOn) // an advanced option: hidden, and ignored, while they're off
+        {
+            if (aMacro.CooldownSec > 0)
+                ImGui::TextDisabled(T("Cooldown: %d s, ignored while advanced options are off."), aMacro.CooldownSec);
+            return;
+        }
         UiFont::Row row;
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted(T("Cooldown:"));
@@ -740,9 +783,12 @@ namespace
         {
             const MapNames::State st = MapNames::GetState();
             if (st.Listed == 0 && st.Refreshing) ImGui::TextDisabled(T("The map list is still loading from the GW2 API..."));
-            else if (st.Listed == 0)
+            else if (st.Listed == 0 && s_AdvancedOn)
                 ImGui::TextDisabled(T("The map list isn't loaded yet (it comes from the GW2 API). Try Refresh map list "
                                     "on the addon's options page, or add the map by its id."));
+            else if (st.Listed == 0)
+                ImGui::TextDisabled(T("The map list isn't loaded yet (it comes from the GW2 API). Try again later, or add "
+                                    "the map by its id."));
             else ImGui::TextDisabled(T("No map matches."));
             return;
         }
@@ -1301,7 +1347,8 @@ namespace
             // Macros take their first line's channel colour, like in bhm-chat-macros.
             const EChannel first = aNode.Lines.empty() ? EChannel::Current : aNode.Lines.front().Channel;
             ImVec4 color = ChannelColorVec(first);
-            if (!IsActiveHere(aNode, WhereAmI())) color.w *= 0.45f; // filtered out here: dimmed
+            // Filtered out here, or uses an advanced option that's off: dimmed.
+            if (!IsActiveHere(aNode, WhereAmI()) || IsBlocked(aNode)) color.w *= 0.45f;
             ImGui::PushStyleColor(ImGuiCol_Text, color);
             if (aNode.Hotkey.Empty()) ImGui::TreeNodeEx("##node", flags, "%s%s", aNode.Name.c_str(), suffix.c_str());
             else if (Hotkey::NeedsModifier(aNode.Hotkey))
@@ -2176,6 +2223,7 @@ namespace
 
     void SyncLinks(bool aNow)
     {
+        if (!s_AdvancedOn) return; // paused; the agreed states are kept for when it's back on
         if (!aNow && ImGui::GetTime() < s_NextLinkSync) return;
         s_NextLinkSync = ImGui::GetTime() + kLinkSyncEverySec;
 
@@ -2289,6 +2337,7 @@ namespace
 
     void DrawLinkFile(Node& aMacro)
     {
+        if (!s_AdvancedOn) return; // an advanced option: hidden while they're off
         if (s_LinkPathFor != aMacro.Id)
         {
             s_LinkPathFor = aMacro.Id;
@@ -2358,9 +2407,15 @@ namespace
     void DrawMacroEditor(Node& aMacro)
     {
         const bool busy = Sender::IsBusy();
-        if (busy) ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
-        if (ImGui::Button(T("Send now")) && !busy) SendMacro(aMacro);
-        if (busy) ImGui::PopStyleVar();
+        const bool blocked = IsBlocked(aMacro);
+        if (blocked)
+            ImGui::TextColored(kWarnColor, "%s", T("This macro is linked to a text file, which is an advanced option. Advanced "
+                                                   "options are off, so it can't be sent (its hotkey does nothing) and it isn't "
+                                                   "kept in step with its file. Turn on \"Advanced options\" on the addon's "
+                                                   "options page to use it again."));
+        if (busy || blocked) ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+        if (ImGui::Button(T("Send now")) && !busy) SendMacro(aMacro); // a blocked macro says why
+        if (busy || blocked) ImGui::PopStyleVar();
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip(T("Types each line into its chat channel and sends it.\n"
                               "Needs your Chat key set in Nexus > Options > Game Keybinds."));
@@ -2380,13 +2435,23 @@ namespace
         ImGui::Separator();
 
         UiFont::Row modeRow;
-        int mode = static_cast<int>(s_EditMode);
-        if (ImGui::RadioButton(T("Lines"), &mode, static_cast<int>(EEditMode::Lines))) s_RawForId = 0;
-        modeRow.Next(UiFont::CheckboxWidth(T("Raw text")));
-        if (ImGui::RadioButton(T("Raw text"), &mode, static_cast<int>(EEditMode::Raw))) s_RawForId = 0;
-        s_EditMode = static_cast<EEditMode>(mode);
+        // The Raw text tab is an advanced option: while they're off, the editor is always Lines.
+        if (!s_AdvancedOn && s_EditMode == EEditMode::Raw)
+        {
+            s_EditMode = EEditMode::Lines;
+            s_RawForId = 0;
+        }
         const std::string count = Fmt(T("%zu line(s)"), aMacro.Lines.size());
-        modeRow.Next(UiFont::TextWidth(count.c_str()));
+        if (s_AdvancedOn)
+        {
+            int mode = static_cast<int>(s_EditMode);
+            if (ImGui::RadioButton(T("Lines"), &mode, static_cast<int>(EEditMode::Lines))) s_RawForId = 0;
+            modeRow.Next(UiFont::CheckboxWidth(T("Raw text")));
+            if (ImGui::RadioButton(T("Raw text"), &mode, static_cast<int>(EEditMode::Raw))) s_RawForId = 0;
+            s_EditMode = static_cast<EEditMode>(mode);
+            modeRow.Next(UiFont::TextWidth(count.c_str()));
+        }
+        else ImGui::AlignTextToFramePadding();
         ImGui::TextDisabled("%s", count.c_str());
         modeRow.Next(UiFont::TextWidth(T("Placeholders (?)")));
         ImGui::TextDisabled(T("Placeholders (?)"));
@@ -2517,12 +2582,16 @@ namespace
     {
         const EChannel first = n.Lines.empty() ? EChannel::Current : n.Lines.front().Channel;
         const std::string keys = Hotkey::Fires(n.Hotkey) ? Hotkey::Display(n.Hotkey) : std::string(); // an off hotkey isn't shown
+        const bool blocked = IsBlocked(n);
         ImVec4 color = ChannelColorVec(first);
-        if (aDim) color.w *= kDimAlpha;
+        if (aDim || blocked) color.w *= kDimAlpha;
         ImGui::PushStyleColor(ImGuiCol_Text, color);
-        const bool clicked = ImGui::MenuItem(aLabel, keys.empty() ? nullptr : keys.c_str(), false, !aBusy);
+        const bool clicked = ImGui::MenuItem(aLabel, keys.empty() ? nullptr : keys.c_str(), false, !aBusy && !blocked);
         ImGui::PopStyleColor();
-        if (ImGui::IsItemHovered()) MacroPreviewTooltip(n, aDim);
+        if (blocked && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+            ImGui::SetTooltip("%s", T("Linked to a text file, an advanced option that's off:\n"
+                                    "turn on \"Advanced options\" on the addon's options page to send it."));
+        else if (ImGui::IsItemHovered()) MacroPreviewTooltip(n, aDim);
         if (clicked) SendMacro(n, ESendFrom::Menu);
     }
 
@@ -2659,8 +2728,13 @@ namespace
             ImGui::TextDisabled(T("...and %zu more: type more to narrow it down."), found.size() - kMenuResultsMax);
         if (aEnter && !busy)
         {
-            SendMacro(*found.front(), ESendFrom::Menu);
-            ImGui::CloseCurrentPopup();
+            // The first one that can be sent; if none can (all blocked), the menu stays open, faded.
+            const auto first = std::find_if(found.begin(), found.end(), [](const Node* n) { return !IsBlocked(*n); });
+            if (first != found.end())
+            {
+                SendMacro(**first, ESendFrom::Menu);
+                ImGui::CloseCurrentPopup();
+            }
         }
     }
 
@@ -2992,13 +3066,18 @@ namespace
     void DrawImportSource()
     {
         ImGui::TextUnformatted(T("1. Choose what to import"));
-        if (ImGui::RadioButton(T("Macros"), !s_ImportLibrary)) SetImportLibrary(false);
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip(T("A .json export, a .txt file (one macro), or a folder of .txt files."));
-        ImGui::SameLine();
-        if (ImGui::RadioButton(T("A whole library"), s_ImportLibrary)) SetImportLibrary(true);
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip(T("Someone else's macros.json (or macros.json.bak), as they sent it to you.\n"
-                              "It goes into a new folder of its own, so it never mixes with your folders."));
+        // Importing a whole library is an advanced option: while they're off, only macros.
+        if (!s_AdvancedOn) SetImportLibrary(false);
+        else
+        {
+            if (ImGui::RadioButton(T("Macros"), !s_ImportLibrary)) SetImportLibrary(false);
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip(T("A .json export, a .txt file (one macro), or a folder of .txt files."));
+            ImGui::SameLine();
+            if (ImGui::RadioButton(T("A whole library"), s_ImportLibrary)) SetImportLibrary(true);
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip(T("Someone else's macros.json (or macros.json.bak), as they sent it to you.\n"
+                                  "It goes into a new folder of its own, so it never mixes with your folders."));
+        }
         if (s_ImportLibrary)
             ImGui::TextDisabled(T("Someone's macros.json or macros.json.bak. Rename it (e.g. Alex.json) so it's easy to tell apart. "
                                 "It goes into a new folder at the top level. Their trash bin and text file links aren't taken."));
@@ -3268,10 +3347,15 @@ namespace
         ImGui::Checkbox(T("Move the contents of too-deep folders up a level"), &s_ImportOpt.Flatten);
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip(T("Folders can be nested at most %d deep. Unticked, folders that would go deeper are left out."), kMaxFolderDepth);
-        ImGui::Checkbox(T("Keep hotkeys"), &s_ImportOpt.KeepHotkeys);
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("%s", s_ImportLibrary ? T("Off by default for someone else's library, so their keys don't clash with yours.")
-                                                    : T("Off at first, so macros from someone else come without their hotkeys. Tick it for your own exports; the preview then shows each macro's hotkey."));
+        // Keep hotkeys is an advanced option: while they're off, imports never bring hotkeys.
+        if (!s_AdvancedOn) s_ImportOpt.KeepHotkeys = false;
+        else
+        {
+            ImGui::Checkbox(T("Keep hotkeys"), &s_ImportOpt.KeepHotkeys);
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("%s", s_ImportLibrary ? T("Off by default for someone else's library, so their keys don't clash with yours.")
+                                                        : T("Off at first, so macros from someone else come without their hotkeys. Tick it for your own exports; the preview then shows each macro's hotkey."));
+        }
         for (const std::string& w : s_ImportPkg->Warnings) ImGui::TextColored(kWarnColor, "%s", w.c_str());
 
         // Built every frame against the live library, so the preview is always what Import does.
@@ -3616,6 +3700,36 @@ namespace
         if (ImGui::IsItemClicked()) Storage::OpenWebPage(aUrl);
     }
 
+    // "Advanced options": one box for the features most players never need (Advanced.h). [?] opens
+    // the wiki page that explains it.
+    void DrawAdvancedOption()
+    {
+        if (ImGui::Checkbox(T("Advanced options"), &s_AdvancedOn))
+        {
+            if (!Storage::SaveSetting(Advanced::kSetting, s_AdvancedOn)) LogF(LOGL_WARNING, "The advanced options setting couldn't be saved.");
+            Languages::UseFolder(s_AdvancedOn); // your own language files load only while it's on
+            if (s_AdvancedOn) SyncLinks(true);  // catch up with files changed while it was off
+        }
+        ImGui::SameLine();
+        if (ImGui::SmallButton("[?]##advanced_help")) Storage::OpenWebPage(kAdvancedHelpUrl);
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+            ImGui::SetTooltip(T("Opens the wiki page about advanced options:\n%s"), kAdvancedHelpUrl);
+        }
+        ImGui::TextWrapped(T("Shows extra features most players never need: text file links, hotkey cooldowns, the Raw "
+                           "text tab, importing a whole library, Keep hotkeys on import, your own language files and "
+                           "Refresh map list. Off: they're hidden and don't work, but nothing you set is deleted."));
+        if (!s_AdvancedOn)
+        {
+            const Advanced::InUse in = Advanced::Count(s_Tree);
+            if (in.Linked > 0)
+                ImGui::TextColored(kWarnColor, T("%zu macro(s) linked to a text file: they can't be sent while this is off."), in.Linked);
+            if (in.Cooldowns > 0)
+                ImGui::TextColored(kWarnColor, T("%zu macro(s) with a cooldown: it's ignored while this is off."), in.Cooldowns);
+        }
+    }
+
     // The options page's map list: when the GW2 API's list was last fetched, and a button to do
     // it again now (it's also fetched on the first run, weekly, and when the language changes).
     void DrawMapListOptions()
@@ -3633,7 +3747,7 @@ namespace
             if (localtime_s(&local, &t) == 0) std::strftime(when, sizeof(when), "%Y-%m-%d %H:%M", &local);
             ImGui::Text(T("Map list: %zu maps, from %s."), st.Listed, when);
         }
-        if (!st.Refreshing)
+        if (!st.Refreshing && s_AdvancedOn) // an advanced option: the list refreshes by itself anyway
         {
             row.Next(UiFont::ButtonWidth(T("Refresh map list")));
             if (ImGui::SmallButton(T("Refresh map list"))) MapNames::RefreshNow();
@@ -3656,6 +3770,7 @@ namespace
         if (choice != Languages::kFollowNexus)
         {
             current = choice; // a chosen language whose file is gone shows its id
+            if (!s_AdvancedOn) current = Fmt(T("%s (a language file: needs Advanced options)"), choice.c_str());
             for (const Languages::Entry& e : list)
                 if (e.Id == choice) current = LanguageLabel(e);
         }
@@ -3678,6 +3793,7 @@ namespace
         ImGui::TextDisabled("%s", T("The language of this addon's text. \"Follow Nexus\" uses the language set in Nexus' own options."));
         if (Languages::ActiveId() == "en" && nexusId != "en" && choice == Languages::kFollowNexus)
             ImGui::TextDisabled("%s", T("This addon has no translation for that language yet, so it's shown in English."));
+        if (!s_AdvancedOn) return; // language files of your own are an advanced option
         UiFont::Row row;
         if (ImGui::SmallButton(T("Open localization folder"))) Storage::OpenFolder(Languages::Folder());
         row.Next(UiFont::ButtonWidth(T("Reload language files")));
@@ -4047,6 +4163,7 @@ void Ui::Init()
         s_RecentCount = recentCount != settings.end() ? QuickLists::CountFromJson(*recentCount) : QuickLists::kDefaultRecent;
         const auto backups = settings.find(kBackupsSetting);
         s_Backup = backups != settings.end() ? Backups::FromJson(*backups) : Backups::Settings{};
+        s_AdvancedOn = Advanced::FromSettings(settings); // off unless the user turned it on
     }
     s_TrashSelId = 0;
     // The imports and exports folders exist from the start, so there's never one to make by hand.
@@ -4200,6 +4317,8 @@ void Ui::RenderOptions()
         ImGui::TextWrapped(T("How many of the macros you sent last are listed at the top of the quick menu, under your "
                            "favourites (0 to 10; 0 = none). Mark a favourite in the macro's editor, or right-click it "
                            "in the library."));
+        ImGui::Spacing();
+        DrawAdvancedOption();
         ImGui::EndTabItem();
     }
     if (ImGui::BeginTabItem(T("Backups###chatmsg_tab_backups")))

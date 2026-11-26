@@ -77,6 +77,10 @@ Each macro can have its own hotkey. In the macro editor, next to **Hotkey:**, cl
 
 ### Cooldown
 
+> **Advanced option:** only with **Advanced options** ticked on the addon's options page; see
+> [Advanced options](Advanced-Options). While it's off, a
+> cooldown you set is kept but ignored.
+
 Under the hotkey, **Cooldown:** sets how many seconds the hotkey waits before it sends that
 macro again: 0 (off, the default) up to 600 (10 minutes).
 

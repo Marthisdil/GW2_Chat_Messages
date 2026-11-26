@@ -31,6 +31,11 @@ example macros if they were added; how the text boxes point at things in ImGui 1
 highlights drawn over our own windows, not the game's); translations for every step; and new
 in-game checks and screenshots for both.
 
+**Advanced options (2026-11-25):** the tour follows the box. With it off (the default on a new
+install) it never points at anything hidden behind it; at most one step points at the box itself
+("more features for experienced players"). Whether the tour has extra steps when it's on, or
+the [?] wiki page is enough, is to discuss. The welcome itself isn't an advanced option.
+
 ### In-game testing
 
 Work through `docs/in-game-tests.md` (A1 passed, A2 mostly; the rest is still to do). Session B,
@@ -94,6 +99,15 @@ below, so that cleanup works on the final layout.
 What stands out: everything about one macro is on one screen, with where it's active and how
 it's triggered side by side above the lines, and each line is compact (channel, text, delete,
 drag). The text box doesn't wrap, so long lines get cut off at the edge.
+
+**Advanced options (2026-11-25):** design the layout for both states. With the box off (the
+default) the pane shows only the everyday settings, with no gaps where hidden sections would
+be. With it on, the advanced sections (now the text file link; later the planned ones in
+`docs/design.md`, "Advanced options", such as timed lines or a schedule) have a clear place of
+their own, e.g. grouped under one "Advanced" heading at the bottom, rather than scattered among
+the everyday ones. A macro that uses an advanced feature while the box is off still needs its
+note and faded Send now to fit. Screenshots of the new layout: one with the box off, and one
+with it on where it differs.
 
 ### Cleanup PR for `Ui.cpp` after the in-game testing (added 2026-11-24)
 
@@ -200,6 +214,10 @@ be clicked into a message.
 
 ### Timed lines ("Pull in 5... 4... 3...") (moved from section 5, 2026-11-23, for more discussion)
 
+**Advanced option (owner, 2026-11-25):** when it's built, it goes behind the **Advanced options**
+checkbox (`src/Advanced.*`; `docs/design.md`, "Advanced options"): hidden, and not working, while
+the box is off.
+
 A delay per line (e.g. one second between lines) for countdowns. Raid leaders would like it, but
 it's the idea closest to ArenaNet's macro policy. The policy was read on 2026-11-23 (see the
 wiki's ArenaNet's policies page): it's about gameplay (skills, farming, bots, playing while
@@ -208,6 +226,10 @@ press sending chat lines once, but it runs on its own for several seconds, so de
 care (and say so when registering with Raidcore).
 
 ### Scheduled and repeating macros (added 2026-11-24)
+
+**Advanced option (owner, 2026-11-25):** when it's built, it goes behind the **Advanced options**
+checkbox (`src/Advanced.*`; `docs/design.md`, "Advanced options"): hidden, and not working, while
+the box is off.
 
 - **Scheduled:** the user sets a date and time, and the macro sends itself then (for example a
   guild event reminder at 19:55).
@@ -279,6 +301,10 @@ doesn't pass the test).
 
 ### Read the player's real keybinds (left from the default-key warning, 2026-11-23)
 
+**Advanced option (owner, 2026-11-25):** when it's built, it goes behind the **Advanced options**
+checkbox (`src/Advanced.*`; `docs/design.md`, "Advanced options"): hidden, and not working, while
+the box is off.
+
 The hotkey editor only knows GW2's default keys. Reading the player's own binds: a newer Nexus
 API with a getter for its game-bind table (API v6 has none; ask Raidcore?), or the newest saved
 profile in `Documents\Guild Wars 2\InputBinds\` (can be out of date). Also: secondary binds,
@@ -308,12 +334,47 @@ starter library and backups moved up to section 2. Filters by character or profe
 dropped (not needed), and timed lines moved to section 3 for more discussion (owner,
 2026-11-23).
 
+### Own language files outside Advanced options? (added 2026-11-25)
+
+Your own language files (the `localization` folder, **Open localization folder**, **Reload
+language files**) went behind the **Advanced options** box on 2026-11-25. Consider moving them
+back out: players who speak several languages may use a language file regularly without wanting
+any of the other advanced features. Points to settle:
+- whether the files are read only after a separate, smaller opt-in (for example a "Use language
+  files from the localization folder" box next to the Language dropdown), since they're an
+  untrusted input (`docs/security-review.md`) and the folder isn't read at all while the box is
+  off today;
+- what the Language dropdown shows meanwhile, so the feature is easy to find;
+- the wiki's Advanced options and Languages pages, the S2/S3 and Q6 in-game checks, and the
+  `language-options.png` row change with it.
+
+**Advanced option?** That's the question itself: leaning towards no (useful to many, nothing
+surprising once chosen), with its own small opt-in.
+
+### Refresh the map list after a game update (added 2026-11-25)
+
+The map list (`maps.json`) is fetched on the first run, once a week, on a language change, and by
+**Refresh map list**. New maps arrive with game updates, so fetch it again soon after the game is
+updated. Possible signal: MumbleLink's `Context.BuildID` (the game's build number, in
+`vendor/mumble`): remember the last one seen in `maps.json` or `settings.json`, and when it
+changes, start a background refresh (the same one as the weekly refresh, on the worker thread).
+Points to settle: whether `BuildID` is filled in before the first map load, a small delay so a
+refresh doesn't start during the loading screen, and that the GW2 API may list a new map a little
+after the patch (maybe refresh again a day later).
+
+**Advanced option?** No: it's automatic and invisible, and helps everyone. With it, the
+**Refresh map list** button matters even less.
+
 ### Duplicate a macro
 
 Right-click > **Duplicate** makes "Name (2)" next to it, with the same lines and filters but no
 hotkey (a hotkey must stay unique). Quick to build; handy for variants of one callout.
 
 ### A random pick inside the macro: `{pick a|b|c}`
+
+**Advanced option (owner, 2026-11-25):** when it's built, it goes behind the **Advanced options**
+checkbox (`src/Advanced.*`; `docs/design.md`, "Advanced options"): hidden, and not working, while
+the box is off.
 
 Sends one of the choices at random, e.g. `/s {pick hi|hello|o/}`. It brings back the most-used
 part of `{txt}` (a random line) with no file reading: every choice is written in the macro.
@@ -323,6 +384,10 @@ part of `{txt}` (a random line) with no file reading: every choice is written in
   mask applies (it can't start a command), and the length check uses the longest choice.
 
 ### Copy to clipboard as a fallback
+
+**Advanced option (owner, 2026-11-25):** when it's built, it goes behind the **Advanced options**
+checkbox (`src/Advanced.*`; `docs/design.md`, "Advanced options"): hidden, and not working, while
+the box is off.
 
 When a send is refused (game not focused, a text box already open...), offer "Copy the text"
 so the user can paste it themselves. The sender itself still never uses the clipboard; this is
@@ -368,6 +433,7 @@ player moving from Blish HUD to Nexus doesn't have to type them all again?
 - **Your own text values:** placeholders you define once on the options page, like
   `{v:guild}` = "[TAG] My Guild" or `{v:raid}` = "Wing 4", used in many macros and changed in one
   place. Text only, never files or addresses (the SEC-013 mask applies, as for `{map}`).
+  **Advanced option (owner, 2026-11-25):** behind the **Advanced options** checkbox when built.
 - **Split a long line:** when a line is over 199 characters, offer to split it into two lines on
   the same channel at a word break, instead of only showing it in red.
 - **Send to another channel once:** right-click a macro in the quick menu > "Send to..." with a

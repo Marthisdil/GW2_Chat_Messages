@@ -116,6 +116,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)tools\compile_
     <ClCompile Include="src\MapNames.cpp" />
     <ClCompile Include="src\PathText.cpp" />
     <ClCompile Include="src\QuickLists.cpp" />
+    <ClCompile Include="src\Advanced.cpp" />
     <ClCompile Include="src\Placeholders.cpp" />
     <ClCompile Include="src\Sender.cpp" />
     <ClCompile Include="src\SendPlan.cpp" />
@@ -146,6 +147,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)tools\compile_
     <ClInclude Include="src\MapNames.h" />
     <ClInclude Include="src\PathText.h" />
     <ClInclude Include="src\QuickLists.h" />
+    <ClInclude Include="src\Advanced.h" />
     <ClInclude Include="src\Placeholders.h" />
     <ClInclude Include="src\resource.h" />
     <ClInclude Include="src\Version.h" />

@@ -44,6 +44,9 @@ Each line has a channel dropdown and a message box, with arrow buttons to change
 
 ### The "Raw text" tab
 
+> **Advanced option:** only with **Advanced options** ticked on the addon's options page; see
+> [Advanced options](Advanced-Options).
+
 Type one message per row, the way you'd type it in game:
 
 ```
@@ -79,39 +82,9 @@ message, and the game turns them into links when it's sent.
 
 ## Text file links
 
-A macro can be kept in step with a `.txt` file, so you can edit it in Notepad (or any text
-editor) while the game runs. The file uses the same format as the Raw text tab: one chat line per
-row.
-
-Open **Text file link** in the macro editor, type a file name and click **Link**:
-
-- A name alone, like `callouts.txt`, goes in `<GW2>\addons\GW2_Chat_Messages\links\`. A full path,
-  like `C:\Users\Me\Documents\raid.txt`, works too. The name must end in `.txt`.
-- If the file already has lines, they **replace** the macro's lines. If it doesn't exist (or is
-  empty), it's created from the macro's lines.
-
-From then on, changes go both ways and show up within a second:
-
-- Save the file in your editor: the macro gets its lines.
-- Edit the macro in the addon: the file is rewritten.
-- If both changed at once, the file wins.
-- While the game is closed you can edit the file; the macro picks it up when the addon loads.
-
-**Open file** opens it in your text editor, **Open folder** shows it in Explorer, and **Unlink**
-stops the syncing (neither the macro nor the file is deleted). If the file is deleted or moved,
-the editor says so; the macro keeps its lines, and **Recreate the file** writes it again. A file
-can hold up to 50 lines for one macro, and at most 256 KB.
-
-Save the file as UTF-8 (Notepad's default). In a file saved another way (ANSI, say), characters
-like `ä` or `é` can't be read: the macro gets `�` in their place (the font may show `?`). The file
-itself is left as it is until you edit the macro in the addon, which writes it back as UTF-8, with
-the `�`. Each `�` takes three bytes, so a file that would be over 256 KB that way isn't read (the
-editor says why). A macro too big for its file isn't written to it either; the editor says so.
-
-Two macros can't be linked to the same file. Links aren't included in exports.
-
-<!-- screenshot: link-file.png (docs/screenshots.md) -->
-> 📷 *Screenshot to come: the Text file link section of a linked macro.*
+A macro can be kept in step with a `.txt` file, so you can edit it in Notepad while the game
+runs. This is an advanced option: it only shows when **Advanced options** is ticked on the
+addon's options page. See [Advanced options](Advanced-Options#text-file-links).
 
 ## Placeholders
 
