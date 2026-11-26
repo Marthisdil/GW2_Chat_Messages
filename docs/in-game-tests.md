@@ -21,7 +21,7 @@ change means a done check must be run again, it moves back here and into its ses
 |---|---|---|
 | A1 | Passed (PR #15 build) | Re-check with the current build: the log and the options page show its version and build stamp, the two links and the folders are new (A1's last part), and so is the icon (the quick bubble, 2026-11-25). |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text wraps and errors open the error window. Re-check those two points only (marked *Re-check* in A2), then go on to A3. |
-| A3 to T | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (T, saved files from older and newer versions, is the newest (2026-11-26); H9 and H10, filters on folders, are the newest; then S, the Advanced options box (new 2026-11-25; tick it first, see "Before you start"); then J11, export a selection; G4 to G6, favourites and recently sent, with G4 and G6 new for favourites shown everywhere, and R, backups and restore, are the newest; A1b, the example macros, and F9, the hotkey cooldown, came just before). |
+| A3 to T | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (Q6 changed and Q9 is new: your own language files have their own box now, and files from other versions (2026-11-26); T, saved files from older and newer versions, is the newest (2026-11-26); H9 and H10, filters on folders, are the newest; then S, the Advanced options box (new 2026-11-25; tick it first, see "Before you start"); then J11, export a selection; G4 to G6, favourites and recently sent, with G4 and G6 new for favourites shown everywhere, and R, backups and restore, are the newest; A1b, the example macros, and F9, the hotkey cooldown, came just before). |
 
 ## How to report
 
@@ -709,7 +709,11 @@ correctly (no `?` boxes) in the library, the menus and the tooltips.
 **Q5. Names in Nexus.** With Nexus set to Deutsch, **Nexus > Options > Keybinds** shows the
 addon's two keybinds in German, and hovering the chat bubble icon shows a German tooltip.
 
-**Q6. A file of your own.** *(advanced option)* Click **Open localization folder**: Explorer opens
+**Q6. A file of your own.** Run it with **Advanced options** off (it no longer matters). Under the
+Language dropdown, **Use language files from the localization folder** is unticked (the default),
+with a grey line saying what it's for, and there's no **Open localization folder** or **Reload
+language files**. Tick it: the two buttons and the text about adding a language appear. Click
+**Open localization folder**: Explorer opens
 `<GW2>\addons\GW2_Chat_Messages\localization\`. Copy `localization\template.json` from the
 repository into it as `nl.json`, set `"Identifier": "nl"`, `"DisplayName": "Nederlands"`, and
 translate one text, e.g. `"Open macro library": "Macrobibliotheek openen"`. Click **Reload
@@ -720,13 +724,29 @@ it: that one text is in Dutch, the rest in English.
 %s from the quick menu": "Verzonden"`), then click **Reload language files**: the error window
 says one text was left out, and that text shows in English. Then break the file (delete the last
 `}`) and reload: the error window says the file wasn't loaded and why, and the dropdown falls
-back. Delete `nl.json` and reload afterwards.
+back. Put the last `}` back and reload, for Q9.
 
 **Q8. Messages and key names.** With German on, the hotkey row and the tree show key names in
 German: **Ctrl+Mouse 4** shows as `Ctrl+Maus 4` and Page Up as `Bild auf` (Ctrl, Alt and Shift
 keep their names). Make a duplicate name, send a macro with the Chat key cleared, and import a
 damaged file: each error window message is in German. Searching the library for `maus 4` and for
 `mouse 4` both find the macro with that hotkey. `macros.json` still stores the hotkey in English.
+
+**Q9. Files from other versions, and the opt-in (new 2026-11-26).** With Q6's `nl.json` (fixed
+again) and **Nederlands** picked:
+- in `nl.json`, add `"Format": 2,` and `"Plurals": {"one": 1},` after the `{`, and a text this
+  version doesn't have under `Texts` (`"A text from a newer version": "Nieuw",`). Click **Reload
+  language files**: no error window; Nederlands is still picked, Q6's text is still in Dutch, and
+  a yellow line under the box says `nl.json` was made for a newer version. Take those three
+  additions out again and reload: the yellow line is gone;
+- change the English side of Q6's text (`"Open the macro library": "Macrobibliotheek openen"`) and
+  reload: no error window, and that text is back in English (as for a text reworded in an update);
+- untick **Use language files from the localization folder**: the buttons go, Nederlands isn't in
+  the list any more, the addon is in English and the dropdown shows "nl (a language file: turn on
+  language files below)". Restart the game: still unticked, still English. Tick it again:
+  Nederlands is back and shown again. In `settings.json`, `"own_language_files"` is `true`;
+- tick **Advanced options**, then untick it: the language box and Nederlands don't change.
+Delete `nl.json`, reload, and untick the box afterwards.
 
 ## R. Backups and restore
 
@@ -804,10 +824,9 @@ same one. Untick **Advanced options**:
   editor is back on Lines;
 - **Import...**: no **Macros / A whole library** choice (macros only), and no **Keep hotkeys**
   box. Import an export of `Say`: it comes without its hotkey;
-- the options page has no **Refresh map list** button (the map list line is still there), and no
-  **Open localization folder**, **Reload language files** or the text about adding a language.
-  The Language dropdown no longer lists Q6's file (if you chose it, the addon is in English and
-  the dropdown shows its id with "(a language file: needs Advanced options)");
+- the options page has no **Refresh map list** button (the map list line is still there). The
+  Language section still has **Use language files from the localization folder** (it has its own
+  box now, not this one): ticked, its buttons show, and a file in the folder is listed;
 - in a filter's map search with no map list loaded, the hint says "Try again later" instead of
   pointing at Refresh map list (only if you can make the list empty, e.g. offline on a first
   run: skip otherwise).
@@ -816,8 +835,8 @@ same one. Untick **Advanced options**:
 - within a second `Two` has the lines you saved in Notepad in S1 (the file wins, as when both
   change), its **Text file link** section is back, and Ctrl+F7 sends it;
 - `Say`'s **Cooldown:** row shows `10` again and the hotkey waits 10 seconds;
-- Raw text, A whole library, Keep hotkeys, Refresh map list and the language buttons are back;
-  Q6's language is listed again (and shown again if you'd chosen it);
+- Raw text, A whole library, Keep hotkeys and Refresh map list are back; the language box and
+  its buttons are as they were (this box doesn't change them);
 - click **[?]** next to the box: the browser opens the wiki's **Advanced options** page.
 
 **S4. Off by default.** Close the game. In `<GW2>\addons\GW2_Chat_Messages\settings.json`,
@@ -895,7 +914,7 @@ M1 (entries and sizes):  M2  M3  M4  M5
 N1 (pasted text):  N2  N3
 O1  O2  O3 (long name too)  O4  O5
 P1  P2  P3  P4 (did Ctrl+F / Escape reach the game?):  P5  P6 (label at character select):  P7 (did typing or Enter reach the game?):  P8
-Q1  Q2  Q3 (anything cut off?):  Q4  Q5  Q6  Q7  Q8   Translations that read oddly:
+Q1  Q2  Q3 (anything cut off?):  Q4  Q5  Q6  Q7  Q8  Q9   Translations that read oddly:
 R1  R2  R3  R4  R5  R6  R7
 S1  S2  S3  S4
 Nexus log warnings:

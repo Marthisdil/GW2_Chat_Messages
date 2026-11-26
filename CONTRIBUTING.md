@@ -38,6 +38,7 @@ the right, and send it in (see [Sending it in](#sending-it-in)).
    options page in Nexus, e.g. `2026.11.21.1412.Dev`). It tells people how current the file is.
 4. Under `"Texts"`, fill in the right-hand side of each line. Don't change the left-hand side:
    it's the English text the addon looks up. A text you leave empty (`""`) is shown in English.
+5. Leave `"Format": 1` as it is (see [Files from other versions](#files-from-other-versions)).
 
 ### The rules for each text
 
@@ -67,11 +68,28 @@ Nexus' fonts cover the Latin alphabets (with accents). Languages with other scri
 Korean, Russian...) may show `?` boxes until the addon has fonts for them. You're welcome to
 translate them anyway; it's on the [to-do list](docs/todo.md).
 
+### Files from other versions
+
+A language file made for one version of the addon keeps working with the next:
+
+- `"Format"` is the file format (1 now). It only goes up if the file's layout changes in a way an
+  older addon can't read; a file without it counts as 1. A file with a higher number is still
+  used for everything that version of the addon understands.
+- Fields the addon doesn't know (`"About"`, `"Unused"`, anything added later) are ignored.
+- A text in your file that the addon doesn't use (its English was reworded or removed in an
+  update, or it's from a newer version) is left out quietly, and any text without a translation
+  is shown in English. The rest of the file is used, text by text.
+- When an English text is reworded, `tools\localization.ps1 -Write` moves its old translation to
+  `"Unused"` at the end of the file, and adds the new English text with `""`. Reuse the old
+  translation for the new text if it still fits, then delete the entry under `"Unused"`.
+
 ### Trying it in game
 
 1. Put your file in `<GW2>\addons\GW2_Chat_Messages\localization\` (create the folder if it
-   isn't there; **Open localization folder** in the addon's options does it for you).
-2. In Nexus > Options, open the addon's page and click **Reload language files**.
+   isn't there; **Open localization folder** in the addon's options does it for you, once the
+   box in step 2 is ticked).
+2. In Nexus > Options, open the addon's page, tick **Use language files from the localization
+   folder** under the Language dropdown (once), and click **Reload language files**.
 3. Pick your language in the **Language** dropdown. If a text was refused, an error window
    says why, and the Nexus log lists the first few texts.
 

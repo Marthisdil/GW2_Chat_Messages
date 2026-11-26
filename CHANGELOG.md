@@ -26,10 +26,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Advanced options:** a new checkbox on the addon's options page (General tab), with **[?]**
   opening its wiki page. Features most players never need are kept behind it, so the addon stays
   simple: text file links, hotkey cooldowns, the Raw text tab, importing a whole library, Keep
-  hotkeys on import, your own language files and the Refresh map list button. It's off by
+  hotkeys on import and the Refresh map list button. It's off by
   default: they're hidden and don't work, and nothing you set is deleted. A macro linked to a
   text file can't be sent while it's off (its hotkey does nothing, it's faded in the quick menu,
   and Send now explains why); a cooldown is kept but ignored.
+- **Your own language files** have their own checkbox, **Use language files from the
+  localization folder**, under the Language dropdown (off by default; the folder isn't read
+  until you tick it). They're no longer behind Advanced options.
+- **Language files from other versions** keep working: a text the file has that this version
+  doesn't use (reworded, removed, or new in a later version) is left out quietly instead of
+  opening the error window, and a file made for a newer version is used for everything this
+  version understands, with a note under the box. Language files now start with
+  `"Format": 1`; when an English text is reworded, its old translation is kept under `"Unused"`
+  for translators to reuse.
 - **New icon:** the Quick Access icon in the Nexus bar is now a speech bubble with a lightning
   bolt (it was a scroll), so it reads as "chat, fast" even at small sizes.
 

@@ -22,6 +22,9 @@ namespace Languages
         std::string AddonVersion; // the version the file was made for
         int         Percent = 100;
         size_t      Skipped = 0;  // texts left out by the checks
+        size_t      Unused  = 0;  // texts this version doesn't use (reworded, removed or newer)
+        bool        FromNewer = false; // made for a newer version of the addon (its Format is higher)
+        int         Format  = 1;
     };
 
     // Registers a text Nexus shows for us (a keybind's name, the Quick Access tooltip) so it's
@@ -42,9 +45,10 @@ namespace Languages
     std::string NexusLanguage();      // what Nexus uses now ("en" if unknown)
     std::string ActiveId();           // what's shown now
     std::filesystem::path Folder();   // <addon>\localization, created on first call
-    // Advanced options (Advanced.h): the folder's files are only loaded while they're on. A change
-    // reloads the languages next frame.
+    // The "Use language files from the localization folder" opt-in (Localization::kOwnFilesSetting):
+    // the folder isn't read while it's off. A change is saved and reloads the languages next frame.
     void UseFolder(bool aOn);
+    bool UsesFolder();
 
     // Problems found while loading (a file that was refused, texts skipped), in plain words, for
     // the error window. Taken once.

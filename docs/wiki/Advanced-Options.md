@@ -47,8 +47,11 @@ changes a macro while you play, for example). Keeping them behind one box means:
 | **Raw text** tab: edit a macro's lines as plain text | Hidden: the editor shows the Lines tab only. | [Editing macros](Editing-Macros#the-raw-text-tab) |
 | Import **A whole library**: someone else's `macros.json` into a folder of its own | Hidden: the Import window imports macros only. | [Import and export](Import-and-Export#importing-a-whole-library) |
 | Import **Keep hotkeys** | Hidden and off: imported macros come without hotkeys. | [Import and export](Import-and-Export#2-choose-where-it-goes) |
-| **Your own language files** (`localization` folder, **Open localization folder**, **Reload language files**) | Hidden, and the files aren't read: only the built-in languages are offered. A language you'd chosen from a file shows in English until the box is back on. | [Languages](Languages#more-languages) |
 | **Refresh map list** button | Hidden. The map list still refreshes by itself (first run, weekly, on a language change). | [Filters](Filters#the-map-list) |
+
+Your own language files used to be behind this box too. They now have their own checkbox under
+the Language dropdown, so you can use a language file without the other advanced features (see
+[Languages](Languages#more-languages)).
 
 Features added later that fit here (for example timed or scheduled lines) will be behind the
 checkbox too, and listed here when they're built.

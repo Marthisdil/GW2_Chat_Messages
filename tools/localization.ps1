@@ -5,8 +5,11 @@
 #   -Check (default): fails if localization\en.json or template.json is out of date with the code,
 #                     and reports what each language file is missing or has extra;
 #   -Write:           rewrites en.json and template.json, and brings every other language file in
-#                     line: new texts are added with "" (English is shown until translated), texts
-#                     the code no longer uses are removed, existing translations are kept.
+#                     line: new texts are added with "" (English is shown until translated), and a
+#                     translated text the code no longer uses (its English was reworded or removed)
+#                     moves to "Unused", so the translator can reuse it; the addon ignores "Unused".
+#                     A text that comes back gets its translation back from "Unused".
+#                     Every file gets "Format" (Localization::kFormat; docs/design.md, "Languages").
 # Usage: powershell -NoProfile -ExecutionPolicy Bypass -File tools\localization.ps1 [-Write]
 param([switch]$Write)
 $ErrorActionPreference = "Stop"
@@ -103,10 +106,17 @@ function JsonString([string]$s) {
     return $sb.ToString()
 }
 
-# A language file, keys in $texts order. $values: key -> text ("" = not translated).
-function LanguageJson([string]$id, [string]$name, [string]$ver, [string[]]$about, $values) {
+$format = 1
+$locHeader = Join-Path $root "src\Localization.h"
+$fm = [regex]::Match([IO.File]::ReadAllText($locHeader), 'constexpr\s+int\s+kFormat\s*=\s*(\d+)')
+if ($fm.Success) { $format = [int]$fm.Groups[1].Value } else { throw "kFormat not found in src\Localization.h" }
+
+# A language file, keys in $texts order. $values: key -> text ("" = not translated). $unused: old
+# English -> translation, written after Texts (sorted, so the file stays stable).
+function LanguageJson([string]$id, [string]$name, [string]$ver, [string[]]$about, $values, $unused) {
     $lines = New-Object System.Collections.Generic.List[string]
     $lines.Add("{")
+    $lines.Add('  "Format": ' + $format + ',')
     $lines.Add('  "Identifier": ' + (JsonString $id) + ',')
     $lines.Add('  "DisplayName": ' + (JsonString $name) + ',')
     if ($ver) { $lines.Add('  "AddonVersion": ' + (JsonString $ver) + ',') }
@@ -120,6 +130,15 @@ function LanguageJson([string]$id, [string]$name, [string]$ver, [string[]]$about
         $k = $texts[$i]
         $v = if ($values.ContainsKey($k)) { [string]$values[$k] } else { "" }
         $lines.Add('    ' + (JsonString $k) + ': ' + (JsonString $v) + $(if ($i -lt $texts.Count - 1) { ',' } else { '' }))
+    }
+    $old = @()
+    if ($unused) { $old = @($unused.Keys | Sort-Object -CaseSensitive) }
+    if ($old.Count -gt 0) {
+        $lines.Add('  },')
+        $lines.Add('  "Unused": {')
+        for ($i = 0; $i -lt $old.Count; $i++) {
+            $lines.Add('    ' + (JsonString $old[$i]) + ': ' + (JsonString ([string]$unused[$old[$i]])) + $(if ($i -lt $old.Count - 1) { ',' } else { '' }))
+        }
     }
     $lines.Add('  }')
     $lines.Add('}')
@@ -144,8 +163,8 @@ $templateAbout = @(
 )
 
 $outputs = [ordered]@{
-    "en.json"       = (LanguageJson "en" "English (US)" "" @("Every English text the addon shows. Written by tools\localization.ps1 from the code: don't edit by hand.") $english)
-    "template.json" = (LanguageJson "xx" "Your language's name" "" $templateAbout $empty)
+    "en.json"       = (LanguageJson "en" "English (US)" "" @("Every English text the addon shows. Written by tools\localization.ps1 from the code: don't edit by hand.") $english $null)
+    "template.json" = (LanguageJson "xx" "Your language's name" "" $templateAbout $empty $null)
 }
 
 $problems = 0
@@ -165,13 +184,28 @@ foreach ($f in Get-ChildItem $dir -Filter *.json | Where-Object { $_.Name -ne "e
     $missing = 0; $extra = 0
     foreach ($t in $texts) { if (-not $tx.ContainsKey($t) -or [string]::IsNullOrEmpty([string]$tx[$t])) { $missing++ } }
     foreach ($k in $tx.Keys) { if (-not $english.ContainsKey($k)) { $extra++ } }
-    Write-Host ("{0}: {1} of {2} texts translated, {3} not translated, {4} no longer used" -f $f.Name, ($texts.Count - $missing), $texts.Count, $missing, $extra)
+    $kept = if ($doc.ContainsKey("Unused") -and $doc["Unused"] -is [System.Collections.IDictionary]) { $doc["Unused"].Count } else { 0 }
+    Write-Host ("{0}: {1} of {2} texts translated, {3} not translated, {4} no longer used, {5} kept under Unused" -f $f.Name, ($texts.Count - $missing), $texts.Count, $missing, $extra, $kept)
     if ($Write) {
         $values = New-Object 'System.Collections.Generic.Dictionary[string,string]' ([StringComparer]::Ordinal)
-        foreach ($k in $tx.Keys) { $values[$k] = [string]$tx[$k] }
+        $unused = New-Object 'System.Collections.Generic.Dictionary[string,string]' ([StringComparer]::Ordinal)
+        if ($doc.ContainsKey("Unused") -and $doc["Unused"] -is [System.Collections.IDictionary]) {
+            foreach ($k in $doc["Unused"].Keys) { $unused[$k] = [string]$doc["Unused"][$k] }
+        }
+        foreach ($k in $tx.Keys) {
+            $v = [string]$tx[$k]
+            if ($english.ContainsKey($k)) { $values[$k] = $v }
+            elseif ($v -ne "") { $unused[$k] = $v } # reworded or removed: kept for the translator
+        }
+        foreach ($k in @($unused.Keys)) {
+            if ($english.ContainsKey($k)) { # the text is back: so is its translation
+                if (-not $values.ContainsKey($k) -or $values[$k] -eq "") { $values[$k] = $unused[$k] }
+                [void]$unused.Remove($k)
+            }
+        }
         $about = if ($doc.ContainsKey("About")) { [string[]]$doc["About"] } else { $null }
         $ver = if ($doc.ContainsKey("AddonVersion")) { [string]$doc["AddonVersion"] } else { $version }
-        $out = LanguageJson ([string]$doc["Identifier"]) ([string]$doc["DisplayName"]) $ver $about $values
+        $out = LanguageJson ([string]$doc["Identifier"]) ([string]$doc["DisplayName"]) $ver $about $values $unused
         $now = [IO.File]::ReadAllText($f.FullName, $utf8) -replace "`r`n", "`n"
         if ($now -ne $out) { [IO.File]::WriteAllText($f.FullName, $out, $utf8); Write-Host "  updated $($f.Name)" }
     }

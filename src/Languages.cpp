@@ -11,7 +11,6 @@
 
 #include <nlohmann/json.hpp>
 
-#include "Advanced.h"
 #include "Globals.h"
 #include "Localization.h"
 #include "MapNames.h"
@@ -48,7 +47,7 @@ namespace
     std::string                     s_ActiveId = "en";
     bool                            s_Apply  = false;
     bool                            s_Reload = false;
-    bool                            s_UseFolder = false; // advanced options on (Advanced.h)
+    bool                            s_UseFolder = false; // the "own language files" opt-in (Localization.h)
     DWORD                           s_LastPoll = 0;
 
     HMODULE ThisModule()
@@ -93,6 +92,9 @@ namespace
         info.AddonVersion = aCat->AddonVersion;
         info.Percent      = Localization::PercentDone(*aCat, s_Known);
         info.Skipped      = aCat->Skipped;
+        info.Unused       = aCat->Unused;
+        info.FromNewer    = aCat->FromNewer;
+        info.Format       = aCat->Format;
         for (const std::string& note : aCat->SkipNotes)
             LogF(LOGL_WARNING, "Language %s: skipped %s", info.Id.c_str(), note.c_str());
         for (Loaded& l : s_Loaded)
@@ -126,7 +128,7 @@ namespace
     // <addon>\localization\*.json: plain files only (no links), at most kMaxFiles, each checked.
     void LoadFolder()
     {
-        if (!s_UseFolder) return;    // an advanced option: not even read while it's off
+        if (!s_UseFolder) return;    // not even read until the user opts in
         if (s_Known.empty()) return; // without the English list nothing can be checked
         const fs::path dir = Languages::Folder();
         if (dir.empty()) return;
@@ -170,7 +172,11 @@ namespace
                 s_Problems.push_back(Localization::Fmt(T("The language file %s: %zu text(s) were left out because they didn't pass "
                                                          "the checks (English is shown for them). The Nexus log lists the first few."),
                                                        name.c_str(), cat->Skipped));
-            LogF(LOGL_INFO, "Language file %s loaded: %s (%s).", name.c_str(), cat->DisplayName.c_str(), cat->Id.c_str());
+            LogF(LOGL_INFO, "Language file %s loaded: %s (%s), format %d, %zu text(s) this version doesn't use.", name.c_str(),
+                 cat->DisplayName.c_str(), cat->Id.c_str(), cat->Format, cat->Unused);
+            if (cat->FromNewer)
+                LogF(LOGL_WARNING, "Language file %s is format %d (this version reads %d): only what this version understands is used.",
+                     name.c_str(), cat->Format, Localization::kFormat);
             Add(std::move(cat), true, name);
         }
     }
@@ -248,7 +254,7 @@ void Languages::Init()
     const auto it = settings.find(kSetting);
     if (it != settings.end() && it->is_string() && (it->get<std::string>() == kFollowNexus || Localization::ValidId(it->get<std::string>())))
         s_Choice = it->get<std::string>();
-    s_UseFolder = Advanced::FromSettings(settings);
+    s_UseFolder = Localization::OwnFilesFromSettings(settings);
     LoadAll();
     s_Nexus = AskNexus(); // Nexus applies our probe texts on its next frame: Update corrects this
     Apply();
@@ -307,7 +313,9 @@ void Languages::UseFolder(bool aOn)
     if (aOn == s_UseFolder) return;
     s_UseFolder = aOn;
     s_Reload = true;
+    if (!Storage::SaveSetting(Localization::kOwnFilesSetting, aOn)) LogF(LOGL_WARNING, "The own language files setting couldn't be saved.");
 }
+bool Languages::UsesFolder() { return s_UseFolder; }
 std::string Languages::NexusLanguage() { return s_Nexus; }
 std::string Languages::ActiveId() { return s_ActiveId; }
 fs::path Languages::Folder() { return Storage::LocalizationDir(); }

@@ -164,6 +164,13 @@ bool Localization::SamePlaceholders(const std::string& aEnglish, const std::stri
     return Placeholders(aEnglish, a) && Placeholders(aTranslation, b) && a == b;
 }
 
+bool Localization::OwnFilesFromSettings(const json& aSettings)
+{
+    if (!aSettings.is_object()) return false;
+    const auto it = aSettings.find(kOwnFilesSetting);
+    return it != aSettings.end() && it->is_boolean() && it->get<bool>();
+}
+
 bool Localization::ParseCatalog(const std::string& aJson, const std::unordered_set<std::string>* aKnown,
                                 Catalog& aOut, std::string& aError)
 {
@@ -183,6 +190,17 @@ bool Localization::ParseCatalog(const std::string& aJson, const std::unordered_s
         return false;
     }
     aOut.Id = id->get<std::string>();
+
+    // "Format": a number; anything else (or none) is format 1. Huge or odd values are clamped, so
+    // a newer file never reads as an older one.
+    const auto format = doc.find("Format");
+    if (format != doc.end() && format->is_number())
+    {
+        const double f = format->get<double>();
+        if (f >= 1000000.0) aOut.Format = 1000000;
+        else if (f >= 1.0) aOut.Format = static_cast<int>(f);
+    }
+    aOut.FromNewer = aOut.Format > kFormat;
 
     const auto name = doc.find("DisplayName");
     std::string why;
@@ -207,7 +225,7 @@ bool Localization::ParseCatalog(const std::string& aJson, const std::unordered_s
     {
         const std::string& key = it.key();
         if (key.empty() || key.size() > kMaxTextBytes || !SafeText(key, true)) { Skip(aOut, "(an entry)", "its English text isn't valid"); continue; }
-        if (aKnown && !aKnown->count(key)) { Skip(aOut, key, "not a text this version uses"); continue; }
+        if (aKnown && !aKnown->count(key)) { aOut.Unused++; continue; } // reworded, removed, or newer: English is used
         if (!it.value().is_string()) { Skip(aOut, key, "the translation isn't text"); continue; }
         const std::string value = it.value().get<std::string>();
         if (value.empty()) continue; // not translated yet: English is used, not counted as a problem

@@ -35,19 +35,31 @@ tooltip, follow Nexus' language.
 
 ## More languages
 
-> **Advanced option:** only with **Advanced options** ticked on the addon's options page; see
-> [Advanced options](Advanced-Options). While it's off, the
-> files in the `localization` folder aren't read.
+Other languages can be added with a language file (a `.json` file). This is off until you turn
+it on, so the addon reads no files you didn't ask for.
 
-Other languages can be added with a language file (a `.json` file).
-
-1. Get the file from the `localization` folder of the addon's
+1. Under the **Language** dropdown, tick **Use language files from the localization folder**.
+   The buttons below appear. (It isn't part of [Advanced options](Advanced-Options): it works
+   whether that box is on or off.)
+2. Get the file from the `localization` folder of the addon's
    [GitHub page](https://github.com/Marthisdil/GW2_Chat_Messages/tree/main/localization).
-2. On the addon's options page, click **Open localization folder**. It opens
+3. Click **Open localization folder**. It opens
    `<GW2>\addons\GW2_Chat_Messages\localization\` (and creates it if needed).
-3. Put the file there and click **Reload language files**. The language appears in the
+4. Put the file there and click **Reload language files**. The language appears in the
    dropdown, marked "file from your localization folder". Hover it to see which addon version it
    was made for.
+
+<!-- screenshot: language-own-files.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the language files box ticked, with its buttons and a file of your own.*
+
+Untick the box to stop using the files: the folder isn't read any more, and a language you'd
+chosen from a file shows in English until you tick it again.
+
+**Files made for another version of the addon** still work. A text the file has but this
+version doesn't use (because its English was reworded, or it's new in a later version) is
+simply left out, and any text without a translation is shown in English. A file made for a newer
+version is used for everything this version understands, and a yellow line under the box says
+so while it's the language you use. Neither opens the error window.
 
 A file with the same language code as a built-in one (`de.json`, for example) replaces the
 built-in language, which is useful for testing a correction. English can't be replaced.

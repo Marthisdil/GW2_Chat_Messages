@@ -6,8 +6,9 @@
 // The English text in the code is the key: T("Open macro library") returns the active
 // language's text for it, or the English when there's none. A language file is
 // localization/<id>.json:
-//   { "Identifier": "de", "DisplayName": "Deutsch", "AddonVersion": "...",
-//     "Texts": { "Open macro library": "Makrobibliothek öffnen", ... } }
+//   { "Format": 1, "Identifier": "de", "DisplayName": "Deutsch", "AddonVersion": "...",
+//     "Texts": { "Open macro library": "Makrobibliothek öffnen", ... },
+//     "Unused": { ... } }
 // localization/en.json lists every English text (written by tools/localization.ps1); only its
 // keys are accepted from other files.
 //
@@ -16,6 +17,13 @@
 // characters, and a translation's %-codes must be exactly the English text's, in the same order
 // (it may be used as a format string). A text that fails is skipped (English is used); a file
 // that fails as a whole isn't loaded.
+//
+// Files from other versions of the addon (docs/design.md, "Languages", "Language file format"):
+// "Format" is raised only by a breaking change; no "Format" means 1. A newer file is still used
+// for everything this version understands (FromNewer, shown on the options page). Fields this
+// version doesn't know ("About", "Unused", anything a newer version adds) are ignored. A text this
+// version doesn't use (reworded or removed English, or new in a newer version) is left out quietly
+// (Unused), not counted as a problem: English is shown for whatever has no translation.
 
 #include <cstddef>
 #include <string>
@@ -23,8 +31,11 @@
 #include <unordered_set>
 #include <vector>
 
+#include <nlohmann/json_fwd.hpp>
+
 namespace Localization
 {
+    constexpr int    kFormat        = 1;          // the language file format this version writes and reads
     constexpr size_t kMaxFileBytes  = 512 * 1024; // a full translation is about 60 KB
     constexpr size_t kMaxTexts      = 4000;
     constexpr size_t kMaxTextBytes  = 2048;
@@ -39,9 +50,18 @@ namespace Localization
         std::string DisplayName;  // "Deutsch"
         std::string AddonVersion; // the version it was made for ("" if not given)
         std::unordered_map<std::string, std::string> Texts; // English -> translation
-        size_t Skipped = 0;                    // texts left out (English is used for them)
+        int    Format  = 1;                    // its "Format" (1 when not given)
+        bool   FromNewer = false;              // Format > kFormat: made for a newer version
+        size_t Unused  = 0;                    // texts this version doesn't use (not a problem)
+        size_t Skipped = 0;                    // texts that failed a check (English is used for them)
         std::vector<std::string> SkipNotes;    // the first few reasons, for the log
     };
+
+    // Your own language files (<addon>\localization\) are read only after this opt-in, next to
+    // the Language dropdown (docs/design.md, "Languages"). settings.json: true or false.
+    constexpr const char* kOwnFilesSetting = "own_language_files";
+    // Off unless saved as true.
+    bool OwnFilesFromSettings(const nlohmann::json& aSettings);
 
     // "en", "de", "pt-br": 2-3 lower-case letters, optionally "-" and 2-8 letters or digits.
     bool ValidId(const std::string& aId);
@@ -58,7 +78,7 @@ namespace Localization
     bool SamePlaceholders(const std::string& aEnglish, const std::string& aTranslation);
 
     // Parses and checks a language file. aKnown: the English texts that exist (en.json); other
-    // keys are skipped. nullptr accepts every key (only for en.json itself). Returns false, with
+    // keys are left out (Unused). nullptr accepts every key (only for en.json itself). Returns false, with
     // aError in plain words, when the file as a whole is refused.
     bool ParseCatalog(const std::string& aJson, const std::unordered_set<std::string>* aKnown,
                       Catalog& aOut, std::string& aError);

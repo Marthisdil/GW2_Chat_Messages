@@ -50,7 +50,11 @@ to scan, where untrusted data comes in, which bug classes matter here, and how p
    characters, bidi marks, `##`), that only keys known from English are used, the folder rules
    in `Languages.cpp` (regular files only, no links, at most `kMaxFiles`), and that a text can't
    change an ImGui ID (the `##` part is kept from the English literal). The built-in files go
-   through the same checks.
+   through the same checks. The folder is read only after the user ticks "Use language files
+   from the localization folder" (`"own_language_files"`, off unless saved as true). A newer
+   `Format` or unknown fields never loosen a check: every text still goes through the same
+   rules, and fields other than `Identifier`, `DisplayName`, `AddonVersion`, `Format` and
+   `Texts` are never read.
 6. **Our own files** (`macros.json`, `settings.json`, `.bak`, `backups\*.json`): may be hand-edited
    or damaged; an unreadable file is renamed aside, never overwritten. Backups are read (capped at
    32 MB) only under names `Backups::ParseFileName` accepts, and a restore checks the whole file
