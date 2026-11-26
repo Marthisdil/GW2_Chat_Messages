@@ -1024,6 +1024,10 @@ page, General tab):
 - open a pop-up during the tour (right-click > Rename): the box hides, and comes back after it;
 - with an empty library (no macros), steps 4 to 6 say "Make a macro, or select one..." in the
   middle of the window;
+- select a long macro, scroll the details pane to its bottom, take the tour: at step 4 the pane
+  scrolls up to the header, and no outline ever spills outside its pane;
+- type `xyz` in the search box at step 3 (nothing matches), clear it and type `hello`, then
+  **Next**: step 4 selects a macro the search shows;
 - biggest text size: the box and the outline fit and wrap.
 
 **W3. An update.** Put your own folder back (`GW2_Chat_Messages.keep` to `GW2_Chat_Messages`;
