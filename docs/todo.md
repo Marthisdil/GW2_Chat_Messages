@@ -31,6 +31,11 @@ example macros if they were added; how the text boxes point at things in ImGui 1
 highlights drawn over our own windows, not the game's); translations for every step; and new
 in-game checks and screenshots for both.
 
+**Advanced options (2026-11-25):** the tour follows the box. With it off (the default on a new
+install) it never points at anything hidden behind it; at most one step points at the box itself
+("more features for experienced players"). Whether the tour has extra steps when it's on, or
+the [?] wiki page is enough, is to discuss. The welcome itself isn't an advanced option.
+
 ### In-game testing
 
 Work through `docs/in-game-tests.md` (A1 passed, A2 mostly; the rest is still to do). Session B,
@@ -94,6 +99,15 @@ below, so that cleanup works on the final layout.
 What stands out: everything about one macro is on one screen, with where it's active and how
 it's triggered side by side above the lines, and each line is compact (channel, text, delete,
 drag). The text box doesn't wrap, so long lines get cut off at the edge.
+
+**Advanced options (2026-11-25):** design the layout for both states. With the box off (the
+default) the pane shows only the everyday settings, with no gaps where hidden sections would
+be. With it on, the advanced sections (now the text file link; later the planned ones in
+`docs/design.md`, "Advanced options", such as timed lines or a schedule) have a clear place of
+their own, e.g. grouped under one "Advanced" heading at the bottom, rather than scattered among
+the everyday ones. A macro that uses an advanced feature while the box is off still needs its
+note and faded Send now to fit. Screenshots of the new layout: one with the box off, and one
+with it on where it differs.
 
 ### Cleanup PR for `Ui.cpp` after the in-game testing (added 2026-11-24)
 

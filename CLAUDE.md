@@ -37,6 +37,14 @@ Before a **minor release** (any other tagged release), ask: full audit, quick au
 last tag, or skip. When opening a PR that changes code (not docs-only), ask: code review and
 quick audit, code review only, or skip (see "Code review" under Git workflow).
 
+**Advanced options (owner, 2026-11-25):** for every new feature or idea (built or added to
+`docs/todo.md`), say whether it should go behind the **Advanced options** checkbox, and why
+(rare need, surprising behaviour, close to ArenaNet's macro policy, or not per-macro), and record
+the decision with the idea. A feature behind it is hidden and doesn't work while the box is off
+(a macro that uses one is blocked; its settings are kept; see `docs/design.md`, "Advanced
+options"). Every UI design (layouts, the welcome tour, screenshots, in-game checks) must work
+both ways: with the box off (the default) and on. The current list is in `docs/design.md`.
+
 `docs/todo.md` collects ideas and brainstorming for later discussion. When the user says "add X
 to the todo list", add it there (don't start building it). Move agreed items into
 `docs/design.md`.
