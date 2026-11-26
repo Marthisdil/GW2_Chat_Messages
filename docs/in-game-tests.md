@@ -837,9 +837,11 @@ Start the game and open the library:
   window says the same once;
 - send `Say` (Send now and its hotkey): it's sent;
 - rename `Say` to `Say 2` and wait 10 seconds, then unload the addon (or close the game): the
-  file still has `"format": 2` and the name `Say`; the Nexus log says it wasn't saved;
+  file still has `"format": 2` and the name `Say`;
 - on the options page, **Back up now**: the new file in `backups\` is a copy of `macros.json` as
-  it was (`"format": 2`).
+  it was (`"format": 2`);
+- on the Restore tab, **Restore...** an older backup: the error window says the library is
+  read-only and nothing is restored; `macros.json` still has `"format": 2`.
 
 **T2. Fields from a newer version are kept.** Put `"format": 1` back. Add `"colour": "red",` to a
 folder's object and `"delay_ms": 250,` to one of `Two`'s lines. Start the game, rename `Two` to
@@ -854,9 +856,13 @@ game:
   hotkey and the quick menu send nothing either;
 - Advanced options on: the **Raw text** tab shows a note instead of the text; right-click >
   Export > as .txt is refused with its own message; if `Two` is linked to a file, the link
-  section says it isn't kept in step (the file doesn't change);
+  section says it isn't kept in step (the file doesn't change); linking another macro with such
+  a line to a new file is refused with its own message;
+- the quick menu's hover preview and the trash bin show that line as **? guild_hall** in red;
 - save something else, close the game: the line still has `"channel": "guild_hall"`;
-- pick **Say** in that line's channel box: the error goes, and **Send now** sends both lines.
+- pick **Say** in that line's channel box: the error goes, and **Send now** sends both lines; if
+  `Two` is linked, within a second its file gets the Say line (the macro wins, it isn't replaced
+  by the file).
 
 **T4. Importing a newer export.** Export `Two` (as .json). In the file, change `"format": 1` to
 `"format": 2` and add `"pinned_at": 5,` to the macro. Import it: the import window warns it was

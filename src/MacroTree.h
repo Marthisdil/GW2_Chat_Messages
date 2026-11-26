@@ -180,6 +180,7 @@ namespace MacroTree
         std::vector<std::string> FromNames; // their names, same order (to recreate them)
         size_t                   FromIndex = 0; // its place in that folder
         std::string              DeletedAt; // UTC, "2026-11-21T14:03:00Z" (UtcStamp)
+        MacroTree::Extra         Extra;     // the entry's fields from a newer version
     };
 
     enum class ERestoreTo : uint8_t
@@ -274,6 +275,7 @@ namespace MacroTree
     private:
         std::unique_ptr<Node> m_Root;
         std::vector<TrashItem> m_Trash;
+        Extra                  m_RootExtra; // the "root" object's own fields from a newer version
         int                    m_FormatRead = kFormatVersion;
         std::string            m_SavedBy;
         // Every id in the tree or the bin (plus some since deleted, which is harmless), filled on the

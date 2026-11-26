@@ -296,6 +296,16 @@ namespace
         return buf;
     }
 
+    // One line as it's typed, in its channel's colour; a newer version's channel as "? key", in red
+    // (that line is never sent).
+    void DrawLinePreview(const Line& aLine)
+    {
+        if (aLine.UnknownChannel.empty())
+            ImGui::TextColored(ChannelColorVec(aLine.Channel), "%s", ChatLine::TypedText(aLine).c_str());
+        else
+            ImGui::TextColored(kErrorColor, "? %s  %s", aLine.UnknownChannel.c_str(), aLine.Message.c_str());
+    }
+
     std::string WhereText()
     {
         const Here h = WhereAmI();
@@ -1572,7 +1582,7 @@ namespace
         else
         {
             if (n.Lines.empty()) ImGui::TextDisabled(T("No lines."));
-            for (const Line& l : n.Lines) ImGui::TextColored(ChannelColorVec(l.Channel), "%s", ChatLine::TypedText(l).c_str());
+            for (const Line& l : n.Lines) DrawLinePreview(l);
             if (!n.Hotkey.Empty()) ImGui::TextDisabled(T("Hotkey (not active in the bin): %s"), Hotkey::Display(n.Hotkey).c_str());
         }
     }
@@ -2284,13 +2294,23 @@ namespace
         {
             // Its file is raw text, which can't hold a newer version's channel: syncing would turn
             // that line into a current-channel line. Paused until the line gets another channel.
+            const std::filesystem::path file = LinkSync::Resolve(dir, m->LinkFile);
+            LinkSync::State& st = s_LinkStates[m->Id];
             if (MacroTree::HasUnknownChannel(*m))
             {
+                // The file as it is now counts as agreed: when the line gets a channel again, the
+                // macro's edits go to the file instead of the file replacing them (a first sync
+                // would load the file). A later change to the file still wins, as always.
+                if (!st.Known)
+                {
+                    bool exists = false;
+                    st.Mtime = FileMtime(file, exists);
+                    st.Text  = ChatLine::SerializeRaw(m->Lines);
+                    st.Known = exists;
+                }
                 s_LinkProblems[m->Id] = T("Not kept in step with its file: a line's channel is from a newer version of the addon.");
                 continue;
             }
-            const std::filesystem::path file = LinkSync::Resolve(dir, m->LinkFile);
-            LinkSync::State& st = s_LinkStates[m->Id];
             const LinkSync::State before = st;
             LinkSync::File view;
             view.Mtime = FileMtime(file, view.Exists);
@@ -2341,6 +2361,12 @@ namespace
         const std::string action = Fmt(T("Linked \"%s\" to the file \"%s\""), aMacro.Name.c_str(), aPath.c_str());
         const std::string bad = LinkSync::CheckPath(aPath);
         if (!bad.empty()) { ShowError(action, bad); return; }
+        // A text file can't hold a newer version's channel: it would become a current-channel line.
+        if (MacroTree::HasUnknownChannel(aMacro))
+        {
+            ShowError(action, T("A line's channel is from a newer version of the addon, which a text file can't hold. Pick a channel for it first."));
+            return;
+        }
         const std::filesystem::path dir = Storage::AddonDir();
         if (dir.empty()) { ShowError(action, T("The addon folder isn't available.")); return; }
         const std::filesystem::path file = LinkSync::Resolve(dir, aPath);
@@ -2612,7 +2638,7 @@ namespace
         for (size_t i = 0; i < aMacro.Lines.size() && i < kPreviewLines; i++)
         {
             const Line& l = aMacro.Lines[i];
-            ImGui::TextColored(ChannelColorVec(l.Channel), "%s", ChatLine::TypedText(l).c_str());
+            DrawLinePreview(l);
         }
         if (aMacro.Lines.size() > kPreviewLines)
             ImGui::TextDisabled(T("...and %zu more line(s)"), aMacro.Lines.size() - kPreviewLines);
@@ -4067,6 +4093,14 @@ namespace
     void RestoreBackup(const std::string& aName)
     {
         const char* action = T("Clicked Restore on the Restore tab of the addon's options");
+        // Read-only: a restore would be saved over the newer version's macros.json, and Undo
+        // restore couldn't write it back (a read-only library is never saved).
+        if (s_Tree.FromNewerVersion())
+        {
+            ShowError(action, T("Your macros were saved by a newer version of the addon, so they're read-only and a backup "
+                                "can't be restored over them. Update the addon first."));
+            return;
+        }
         Backups::EKind kind;
         std::time_t when = 0;
         MacroTree::Tree tree;

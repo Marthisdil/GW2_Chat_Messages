@@ -280,6 +280,45 @@ namespace
         CHECK(mine2.FromJson(json::parse(R"({"format":1,"root":{"children":[]}})")));
         CHECK(Exchange::BuildPlan(mine2, mine2.Root(), plain.Items, o).FromNewer == 0);
     }
+    // Review fixes (PR #90): more places keep a newer version's fields, and odd numbers and dates.
+    void TestMoreKept()
+    {
+        const json j = json::parse(R"({"format":1,
+            "root":{"children":[{"type":"macro","id":"00000000000000aa","name":"M"}],"sort":"az"},
+            "trash":[{"item":{"type":"macro","id":"00000000000000bb","name":"Gone"},"from_ids":[],"from_names":[],
+                      "from_index":0,"deleted_at":"2026-11-21T14:03:00Z","deleted_by":"me"}]})");
+        Tree t;
+        CHECK(t.FromJson(j));
+        const json out = t.ToJson();
+        CHECK(out["root"].value("sort", std::string()) == "az");
+        CHECK(out["trash"].size() == 1 && out["trash"][0].value("deleted_by", std::string()) == "me");
+
+        // A too-big value doesn't use up the budget of the small ones after it.
+        json big = json::parse(R"({"format":1,"root":{"children":[{"type":"macro","id":"00000000000000aa","name":"M"}]}})");
+        json arr = json::array();
+        for (size_t i = 0; i < kMaxExtraValues + 50; i++) arr.push_back(i);
+        big["a_big"] = arr;
+        big["b_small"] = 1;
+        Tree tb;
+        CHECK(tb.FromJson(big));
+        CHECK(tb.Root().Extra && tb.Root().Extra->contains("b_small") && !tb.Root().Extra->contains("a_big"));
+
+        // A format number too big for an int is still newer (never narrowed to an old one).
+        for (const char* f : {"3000000000", "1e300", "99999999999999999999"})
+        {
+            Tree n;
+            CHECK(n.FromJson(json::parse(std::string(R"({"format":)") + f + R"(,"root":{"children":[]}})")));
+            CHECK(n.FromNewerVersion());
+        }
+        Tree b;
+        CHECK(b.FromJson(json::parse(R"({"format":true,"root":{"children":[]}})")) && !b.FromNewerVersion());
+
+        // Dates that don't exist are refused, not moved on.
+        std::time_t when = 0;
+        for (const char* bad : {"2026-02-31T10:00:00Z", "2025-02-29T10:00:00Z", "2026-04-31T10:00:00Z", "2026-11-21T14:03:60Z"})
+            CHECK(!ParseUtcStamp(bad, when));
+        CHECK(ParseUtcStamp("2028-02-29T10:00:00Z", when));
+    }
 }
 
 void RunFormatTests()
@@ -292,4 +331,5 @@ void RunFormatTests()
     TestNewerFormat();
     TestUtcStamp();
     TestExports();
+    TestMoreKept();
 }

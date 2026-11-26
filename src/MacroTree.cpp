@@ -121,6 +121,8 @@ namespace MacroTree
         constexpr const char* kNodeKeys[] = {"type", "id", "name", "favourite", "expanded", "game_modes", "map_ids",
                                              "children", "lines", "link_file", "hotkey", "cooldown_sec"};
         constexpr const char* kLineKeys[] = {"channel", "message", "whisper_to", "squad_broadcast"};
+        constexpr const char* kRootKeys[] = {"children"}; // the "root" object itself
+        constexpr const char* kTrashKeys[] = {"item", "from_ids", "from_names", "from_index", "deleted_at"};
 
         template <size_t N>
         bool IsKnown(const std::string& aKey, const char* const (&aKnown)[N])
@@ -242,7 +244,11 @@ namespace MacroTree
                 for (auto it = aObj.begin(); it != aObj.end(); ++it)
                 {
                     if (IsKnown(it.key(), aKnown)) continue;
-                    if (out.size() >= kMaxExtraKeys || !SmallEnough(it.value(), values)) { dropped = true; continue; }
+                    // Counted on its own first: a value too big to keep doesn't use up the budget
+                    // of the small ones after it.
+                    size_t mine = values;
+                    if (out.size() >= kMaxExtraKeys || !SmallEnough(it.value(), mine)) { dropped = true; continue; }
+                    values = mine;
                     out[it.key()] = it.value(); // checked first, so the copy is small and shallow
                 }
                 if (dropped)
@@ -547,7 +553,7 @@ namespace MacroTree
         int y, mo, d, h, mi, s;
         if (!num(0, 4, y) || !num(5, 2, mo) || !num(8, 2, d) || !num(11, 2, h) || !num(14, 2, mi) || !num(17, 2, s))
             return false;
-        if (y < 1970 || mo < 1 || mo > 12 || d < 1 || d > 31 || h > 23 || mi > 59 || s > 60) return false;
+        if (y < 1970 || mo < 1 || mo > 12 || d < 1 || d > 31 || h > 23 || mi > 59 || s > 59) return false;
         std::tm tm{};
         tm.tm_year = y - 1900;
         tm.tm_mon  = mo - 1;
@@ -557,6 +563,9 @@ namespace MacroTree
         tm.tm_sec  = s;
         const std::time_t t = _mkgmtime(&tm);
         if (t == static_cast<std::time_t>(-1)) return false;
+        // A date that doesn't exist (February 31) is moved on by _mkgmtime: refuse it instead.
+        std::tm back{};
+        if (gmtime_s(&back, &t) != 0 || back.tm_year != y - 1900 || back.tm_mon != mo - 1 || back.tm_mday != d) return false;
         aWhen = t;
         return true;
     }
@@ -986,6 +995,7 @@ namespace MacroTree
         json children = json::array();
         for (const auto& c : m_Root->Children) children.push_back(NodeJson(*c));
         root["children"] = std::move(children);
+        MergeExtra(root, m_RootExtra);
         json out{{"format", Format()}, {"saved_by", CHATMSG_VER_TEXT}, {"kind", aKind ? aKind : "library"},
                  {"root", std::move(root)}};
         MergeExtra(out, m_Root->Extra);
@@ -996,8 +1006,10 @@ namespace MacroTree
             {
                 json ids = json::array();
                 for (uint64_t id : t.FromIds) ids.push_back(IdToString(id));
-                trash.push_back({{"item", NodeJson(*t.Item)}, {"from_ids", std::move(ids)}, {"from_names", t.FromNames},
-                                 {"from_index", t.FromIndex}, {"deleted_at", t.DeletedAt}});
+                json je{{"item", NodeJson(*t.Item)}, {"from_ids", std::move(ids)}, {"from_names", t.FromNames},
+                        {"from_index", t.FromIndex}, {"deleted_at", t.DeletedAt}};
+                MergeExtra(je, t.Extra);
+                trash.push_back(std::move(je));
             }
             out["trash"] = std::move(trash);
         }
@@ -1010,14 +1022,18 @@ namespace MacroTree
         auto root = aJson.find("root");
         if (root == aJson.end() || !root->is_object()) return false;
 
-        // "format" is untrusted, and value() throws on a type get<int>() can't read. Those types
-        // (null, text, an object or array) aren't a file we can read; missing means 0, and
-        // numbers and true/false are read as get<int>() always read them.
+        // "format" is untrusted. Null, text, an object or an array isn't a file we can read.
+        // Missing (a hand-written file) or below 1: read as format 1, the first one. A number
+        // too big for an int is a newer one (never narrowed, so it can't read as old).
         auto jf = aJson.find("format");
         if (jf != aJson.end() && !jf->is_number() && !jf->is_boolean()) return false;
-        // Missing (a hand-written file) or below 1: read as format 1, the first one.
-        int format = jf != aJson.end() ? jf->get<int>() : kFormatVersion;
-        if (format < 1) format = 1;
+        int format = kFormatVersion;
+        if (jf != aJson.end())
+        {
+            constexpr double kMaxFormat = 1000000.0;
+            const double f = jf->is_boolean() ? (jf->get<bool>() ? 1.0 : 0.0) : jf->get<double>();
+            format = f >= kMaxFormat ? static_cast<int>(kMaxFormat) : f < 1.0 ? 1 : static_cast<int>(f);
+        }
         // A newer format is told by the caller (FromNewerVersion): read-only for the library, a
         // warning for an import.
         const std::string savedBy = ChatLine::ControlsToSpaces(CutUtf8(StringField(aJson, "saved_by"), 64));
@@ -1029,6 +1045,7 @@ namespace MacroTree
         p.Format   = format;
         p.ParseChildren(*root, *fresh, 0);
         fresh->Extra = p.KeepExtra(aJson, kTopKeys, nullptr);
+        Extra rootExtra = p.KeepExtra(*root, kRootKeys, nullptr);
 
         // The trash bin, parsed with the same parser so an id can't be both in the tree and the bin.
         std::vector<TrashItem> trash;
@@ -1056,6 +1073,7 @@ namespace MacroTree
                 auto idx = je.find("from_index");
                 if (idx != je.end() && idx->is_number_unsigned()) t.FromIndex = idx->get<size_t>();
                 t.DeletedAt = StringField(je, "deleted_at");
+                t.Extra     = p.KeepExtra(je, kTrashKeys, nullptr);
                 Node holder;
                 holder.Type = ENodeType::Folder;
                 p.ParseNode(*item, holder, static_cast<int>(t.FromIds.size())); // in place: no json copy
@@ -1068,6 +1086,7 @@ namespace MacroTree
 
         m_Root    = std::move(fresh);
         m_Trash   = std::move(trash);
+        m_RootExtra  = std::move(rootExtra);
         m_FormatRead = format;
         m_SavedBy    = savedBy;
         // The parser saw every id kept in the tree and the bin: NewId starts from those instead of
