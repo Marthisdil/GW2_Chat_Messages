@@ -5,7 +5,7 @@ Items here are **not decided**. Once an item is agreed, move it into `docs/desig
 and remove it here.
 
 The sections are in priority order (ranked 2026-11-23, updated the same day after the security
-scan plan; sections 1 and 5 re-ranked 2026-11-24; section 2 refilled from section 5 on 2026-11-26): release blockers first, then quick wins,
+scan plan; sections 1 and 5 re-ranked 2026-11-24; section 2 refilled from section 5 on 2026-11-26, and `{pick}` moved to section 1): release blockers first, then quick wins,
 bigger features, later items, and new ideas still to discuss. Within each section, items are in
 priority order too.
 
@@ -97,6 +97,19 @@ stays the same (texts, popup IDs, JSON keys, the `Action` queue), the input path
 then the build, the tests, `/code-review`, and the in-game checks of every screen it touched,
 named in the PR. Not before the in-game testing, so a break can't be mixed up with a feature
 bug.
+
+### A random pick inside the macro: `{pick a|b|c}` (moved from section 5, 2026-11-26)
+
+**Advanced option (owner, 2026-11-25):** when it's built, it goes behind the **Advanced options**
+checkbox (`src/Advanced.*`; `docs/design.md`, "Advanced options"): hidden, and not working, while
+the box is off.
+
+Sends one of the choices at random, e.g. `/s {pick hi|hello|o/}`. It brings back the most-used
+part of `{txt}` (a random line) with no file reading: every choice is written in the macro.
+
+- Points to settle: the separator (`|`), how to write a literal `|`, whether empty choices are
+  allowed, and a limit on the number of choices. The chosen text is a value, so the SEC-013
+  mask applies (it can't start a command), and the length check uses the longest choice.
 
 ## 2. Quick wins
 
@@ -405,20 +418,8 @@ the clipboard fallback before the character placeholders). Preview, cooldown, fa
 starter library and backups moved up to section 2. Filters by character or profession were
 dropped (not needed), and timed lines moved to section 3 for more discussion (owner,
 2026-11-23). Duplicate, the map refresh after a game update, own language files, notes, split a
-long line and the quick menu keyboard moved up to section 2 (owner, 2026-11-26).
-
-### A random pick inside the macro: `{pick a|b|c}`
-
-**Advanced option (owner, 2026-11-25):** when it's built, it goes behind the **Advanced options**
-checkbox (`src/Advanced.*`; `docs/design.md`, "Advanced options"): hidden, and not working, while
-the box is off.
-
-Sends one of the choices at random, e.g. `/s {pick hi|hello|o/}`. It brings back the most-used
-part of `{txt}` (a random line) with no file reading: every choice is written in the macro.
-
-- Points to settle: the separator (`|`), how to write a literal `|`, whether empty choices are
-  allowed, and a limit on the number of choices. The chosen text is a value, so the SEC-013
-  mask applies (it can't start a command), and the length check uses the longest choice.
+long line and the quick menu keyboard moved up to section 2, and `{pick}` to section 1
+(owner, 2026-11-26).
 
 ### Copy to clipboard as a fallback
 
