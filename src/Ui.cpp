@@ -2506,7 +2506,8 @@ namespace
 
     void DrawNote(Node& aMacro)
     {
-        if (s_NoteForId != aMacro.Id || (!s_NoteEditing && Tree::CleanNote(s_NoteBuf) != aMacro.Note))
+        // Once it isn't being edited, the box shows what was kept (cut, merged lines, no end spaces).
+        if (s_NoteForId != aMacro.Id || (!s_NoteEditing && s_NoteBuf != aMacro.Note))
         {
             s_NoteBuf     = aMacro.Note;
             s_NoteForId   = aMacro.Id;

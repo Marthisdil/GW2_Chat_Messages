@@ -267,7 +267,8 @@ namespace MacroTree
         // A note as kept: control characters but '\n' become spaces ("\r\n" becomes "\n"), at
         // most kMaxNoteLines lines, trailing spaces and line breaks go, cut to kMaxNoteLength
         // (never inside a character).
-        static std::string CleanNote(const std::string& aNote);
+        // aCut (optional): set to whether text was cut off (not just spaces trimmed).
+        static std::string CleanNote(const std::string& aNote, bool* aCut = nullptr);
 
         // Copies a macro right after itself: "Name (2)" (a name already ending in " (n)" gets the
         // next free number instead), with its lines, filters, cooldown, note and a newer version's

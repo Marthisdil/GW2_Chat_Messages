@@ -113,7 +113,13 @@ bool MapCatalog::FromJson(const std::string& aText, const std::string& aLang, Ca
     readU32("build", aOut.Build);
     readU32("listed_build", aOut.ListedBuild);
     const auto seen = j.find("build_seen_at");
-    if (seen != j.end() && seen->is_number_integer() && aOut.Build != 0) aOut.BuildSeenAt = seen->get<int64_t>();
+    // Only a plausible time (up to the year 3000), so RefreshDue's sums can't overflow.
+    constexpr int64_t kLatest = 32503680000;
+    if (seen != j.end() && seen->is_number_integer() && aOut.Build != 0)
+    {
+        const int64_t at = seen->get<int64_t>();
+        if (at > 0 && at <= kLatest) aOut.BuildSeenAt = at;
+    }
 
     bool any = false;
     const auto lang = j.find("lang");

@@ -407,8 +407,9 @@ namespace MacroTree
                 n.LinkFile = StringField(j, "link_file");
                 // A note (maybe someone else's): never sent, but drawn, so it's cleaned and capped.
                 const std::string note = StringField(j, "note");
-                n.Note = Tree::CleanNote(note);
-                if (note.size() > kMaxNoteLength)
+                bool cut = false;
+                n.Note = Tree::CleanNote(note, &cut);
+                if (cut)
                     Warn(Localization::Fmt(TR("Macro \"%s\": its note was longer than %zu bytes and was shortened."),
                                            n.Name.c_str(), kMaxNoteLength));
                 const std::string hk = StringField(j, "hotkey");
@@ -645,8 +646,9 @@ namespace MacroTree
         return s;
     }
 
-    std::string Tree::CleanNote(const std::string& aNote)
+    std::string Tree::CleanNote(const std::string& aNote, bool* aCut)
     {
+        if (aCut) *aCut = false;
         std::string s;
         s.reserve(aNote.size());
         size_t lines = 1;
@@ -677,8 +679,16 @@ namespace MacroTree
             out += '\n';
             start = nl + 1;
         }
-        out = CutUtf8(std::move(out), kMaxNoteLength);
-        while (!out.empty() && (out.back() == ' ' || out.back() == '\n')) out.pop_back();
+        const auto trimEnd = [&out] {
+            while (!out.empty() && (out.back() == ' ' || out.back() == '\n')) out.pop_back();
+        };
+        trimEnd();
+        if (out.size() > kMaxNoteLength)
+        {
+            if (aCut) *aCut = true;
+            out = CutUtf8(std::move(out), kMaxNoteLength);
+            trimEnd();
+        }
         return out;
     }
 

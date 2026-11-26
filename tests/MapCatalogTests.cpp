@@ -203,6 +203,9 @@ static void TestBuilds()
     CHECK(bad.Build == 0 && bad.ListedBuild == 0 && bad.BuildSeenAt == 0);
     FromJson("{\"format\":2,\"lang\":\"en\",\"build\":99999999999}", "en", bad);
     CHECK(bad.Build == 0);
+    Cache huge;
+    FromJson("{\"format\":2,\"lang\":\"en\",\"build\":5,\"build_seen_at\":9223372036854775807}", "en", huge);
+    CHECK(huge.Build == 5 && huge.BuildSeenAt == 0 && RefreshDue(huge, 1000));
 }
 
 void RunMapCatalogTests()

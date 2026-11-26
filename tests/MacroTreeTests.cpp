@@ -662,6 +662,10 @@ static void TestNotes()
     for (int i = 0; i < 600; i++) umlauts += "\xC3\xA4";
     const std::string cut = Tree::CleanNote(umlauts);
     CHECK(cut.size() <= kMaxNoteLength && cut.size() % 2 == 0);
+    // Only real text cut off counts; spaces trimmed at the end don't.
+    bool wasCut = true;
+    CHECK(Tree::CleanNote(std::string(900, 'x') + std::string(200, ' '), &wasCut).size() == 900 && !wasCut);
+    CHECK(Tree::CleanNote(umlauts, &wasCut).size() <= kMaxNoteLength && wasCut);
 
     // Saved only when there is one; read back cleaned; a too-long one shortened with a warning.
     Tree t;
