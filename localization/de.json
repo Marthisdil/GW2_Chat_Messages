@@ -446,6 +446,7 @@
     "The last refresh failed: %s": "Die letzte Aktualisierung ist fehlgeschlagen: %s",
     "Map names for the filters' map search and {map}, in your language where the GW2 API has it. It's fetched on the first run, once a week, and when you change the language.": "Kartennamen für die Kartensuche der Filter und für {map}, in deiner Sprache, wo die GW2-API sie hat. Sie wird beim ersten Start, einmal pro Woche und beim Wechsel der Sprache geladen.",
     "Follow Nexus (%s)": "Nexus folgen (%s)",
+    "%s (a language file: needs Advanced options)": "%s (eine Sprachdatei: braucht die erweiterten Optionen)",
     "Language": "Sprache",
     "From %s in your localization folder, made for version %s.\n%zu text(s) were left out by the checks (English is shown for them).": "Aus %s in deinem localization-Ordner, gemacht für Version %s.\n%zu Text(e) wurden von den Prüfungen ausgelassen (für sie wird Englisch angezeigt).",
     "The language of this addon's text. \"Follow Nexus\" uses the language set in Nexus' own options.": "Die Sprache der Texte dieses Addons. \"Nexus folgen\" nutzt die Sprache aus den Nexus-Optionen.",

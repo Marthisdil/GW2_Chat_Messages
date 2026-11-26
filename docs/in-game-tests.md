@@ -786,10 +786,12 @@ same one. Untick **Advanced options**:
   is sent;
 - `Two`'s **Hotkey:** row still shows Ctrl+F7, and `Emote`'s editor still warns that the key is
   also set on `Two`;
-- press Ctrl+F7 with the library closed: `Emote` is sent, `Two` isn't. Clear `Emote`'s hotkey and
-  press Ctrl+F7 again: nothing is sent, and a Nexus alert says `Two` is linked to a text file;
+- press Ctrl+F7 with the library closed: nothing is sent, and the alert says Ctrl+F7 is set on 2
+  macros (`Two` still counts, as the warning says). Clear `Emote`'s hotkey and press Ctrl+F7
+  again: nothing is sent, and a Nexus alert says `Two` is linked to a text file. Press it a few
+  more times quickly: no new alert for 5 seconds;
 - in the quick menu `Two` is faded and can't be clicked; hovering it says why. Search for `Two`
-  in the quick menu and press Enter: nothing is sent;
+  in the quick menu and press Enter: nothing is sent, and the menu stays open;
 - edit `test.txt` in Notepad and save: `Two` doesn't change. Edit `Two` in the addon: the file
   doesn't change.
 
@@ -804,7 +806,8 @@ same one. Untick **Advanced options**:
   box. Import an export of `Say`: it comes without its hotkey;
 - the options page has no **Refresh map list** button (the map list line is still there), and no
   **Open localization folder**, **Reload language files** or the text about adding a language.
-  The Language dropdown no longer lists Q6's file (if you chose it, the addon is in English);
+  The Language dropdown no longer lists Q6's file (if you chose it, the addon is in English and
+  the dropdown shows its id with "(a language file: needs Advanced options)");
 - in a filter's map search with no map list loaded, the hint says "Try again later" instead of
   pointing at Refresh map list (only if you can make the list empty, e.g. offline on a first
   run: skip otherwise).

@@ -418,6 +418,11 @@ namespace
 
     bool IsBlocked(const Node& aMacro) { return Advanced::Blocked(aMacro, s_AdvancedOn); }
 
+    // The last "its hotkey does nothing" alert for a blocked macro (HandleHotkeys).
+    uint64_t         s_BlockedAlertId = 0;
+    double           s_BlockedAlertAt = 0.0;
+    constexpr double kBlockedAlertEverySec = 5.0;
+
     void SaveRecent()
     {
         if (!Storage::SaveSetting(kRecentSetting, s_Recent.ToJson()))
@@ -554,18 +559,23 @@ namespace
             if (!Hotkey::Fires(combo)) continue;
             // Only macros active here count: the same hotkey can be used for, say, a WvW macro and a PvE one.
             const Here here = WhereAmI();
+            // A macro blocked by Advanced options still counts here, so a shared key sends nothing,
+            // as the hotkey editor's "Also set on" warning says.
             std::vector<Node*> macros;
-            const Node* blocked = nullptr; // one that would fire, but uses an advanced option that's off
             for (Node* m : s_Tree.MacrosWithHotkey(combo))
+                if (IsActiveHere(*m, here)) macros.push_back(m);
+            if (macros.empty()) continue;
+            if (macros.size() == 1 && IsBlocked(*macros[0]))
             {
-                if (!IsActiveHere(*m, here)) continue;
-                if (IsBlocked(*m)) blocked = m;
-                else macros.push_back(m);
-            }
-            if (macros.empty())
-            {
-                if (blocked) Alert(Fmt(T("%s is linked to a text file, an advanced option that's off, so its hotkey does nothing."),
-                                       blocked->Name.c_str()));
+                // One alert per macro every few seconds, so mashing the key doesn't stack them.
+                const double now = ImGui::GetTime();
+                if (s_BlockedAlertId != macros[0]->Id || now - s_BlockedAlertAt >= kBlockedAlertEverySec)
+                {
+                    s_BlockedAlertId = macros[0]->Id;
+                    s_BlockedAlertAt = now;
+                    Alert(Fmt(T("%s is linked to a text file, an advanced option that's off, so its hotkey does nothing."),
+                              macros[0]->Name.c_str()));
+                }
                 continue;
             }
             if (macros.size() > 1)
@@ -2718,9 +2728,13 @@ namespace
             ImGui::TextDisabled(T("...and %zu more: type more to narrow it down."), found.size() - kMenuResultsMax);
         if (aEnter && !busy)
         {
+            // The first one that can be sent; if none can (all blocked), the menu stays open, faded.
             const auto first = std::find_if(found.begin(), found.end(), [](const Node* n) { return !IsBlocked(*n); });
-            if (first != found.end()) SendMacro(**first, ESendFrom::Menu);
-            ImGui::CloseCurrentPopup();
+            if (first != found.end())
+            {
+                SendMacro(**first, ESendFrom::Menu);
+                ImGui::CloseCurrentPopup();
+            }
         }
     }
 
@@ -3756,6 +3770,7 @@ namespace
         if (choice != Languages::kFollowNexus)
         {
             current = choice; // a chosen language whose file is gone shows its id
+            if (!s_AdvancedOn) current = Fmt(T("%s (a language file: needs Advanced options)"), choice.c_str());
             for (const Languages::Entry& e : list)
                 if (e.Id == choice) current = LanguageLabel(e);
         }

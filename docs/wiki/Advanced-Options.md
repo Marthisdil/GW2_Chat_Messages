@@ -19,8 +19,8 @@ A macro linked to a text file can't be sent at all while the box is off:
 - its hotkey does nothing (a Nexus alert says why), it's faded and can't be clicked in the quick
   menu, and **Send now** explains instead of sending;
 - it's dimmed in the library, and its editor says why it can't be sent;
-- it keeps all its settings. Its hotkey is kept too, and still counts when the editor warns that
-  another macro uses the same key.
+- it keeps all its settings. Its hotkey is kept too, and still counts as in use: if another macro
+  active in the same place has the same key, the key sends nothing there (as the editor warns).
 
 <!-- screenshot: advanced-off-macro.png (docs/screenshots.md) -->
 > 📷 *Screenshot to come: a linked macro in the library while Advanced options is off.*

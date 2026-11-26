@@ -448,6 +448,7 @@
     "The last refresh failed: %s": "The last refresh failed: %s",
     "Map names for the filters' map search and {map}, in your language where the GW2 API has it. It's fetched on the first run, once a week, and when you change the language.": "Map names for the filters' map search and {map}, in your language where the GW2 API has it. It's fetched on the first run, once a week, and when you change the language.",
     "Follow Nexus (%s)": "Follow Nexus (%s)",
+    "%s (a language file: needs Advanced options)": "%s (a language file: needs Advanced options)",
     "Language": "Language",
     "From %s in your localization folder, made for version %s.\n%zu text(s) were left out by the checks (English is shown for them).": "From %s in your localization folder, made for version %s.\n%zu text(s) were left out by the checks (English is shown for them).",
     "The language of this addon's text. \"Follow Nexus\" uses the language set in Nexus' own options.": "The language of this addon's text. \"Follow Nexus\" uses the language set in Nexus' own options.",
