@@ -22,6 +22,7 @@ constexpr uint16_t    kVersionMinor    = CHATMSG_VER_MONTH;
 constexpr uint16_t    kVersionBuild    = CHATMSG_VER_DAY;
 constexpr uint16_t    kVersionRevision = CHATMSG_VER_TIME;
 constexpr const char* kVersionText     = CHATMSG_VER_TEXT;
+constexpr const char* kVersionTag      = CHATMSG_VER_TAG; // the numbers only, as the release tag
 constexpr const char*  kRepositoryUrl   = "https://github.com/Marthisdil/GW2_Chat_Messages";
 // ArenaNet's macro policy, linked from the options page and the docs (README, wiki).
 constexpr const char*  kMacroPolicyUrl  = "https://help.guildwars2.com/hc/en-us/articles/360013762153-Policy-Macros-and-Macro-Use";

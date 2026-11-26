@@ -21,7 +21,7 @@ change means a done check must be run again, it moves back here and into its ses
 |---|---|---|
 | A1 | Passed (PR #15 build) | Re-check with the current build: the log and the options page show its version and build stamp, the two links and the folders are new (A1's last part), and so is the icon (the quick bubble, 2026-11-25). |
 | A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text wraps and errors open the error window. Re-check those two points only (marked *Re-check* in A2), then go on to A3. |
-| A3 to T | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (V, the new macro editor layout, is the newest (2026-11-26), and A4, F9, K1, M2, S1 to S3 and U2 changed with it; U, duplicate, notes and the map list after a game update, is the newest (2026-11-26); Q6 changed and Q9 is new: your own language files have their own box now, and files from other versions (2026-11-26); T, saved files from older and newer versions, is the newest (2026-11-26); H9 and H10, filters on folders, are the newest; then S, the Advanced options box (new 2026-11-25; tick it first, see "Before you start"); then J11, export a selection; G4 to G6, favourites and recently sent, with G4 and G6 new for favourites shown everywhere, and R, backups and restore, are the newest; A1b, the example macros, and F9, the hotkey cooldown, came just before). |
+| A3 to W | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (W, the first-run welcome, the tour and What's new, is the newest (2026-11-26), and A1b changed with it; V, the new macro editor layout, came just before (2026-11-26), and A4, F9, K1, M2, S1 to S3 and U2 changed with it; U, duplicate, notes and the map list after a game update, is the newest (2026-11-26); Q6 changed and Q9 is new: your own language files have their own box now, and files from other versions (2026-11-26); T, saved files from older and newer versions, is the newest (2026-11-26); H9 and H10, filters on folders, are the newest; then S, the Advanced options box (new 2026-11-25; tick it first, see "Before you start"); then J11, export a selection; G4 to G6, favourites and recently sent, with G4 and G6 new for favourites shown everywhere, and R, backups and restore, are the newest; A1b, the example macros, and F9, the hotkey cooldown, came just before). |
 
 ## How to report
 
@@ -74,8 +74,9 @@ In the addon folder, `imports\` and `exports\` exist (delete both before startin
 check they're created).
 
 **A1b. Example macros.** Close the game. In the addon folder, rename `macros.json` to
-`macros.keep.json` and `macros.json.bak` to `macros.keep.bak` (if you have them), and in `settings.json` delete the line
-`"examples_added": true` (keep the file valid JSON). Start the game: the library has an
+`macros.keep.json` and `macros.json.bak` to `macros.keep.bak` (if you have them), and in `settings.json` delete the lines
+`"examples_added": true` and `"welcome_shown": true` (keep the file valid JSON). Start the game:
+the welcome asks about the examples (session W); **Add the examples**, then **Not now**: the library has an
 **Examples** folder with Hello, Basics, Placeholders and Filters (Filters has In WvW and In
 Lion's Arch inside), in the addon's language, and no macro has a hotkey. Preview `Two channels`
 and `Roll a die`. In PvE, `Stack on tag` is dimmed (WvW only) and `Meet at the bank` too unless
@@ -990,6 +991,65 @@ is cut off.
   in yellow;
 - untick the box: the section is gone with no gap; a macro with a cooldown shows the grey "kept,
   ignored" line under the header instead.
+
+## W. First-run welcome, tour and What's new (new 2026-11-26)
+
+Close the game first, and keep a copy of the addon folder (`<GW2>\addons\GW2_Chat_Messages\`).
+Run W1 to W4 with **Advanced options** off (the default on a new install), then W5.
+
+**W1. The welcome.** Rename the addon folder to `GW2_Chat_Messages.keep` (a real first run).
+Start the game and load a character:
+- on the loading screen and at character select nothing opens; once in game, the library opens
+  by itself with **Welcome to Chat Messages** in it;
+- **Start empty**: the second page asks about the tour; **Not now**: an empty library. Close the
+  game: `settings.json` has `"welcome_shown": true`, no `"examples_added"`, and `"notes_seen"`
+  is this version. Start again: no welcome;
+- delete the new folder and start again: the welcome is back. Close the game before answering
+  and start again: it asks again. This time **Add the examples**: the Examples folder is added,
+  selected and opened, with the status line; on the options page **Add the example macros** now
+  asks "Replace the examples?".
+
+**W2. The tour.** From W1's second page, **Take the tour** (or **Take the tour** on the options
+page, General tab):
+- step 1 outlines the tree in yellow, with a box beside it: title, text, "Step 1 of 8",
+  **Next**, **Skip the tour**; then the toolbar, the search box, the selected macro's header
+  (the tour selected `Hello`), the lines and the folding sections, each outlined, the box never
+  covering what it's about; steps 7 and 8 (quick menu, options) are boxes in the middle of the
+  library, with no outline;
+- **Back** goes back; **Finish** on step 8 ends it; **Skip the tour** ends it at once;
+- click in the library while the box shows: the box stays in front; type in the search box: the
+  keys go there;
+- move and resize the library window during a step: the outline and the box follow; close the
+  library: the tour ends;
+- open a pop-up during the tour (right-click > Rename): the box hides, and comes back after it;
+- with an empty library (no macros), steps 4 to 6 say "Make a macro, or select one..." in the
+  middle of the window;
+- select a long macro, scroll the details pane to its bottom, take the tour: at step 4 the pane
+  scrolls up to the header, and no outline ever spills outside its pane;
+- type `xyz` in the search box at step 3 (nothing matches), clear it and type `hello`, then
+  **Next**: step 4 selects a macro the search shows;
+- biggest text size: the box and the outline fit and wrap.
+
+**W3. An update.** Put your own folder back (`GW2_Chat_Messages.keep` to `GW2_Chat_Messages`;
+no `"welcome_shown"` in it yet). Start the game: no welcome (you have a library), and
+`settings.json` gets `"welcome_shown": true`. This Dev build has no section of its own in the
+changelog, so What's new doesn't open and `"notes_seen"` is set to this version.
+
+**W4. What's new.** Needs a build whose `CHANGELOG.md` has a section for its version (run
+`tools\set_version.ps1` on a test branch and build, or wait for the first release). In
+`settings.json` delete `"notes_seen"`, or set it to an older version (`"2026.11.21.1412"`). Start
+the game and load a character:
+- **What's new in Chat Messages** opens once in game (not at character select), about half the
+  screen at most, with the version's title, headings, bullets (nested ones indented) and a
+  scrollbar when it's long; no `**` or backticks show;
+- in German, French or Spanish it says the notes are in English;
+- **Close**: `"notes_seen"` is this version; restart: it doesn't open again;
+- set `"notes_seen"` back, untick **Show what's new after each update** in the window and close:
+  the options page's box is unticked too; set `"notes_seen"` back again and restart: it doesn't
+  open, and `"notes_seen"` is updated.
+
+**W5. Advanced options on.** Tick **Advanced options** and take the tour again: the same 8
+steps; none points at the Advanced section; step 8 names the box.
 
 ## Report template
 

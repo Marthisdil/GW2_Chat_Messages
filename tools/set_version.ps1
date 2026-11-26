@@ -5,7 +5,8 @@
 #
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tools\set_version.ps1 [-Channel Dev|Beta|Rel]
 #
-# Run it once per release, commit src\Version.h, and tag the GitHub release with the number part
+# It also moves CHANGELOG.md's [Unreleased] notes under the new version (see the end).
+# Run it once per release, commit src\Version.h and CHANGELOG.md, and tag the GitHub release with the number part
 # only (2026.11.21.1430): Nexus ignores tags with a suffix.
 param(
     [ValidateSet("Dev", "Beta", "Rel")]
@@ -20,6 +21,14 @@ $d    = $now.Day
 $hhmm = $now.Hour * 100 + $now.Minute
 $num  = "{0}.{1:D2}.{2:D2}.{3:D4}" -f $y, $m, $d, $hhmm
 $text = "$num.$Channel"
+
+# CHANGELOG.md is checked first, so a missing [Unreleased] section changes nothing.
+$logPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\CHANGELOG.md"))
+$log = [System.IO.File]::ReadAllText($logPath)
+$nl = if ($log.Contains("`r`n")) { "`r`n" } else { "`n" }
+$marker = "## [Unreleased]"
+$at = $log.IndexOf($marker)
+if ($at -lt 0) { throw "CHANGELOG.md has no '## [Unreleased]' section." }
 
 $header = @"
 #pragma once
@@ -41,3 +50,11 @@ $header = @"
 $path = Join-Path $PSScriptRoot "..\src\Version.h"
 [System.IO.File]::WriteAllText([System.IO.Path]::GetFullPath($path), $header.Replace("`r`n", "`n") + "`n")
 Write-Output "Version: $text  (GitHub release tag: $num)"
+
+# CHANGELOG.md: what's under "## [Unreleased]" becomes this version's section, with a new empty
+# "## [Unreleased]" above it. The DLL carries the changelog, and "What's new" after an update shows
+# the running version's section (docs/design.md, "Update notes"), so commit it with Version.h.
+$date = "{0}-{1:D2}-{2:D2}" -f $y, $m, $d
+$log = $log.Substring(0, $at) + "$marker$nl$nl## [$num] - $date" + $log.Substring($at + $marker.Length)
+[System.IO.File]::WriteAllText($logPath, $log, (New-Object System.Text.UTF8Encoding($false)))
+Write-Output "CHANGELOG.md: the Unreleased notes are now under [$num] - $date."

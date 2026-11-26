@@ -12,10 +12,32 @@ new folder or macro inside it.
 
 ![The library window, with the tree and the editor](../images/library-window.png)
 
+## The welcome and the tour
+
+The first time the addon starts (with no library yet), the library window opens by itself once
+you're in game, with a welcome:
+
+1. **Add some example folders and macros to start with?** **Add the examples** puts the
+   [Examples folder](#the-examples-folder) in your library; **Start empty** adds nothing (you can
+   add them later).
+2. **Take a short tour of the library window?** The tour has eight steps. Each one outlines a
+   part of the window in yellow (the tree, New folder and New macro, the search box, a macro's
+   **Send now** and **Preview**, its lines and its folding sections) with a box beside it; the
+   last two tell you about the quick menu and the options page. **Back** and **Next** move
+   between the steps, and **Skip the tour** stops it. Closing the library window stops it too.
+
+To take the tour again, click **Take the tour** on the addon's page in Nexus options. If you
+update from an older version and already have macros, you don't get the welcome.
+
+<!-- screenshot: welcome.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the welcome on a first run.*
+
+<!-- screenshot: tour-step.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: a step of the tour, with Send now and Preview outlined.*
+
 ## The Examples folder
 
-The first time the addon starts, the library isn't empty: an **Examples** folder shows what a
-macro can do. Select a macro to see how it's made, try **Preview** or **Send now**, and change or
+If you say yes in the welcome, an **Examples** folder shows what a macro can do. Select a macro to see how it's made, try **Preview** or **Send now**, and change or
 delete anything you like. It's an ordinary folder.
 
 ```
@@ -37,8 +59,8 @@ Examples
 ```
 
 - The examples are in the addon's language at the time, and none has a hotkey.
-- They're only added once. If you delete them, or start over by removing `macros.json`, they
-  don't come back by themselves.
+- The welcome only asks once. If you delete the examples, or start over by removing
+  `macros.json`, they don't come back by themselves.
 - To get them back, click **Add the example macros** on the addon's page in Nexus options. The
   library opens and:
   - **If you still have the Examples folder** (even renamed or moved), it asks whether to

@@ -337,8 +337,9 @@ Defaults (owner, 2026-11-26):
 
 ## Starter library
 
-Built 2026-11-23 (todo section 2). On the **first run** (no `macros.json` yet), the library starts
-with an **Examples** folder, with nested folders, so new users see what a macro can do:
+Built 2026-11-23 (todo section 2). On the **first run** (no `macros.json` yet), the welcome asks
+whether to add an **Examples** folder, with nested folders, so new users see what a macro can do
+(see "First-run welcome and tour"; until 2026-11-26 it was added without asking):
 
 ```
 Examples
@@ -361,9 +362,9 @@ Examples
 - **In the addon's language** at the moment it's added (names and lines are `TR` texts, so
   de/fr/es get their own; map names in the lines are written per language). No hotkeys and no
   cooldowns: nothing fires until the user sets a key.
-- **Once only:** `settings.json` gets `"examples_added": true` the first time the addon loads
-  (also when a library already exists), so a `macros.json` removed on purpose later starts
-  empty, as before. A library restored from the `.bak` doesn't get examples either, and a
+- **Once only:** `settings.json` gets `"examples_added": true` when they're added, and the first
+  time the addon loads with a library already there, so a `macros.json` removed on purpose later
+  starts empty, as before (no welcome either: `"welcome_shown"`). A library restored from the `.bak` doesn't get examples either, and a
   missing `macros.json` with its `.bak` still there isn't a first run (saving the examples
   would soon overwrite that backup).
 - **Getting them back:** the options page has **Add the example macros** (decided by the owner
@@ -403,6 +404,71 @@ Examples
     keeps it. A folder rebuilt by a restore (for an item whose folder is gone) never takes it.
   - A second copy ("Examples (2)") has an ordinary id.
   Tested in `tests/ExamplesTests.cpp`.
+
+## First-run welcome and tour
+
+Built 2026-11-26 (todo section 1, decided by the owner the same day). Not behind Advanced
+options: it's for everyone, and the tour never points at anything behind the box.
+
+- **When:** only on a real first run: no `macros.json`, no `.bak`, nothing loaded, and neither
+  `"examples_added"` nor `"welcome_shown"` saved (`Welcome::Decide`). Anyone updating with a
+  library already gets no welcome; both settings are saved then, so it never shows later. The
+  library window opens by itself once the game is in gameplay (not on the loading screen or
+  character select), with the welcome in it.
+- **The welcome** (a pop-up at the library window's ID level, `###chatmsg_welcome`), two pages:
+  1. "Add some example folders and macros to start with?" **Add the examples** (the Examples
+     folder, see "Starter library", selected and shown) or **Start empty**. Either answer saves
+     `"welcome_shown": true`; closing the game before answering asks again next time. Start
+     empty leaves `"examples_added"` unset, so the options page's button later adds them
+     without "again?".
+  2. "Take a short tour of the library window?" **Take the tour** or **Not now**.
+- **The tour** (`Welcome::Steps`, 8 steps; texts are `TX`): the tree, the toolbar (New folder,
+  New macro), the search box, the selected macro's header (Send now, Preview, "..."), the lines,
+  the folding sections, then two steps in words: the quick bubble icon and the quick menu, and the
+  options page (naming the Advanced options box once). Each step:
+  - outlines its part of the library window (a yellow frame on the foreground draw list; the
+    parts call `TourMark` after drawing, so the frame follows the window, the text size and
+    the layout), clipped to the window;
+  - puts a small box beside it (below, else above, right, left; else in the middle of the window)
+    with the title, the text, "Step n of 8", **Back**, **Next** (**Finish** on the last) and
+    **Skip the tour**. The box stays in front of our windows without taking the keyboard, as
+    the error window does, and hides while a pop-up is open.
+  - The editor steps need a macro: the tour selects the first example ("Hello") if there's no
+    macro selected, else the first macro in the library; with none, the step explains in words
+    ("Make a macro, or select one...").
+  - Closing the library window ends the tour. The same tour runs with Advanced options on or off.
+- **Again:** **Take the tour** on the options page (General tab) opens the library and starts it.
+- `src/Welcome.*` (no Nexus or ImGui) holds `Decide`, the steps and `NeedsMacro`, tested by
+  `tests/WelcomeTests.cpp`.
+
+## Update notes
+
+Built 2026-11-26 (owner): "What's new" once after an update. Not behind Advanced options: it has
+its own box.
+
+- **The notes are `CHANGELOG.md`**, built into the DLL (resource type `NOTES`, `IDR_CHANGELOG`),
+  since the updater only ships the DLL. They're in English; the window says so in other
+  languages. `tools\set_version.ps1` moves the `[Unreleased]` notes under the new version
+  (`## [2026.11.21.1412] - 2026-11-21`) with a new empty `[Unreleased]` above, so a release's
+  DLL carries its own section.
+- **When:** at load, `ReleaseNotes::Decide` compares `"notes_seen"` (in `settings.json`, the
+  version tag whose notes were last shown) with the running version:
+  - newer than the one seen, with a section to show: the window opens once in gameplay, with
+    every version since the one seen (newest first; only the running version's for an update
+    from before this feature, which has no `"notes_seen"`). `"notes_seen"` is saved when it's
+    closed;
+  - a first run (the welcome shows instead), notes turned off, or no section with notes for this version
+    (a Dev build between releases; an empty section counts as none): nothing shows and `"notes_seen"` is set now;
+  - the same version or an older DLL: nothing, and the newer mark is kept.
+- **The window** (`###chatmsg_notes`, about 540x440, resizable): the notes in a scrolling box
+  (each version's title, its `###` headings, bullets with their indent, wrapped; `**`, backticks
+  and links shown as plain text), **Show what's new after each update** and **Close**.
+- **The setting:** `"show_update_notes"` (on unless saved as false), the same box on the options
+  page (General tab).
+- `src/ReleaseNotes.*` (no Nexus or ImGui): versions, sections, `Since`, `Decide` and
+  `ToBlocks`, tested by `tests/WelcomeTests.cpp`. The changelog is built in, so it isn't an
+  untrusted input; `"notes_seen"` is read as a string and anything that isn't a version counts
+  as none.
 
 ## Text size
 

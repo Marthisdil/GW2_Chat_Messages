@@ -117,6 +117,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)tools\compile_
     <ClCompile Include="src\PathText.cpp" />
     <ClCompile Include="src\QuickLists.cpp" />
     <ClCompile Include="src\EditorLayout.cpp" />
+    <ClCompile Include="src\ReleaseNotes.cpp" />
+    <ClCompile Include="src\Welcome.cpp" />
     <ClCompile Include="src\Advanced.cpp" />
     <ClCompile Include="src\Placeholders.cpp" />
     <ClCompile Include="src\Sender.cpp" />
@@ -149,6 +151,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)tools\compile_
     <ClInclude Include="src\PathText.h" />
     <ClInclude Include="src\QuickLists.h" />
     <ClInclude Include="src\EditorLayout.h" />
+    <ClInclude Include="src\ReleaseNotes.h" />
+    <ClInclude Include="src\Welcome.h" />
     <ClInclude Include="src\Advanced.h" />
     <ClInclude Include="src\Placeholders.h" />
     <ClInclude Include="src\resource.h" />
