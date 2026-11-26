@@ -132,7 +132,12 @@ function LanguageJson([string]$id, [string]$name, [string]$ver, [string[]]$about
         $lines.Add('    ' + (JsonString $k) + ': ' + (JsonString $v) + $(if ($i -lt $texts.Count - 1) { ',' } else { '' }))
     }
     $old = @()
-    if ($unused) { $old = @($unused.Keys | Sort-Object -CaseSensitive) }
+    if ($unused) {
+        $sorted = New-Object System.Collections.Generic.List[string]
+        foreach ($k in $unused.Keys) { $sorted.Add($k) }
+        $sorted.Sort([StringComparer]::Ordinal) # the same order on every machine
+        $old = $sorted.ToArray()
+    }
     if ($old.Count -gt 0) {
         $lines.Add('  },')
         $lines.Add('  "Unused": {')
@@ -190,7 +195,7 @@ foreach ($f in Get-ChildItem $dir -Filter *.json | Where-Object { $_.Name -ne "e
         $values = New-Object 'System.Collections.Generic.Dictionary[string,string]' ([StringComparer]::Ordinal)
         $unused = New-Object 'System.Collections.Generic.Dictionary[string,string]' ([StringComparer]::Ordinal)
         if ($doc.ContainsKey("Unused") -and $doc["Unused"] -is [System.Collections.IDictionary]) {
-            foreach ($k in $doc["Unused"].Keys) { $unused[$k] = [string]$doc["Unused"][$k] }
+            foreach ($k in $doc["Unused"].Keys) { if ($doc["Unused"][$k] -is [string]) { $unused[$k] = $doc["Unused"][$k] } } # anything else is dropped
         }
         foreach ($k in $tx.Keys) {
             $v = [string]$tx[$k]
@@ -205,6 +210,7 @@ foreach ($f in Get-ChildItem $dir -Filter *.json | Where-Object { $_.Name -ne "e
         }
         $about = if ($doc.ContainsKey("About")) { [string[]]$doc["About"] } else { $null }
         $ver = if ($doc.ContainsKey("AddonVersion")) { [string]$doc["AddonVersion"] } else { $version }
+        if ($unused.Count -gt 200) { Write-Host "  $($f.Name) keeps $($unused.Count) old translations under Unused: delete the ones that are done with, so the file stays well under the 512 KB limit." }
         $out = LanguageJson ([string]$doc["Identifier"]) ([string]$doc["DisplayName"]) $ver $about $values $unused
         $now = [IO.File]::ReadAllText($f.FullName, $utf8) -replace "`r`n", "`n"
         if ($now -ne $out) { [IO.File]::WriteAllText($f.FullName, $out, $utf8); Write-Host "  updated $($f.Name)" }

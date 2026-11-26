@@ -390,7 +390,8 @@ Examples
     ignored, never an error.
   - A text this version doesn't use (its English was reworded or removed, or it's new in a newer
     version) is left out quietly: counted as `Unused` in the log, not as a problem, and no error
-    window. Everything else in the file is used, text by text; a text without a translation
+    window. In a newer file, a text stored another way (not a string) counts as `Unused` too;
+    in a format-1 file it's a problem (`Skipped`). Everything else in the file is used, text by text; a text without a translation
     shows English.
   - No stable ids: the English text stays the key. When an English text is reworded, `-Write`
     moves the old pair to `"Unused"` (sorted, after `Texts`), so a translator can reuse the old

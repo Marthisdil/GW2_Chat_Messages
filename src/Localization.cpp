@@ -226,7 +226,13 @@ bool Localization::ParseCatalog(const std::string& aJson, const std::unordered_s
         const std::string& key = it.key();
         if (key.empty() || key.size() > kMaxTextBytes || !SafeText(key, true)) { Skip(aOut, "(an entry)", "its English text isn't valid"); continue; }
         if (aKnown && !aKnown->count(key)) { aOut.Unused++; continue; } // reworded, removed, or newer: English is used
-        if (!it.value().is_string()) { Skip(aOut, key, "the translation isn't text"); continue; }
+        if (!it.value().is_string())
+        {
+            // A newer format may store a text differently: English is used, quietly.
+            if (aOut.FromNewer) aOut.Unused++;
+            else Skip(aOut, key, "the translation isn't text");
+            continue;
+        }
         const std::string value = it.value().get<std::string>();
         if (value.empty()) continue; // not translated yet: English is used, not counted as a problem
         if (value.size() > kMaxTextBytes) { Skip(aOut, key, "the translation is too long"); continue; }

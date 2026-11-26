@@ -81,7 +81,8 @@ A language file made for one version of the addon keeps working with the next:
   is shown in English. The rest of the file is used, text by text.
 - When an English text is reworded, `tools\localization.ps1 -Write` moves its old translation to
   `"Unused"` at the end of the file, and adds the new English text with `""`. Reuse the old
-  translation for the new text if it still fits, then delete the entry under `"Unused"`.
+  translation for the new text if it still fits, then delete the entry under `"Unused"`. (Keep
+  `"Unused"` short: the whole file must stay under 512 KB.)
 
 ### Trying it in game
 

@@ -734,11 +734,12 @@ damaged file: each error window message is in German. Searching the library for 
 
 **Q9. Files from other versions, and the opt-in (new 2026-11-26).** With Q6's `nl.json` (fixed
 again) and **Nederlands** picked:
-- in `nl.json`, add `"Format": 2,` and `"Plurals": {"one": 1},` after the `{`, and a text this
-  version doesn't have under `Texts` (`"A text from a newer version": "Nieuw",`). Click **Reload
-  language files**: no error window; Nederlands is still picked, Q6's text is still in Dutch, and
-  a yellow line under the box says `nl.json` was made for a newer version. Take those three
-  additions out again and reload: the yellow line is gone;
+- in `nl.json`, change `"Format": 1` to `"Format": 2`, add `"Plurals": {"one": 1},` on the next
+  line, and add a text this version doesn't have under `Texts` (`"A text from a newer version":
+  "Nieuw",`). Click **Reload language files**: no error window; Nederlands is still picked, Q6's
+  text is still in Dutch, and a yellow line under the box says `nl.json` was made for a newer
+  version. Put `"Format": 1` back, take the two additions out again and reload: the yellow line
+  is gone;
 - change the English side of Q6's text (`"Open the macro library": "Macrobibliotheek openen"`) and
   reload: no error window, and that text is back in English (as for a text reworded in an update);
 - untick **Use language files from the localization folder**: the buttons go, Nederlands isn't in

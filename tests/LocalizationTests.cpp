@@ -203,6 +203,13 @@ static void TestFormats()
     CHECK(c.Format == 2 && c.FromNewer);
     CHECK(c.Texts.size() == 1 && c.Texts["Sent %s"] == "%s gesendet");
     CHECK(c.Unused == 1 && c.Skipped == 1); // the new text; the %-code mismatch
+    // A text stored another way in a newer format: English, quietly (a format-1 file: a problem).
+    const std::string shape = "{\"Format\": 2, \"Identifier\": \"de\", \"DisplayName\": \"x\","
+                              " \"Texts\": { \"Delete\": {\"text\": \"Löschen\"} } }";
+    CHECK(ParseCatalog(shape, &known, c, err) && c.Texts.empty() && c.Unused == 1 && c.Skipped == 0);
+    std::string shape1 = shape;
+    shape1.replace(shape1.find("2"), 1, "1");
+    CHECK(ParseCatalog(shape1, &known, c, err) && c.Unused == 0 && c.Skipped == 1);
 
     // An older file (texts since reworded or removed): the rest is used, text by text.
     const std::string older = "{\"Identifier\": \"fr\", \"DisplayName\": \"Français\", \"AddonVersion\": \"0.1\","
