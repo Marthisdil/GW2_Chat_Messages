@@ -6,9 +6,11 @@
 param(
     [Parameter(Mandatory = $true)][string]$Version,
     [Parameter(Mandatory = $true)][string]$Out,
-    [string]$Changelog = (Join-Path (Split-Path -Parent $PSScriptRoot) "CHANGELOG.md")
+    [string]$Changelog
 )
 $ErrorActionPreference = "Stop"
+# $PSScriptRoot is empty in a param default on Windows PowerShell 5.1, so default it here.
+if (-not $Changelog) { $Changelog = Join-Path (Split-Path -Parent $PSScriptRoot) "CHANGELOG.md" }
 
 $lines = [System.IO.File]::ReadAllLines($Changelog)
 $head = "## [$Version]"

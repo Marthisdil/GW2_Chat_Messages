@@ -51,6 +51,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   bolt (it was a scroll), so it reads as "chat, fast" even at small sizes.
 
 ### Added
+- **Releases are scanned on VirusTotal:** each release's page on GitHub shows the DLL's SHA-256
+  and links to its VirusTotal report, so you can check the file you download.
 - **A welcome for new players:** the first time the addon starts (no library yet), the library
   opens by itself and asks whether to add the example macros (they're no longer added without
   asking), then offers a short **tour** of the library window: eight steps, each outlining a part

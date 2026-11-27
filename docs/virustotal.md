@@ -89,8 +89,27 @@ a build you're happy to share. `Remove-Item Env:VT_API_KEY` afterwards.
      to the report, and any engine that flagged it), then the build stamp.
 4. Nexus' updater sees the new release.
 
-If the release already exists (a re-run), its DLL and text are replaced. To re-run for a tag
-that's already pushed: Actions > **Release** > **Run workflow** > enter the tag.
+A **published** release is never changed: players already have its DLL, and a rebuild would
+be a different file (the build stamp's time changes its SHA-256). A fix needs a new version.
+Only a **draft** (one held for review, below) can be re-run: its DLL and text are replaced, and
+it's published if the new scan is clean. To re-run for a tag that's already pushed: Actions >
+**Release** > **Run workflow** > enter the tag.
+
+## A test release
+
+To check the scan and the release text without releasing a version: Actions > **Release** >
+**Run workflow**, **Use workflow from: main**, leave the tag empty, tick **test**, **Run
+workflow**. It builds `main` as it is, tags it `test-<short sha>`, takes the notes from
+`[Unreleased]`, and publishes a pre-release titled "TEST ..., to be deleted" with a warning at
+the top. `CHANGELOG.md` and the version aren't touched, and Nexus ignores the tag (it isn't
+numbers only). Delete it afterwards, tag included:
+
+```powershell
+gh release delete test-<short sha> --cleanup-tag --yes
+```
+
+The DLL stays on VirusTotal (uploads can't be taken back), which is fine for a build of public
+code.
 
 ## When it's held as a draft
 
@@ -112,7 +131,8 @@ Then:
    report the false positive to that engine's vendor (each has its own form or address;
    VirusTotal's documentation keeps a list of vendors' false-positive contacts), then click
    **Reanalyze** on the report a few days later.
-4. If the scan only timed out: open the link later; once the report is there, publish the draft.
+4. If the scan only timed out: open the link later; once the report is there, publish the draft
+   (or re-run the workflow for the tag, which rebuilds and scans again).
 
 ## What gets shared
 

@@ -9,6 +9,11 @@ name: Release
 #   git push origin 2026.11.21.1412
 # or, for a tag that's already pushed, from the Actions tab: Release > Run workflow > the tag.
 #
+# Test release (Run workflow on main, tick "test"): builds main as it is, tags it test-<sha>,
+# takes the notes from [Unreleased] and publishes a pre-release titled TEST, to check the scan
+# and the release text. Nexus ignores the tag (not numbers only). Delete it afterwards with
+# `gh release delete test-<sha> --cleanup-tag`.
+#
 # Needs the repository secret VT_API_KEY (a VirusTotal API key). The repository variable
 # VT_MAX_FLAGS (default 3) is how many engines may flag the DLL before the release is held as
 # a draft for review.
@@ -19,36 +24,53 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'The release tag (numbers only, e.g. 2026.11.21.1412)'
-        required: true
+        description: 'The release tag (numbers only, e.g. 2026.11.21.1412). Leave empty for a test release.'
+        required: false
+      test:
+        description: 'Test release: from main, tag test-<sha>, notes from [Unreleased], a pre-release to delete afterwards'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
 
 concurrency:
-  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  group: release-${{ github.event.inputs.test == 'true' && 'test' || github.event.inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
   release:
     runs-on: windows-2022
-    # Build ~10 minutes, scan up to 20 more.
-    timeout-minutes: 45
+    # Build and tests ~12 minutes, the scan up to 20 more, plus VirusTotal's back-offs.
+    timeout-minutes: 60
     env:
       # Passed through the environment and checked before use, never pasted into a script.
-      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+      IN_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+      TEST: ${{ github.event.inputs.test == 'true' && 'true' || 'false' }}
     steps:
       - name: Check the tag and the VirusTotal key
         shell: pwsh
         env:
           VT_API_KEY: ${{ secrets.VT_API_KEY }}
         run: |
-          if ($env:TAG -notmatch '^\d{4}\.\d{2}\.\d{2}\.\d{4}$') { throw "'$env:TAG' isn't a release tag (numbers only: 2026.11.21.1412)." }
+          if ($env:TEST -eq 'true') {
+            if ($env:GITHUB_REF -ne 'refs/heads/main') { throw "A test release runs from main (Run workflow > Use workflow from: main)." }
+            $tag = 'test-' + $env:GITHUB_SHA.Substring(0, 7)
+            "CHECKOUT_REF=$env:GITHUB_SHA" >> $env:GITHUB_ENV
+            "NOTES_VERSION=Unreleased" >> $env:GITHUB_ENV
+          } else {
+            $tag = $env:IN_TAG
+            if ($tag -notmatch '^\d{4}\.\d{2}\.\d{2}\.\d{4}$') { throw "'$tag' isn't a release tag (numbers only: 2026.11.21.1412). For a test release, tick 'test'." }
+            "CHECKOUT_REF=refs/tags/$tag" >> $env:GITHUB_ENV
+            "NOTES_VERSION=$tag" >> $env:GITHUB_ENV
+          }
+          "TAG=$tag" >> $env:GITHUB_ENV
           if ([string]::IsNullOrWhiteSpace($env:VT_API_KEY)) { throw "The VT_API_KEY secret isn't set (docs/virustotal.md, 'Setting it up')." }
+          Write-Host "Tag: $tag (test: $env:TEST)"
 
       - uses: actions/checkout@v4
         with:
-          ref: refs/tags/${{ env.TAG }}
+          ref: ${{ env.CHECKOUT_REF }}
           submodules: recursive
           fetch-depth: 0
 
@@ -60,10 +82,11 @@ jobs:
           $tag = [regex]::Match($h, '#define CHATMSG_VER_TAG\s+"([^"]+)"').Groups[1].Value
           $text = [regex]::Match($h, '#define CHATMSG_VER_TEXT\s+"([^"]+)"').Groups[1].Value
           $channel = [regex]::Match($h, '#define CHATMSG_VER_CHANNEL\s+"([^"]+)"').Groups[1].Value
-          if ($tag -ne $env:TAG) { throw "The tag is $env:TAG but src\Version.h says ${tag}: run tools\set_version.ps1, merge, and tag that commit." }
+          if ($env:TEST -ne 'true' -and $tag -ne $env:TAG) { throw "The tag is $env:TAG but src\Version.h says ${tag}: run tools\set_version.ps1, merge, and tag that commit." }
           if ($channel -notin @('Dev', 'Beta', 'Rel')) { throw "Unknown channel '$channel' in src\Version.h." }
           git merge-base --is-ancestor HEAD origin/main
           if ($LASTEXITCODE -ne 0) { throw "The tagged commit isn't on main: only merged code is released." }
+          if ($env:TEST -eq 'true') { $text = "TEST $text ($(git rev-parse --short HEAD)), to be deleted" }
           "text=$text" >> $env:GITHUB_OUTPUT
           "channel=$channel" >> $env:GITHUB_OUTPUT
           Write-Host "Releasing $text ($channel) from $(git rev-parse --short HEAD)"
@@ -86,7 +109,7 @@ jobs:
 
       - name: Release notes from CHANGELOG.md
         shell: pwsh
-        run: powershell -NoProfile -ExecutionPolicy Bypass -File tools\release_notes.ps1 -Version $env:TAG -Out build\notes.md
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tools\release_notes.ps1 -Version $env:NOTES_VERSION -Out build\notes.md
 
       - name: VirusTotal scan
         id: scan
@@ -119,22 +142,28 @@ jobs:
           HOLD: ${{ steps.scan.outputs.hold }}
         run: |
           $stamp = (Get-Item build\Release\GW2_Chat_Messages.dll).VersionInfo.Comments
-          $notes = (Get-Content build\notes.md -Raw).TrimEnd() + "`n`n" + (Get-Content build\vt.md -Raw).TrimEnd() + "`n`nBuild: $stamp`n"
+          $warn = if ($env:TEST -eq 'true') { "**Test release of the release workflow: not for use, and it will be deleted.**`n`n" } else { '' }
+          $notes = $warn + (Get-Content build\notes.md -Raw).TrimEnd() + "`n`n" + (Get-Content build\vt.md -Raw).TrimEnd() + "`n`nBuild: $stamp`n"
           [System.IO.File]::WriteAllText("$PWD\build\release.md", $notes, (New-Object System.Text.UTF8Encoding($false)))
-          $pre = if ($env:CHANNEL -ne 'Rel') { 'true' } else { 'false' }
+          $pre = if ($env:CHANNEL -ne 'Rel' -or $env:TEST -eq 'true') { 'true' } else { 'false' }
           $dll = 'build\Release\GW2_Chat_Messages.dll'
-          gh release view $env:TAG *> $null
+          # A published release is never changed: players already have its DLL, and a rebuild has
+          # a different SHA-256 (the build stamp's time). A fix needs a new version. Only a draft
+          # (held earlier) is replaced, and published once its new scan is clean.
+          $draft = gh release view $env:TAG --json isDraft -q .isDraft 2> $null
           if ($LASTEXITCODE -eq 0) {
-            Write-Host "Release $env:TAG exists: replacing its DLL and text."
+            if ($draft -ne 'true') { throw "Release $env:TAG is already published; it's never replaced. Set a new version (tools\set_version.ps1) and tag that." }
+            Write-Host "Draft release $env:TAG exists: replacing its DLL and text."
             gh release upload $env:TAG $dll --clobber
             if ($LASTEXITCODE -ne 0) { throw "Upload failed" }
-            $ghArgs = @('release', 'edit', $env:TAG, '--title', $env:TEXT, '--notes-file', 'build\release.md', "--prerelease=$pre")
-            if ($env:HOLD -eq 'true') { $ghArgs += '--draft=true' }
-            gh @args
+            $ghArgs = @('release', 'edit', $env:TAG, '--title', $env:TEXT, '--notes-file', 'build/release.md', "--prerelease=$pre")
+            if ($env:HOLD -ne 'true') { $ghArgs += '--draft=false' }
+            gh @ghArgs
           } else {
-            $ghArgs = @('release', 'create', $env:TAG, $dll, '--verify-tag', '--title', $env:TEXT, '--notes-file', 'build\release.md', "--prerelease=$pre")
+            $where = if ($env:TEST -eq 'true') { @('--target', $env:GITHUB_SHA) } else { @('--verify-tag') }
+            $ghArgs = @('release', 'create', $env:TAG, $dll) + $where + @('--title', $env:TEXT, '--notes-file', 'build/release.md', "--prerelease=$pre")
             if ($env:HOLD -eq 'true') { $ghArgs += '--draft' }
-            gh @args
+            gh @ghArgs
           }
           if ($LASTEXITCODE -ne 0) { throw "gh release failed" }
 
