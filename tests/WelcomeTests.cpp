@@ -110,30 +110,104 @@ static void TestParseAndSince()
     CHECK(sections[2].Body == "- First release.");
 
     // Only the current version's, for an update from before this feature.
-    auto s = Since(sections, "", "2026.12.02.0900");
+    auto s = Since(sections, "", "2026.12.02.0900", "Dev");
     CHECK(s.size() == 1 && s[0].Version == "2026.12.02.0900");
-    s = Since(sections, "garbage", "2026.12.02.0900.Dev");
+    s = Since(sections, "garbage", "2026.12.02.0900.Dev", "Dev");
     CHECK(s.size() == 1);
     // Every skipped version, newest first.
-    s = Since(sections, "2026.11.21.1412", "2026.12.02.0900");
+    s = Since(sections, "2026.11.21.1412", "2026.12.02.0900", "Dev");
     CHECK(s.size() == 2 && s[0].Version == "2026.12.02.0900" && s[1].Version == "2026.11.30.1200");
     // Never a version newer than the running DLL.
-    s = Since(sections, "2026.11.21.1412", "2026.11.30.1200");
+    s = Since(sections, "2026.11.21.1412", "2026.11.30.1200", "Dev");
     CHECK(s.size() == 1 && s[0].Version == "2026.11.30.1200");
     // Nothing new.
-    CHECK(Since(sections, "2026.12.02.0900", "2026.12.02.0900").empty());
+    CHECK(Since(sections, "2026.12.02.0900", "2026.12.02.0900", "Dev").empty());
     // A version with no section of its own (a Dev build).
-    CHECK(Since(sections, "", "2026.12.05.0000").empty());
+    CHECK(Since(sections, "", "2026.12.05.0000", "Dev").empty());
     // A release with no notes (an empty section) shows nothing, but the others still show.
     {
         const auto withEmpty = Parse("## [2026.12.03.0800] - 2026-12-03\n\n## [2026.12.02.0900] - 2026-12-02\n- Two.\n");
         CHECK(withEmpty.size() == 2);
-        CHECK(Since(withEmpty, "2026.12.02.0900", "2026.12.03.0800").empty());
-        const auto both = Since(withEmpty, "2026.11.21.1412", "2026.12.03.0800");
+        CHECK(Since(withEmpty, "2026.12.02.0900", "2026.12.03.0800", "Dev").empty());
+        const auto both = Since(withEmpty, "2026.11.21.1412", "2026.12.03.0800", "Dev");
         CHECK(both.size() == 1 && both[0].Version == "2026.12.02.0900");
     }
     CHECK(Parse("").empty());
     CHECK(Parse("## [Unreleased]\n- x\n").empty());
+}
+
+// A Rel build shows Rel releases only, a Beta build Beta and Rel, a Dev build all of them; a
+// heading without a channel shows on every channel. Never older than the version last running.
+static const char* kChannelLog =
+    "## [Unreleased]\n"
+    "- Next.\n"
+    "\n"
+    "## [2026.12.05.0900] - 2026-12-05 (Rel)\n"
+    "- Rel two.\n"
+    "\n"
+    "## [2026.12.04.0900] - 2026-12-04 (Beta)\n"
+    "- Beta.\n"
+    "\n"
+    "## [2026.12.03.0900] - 2026-12-03 (Dev)\n"
+    "- Dev.\n"
+    "\n"
+    "## [2026.12.02.0900] - 2026-12-02 (rel)\n"
+    "- Rel one.\n"
+    "\n"
+    "## [2026.12.01.0900] - 2026-12-01 (Hotfix)\n"
+    "- No channel.\n"
+    "\n"
+    "## [2026.11.30.0900] - 2026-11-30 (Rel)\n"
+    "- Rel zero.\n";
+
+// The day parts ("05 02 01") of the sections, in order.
+static std::string Days(const std::vector<ReleaseNotes::Section>& aSections)
+{
+    std::string out;
+    for (const auto& s : aSections)
+    {
+        if (!out.empty()) out += " ";
+        out += s.Version.substr(8, 2);
+    }
+    return out;
+}
+
+static void TestChannels()
+{
+    using namespace ReleaseNotes;
+    CHECK(ParseChannel("Dev") == EChannel::Dev && ParseChannel("BETA") == EChannel::Beta);
+    CHECK(ParseChannel("rel") == EChannel::Rel && ParseChannel("") == EChannel::None);
+    CHECK(ParseChannel("Release") == EChannel::None);
+    CHECK(ChannelShows(EChannel::Rel, EChannel::Rel) && !ChannelShows(EChannel::Beta, EChannel::Rel));
+    CHECK(!ChannelShows(EChannel::Dev, EChannel::Rel) && !ChannelShows(EChannel::Dev, EChannel::Beta));
+    CHECK(ChannelShows(EChannel::Beta, EChannel::Beta) && ChannelShows(EChannel::Rel, EChannel::Beta));
+    CHECK(ChannelShows(EChannel::Dev, EChannel::Dev) && ChannelShows(EChannel::None, EChannel::Rel));
+
+    const auto sections = Parse(kChannelLog);
+    CHECK(sections.size() == 6);
+    if (sections.size() != 6) return;
+    CHECK(sections[0].Channel == EChannel::Rel && sections[1].Channel == EChannel::Beta);
+    CHECK(sections[2].Channel == EChannel::Dev && sections[3].Channel == EChannel::Rel);
+    CHECK(sections[4].Channel == EChannel::None);
+    const auto notAtEnd = Parse("## [2026.12.01.0900] (Beta) - 2026-12-01\n- x\n");
+    CHECK(notAtEnd.size() == 1 && notAtEnd[0].Channel == EChannel::None);
+    const auto bare = Parse("## [2026.12.01.0900]\n- x\n");
+    CHECK(bare.size() == 1 && bare[0].Channel == EChannel::None);
+
+    // Last running 30, now 05: only what's newer than 30, by channel.
+    CHECK(Days(Since(sections, "2026.11.30.0900", "2026.12.05.0900", "Rel")) == "05 02 01");
+    CHECK(Days(Since(sections, "2026.11.30.0900", "2026.12.05.0900", "Beta")) == "05 04 02 01");
+    CHECK(Days(Since(sections, "2026.11.30.0900", "2026.12.05.0900", "Dev")) == "05 04 03 02 01");
+    // An unknown running channel shows everything, as Dev does.
+    CHECK(Days(Since(sections, "2026.11.30.0900", "2026.12.05.0900", "")) == "05 04 03 02 01");
+    // Last running 02: nothing from 02 or before.
+    CHECK(Days(Since(sections, "2026.12.02.0900", "2026.12.05.0900", "Beta")) == "05 04");
+    // A Beta build of 04: no newer Rel (05), and not the Dev one (03).
+    CHECK(Days(Since(sections, "2026.12.01.0900", "2026.12.04.0900", "Beta")) == "04 02");
+    // An update from before this feature: the running version's own section only.
+    CHECK(Days(Since(sections, "", "2026.12.05.0900", "Rel")) == "05");
+    // Only another channel's releases are new: nothing to show.
+    CHECK(Since(sections, "2026.12.02.0900", "2026.12.04.0900", "Rel").empty());
 }
 
 static void TestDecideNotes()
@@ -195,6 +269,7 @@ void RunWelcomeTests()
     TestTourSteps();
     TestVersions();
     TestParseAndSince();
+    TestChannels();
     TestDecideNotes();
     TestBlocks();
 }

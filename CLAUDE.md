@@ -267,7 +267,8 @@ to the todo list", add it there (don't start building it). Move agreed items int
 - Versions are `YYYY.MM.DD.HHMM.Channel` (date and time both UTC; Channel `Dev` until initial development is done,
   then `Beta` or `Rel`). For every release run `tools\set_version.ps1 -Channel Dev` and commit
   `src/Version.h` and `CHANGELOG.md` (it moves the `[Unreleased]` notes under the new version,
-  which "What's new" shows after the update). The GitHub release tag is the numbers only (`2026.11.21.1412`; Nexus ignores
+  with the channel in the heading, which "What's new" shows after the update: Rel builds show
+  Rel releases only, Beta builds Beta and Rel, Dev builds all). The GitHub release tag is the numbers only (`2026.11.21.1412`; Nexus ignores
   suffixed tags); Dev and Beta releases are GitHub pre-releases.
 
 ## Building (local notes)

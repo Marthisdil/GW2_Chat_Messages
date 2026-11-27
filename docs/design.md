@@ -449,16 +449,25 @@ its own box.
 - **The notes are `CHANGELOG.md`**, built into the DLL (resource type `NOTES`, `IDR_CHANGELOG`),
   since the updater only ships the DLL. They're in English; the window says so in other
   languages. `tools\set_version.ps1` moves the `[Unreleased]` notes under the new version
-  (`## [2026.11.21.1412] - 2026-11-21`) with a new empty `[Unreleased]` above, so a release's
-  DLL carries its own section.
+  (`## [2026.11.21.1412] - 2026-11-21 (Dev)`) with a new empty `[Unreleased]` above, so a
+  release's DLL carries its own section.
+- **By channel** (owner, 2026-11-27): each heading ends with its release's channel, and a build
+  shows the releases its channel follows: a **Rel** build the Rel releases only, a **Beta** build
+  Beta and Rel, a **Dev** build all of them. A heading without a channel (written by hand, or any
+  other word in the brackets) shows on every channel (`ReleaseNotes::ParseChannel`,
+  `ChannelShows`; the running channel is `CHATMSG_VER_CHANNEL`). Considered and not built: fetching
+  the notes from the GitHub releases (they could be edited after a release, but it needs the
+  network, a new host and a new untrusted input, with the built-in notes as the fallback).
 - **When:** at load, `ReleaseNotes::Decide` compares `"notes_seen"` (in `settings.json`, the
   version tag whose notes were last shown) with the running version:
   - newer than the one seen, with a section to show: the window opens once in gameplay, with
-    every version since the one seen (newest first; only the running version's for an update
-    from before this feature, which has no `"notes_seen"`). `"notes_seen"` is saved when it's
+    every version on a channel this build shows that's newer than the one seen (the version that
+    was running before, so never the older notes again) up to this one, newest first; only the
+    running version's for an update from before this feature, which has no `"notes_seen"`. `"notes_seen"` is saved when it's
     closed;
-  - a first run (the welcome shows instead), notes turned off, or no section with notes for this version
-    (a Dev build between releases; an empty section counts as none): nothing shows and `"notes_seen"` is set now;
+  - a first run (the welcome shows instead), notes turned off, or no section with notes to show
+    (a Dev build between releases; an empty section, or only other channels' releases, counts as
+    none): nothing shows and `"notes_seen"` is set now;
   - the same version or an older DLL: nothing, and the newer mark is kept.
 - **The window** (`###chatmsg_notes`, about 540x440, resizable): the notes in a scrolling box
   (each version's title, its `###` headings, bullets with their indent, wrapped; `**`, backticks

@@ -1046,7 +1046,12 @@ the game and load a character:
 - **Close**: `"notes_seen"` is this version; restart: it doesn't open again;
 - set `"notes_seen"` back, untick **Show what's new after each update** in the window and close:
   the options page's box is unticked too; set `"notes_seen"` back again and restart: it doesn't
-  open, and `"notes_seen"` is updated.
+  open, and `"notes_seen"` is updated;
+- by channel: on a test branch, add hand-made sections to `CHANGELOG.md` between `"notes_seen"`
+  and this version, one each ending `(Dev)`, `(Beta)` and `(Rel)`, plus one older than
+  `"notes_seen"`, then run `tools\set_version.ps1 -Channel Beta` and build. The window shows the
+  Beta and Rel sections and this version's, newest first, but not the Dev one or the older one.
+  Again with `-Channel Rel`: the Rel ones only; with `-Channel Dev`: all but the older one.
 
 **W5. Advanced options on.** Tick **Advanced options** and take the tour again: the same 8
 steps; none points at the Advanced section; step 8 names the box.

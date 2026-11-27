@@ -44,8 +44,10 @@ Neither has a key by default. Your macro hotkeys are set in the addon itself (se
 
 - To update, replace the DLL (or let Nexus update it). Your macros are kept, because they're
   stored in a separate folder (see [Files and data](Files-and-Data)).
-- **What's new:** once after each update, a window lists what changed in that version (in
-  English; it scrolls when it's long). Untick **Show what's new after each update**, in the window
+- **What's new:** once after each update, a window lists what changed since the version you
+  were running before (in English; it scrolls when it's long). A regular release shows the
+  regular releases' notes only; a beta shows the betas' and the regular releases'; a Dev build
+  shows them all. Untick **Show what's new after each update**, in the window
   or on the addon's page in Nexus options, to turn it off.
 
 <!-- screenshot: whats-new.png (docs/screenshots.md) -->
