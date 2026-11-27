@@ -16,9 +16,8 @@ image, and its row is marked **Captured** and moves from the list to [Done](#don
 Nothing in the folder is overwritten. So the list only shows pictures still to take, and
 [Retakes](#retakes) the ones to redo.
 
-The list is kept up to date with every change: new screens get a row, and a row whose screen has
-changed gets a new description (and goes back to **Needed**, moving from Done to the list, if
-its picture is out of date).
+The list is kept up to date with every change, in the order described in
+[How this list is ordered](#how-this-list-is-ordered-keep-it-this-way).
 
 ## Tips
 
@@ -32,60 +31,133 @@ its picture is out of date).
 - Keep the game's default UI size, the Nexus default font, the addon's **Text size** on Default
   (except for `text-size.png`) and its **Language** on English (except for `library-german.png`),
   so the pictures match what most players see.
-- Several pictures can come from one setup: the macros from the in-game tests (`docs/in-game-tests.md`,
-  A3 and J10) give `library-window.png`, `macro-editor-*.png`, `hotkey-set.png` and
-  `import-window.png`.
+- Take a whole group in one sitting: its first line says what to set up.
 - PNG, ideally under 1 MB each.
 
+## How this list is ordered (keep it this way)
+
+Owner, 2026-11-27. The pictures are grouped by the part of the addon they show and the setup they
+need, so one sitting covers a whole group. The groups are in the order to take them (each
+builds on the setup of the ones before), and the rows in each group in the order the screens
+come up. With every change:
+
+- **A new picture** goes into the group of its screen, placed where its screen comes up; when
+  none fits, a new group goes where its setup fits the order.
+- **The `#` is the picture's id:** it's never reused or renumbered, and a new picture takes the
+  next one (the last given is 46).
+- **A row whose screen changed** gets a new description, and goes back to **Needed** (moving
+  from [Done](#done) to its group) if its picture is out of date.
+- Each group says what to set up first; keep that line current when a row is added or moved.
+
 ## The list
+
+### 1. First run and updates
+
+A fresh addon folder (rename yours first, as in-game check W1 does), **Advanced options** off. `whats-new.png` needs a build with a changelog section of its own (in-game check W4). Put your own folder back afterwards.
+
+| # | File name | What to capture | Used in | Status |
+|---|---|---|---|---|
+| 44 | `welcome.png` | A first run (with **Advanced options** off): the library window open by itself with **Welcome to Chat Messages** in front, on its first page ("Add some example folders and macros to start with?", **Add the examples** / **Start empty**). | The macro library | Needed |
+| 31 | `starter-library.png` | The library on a first run, after **Add the examples** in the welcome: the **Examples** folder open with Basics, Placeholders and Filters (and Filters' two sub-folders) expanded, one example macro (e.g. Two channels) selected in the editor. | The macro library | Needed |
+| 45 | `tour-step.png` | The tour on step 4 ("Send now and Preview"): `Hello` selected, its header outlined in yellow, and the step's box beside it with "Step 4 of 8", **Back**, **Next** and **Skip the tour**. | The macro library | Needed |
+| 46 | `whats-new.png` | **What's new in Chat Messages** after an update: a version's title, headings and bullets, the scrollbar, **Show what's new after each update** ticked and **Close**. | Installation | Needed |
+
+### 2. The library window
+
+Your own library, with a few folders (e.g. *Raids › Wing 3*, *WvW*, *Guild*, a folder with a filter) and the examples. **Advanced options** off. Take `text-size.png` last, then set the text size back to Default.
 
 | # | File name | What to capture | Used in | Status |
 |---|---|---|---|---|
 | 1 | `library-window.png` | The whole library window: a few folders (e.g. *Raids › Wing 3*, *WvW*, *Guild*) with one expanded, and a macro selected so the editor shows on the right in the new layout (2026-11-26: the name with **Send now** / **Preview** / **...**, the grey path line, **Lines (n)** with one row per line, then the folded **Where it's active**, **Hotkey and favourite** and **Note** sections; with **Advanced options** off, so no **Advanced** section). The empty **Search (Ctrl+F)** box and the unticked **Only active in ...** checkbox show above the tree. | README, wiki Home, The macro library | Captured (2026-11-25), retake |
-| 2 | `chat-result.png` | The game's chat box right after sending a multi-line macro, showing two or three lines in different channels (e.g. squad, party, map). | README | Captured (2026-11-25), retake |
-| 3 | `quick-menu.png` | The quick menu open from right-clicking the chat bubble icon: the empty search box at the top, nested folders under it, and the mouse over a macro (one with a note) so its note and line preview show. | README, Sending macros | Captured (2026-11-25), retake |
-| 5 | `nexus-game-keybinds.png` | Nexus > Options > Game Keybinds, showing the **Chat** (and **Squad Broadcast**) keys set. | Installation | Needed |
 | 6 | `tree-context-menu.png` | Right-click menu on a folder in the library tree (shows Export, Import into this folder, Sort...). | The macro library | Needed |
-| 7 | `macro-editor-lines.png` | With **Advanced options** off (the default): the macro editor's **Lines (n)** rows with 3-4 lines: a say line, a whisper with its **Recipient** box in the row, a squad line with **Broadcast** ticked, each with its count, up/down arrows and **X** on the right (ideally one long line with a yellow count). | Editing macros | Needed |
-| 8 | `macro-editor-raw.png` | With **Advanced options** ticked (options page, General tab): the same macro edited as **Raw text** (chosen in the **Advanced** section), with the **Will send:** list under it. | Editing macros | Needed |
-| 9 | `send-status.png` | The editor after **Send now**, with the status line ("Sent 3 lines." or "Sending line 2 of 3...") under the header with the **Send now** and **Preview** buttons. A successful send: errors now show in the error window instead. | Sending macros | Needed |
-| 10 | `hotkey-set.png` | The **Hotkey:** row of a macro with a hotkey set (e.g. Ctrl+F1) and its **Change...** / **Clear** buttons, ideally with the "Also set on: ... Where both are active, this hotkey sends nothing." warning (two macros active in the same place with the same hotkey). | Sending macros | Needed |
-| 11 | `filters.png` | **Where it's active** opened: game modes ticked, two or three maps listed by name, and the "Active here" line. | Filters | Needed |
-| 12 | `placeholders-tooltip.png` | The tooltip from hovering **Placeholders (?)** in the editor: `{time}` to `{nexus}`, with the line about other `{ }` text under it (no `{txt}` or `{json}` any more). | Placeholders | Needed |
 | 13 | `export-menu.png` | Right-click a macro > **Export** submenu open. | Import and export | Needed |
-| 14 | `import-window.png` | With **Advanced options** ticked (options page, General tab): the Import window with something loaded: the target folder, the options, **Select all / Deselect all**, and the preview with its checkboxes (one item unticked), at least one **NAME TAKEN** item and its choice box, a macro marked **REMOVED PLACEHOLDER**, and (with **Keep hotkeys** ticked) one marked **YOUR HOTKEY** with its notice above the preview. In-game check J10 sets this up (use **Keep both (rename)**). | Import and export | Needed |
-| 15 | `send-alert.png` | A Nexus alert on screen from a hotkey that couldn't send, with the error window it also opens. Easiest: give two macros that are both active here the same hotkey, then press it with the library closed. | Safety and troubleshooting | Needed |
-| 16 | `link-file.png` | With **Advanced options** ticked on the options page: a macro's **Advanced** section opened at the bottom, its **Text file link** part with a file linked ("In step") and the Open file / Open folder / Unlink buttons. | Advanced options | Needed |
-| 17 | `text-size.png` | The library window at the biggest text size, with the **Text size** dropdown (end of the toolbar) open. | The macro library | Needed |
-| 18 | `error-window.png` | The error window with "What you did" and the OK / Copy to clipboard buttons. Easiest: toolbar **Export all** with an empty library, or select a folder 6 levels deep and click **New folder**. (A duplicate name shows it as a pop-up over the name box, which works too.) | Safety and troubleshooting | Needed |
-| 19 | `trash-bin.png` | The library with the **Trash bin (F/M)** opened at the bottom of the tree (two or three items, one a folder), one item selected so the details pane shows **Restore** / **Delete permanently...**. | The macro library | Needed |
+| 38 | `new-folder-modes.png` | The **New folder** name box with a name typed and **Active in:** PvE / WvW / PvP below it (WvW only ticked), and the "Maps: in the folder's details" line. | The macro library | Needed |
+| 37 | `folder-filters.png` | The library with two or three folders that have filters, showing their tags (`Roaming  [WvW]`, `LA  [1 map]`), one of them dimmed because it isn't active here, and that folder selected: its details show **Where it's active** open with WvW ticked, a map listed, and "Not active here". | Filters | Needed |
 | 20 | `search.png` | The library tree while searching: a word typed in the **Search** box (e.g. `stack`), the "Found: ..." line, an opened folder path with a highlighted match, and one macro marked "(found in its lines)". Crop to the tree pane. | The macro library | Needed |
-| 21 | `import-library.png` | With **Advanced options** ticked (options page, General tab): the Import window with **A whole library** chosen and a file like `Alex.json` loaded: step 2's folder name (`From Alex`), **Keep hotkeys** unticked, and the preview with the new folder holding their folders and macros. | Import and export | Needed |
+| 19 | `trash-bin.png` | The library with the **Trash bin (F/M)** opened at the bottom of the tree (two or three items, one a folder), one item selected so the details pane shows **Restore** / **Delete permanently...**. | The macro library | Needed |
+| 32 | `examples-replace.png` | The "Replace the examples?" prompt in the library after **Add the example macros** on the options page, with the trash bin on: the folder's current name, the yellow count of folders and macros that go to the trash bin, "can't be merged", and **Replace** / **Cancel**. | The macro library | Needed |
+| 17 | `text-size.png` | The library window at the biggest text size, with the **Text size** dropdown (end of the toolbar) open. | The macro library | Needed |
+
+### 3. The macro editor
+
+One macro selected, with 3-4 lines (a say line, a whisper, a squad line with **Broadcast**), a placeholder, a filter and a hotkey. **Advanced options** off.
+
+| # | File name | What to capture | Used in | Status |
+|---|---|---|---|---|
+| 7 | `macro-editor-lines.png` | With **Advanced options** off (the default): the macro editor's **Lines (n)** rows with 3-4 lines: a say line, a whisper with its **Recipient** box in the row, a squad line with **Broadcast** ticked, each with its count, up/down arrows and **X** on the right (ideally one long line with a yellow count). | Editing macros | Needed |
+| 12 | `placeholders-tooltip.png` | The tooltip from hovering **Placeholders (?)** in the editor: `{time}` to `{nexus}`, with the line about other `{ }` text under it (no `{txt}` or `{json}` any more). | Placeholders | Needed |
+| 29 | `send-preview.png` | The macro editor after **Preview** on a 2-3 line macro with a whisper and a placeholder: each line's channel and typed text under the buttons, the whisper's "then Tab, then:" row, the note about placeholders, and **Close preview**. | Sending macros | Needed |
+| 9 | `send-status.png` | The editor after **Send now**, with the status line ("Sent 3 lines." or "Sending line 2 of 3...") under the header with the **Send now** and **Preview** buttons. A successful send: errors now show in the error window instead. | Sending macros | Needed |
+| 11 | `filters.png` | **Where it's active** opened: game modes ticked, two or three maps listed by name, and the "Active here" line. | Filters | Needed |
+| 25 | `filter-map-search.png` | **Where it's active** opened with `lion` typed in **Find a map by name or id**: the list of matches ("Lion's Arch - Kryta (50)", one marked "(been there)"), and the **Maps you've been to** dropdown next to it. | Filters | Needed |
+| 10 | `hotkey-set.png` | The open **Hotkey and favourite** section of a macro: its **Hotkey:** row with a hotkey set (e.g. Ctrl+F1) and its **Change...** / **Clear** buttons, ideally with the "Also set on: ... Where both are active, this hotkey sends nothing." warning (two macros active in the same place with the same hotkey). | Sending macros | Needed |
+| 26 | `hotkey-game-key.png` | The open **Hotkey and favourite** section of a macro: its **Hotkey:** row set to a GW2 default key (e.g. F1 or Ctrl+T), with the yellow note "In GW2's default keys, F1 is "Profession skill 1"..." under it. | Sending macros | Needed |
+| 42 | `editor-note.png` | A macro selected in the library, its **Note** section open (under **Where it's active** and **Hotkey and favourite**) with the grey "What it's for..." line and a two-line note in the box (e.g. "Before each boss" / "Needs commander tag"). | Editing macros | Needed |
+
+### 4. The macro editor with Advanced options on
+
+Tick **Advanced options** (options page, General tab). The same macro, linked to a text file, with a cooldown. Take `advanced-off-macro.png` last, after unticking the box again.
+
+| # | File name | What to capture | Used in | Status |
+|---|---|---|---|---|
+| 43 | `editor-advanced.png` | With **Advanced options** ticked: a macro's editor scrolled to the bottom, the **Advanced** section open: **Edit the lines as:** Lines / Raw text, **Cooldown:** and **Text file link: none** with its box and **Link**. | Advanced options, Editing macros | Needed |
+| 8 | `macro-editor-raw.png` | With **Advanced options** ticked (options page, General tab): the same macro edited as **Raw text** (chosen in the **Advanced** section), with the **Will send:** list under it. | Editing macros | Needed |
+| 30 | `hotkey-cooldown.png` | With **Advanced options** ticked (options page, General tab): the macro editor's **Advanced** section open with the **Cooldown:** row showing a value (e.g. 10 seconds) and the yellow "(N s left)" just after a hotkey send, and the **Hotkey and favourite** header above showing the hotkey. | Sending macros | Needed |
+| 16 | `link-file.png` | With **Advanced options** ticked on the options page: a macro's **Advanced** section opened at the bottom, its **Text file link** part with a file linked ("In step") and the Open file / Open folder / Unlink buttons. | Advanced options | Needed |
+| 40 | `advanced-off-macro.png` | With **Advanced options** off: a macro linked to a text file selected in the library, dimmed in the tree, its header with a faded **Send now** and the yellow "This macro is linked to a text file, which is an advanced option..." note under it, and no **Advanced** section at the bottom. | Advanced options | Needed |
+
+### 5. Sending in game
+
+Chat visible, in a party or squad if you can (so every line shows), and the library closed for `send-alert.png`.
+
+| # | File name | What to capture | Used in | Status |
+|---|---|---|---|---|
+| 2 | `chat-result.png` | The game's chat box right after sending a multi-line macro, showing two or three lines in different channels (e.g. squad, party, map). | README | Captured (2026-11-25), retake |
+| 15 | `send-alert.png` | A Nexus alert on screen from a hotkey that couldn't send, with the error window it also opens. Easiest: give two macros that are both active here the same hotkey, then press it with the library closed. | Safety and troubleshooting | Needed |
+| 18 | `error-window.png` | The error window with "What you did" and the OK / Copy to clipboard buttons. Easiest: toolbar **Export all** with an empty library, or select a folder 6 levels deep and click **New folder**. (A duplicate name shows it as a pop-up over the name box, which works too.) | Safety and troubleshooting | Needed |
+
+### 6. The quick menu
+
+A few favourites (one a folder), a few macros sent recently, and a macro with a note.
+
+| # | File name | What to capture | Used in | Status |
+|---|---|---|---|---|
+| 3 | `quick-menu.png` | The quick menu open from right-clicking the chat bubble icon: the empty search box at the top, nested folders under it, and the mouse over a macro (one with a note) so its note and line preview show. | README, Sending macros | Captured (2026-11-25), retake |
 | 22 | `quick-menu-search.png` | The quick menu pop-up (opened by its key) with `say` or another word typed in its search box: the flat result list with each macro's folders in brackets, the mouse over one so its preview shows. | Sending macros | Needed |
+| 35 | `quick-menu-favourites.png` | The quick menu with 2-3 **Favourites** (one a folder opened as a sub-menu, one faded because it isn't active on this map) and 2-3 **Recently sent** macros above the folders (each with its folders in brackets), and the library behind it showing a favourite with `*` after its name. | Sending macros | Needed |
+
+### 7. Import and export
+
+Something to export, and the import setup of in-game check J10. `import-window.png` and `import-library.png` need **Advanced options** ticked.
+
+| # | File name | What to capture | Used in | Status |
+|---|---|---|---|---|
+| 36 | `export-window.png` | The **Export** window: the library as a tree with tick boxes, one folder ticked with a sub-folder showing **[some]**, a macro outside it ticked, the "N folder(s) and M macro(s) ticked" line, a file name typed, and the **Save as a .json file** / **Copy to the clipboard** buttons. | Import and export | Needed |
+| 14 | `import-window.png` | With **Advanced options** ticked (options page, General tab): the Import window with something loaded: the target folder, the options, **Select all / Deselect all**, and the preview with its checkboxes (one item unticked), at least one **NAME TAKEN** item and its choice box, a macro marked **REMOVED PLACEHOLDER**, and (with **Keep hotkeys** ticked) one marked **YOUR HOTKEY** with its notice above the preview. In-game check J10 sets this up (use **Keep both (rename)**). | Import and export | Needed |
+| 21 | `import-library.png` | With **Advanced options** ticked (options page, General tab): the Import window with **A whole library** chosen and a file like `Alex.json` loaded: step 2's folder name (`From Alex`), **Keep hotkeys** unticked, and the preview with the new folder holding their folders and macros. | Import and export | Needed |
+
+### 8. The options page in Nexus
+
+The addon's page in **Nexus > Options**, and Nexus' own Game Keybinds. `options-advanced.png` needs a linked macro and a cooldown (from group 4) with the box off; `options-map-list.png` needs the box ticked; `options-restore.png` needs a few backups.
+
+| # | File name | What to capture | Used in | Status |
+|---|---|---|---|---|
+| 28 | `options-links.png` | The top of the addon's page in Nexus > Options: the version, the build stamp, the **Chat Messages on GitHub** and **ArenaNet's macro policy** links (the mouse over the policy link, so its address shows), the line under them, and the **General / Backups / Restore** tabs below. | ArenaNet's policies | Needed |
 | 23 | `language-options.png` | The addon's page in Nexus > Options with the **Language** dropdown open: **Follow Nexus (...)**, English (US), Deutsch, Español, Français with their percentages, and under it **Use language files from the localization folder** unticked (the default) with its grey line. **Advanced options** off (it makes no difference here). | Languages | Needed |
 | 41 | `language-own-files.png` | The same section with **Use language files from the localization folder** ticked: the **Open localization folder** / **Reload language files** buttons and the text under them, and a file of your own in the dropdown (e.g. **Nederlands (0%) - file from your localization folder**, from in-game check Q6). | Languages | Needed |
-| 24 | `library-german.png` | The library window in German (pick **Deutsch**), with a macro selected so the editor shows. | Languages | Needed |
-| 25 | `filter-map-search.png` | **Where it's active** opened with `lion` typed in **Find a map by name or id**: the list of matches ("Lion's Arch - Kryta (50)", one marked "(been there)"), and the **Maps you've been to** dropdown next to it. | Filters | Needed |
-| 26 | `hotkey-game-key.png` | The **Hotkey:** row of a macro set to a GW2 default key (e.g. F1 or Ctrl+T), with the yellow note "In GW2's default keys, F1 is "Profession skill 1"..." under it. | Sending macros | Needed |
-| 27 | `options-map-list.png` | With **Advanced options** ticked (options page, General tab): the addon's page in Nexus > Options, **General** tab, scrolled to the map list: "Map list: 1,5xx maps, from ..." and the **Refresh map list** button. | Filters | Needed |
-| 28 | `options-links.png` | The top of the addon's page in Nexus > Options: the version, the build stamp, the **Chat Messages on GitHub** and **ArenaNet's macro policy** links (the mouse over the policy link, so its address shows), the line under them, and the **General / Backups / Restore** tabs below. | ArenaNet's policies | Needed |
-| 29 | `send-preview.png` | The macro editor after **Preview** on a 2-3 line macro with a whisper and a placeholder: each line's channel and typed text under the buttons, the whisper's "then Tab, then:" row, the note about placeholders, and **Close preview**. | Sending macros | Needed |
-| 30 | `hotkey-cooldown.png` | With **Advanced options** ticked (options page, General tab): the macro editor's **Advanced** section open with the **Cooldown:** row showing a value (e.g. 10 seconds) and the yellow "(N s left)" just after a hotkey send, and the **Hotkey and favourite** header above showing the hotkey. | Sending macros | Needed |
-| 31 | `starter-library.png` | The library on a first run, after **Add the examples** in the welcome: the **Examples** folder open with Basics, Placeholders and Filters (and Filters' two sub-folders) expanded, one example macro (e.g. Two channels) selected in the editor. | The macro library | Needed |
-| 32 | `examples-replace.png` | The "Replace the examples?" prompt in the library after **Add the example macros** on the options page, with the trash bin on: the folder's current name, the yellow count of folders and macros that go to the trash bin, "can't be merged", and **Replace** / **Cancel**. | The macro library | Needed |
 | 33 | `options-backups.png` | The **Backups** tab of the addon's options page with backups on: **Make backups of my macros** ticked, **Back up every** 1 day(s), **Copies to keep** 7, the text about the folder and file names, "Last backup: ... UTC." and the **Back up now** / **Open the backups folder** buttons. | Backups and restore | Needed |
 | 34 | `options-restore.png` | The **Restore** tab with 3-4 backups and one safety copy listed: the Date (UTC), Time (UTC), Folders, Macros and Type columns and the **Restore...** buttons (the mouse over a date, so the file name shows). | Backups and restore | Needed |
-| 35 | `quick-menu-favourites.png` | The quick menu with 2-3 **Favourites** (one a folder opened as a sub-menu, one faded because it isn't active on this map) and 2-3 **Recently sent** macros above the folders (each with its folders in brackets), and the library behind it showing a favourite with `*` after its name. | Sending macros | Needed |
-| 36 | `export-window.png` | The **Export** window: the library as a tree with tick boxes, one folder ticked with a sub-folder showing **[some]**, a macro outside it ticked, the "N folder(s) and M macro(s) ticked" line, a file name typed, and the **Save as a .json file** / **Copy to the clipboard** buttons. | Import and export | Needed |
-| 37 | `folder-filters.png` | The library with two or three folders that have filters, showing their tags (`Roaming  [WvW]`, `LA  [1 map]`), one of them dimmed because it isn't active here, and that folder selected: its details show **Where it's active** open with WvW ticked, a map listed, and "Not active here". | Filters | Needed |
 | 39 | `options-advanced.png` | The addon's page in Nexus > Options, **General** tab, scrolled to the bottom: the **Advanced options** checkbox (unticked) with **[?]** next to it (the mouse over **[?]**, so its tooltip with the wiki address shows), the text under it listing the features behind it, and the two yellow lines "1 macro(s) linked to a text file..." and "1 macro(s) with a cooldown..." (have one of each). | Advanced options | Needed |
-| 40 | `advanced-off-macro.png` | With **Advanced options** off: a macro linked to a text file selected in the library, dimmed in the tree, its header with a faded **Send now** and the yellow "This macro is linked to a text file, which is an advanced option..." note under it, and no **Advanced** section at the bottom. | Advanced options | Needed |
-| 42 | `editor-note.png` | A macro selected in the library, its **Note** section open (under **Where it's active** and **Hotkey and favourite**) with the grey "What it's for..." line and a two-line note in the box (e.g. "Before each boss" / "Needs commander tag"). | Editing macros | Needed |
-| 43 | `editor-advanced.png` | With **Advanced options** ticked: a macro's editor scrolled to the bottom, the **Advanced** section open: **Edit the lines as:** Lines / Raw text, **Cooldown:** and **Text file link: none** with its box and **Link**. | Advanced options, Editing macros | Needed |
-| 44 | `welcome.png` | A first run (with **Advanced options** off): the library window open by itself with **Welcome to Chat Messages** in front, on its first page ("Add some example folders and macros to start with?", **Add the examples** / **Start empty**). | The macro library | Needed |
-| 45 | `tour-step.png` | The tour on step 4 ("Send now and Preview"): `Hello` selected, its header outlined in yellow, and the step's box beside it with "Step 4 of 8", **Back**, **Next** and **Skip the tour**. | The macro library | Needed |
-| 46 | `whats-new.png` | **What's new in Chat Messages** after an update: a version's title, headings and bullets, the scrollbar, **Show what's new after each update** ticked and **Close**. | Installation | Needed |
-| 38 | `new-folder-modes.png` | The **New folder** name box with a name typed and **Active in:** PvE / WvW / PvP below it (WvW only ticked), and the "Maps: in the folder's details" line. | The macro library | Needed |
+| 27 | `options-map-list.png` | With **Advanced options** ticked (options page, General tab): the addon's page in Nexus > Options, **General** tab, scrolled to the map list: "Map list: 1,5xx maps, from ..." and the **Refresh map list** button. | Filters | Needed |
+| 5 | `nexus-game-keybinds.png` | Nexus > Options > Game Keybinds, showing the **Chat** (and **Squad Broadcast**) keys set. | Installation | Needed |
+
+### 9. Another language
+
+The addon's **Language** set to **Deutsch**. Set it back to English afterwards.
+
+| # | File name | What to capture | Used in | Status |
+|---|---|---|---|---|
+| 24 | `library-german.png` | The library window in German (pick **Deutsch**), with a macro selected so the editor shows. | Languages | Needed |
 
 ## Retakes
 

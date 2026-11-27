@@ -289,6 +289,14 @@ to the todo list", add it there (don't start building it). Move agreed items int
   (back to "Needed" if its picture is now out of date). Also add, change or remove the checks in
   `docs/in-game-tests.md` that the change affects, and keep its "Progress" table current with the
   user's results.
+- **Order of both lists (owner, 2026-11-27):** each file's "How this list is ordered" section
+  has the rules; follow them for every new or moved check and picture. In short: in-game
+  sessions are in four priority tiers (1 game input and sending, 2 your macros' safety and what
+  every player sees, 3 everyday features, 4 looks, languages and rare cases), setup sessions
+  first within a tier; letters and check ids never change (a new session takes the next letter,
+  a new check the next number in its session), and the Progress table and report template
+  follow the same order. Screenshots are grouped by area and setup (one sitting per group), in
+  the order to take them; the `#` is a fixed id (next: 47).
 - **Done sections (owner, 2026-11-25):** both lists show only what's still to do at the top.
   An in-game check that passes (or fails, is fixed and passes its re-check) moves, text and
   Progress row, to "Done (passed checks)" at the bottom of `docs/in-game-tests.md`. A captured
