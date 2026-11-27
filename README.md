@@ -135,6 +135,15 @@ explains how, including how to translate the addon into your language with the f
 [localization/](localization/). The German, French and Spanish translations were made by AI, so
 corrections from native speakers would help a lot.
 
+## Credits
+
+This addon is modelled on [Chat Shorts](https://github.com/agaertner/bhm-chat-macros), a Blish
+HUD module by Nekres (agaertner on GitHub). I took its feature set as the starting point, along
+with a few facts I learnt from it: the chat commands in the English, German, French and Spanish
+clients, the chat channels' colours, and the length limit on names. No code was copied: the
+module is written in C# for Blish HUD, and this addon was written from scratch in C++ for
+Nexus. Thank you for the module and the ideas.
+
 ## AI Disclosure
 
 This addon was built with the help of AI. Most of the code, design notes and documentation were
