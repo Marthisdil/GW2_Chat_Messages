@@ -68,7 +68,7 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($env:VT_API_KEY)) { throw "The VT_API_KEY secret isn't set (docs/virustotal.md, 'Setting it up')." }
           Write-Host "Tag: $tag (test: $env:TEST)"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ env.CHECKOUT_REF }}
           submodules: recursive
@@ -91,7 +91,7 @@ jobs:
           "channel=$channel" >> $env:GITHUB_OUTPUT
           Write-Host "Releasing $text ($channel) from $(git rev-parse --short HEAD)"
 
-      - uses: microsoft/setup-msbuild@v2
+      - uses: microsoft/setup-msbuild@v3
 
       - name: Build
         run: msbuild GW2_Chat_Messages.sln /m /p:Configuration=Release /p:Platform=x64
@@ -174,7 +174,7 @@ jobs:
           Get-Content build\hold.txt | ForEach-Object { Write-Host "::error::$_" }
           throw "The release was saved as a draft. Check the VirusTotal report (link in the draft), then publish it on GitHub, or fix and tag again."
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: release-${{ env.TAG }}
