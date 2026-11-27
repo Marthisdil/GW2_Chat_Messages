@@ -1025,6 +1025,12 @@ The options page also links the repository (`kRepositoryUrl`).
   with a suffix, and the tag must match the DLL's version or Nexus keeps re-downloading it. `Dev`
   and `Beta` builds are published as GitHub pre-releases (Nexus offers those only to users who
   allow pre-release updates for the addon); `Rel` builds as normal releases.
+- **Releases are built by CI** (owner, 2026-11-27): pushing the tag on a merged commit runs
+  `.github/workflows/release.yml`, which builds, tests, uploads the DLL to VirusTotal and
+  publishes the release with the changelog section, the DLL's SHA-256, the scan's result and
+  link, and the build stamp. More than `VT_MAX_FLAGS` engines (default 3) flagging it, or a scan
+  that doesn't finish in 20 minutes, saves it as a draft for the owner to check and publish.
+  Setup, the false-positive steps and reuse in other projects: `docs/virustotal.md`.
 
 ## Implementation phases (one small PR each)
 

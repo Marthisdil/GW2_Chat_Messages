@@ -16,19 +16,6 @@ priority order too.
 Work through `docs/in-game-tests.md` (A1 passed, A2 mostly; the rest is still to do). Session B,
 whether the game takes the addon's keys and text, matters most: everything else depends on it.
 
-### VirusTotal scan for every released DLL (added 2026-11-21)
-
-If there's a way to automate it, submit every DLL that's to be released to virustotal.com, and
-include the scan link in the release's text, for people to review if they wish. Build it with
-the first release.
-
-- Points to settle: VirusTotal has a public API (a free API key, with rate limits) that can
-  upload a file and return its analysis page (`https://www.virustotal.com/gui/file/<sha256>`);
-  the release workflow could upload the DLL, wait for the result, and add the link and the
-  SHA-256 to the release notes. The key would be a GitHub Actions secret. Also: what to do when
-  some engines flag it (false positives are common for DLLs that hook a game's window), and
-  whether the release waits for the scan or the link is added afterwards.
-
 ### Cleanup PR for `Ui.cpp` after the in-game testing (added 2026-11-24)
 
 **Reminder (owner):** once every session in `docs/in-game-tests.md` has been run and passed,

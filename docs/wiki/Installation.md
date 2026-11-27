@@ -17,6 +17,16 @@
 There is no public release yet. Until there is, build the DLL from source as described in the
 README.
 
+Every release is scanned on [VirusTotal](https://www.virustotal.com) before it's published: the
+release's text on GitHub shows the DLL's SHA-256 and links to the scan report. To check that
+your download is the same file, compare its hash with the one in the release text:
+
+```powershell
+Get-FileHash "<GW2>\addons\GW2_Chat_Messages.dll" -Algorithm SHA256
+```
+
+A Nexus update downloads the same file as the release.
+
 ## Set your chat keys in Nexus
 
 The addon opens chat with your own game keys, through Nexus. It never guesses a key. Check these
