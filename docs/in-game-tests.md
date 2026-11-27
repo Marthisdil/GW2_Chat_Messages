@@ -4,24 +4,68 @@ The unit tests cover the rules (tree, raw text, send plan, hotkeys, filters, pla
 import, link sync). These checks cover what only the game can tell us: whether GW2 takes our keys
 and text, and whether normal game input is ever disturbed.
 
-The checks are grouped into sessions (A to R) in the order to run them: each one builds on the
-ones before (the `Test` macros from A3, `Say`'s Ctrl+F1 from F1, `Fill` from I1, ...). A
-whole pass takes a few hours, so spread it over several play sessions. If the text is hard to
-read, do M1 first and pick a bigger size. Session B is the one that matters most: if it fails,
-most of the later sessions can't be run, so report it first.
+The sessions are in **priority order**: most important first. Run them from the top, and when
+time is short, stop wherever you are: what's left matters less. A whole pass takes a few hours,
+so spread it over several play sessions, and finish each play session with L1. If the text is
+hard to read, do M1 first and pick a bigger size.
+
+## How this list is ordered (keep it this way)
+
+Owner, 2026-11-27. Every change that adds or changes a check follows these rules:
+
+- **Four priority tiers**, the sessions in each in run order:
+  1. **Game input and sending:** anything that could disturb normal game input (keys, Tab,
+     modifiers, the mouse, typing reaching the game) or stop a macro from sending.
+  2. **Your macros' safety, and what every player sees:** losing or damaging the library
+     (saving, older and newer files, backups, the trash bin), the first run, the editor, the
+     quick menu and the search boxes.
+  3. **Everyday features**, and the Advanced options box with it off (the default).
+  4. **Looks, languages and rare cases.**
+- **Within a tier,** a session that sets something up for others comes before them, then the
+  rest by how many players it touches.
+- **A session keeps its letter** (A to W, then X, Y, Z, AA...): reports, the Done table and
+  `docs\testing results.txt` use the letters, so they never change. A new session takes the next
+  letter and goes into its tier; a new check goes into the session of its feature, numbered
+  after the last one (B6, F10, ...), placed where it runs in that session.
+- **Its row in the Progress table** says its tier and what it needs from other sessions, and
+  the report template lists its checks in the same order.
+- A check that passes moves to [Done](#done-passed-checks); one a change makes due again moves
+  back to its session and the Progress table.
 
 ## Progress
 
 Results so far (keep your notes in `docs\testing results.txt`; it isn't committed). This table
-and the sessions below only hold what is still to test. A check that passed, or that failed and
-passed its re-check after the fix, moves to [Done](#done-passed-checks) at the bottom. If a later
-change means a done check must be run again, it moves back here and into its session.
+and the sessions below only hold what is still to test, in run order. A check that passed, or
+that failed and passed its re-check after the fix, moves to [Done](#done-passed-checks) at the
+bottom. If a later change means a done check must be run again, it moves back here and into its
+session. Everything after A2 is new since the PR #15 build that was tested: run it all with the
+current build.
 
-| Session | State | Notes |
-|---|---|---|
-| A1 | Passed (PR #15 build) | Re-check with the current build: the log and the options page show its version and build stamp, the two links and the folders are new (A1's last part), and so is the icon (the quick bubble, 2026-11-25). |
-| A2 | Passed, 2 fixes to re-check | The duplicate-name error and the Delete pop-up's text ran off the right. Fixed: text wraps and errors open the error window. Re-check those two points only (marked *Re-check* in A2), then go on to A3. |
-| A3 to W | Not run yet | Everything after A2 is new since the PR #15 build that was tested, so run it all with the current build (W, the first-run welcome, the tour and What's new, is the newest (2026-11-26), and A1b changed with it; V, the new macro editor layout, came just before (2026-11-26), and A4, F9, K1, M2, S1 to S3 and U2 changed with it; U, duplicate, notes and the map list after a game update, is the newest (2026-11-26); Q6 changed and Q9 is new: your own language files have their own box now, and files from other versions (2026-11-26); T, saved files from older and newer versions, is the newest (2026-11-26); H9 and H10, filters on folders, are the newest; then S, the Advanced options box (new 2026-11-25; tick it first, see "Before you start"); then J11, export a selection; G4 to G6, favourites and recently sent, with G4 and G6 new for favourites shown everywhere, and R, backups and restore, are the newest; A1b, the example macros, and F9, the hotkey cooldown, came just before). |
+| # | Session | Priority | Needs | State |
+|---|---|---|---|---|
+| 1 | A. Loading and the library | 1 | Nothing. A2 and A3 make the `Test` folder and macros the other sessions use. | A1 and A2 passed (PR #15 build); re-check A1's last part and A2's two *Re-check* points; A1b to A6 not run yet |
+| 2 | B. Sending: does the game take our keys? | 1 | A3. B3b's last point: a line too long once filled in (I4). | Not run yet |
+| 3 | D. Refusals and recovery | 1 | A3. | Not run yet |
+| 4 | F. Hotkeys | 1 | A3 (`Fill` for F8). F9: Advanced options on. | Not run yet |
+| 5 | E. Commander | 1 | A3, and a commander tag (skip without one). | Not run yet |
+| 6 | L. Final checks | 1 | A3 (`Long`). L1 again at the end of every play session. | Not run yet |
+| 7 | W. First-run welcome, tour and What's new | 2 | A copy of the addon folder (W renames it). W4: a test build with a changelog section. | Not run yet |
+| 8 | V. The macro editor layout | 2 | A3, F1 (`Say` on Ctrl+F1). V5: Advanced options on. | Not run yet |
+| 9 | G. Quick menu | 2 | A3, F1. | Not run yet |
+| 10 | P. Search box | 2 | A3, F1. | Not run yet |
+| 11 | T. Saved files: older and newer versions | 2 | A3. T3's link parts: K1 and Advanced options on (or skip them). | Not run yet |
+| 12 | R. Backups and restore | 2 | A library with a few macros. R7: K (or skip it). | Not run yet |
+| 13 | O. Trash bin | 2 | Nothing. | Not run yet |
+| 14 | H. Filters (where a macro is active) | 3 | A3, F2 (`Emote` on Ctrl+Mouse 4). H8: Advanced options on. | Not run yet |
+| 15 | I. Placeholders | 3 | A3 (`Fill`). I9: German (Q2 explains it). | Not run yet |
+| 16 | J. Import and export | 3 | A3, F1. J2, J7, J10: Advanced options on. | Not run yet |
+| 17 | U. Duplicate, notes, and the map list after a game update | 3 | A3. | Not run yet |
+| 18 | N. The error window | 3 | A3. | Not run yet |
+| 19 | K. Text file links | 3 | A3, Advanced options on. | Not run yet |
+| 20 | S. Advanced options | 3 | K1 (`test.txt` linked to `Two`), F9 (`Say`'s cooldown). | Not run yet |
+| 21 | M. Text size | 4 | Nothing. | Not run yet |
+| 22 | Q. Languages | 4 | Nothing (Q6 to Q9 build on each other). | Not run yet |
+| - | C. Whispers and Tab | 1 | A3 | All done (see [Done](#done-passed-checks)) |
 
 ## How to report
 
@@ -51,11 +95,17 @@ describe what you saw even if nothing went wrong. A copy-paste template is at th
    Chat Messages quick menu** (any free keys, e.g. Ctrl+Shift+M and Ctrl+Shift+Q).
 4. Stand somewhere quiet in the open world (PvE), near an enemy you can target with Tab, but not
    in combat.
-5. On the addon's page in **Nexus > Options** (General tab), tick **Advanced options** (new
-   2026-11-25; it's off on a new install). Several checks use a feature behind it: they're marked
-   *(advanced option)*. Session S checks the box itself, turned off.
+5. On the addon's page in **Nexus > Options** (General tab), tick **Advanced options** (it's off
+   on a new install). Several checks use a feature behind it: they're marked *(advanced
+   option)*. Sessions that need it off say so (W, V and S check it off).
+6. Run A2 and A3 first, whatever else you skip: the `Test` folder and its macros are used all
+   through the list.
 
-## A. Loading and the library
+## Priority 1: game input and sending
+
+If these fail, the addon can't be trusted in game: it might disturb normal input or not send. Run them first, in this order; if B1 fails, stop and report it.
+
+### A. Loading and the library
 
 **A1. Loading.** Start the game. In the Nexus log: `Loaded 2026.MM.DD.HHMM.Dev (build abc1234, 2026-MM-DD HH:MM UTC).`
 (the build's version and stamp; `+changes` after the commit if it was built with uncommitted
@@ -121,6 +171,7 @@ under their old names, and start again: your own library, no examples added.
 | `Emote` | Current channel: `/wave` |
 | `Long` | Say: 196 characters (paste `1234567890` 20 times and delete 4) |
 | `Accents` | Say: `héllo wörld ñ ü – “quotes” 日本` |
+| `Fill` | Say: `fill` (B3b, F8 and session I change its line) |
 
 **A4. The line editor.** On `Two`:
 - *(advanced option)* Open **Advanced** at the bottom and pick **Edit the lines as: Raw text**: it
@@ -143,7 +194,7 @@ from the backup, and the error window shows the same (What you did: "Started the
 library shows your macros (maybe missing the very last change); a
 `macros.json.unreadable-<date>` file is in the folder. Nothing is lost.
 
-## B. Sending: does the game take our keys? (most important)
+### B. Sending: does the game take our keys? (most important)
 
 Use **Send now** in the editor for these. If B1 fails, stop and report it: the rest depends on it.
 
@@ -177,11 +228,11 @@ different channel you can use (for example Party, Squad, and `/g1` to `/g5` for 
 you're in), then send it a few times. Every line arrives, in order, each in its channel. If one
 is ever missing, say which one and where you were: the gap between lines then gets longer.
 
-## C. Whispers and Tab
+### C. Whispers and Tab
 
 *C1, C2 and C3 are done (see [Done](#done-passed-checks)).*
 
-## D. Refusals and recovery
+### D. Refusals and recovery
 
 Nothing should happen in game for D1-D4: no chat opens, nothing is typed. Each refusal opens
 the error window with the message below; click OK before the next check. (D1 is done: see
@@ -203,14 +254,9 @@ at most one Escape). Report what you see in chat.
 **D6. Not in game.** Log out to character select, open the library from the Nexus bar and send
 `Say`: refused, "Not in game". (If the bar isn't there on character select, mark skipped.)
 
-## E. Commander (skip if you can't tag up)
+### F. Hotkeys
 
-**E1.** Add a Squad line with **Broadcast** ticked. As commander it goes out as a squad broadcast;
-when you're not commander, the same macro is sent as normal squad chat.
-
-## F. Hotkeys
-
-**F1. Setting one.** On `Say`, click **Set...** and press Ctrl+F1: the editor and the tree show
+**F1. Setting one.** On `Say`, open **Hotkey and favourite**, click **Set...** and press Ctrl+F1: the editor and the tree show
 `Ctrl+F1`. **Set...** then Escape: cancelled, `Ctrl+F1` stays. **Set...** then plain Tab, plain
 Enter or Ctrl+Escape: refused, with the reason in the error window. Closing the window while it waits for a key also
 cancels it.
@@ -264,7 +310,148 @@ again. Set the cooldown to `0`: press Ctrl+F1 twice within a second: sent once o
 after a second it sends again. Type `9999` in the box: it becomes `600`. Reload the addon: the
 cooldown is still set (and the hotkey works at once). Set it back to `0`.
 
-## G. Quick menu
+### E. Commander (skip if you can't tag up)
+
+**E1.** Add a Squad line with **Broadcast** ticked. As commander it goes out as a squad broadcast;
+when you're not commander, the same macro is sent as normal squad chat.
+
+### L. Final checks
+
+**L1. Game input after everything.** Movement keys, skills, Tab targeting, Shift/Ctrl/Alt combos,
+the keys you used as hotkeys (doing their normal game action), left/right click, camera turning,
+and the chat key all work normally. No key feels stuck.
+
+**L2. Unloading.** Send `Long` and, while it's sending, unload the addon in Nexus > Addons: the
+game doesn't freeze and the unload finishes within about a second. Do the same right after sending
+`{map}` on a map that isn't looked up yet (delete `maps.json` first): done within a few seconds. Load the addon again: everything's there.
+Then unload and load it about five times with nothing sending (SEC-036): each unload finishes at
+once.
+
+## Priority 2: your macros' safety, and what every player sees
+
+Losing or damaging macros, and the screens every player meets: the first run, the editor, the quick menu and the search boxes (whose typing must never reach the game).
+
+### W. First-run welcome, tour and What's new
+
+Close the game first, and keep a copy of the addon folder (`<GW2>\addons\GW2_Chat_Messages\`).
+Run W1 to W4 with **Advanced options** off (the default on a new install), then W5.
+
+**W1. The welcome.** Rename the addon folder to `GW2_Chat_Messages.keep` (a real first run).
+Start the game and load a character:
+- on the loading screen and at character select nothing opens; once in game, the library opens
+  by itself with **Welcome to Chat Messages** in it;
+- **Start empty**: the second page asks about the tour; **Not now**: an empty library. Close the
+  game: `settings.json` has `"welcome_shown": true`, no `"examples_added"`, and `"notes_seen"`
+  is this version. Start again: no welcome;
+- delete the new folder and start again: the welcome is back. Close the game before answering
+  and start again: it asks again. This time **Add the examples**: the Examples folder is added,
+  selected and opened, with the status line; on the options page **Add the example macros** now
+  asks "Replace the examples?".
+
+**W2. The tour.** From W1's second page, **Take the tour** (or **Take the tour** on the options
+page, General tab):
+- step 1 outlines the tree in yellow, with a box beside it: title, text, "Step 1 of 8",
+  **Next**, **Skip the tour**; then the toolbar, the search box, the selected macro's header
+  (the tour selected `Hello`), the lines and the folding sections, each outlined, the box never
+  covering what it's about; steps 7 and 8 (quick menu, options) are boxes in the middle of the
+  library, with no outline;
+- **Back** goes back; **Finish** on step 8 ends it; **Skip the tour** ends it at once;
+- click in the library while the box shows: the box stays in front; type in the search box: the
+  keys go there;
+- move and resize the library window during a step: the outline and the box follow; close the
+  library: the tour ends;
+- open a pop-up during the tour (right-click > Rename): the box hides, and comes back after it;
+- with an empty library (no macros), steps 4 to 6 say "Make a macro, or select one..." in the
+  middle of the window;
+- select a long macro, scroll the details pane to its bottom, take the tour: at step 4 the pane
+  scrolls up to the header, and no outline ever spills outside its pane;
+- type `xyz` in the search box at step 3 (nothing matches), clear it and type `hello`, then
+  **Next**: step 4 selects a macro the search shows;
+- biggest text size: the box and the outline fit and wrap.
+
+**W3. An update.** Put your own folder back (`GW2_Chat_Messages.keep` to `GW2_Chat_Messages`;
+no `"welcome_shown"` in it yet). Start the game: no welcome (you have a library), and
+`settings.json` gets `"welcome_shown": true`. This Dev build has no section of its own in the
+changelog, so What's new doesn't open and `"notes_seen"` is set to this version.
+
+**W4. What's new.** Needs a build whose `CHANGELOG.md` has a section for its version (run
+`tools\set_version.ps1` on a test branch and build, or wait for the first release). In
+`settings.json` delete `"notes_seen"`, or set it to an older version (`"2026.11.21.1412"`). Start
+the game and load a character:
+- **What's new in Chat Messages** opens once in game (not at character select), about half the
+  screen at most, with the version's title, headings, bullets (nested ones indented) and a
+  scrollbar when it's long; no `**` or backticks show;
+- in German, French or Spanish it says the notes are in English;
+- **Close**: `"notes_seen"` is this version; restart: it doesn't open again;
+- set `"notes_seen"` back, untick **Show what's new after each update** in the window and close:
+  the options page's box is unticked too; set `"notes_seen"` back again and restart: it doesn't
+  open, and `"notes_seen"` is updated;
+- by channel: on a test branch, add hand-made sections to `CHANGELOG.md` between `"notes_seen"`
+  and this version, one each ending `(Dev)`, `(Beta)` and `(Rel)`, plus one older than
+  `"notes_seen"`, then run `tools\set_version.ps1 -Channel Beta` and build. The window shows the
+  Beta and Rel sections and this version's, newest first, but not the Dev one or the older one.
+  Set `"notes_seen"` back each time, and run it again with `-Channel Rel`: the Rel ones only;
+  with `-Channel Dev`: all but the older one;
+- an older DLL: with `"notes_seen"` set to a newer version (`"2099.01.01.0000"`), start the
+  game: nothing opens, and `"notes_seen"` is now this version.
+
+**W5. Advanced options on.** Tick **Advanced options** and take the tour again: the same 8
+steps; none points at the Advanced section; step 8 names the box.
+
+### V. The macro editor layout
+
+The details pane was rearranged (`docs/design.md`, "Macro editor layout"). Run V1 to V4 with
+**Advanced options** off, then V5 with it on.
+
+**V1. The header.** Select `Two`:
+- the name is at the top, with **Send now**, **Preview** and **...** on its row; under it in grey
+  "Top level > ... · Everywhere" (the folder path, the hotkey if it has one, where it's active);
+- **...** opens a small menu: **Rename** and **Delete** open their usual pop-ups, **Duplicate**
+  makes `Two (2)`; delete the copy;
+- **Send now** sends both lines; **Preview** shows the preview under the header; sending shows
+  "Sending line 1 of 2..." under the header;
+- select a folder: the same header with only **...** (Rename, Delete), the grey path and where
+  it's active, then the folder level, what it contains, **Favourite**, **Where it's active** and
+  the New folder/macro buttons;
+- rename `Two` to something long (80 characters): the buttons go under the name, nothing runs off
+  the right; rename it back.
+
+**V2. Line rows.** On `Two`:
+- under **Lines (2)** (with **Placeholders (?)** on the right; hover it: the list), each line is
+  one row: its number, the channel, the message, the count, up/down arrows and **X**;
+- hover the arrows and **X**: they say what they do; move line 2 up and back; **X** removes a
+  line (add it back);
+- change a line to **Whisper**: a **Recipient** box appears in the row; to **Squad**: a
+  **Broadcast** box;
+- **Add line** is as wide as the pane and adds a row with the last line's channel;
+- make the library window narrow: the message box goes on its own row under the channel, the
+  count and buttons stay at its right; nothing overlaps.
+
+**V3. Folding sections.** Under the lines: **Where it's active: Everywhere**, **Hotkey and
+favourite: no hotkey** (or `Ctrl+F1`, `Ctrl+F1, favourite`), **Note: none**:
+- each opens and closes with a click; select another macro: the same sections are open; close
+  the game and start it again: still the same (`settings.json` has `"editor_sections"`);
+- give `Emote` the same hotkey as `Say` and fold **Hotkey and favourite**: its header still says
+  "(the hotkey is shared)" in yellow; clear it again; give a macro plain `F` (a game key): the
+  folded header says "(it may be a game key)"; give it Ctrl+F1 again;
+- give a macro the map list of another game mode so it can't be active anywhere (e.g. PvP only in
+  a WvW-only folder): the folded **Where it's active** header says "(can't be active anywhere)";
+  a macro that's only inactive on this map says "(not here)";
+- open **Hotkey and favourite**, click **Set...**, then fold it while it waits for a key: it opens
+  again so the prompt stays visible; press Escape.
+
+**V4. Big text.** Pick the biggest text size: the header, rows and sections fit and wrap; nothing
+is cut off.
+
+**V5. Advanced on.** Tick **Advanced options**:
+- an **Advanced** section is at the bottom (folded at first): **Edit the lines as:** Lines /
+  Raw text, **Cooldown:**, and **Text file link: none** with its box and **Link**;
+- a linked macro whose file is missing: the folded **Advanced** header says "(needs attention)"
+  in yellow;
+- untick the box: the section is gone with no gap; a macro with a cooldown shows the grey "kept,
+  ignored" line under the header instead.
+
+### G. Quick menu
 
 **G1. Right-click menu.** Right-click the chat bubble icon: the library shows as nested menus (empty
 folders hidden). Hovering a macro shows its lines; clicking it sends it and closes the menu.
@@ -273,7 +460,8 @@ Put a folder and a macro with the same name in one folder: both work.
 **G2. Pop-up key.** Press your quick menu key: the menu opens at the mouse pointer. Press it again,
 or click outside: it closes. Send something from it.
 
-**G4. Favourites.** In the library, tick **Favourite** in one macro's editor, and right-click
+**G4. Favourites.** In the library, tick **Favourite** in one macro's editor (under **Hotkey and
+favourite**), and right-click
 another > **Favourite**: both show `*` after their name. Open the quick menu: **Favourites** at
 the top lists both (with their folders in brackets), above the folders. Untick one: it's gone
 from the list. Give a favourite a filter that's off here (e.g. PvP only): it's still listed,
@@ -299,7 +487,187 @@ was listed: it drops out. Type in the menu's search box: both lists are hidden w
 **G3. Action camera (question).** Turn on action camera (mouse hidden), press the quick menu key.
 Where does it appear, and can you use it? We may need a "centre of the screen" option.
 
-## H. Filters (where a macro is active)
+### P. Search box
+
+Use the `Test` folder from A3 (with `Say` on Ctrl+F1 from F1, and the `Accents` macro).
+
+**P1. Finding by name.** Type `say` in the **Search (Ctrl+F)** box above the tree: only `Say`
+shows, with `Test` (and any folders above it) opened, and "say" highlighted in its name. The line
+above the tree says "Found: 0 folder(s), 1 macro(s)". Type `SAY`: the same (case doesn't matter).
+Type `test`: the `Test` folder matches and shows everything inside it. Type `zzz`: "Nothing
+matches "zzz"."
+
+**P2. Lines, recipients, hotkeys, accents.** `test map` finds `Two` with "(found in its lines)";
+your own character name finds `Whisper` (its recipient); `ctrl+f1` finds `Say` with "(found in its
+hotkey)"; `hello` finds `Accents` (its line says `héllo`: accents don't matter).
+
+**P3. While searching.** With a search typed: dragging an item does nothing; right-click > **Move
+up** and **Move down** are greyed out; the trash bin isn't shown. Folders that were closed before
+the search open to show matches. Select `Say`, then change the search so `Say` no longer shows: it
+isn't selected any more. Rename a match or edit its lines: the tree updates.
+
+**P4. Clearing and keys.** Click the **x** next to the box: the whole tree is back, with the same
+folders open and closed as before the search, and the trash bin shows again. Click into the
+library window (not the box) and press **Ctrl+F**: the cursor goes into the box. Type something
+and press **Escape**: the box is cleared and the full tree is back. **(question)** Does Ctrl+F or
+that Escape also do anything in the game (Escape opening the game menu, for example)? While typing
+in the box, macro hotkeys don't fire (try Ctrl+F1).
+
+**P5. Text size and narrow windows.** At the biggest text size, make the library narrow: the box
+and its **x** stay inside the tree pane, the box gets narrower, and nothing is cut off.
+
+**P6. Only active here.** Give `Emote` a PvE-only filter (as in H1). In the open world, look at
+the checkbox under the search box: it names where you are, e.g. **Only active in PvE on Queensdale
+(15)**. Tick it: `Emote` still shows, and the line above the tree says how many macros are active
+here. Go into WvW (or the Edge of the Mists): the label changes to **Only active in WvW on ...**,
+`Emote` is gone, and folders with nothing active are hidden. With the box ticked, type `emo`:
+"Nothing active here matches". Restart the game: the box is still ticked. Untick it and clear
+`Emote`'s filter afterwards. On the character select screen (or while loading), note what the
+label says.
+
+**P7. Search in the quick menu (pop-up).** Open the quick menu with its key: the cursor is
+already in the search box at the top. Type `say`: the menu becomes a flat list, `Say  (Test)`,
+coloured by channel, with its hotkey on the right and the line preview on hover. Press **Enter**:
+`Say` is sent and the menu closes. Open it again: the box is empty and the folders are back. Type
+`zzz`: "No macro active here matches". **(question)** While typing in the box, did any letter, or
+the Enter, also reach the game (chat opening, a skill, movement)?
+
+**P8. Search in the Quick Access menu.** Right-click the chat bubble icon: the search box is there but
+not focused. Click it and type `say`: the same flat list. Click `Say` to send it. Close and reopen
+the menu: the box is empty. A macro that isn't active here (P6's `Emote` in WvW) never shows in the
+results.
+
+### T. Saved files: older and newer versions
+
+Run each check with **Advanced options** off, then once more with it on (T3's Raw text and link
+file points only apply with it on). Close the game before each edit of `macros.json`, keep a copy
+of the file first, and put it back after the check. Edit with Notepad and keep the JSON valid.
+
+**T1. A newer library opens read-only.** In `macros.json`, change `"format": 1` to `"format": 2`.
+Start the game and open the library:
+- a yellow line under the toolbar says it's read-only (saved by a newer version), and the error
+  window says the same once;
+- send `Say` (Send now and its hotkey): it's sent;
+- rename `Say` to `Say 2` and wait 10 seconds, then unload the addon (or close the game): the
+  file still has `"format": 2` and the name `Say`;
+- on the options page, **Back up now**: the new file in `backups\` is a copy of `macros.json` as
+  it was (`"format": 2`);
+- on the Restore tab, **Restore...** an older backup: the error window says the library is
+  read-only and nothing is restored; `macros.json` still has `"format": 2`.
+
+**T2. Fields from a newer version are kept.** Put `"format": 1` back. Add `"colour": "red",` to a
+folder's object and `"delay_ms": 250,` to one of `Two`'s lines. Start the game, rename `Two` to
+`Two b`, wait for the save, close the game: both fields are still in `macros.json`, unchanged.
+The file starts with `"format": 1`, `"saved_by"` (this build's version) and `"kind": "library"`.
+
+**T3. An unknown channel.** Change one of `Two`'s lines to `"channel": "guild_hall"`. Start the
+game:
+- that line's channel box shows **? guild_hall** in red, with an error under it: it won't be
+  sent;
+- **Send now**: nothing is sent, and the error window names the line and the channel; the
+  hotkey and the quick menu send nothing either;
+- Advanced options on: the **Raw text** tab shows a note instead of the text; right-click >
+  Export > as .txt is refused with its own message; if `Two` is linked to a file, the link
+  section says it isn't kept in step (the file doesn't change); linking another macro with such
+  a line to a new file is refused with its own message;
+- the quick menu's hover preview and the trash bin show that line as **? guild_hall** in red;
+- save something else, close the game: the line still has `"channel": "guild_hall"`;
+- pick **Say** in that line's channel box: the error goes, and **Send now** sends both lines; if
+  `Two` is linked, within a second its file gets the Say line (the macro wins, it isn't replaced
+  by the file).
+
+**T4. Importing a newer export.** Export `Two` (as .json). In the file, change `"format": 1` to
+`"format": 2` and add `"pinned_at": 5,` to the macro. Import it: the import window warns it was
+saved by a newer version, the preview marks `Two` **NEWER VERSION** (hover: why), and the line
+above the preview counts it. Import it: it comes in, and after the next save `pinned_at` is in
+`macros.json` with it.
+
+**T5. Trash bin times and maps visited.** Delete a macro to the trash bin and click it there: the
+time is your **local** time. In `macros.json`, its `"deleted_at"` is in UTC with a `Z`
+(`"2026-11-26T18:03:00Z"`). Then change map once, close the game and delete `maps.json`: start
+the game again, and a filter's **Maps you've been to** still lists your maps (they're in
+`settings.json`, `"visited_maps"`); `settings.json` has `"format": 1`.
+
+### R. Backups and restore
+
+Open the addon's page in **Nexus > Options**. Keep a UTC clock at hand (search "UTC time" on the
+web) to compare the times.
+
+**R1. The tabs.** The page has **General**, **Backups** and **Restore** tabs. General has
+everything that was on the page before (the buttons, text size, language, trash bin, map list);
+the version, build and links stay above the tabs. `<GW2>\addons\GW2_Chat_Messages\backups\`
+exists.
+
+**R2. The safety copy (backups off).** With **Make backups of my macros** unticked (the default)
+and a library that isn't empty, play for a minute: `backups\` has one
+`macros_safety_<date>_<time>_UTC.json`, with the current UTC date and time. The Backups tab says
+backups are off, explains the weekly safety copy (4 kept), and shows "Last safety copy: ... UTC".
+No message or alert appeared in game.
+
+**R3. Backups on.** Tick **Make backups of my macros**, set **Back up every** 1 **hour(s)** and
+**Copies to keep** 2. Within a minute a `macros_backup_..._UTC.json` appears and "Last backup"
+shows it. Click **Back up now** three times, a few seconds apart: "Backed up as ..." each time,
+and the folder keeps only the 2 newest backups (the safety copy is still there). Try out-of-range
+values: **every** 0 becomes 1, 100 hours becomes 48, then switch to **month(s)**: it shows 12.
+**Keep** 0 becomes 1 and 60 becomes 50. Set it back to 1 hour, keep 2, and restart the game: the
+settings are kept.
+
+**R4. Only when changed** (optional, takes an hour). With hourly backups on, change nothing for
+just over an hour: no new backup. Then rename a macro: a new backup appears within a minute.
+
+**R5. Restore.** On the Restore tab, the list is newest first, with the date and time (UTC),
+folder and macro counts that match the library at that time, and the type (Backup or Safety
+copy); hovering a date shows the file name. Rename a macro and delete another, then click
+**Restore...** on a backup from before: it asks, with the date, time and counts. Click
+**Restore**: the library window opens with the old library, and "Restored the backup from ..."
+with **Undo restore** above the tree. Click **Undo restore**: your changes are back. Restore
+again and restart the game: the library is still the restored one.
+
+**R6. Other files in the folder.** Put a `notes.txt` into `backups\`, and a text file named
+`macros_backup_2020-01-01_00-00-00_UTC.json` containing just `{`. Click **Refresh**: `notes.txt`
+isn't listed, and the 2020 row shows **Can't be read** (hover: why) with no Restore button. Make
+more backups than you keep: `notes.txt` is never deleted. Delete both files afterwards.
+
+**R7. A linked macro.** With a macro linked to a `.txt` file (session K), edit the file, then
+restore a backup from before the edit: the macro shows the file's text, and the file isn't
+changed.
+
+### O. Trash bin
+
+Turn on (if you turned it off) Nexus > Options > Addons > Chat Messages > General > **Use a trash bin for
+deleted folders and macros**, and read its description. Make a scratch folder `Bin test` with a
+sub-folder `Sub` and a macro `Junk` (one line) inside `Sub`.
+
+**O1. Delete and restore.** Select `Junk`, click **Delete**: no question, it's gone from `Sub`, the
+message under the toolbar says it's in the trash bin, and **Trash bin (1)** at the bottom of the
+tree holds it, counted as **Trash bin (0/1)** (folders/macros). Click it: the details show when (your local time) and where from, its line, and no editor. Its
+hotkey (give it one first, e.g. Ctrl+F11) does nothing and it's not in the quick menu.
+Right-click it > **Restore**: it's back in `Sub`, in its old place, and its hotkey works again.
+
+**O2. Folder gone.** Delete `Junk`, then delete `Sub` too. In the bin, right-click `Sub` >
+**Delete permanently...** (it asks; confirm). Now restore `Junk`: a pop-up says its folder no
+longer exists. **Recreate the folders**: `Bin test > Sub > Junk` is back.
+Do it again and choose **Put it at the top level**: `Junk` is at the top level.
+
+**O3. Name taken and drag.** Make a new macro `Junk` in `Sub`, delete it, make another `Junk`
+there and restore the deleted one: it comes back as `Junk (2)` and the message says so. Drag a
+macro onto **Trash bin**: it's moved to the bin.
+*Long name:* name a macro with 100 characters (paste `aaaaaaaaaa` ten times), delete it, make
+another with the same name and restore the first: the game doesn't freeze, and it comes back
+named with 96 `a`s and ` (2)`. Export that macro and import the file into the same folder: the
+preview offers it as a new name ending ` (2)` (or ` (3)`), and the import works.
+
+**O4. Empty and saved.** Delete a couple of items, restart the game: they're still in the bin.
+Right-click the bin > **Empty trash bin...**: it asks, then the bin is empty.
+
+**O5. Turned off.** Untick the setting: Delete asks first and removes for good; items already in
+the bin stay, and the bin still shows until emptied. Tick it again. Delete `Bin test` when done.
+
+## Priority 3: everyday features
+
+Features many players use, and the Advanced options box with it off (the default).
+
+### H. Filters (where a macro is active)
 
 **H1. Game modes.** On `Emote`, open **Where it's active**: by default it's everywhere. Untick
 PvE. In the open world: `Emote` is dimmed in the library, missing from the quick menu, and its
@@ -357,9 +725,9 @@ shows WvW ticked; tick PvE too and rename: the tag says `[PvE, WvW, 1 map]`. Giv
 it as a copy (**Keep both**): the copy has the same tag. Restart the game: the folder filters are
 still there. Move `Say` back out of `Roam` and delete the test folders.
 
-## I. Placeholders
+### I. Placeholders
 
-Make a macro `Fill` and change its line for each check.
+Use `Fill` from A3 and change its line for each check.
 
 **I1. Time and random.** `/s It's {time} on {today}, roll {random 1 6}`: the real time and date;
 send it a few times, the roll stays 1-6. Note the date format as sent (question: is the weekday
@@ -399,7 +767,7 @@ the number after `"format":` to `"x"` (with the quotes) and save. Start the game
 10 seconds: in Lion's Arch, `/s Hello from {map}` sends `Löwenstein`, and the map search finds
 `löwen`. Switch back to English: after a few seconds the names are English again.
 
-## J. Import and export
+### J. Import and export
 
 **J1. Export.** Right-click `Say` > Export > **Save as a .json file**, twice: `exports\Say.json`
 and `exports\Say (2).json` appear and the status names the file, with an **Open exports folder**
@@ -519,7 +887,66 @@ export...**: the window starts again with only that macro ticked. While the wind
 rename and delete a ticked macro in the library: nothing breaks, and the deleted one isn't
 exported. Keys and Tab still work in the game afterwards.
 
-## K. Text file links
+### U. Duplicate, notes, and the map list after a game update
+
+Run U1 and U2 with **Advanced options** off, then once more with it on.
+
+**U1. Duplicate.** Give `Say` a hotkey, tick **Favourite**, and add a game mode filter (untick
+PvP). Right-click `Say` > **Duplicate** (hover first: the tooltip says what isn't copied):
+- `Say (2)` appears right below `Say`, selected, with the same line and filter;
+- it has no hotkey, **Favourite** is off, and with Advanced options on it isn't linked to a
+  file even if `Say` is; `Say` keeps its hotkey and favourite;
+- duplicate `Say (2)`: the new one is `Say (3)`; duplicate `Say` again: `Say (4)`, right below
+  `Say`;
+- a folder's right-click menu has no **Duplicate**;
+- close the game and start it again: the copies are still there; delete them.
+
+**U2. Notes.** Select `Two`. Open the **Note: none** section: a grey line says what it's for
+(never typed into chat), with a box about 3 lines tall under it:
+- type `Before each boss`, Enter, `Needs commander tag`; select another macro and come back:
+  the note is still there; spaces you type at the end stay while you're typing;
+- open the quick menu and hover `Two`: the note is in grey above the lines, with a line between
+  them;
+- search `commander`: `Two` shows with "(found in its note)"; search `test map`: "(found in its
+  lines)";
+- **Send now**: only the lines are sent, never the note;
+- paste over 1000 letters into the box: a yellow warning says the rest isn't kept; click
+  elsewhere: the note is cut;
+- export `Two` (as .json), delete it, import the file: the note came back; close the game:
+  `macros.json` has `"note"` for `Two` and none for macros without one.
+- Fold the section: its header shows "Note: Before each boss..." (the first line, cut, with
+  "...").
+- With a big text size (Text size, the largest): the box and the warning fit the pane.
+
+**U3. The map list after a game update** (only on a patch day, or skip). Before the update, note
+the map list's time on the options page. After the game updates and you're in a map for a
+minute or two: the Nexus log (Advanced options on: **Nexus > Log**, filter "Chat Messages") says
+"Map list: the game was updated (build ...)", and within a couple of minutes the options page
+shows a new time. In `maps.json`, `"build"` and `"listed_build"` are the new build. A day later
+the time changes once more. On a first start with no `maps.json`, the list is fetched only once.
+
+### N. The error window
+
+These look at the error window itself. The other sessions have already opened it many times:
+note anything odd you saw there too.
+
+**N1. Looks and buttons.** In the library, make a second folder called `test` next to `Test`:
+an error pop-up opens over the name box with the error (wrapped, not cut off), "What you did:
+Created a folder named "test" in ...", **OK** and **Copy to clipboard**. Click Copy to
+clipboard ("Copied." shows), paste into Notepad: the version with its build stamp, time, what you did, the error and
+"In game: ..." are there (paste it in your report). OK: back in the name box.
+
+**N2. Queue and the game.** Give macros `Say` and `Two` the hotkey Ctrl+F9, and two other macros
+Ctrl+F10 (all active here). Close the library and press Ctrl+F9 twice, then Ctrl+F10: a Nexus
+alert shows each time, and the error window appears without taking focus. While it's open the
+game keeps all its input (move, click to target, turn the camera, skills). It says "Error 1 of
+2" (the repeated Ctrl+F9 is kept once); OK shows the next one, OK again closes it. Put the
+hotkeys back afterwards.
+
+**N3. Text size.** At the biggest text size the error window and its text get bigger and nothing
+is cut off.
+
+### K. Text file links
 
 Have Notepad ready. "Within a second" means after you save, not after you switch back. Text file
 links are an advanced option: **Advanced options** must be ticked (see "Before you start").
@@ -548,255 +975,7 @@ Encoding **ANSI**. Make a new macro `Ansi` in `Test` and link it to `ansi.txt`: 
 without editing: the file isn't rewritten (Notepad doesn't ask to reload). Edit `Ansi` in the
 addon: the file is rewritten as UTF-8, with `�` for the `ä`. Delete `Ansi`.
 
-## L. Final checks
-
-**L1. Game input after everything.** Movement keys, skills, Tab targeting, Shift/Ctrl/Alt combos,
-the keys you used as hotkeys (doing their normal game action), left/right click, camera turning,
-and the chat key all work normally. No key feels stuck.
-
-**L2. Unloading.** Send `Long` and, while it's sending, unload the addon in Nexus > Addons: the
-game doesn't freeze and the unload finishes within about a second. Do the same right after sending
-`{map}` on a map that isn't looked up yet (delete `maps.json` first): done within a few seconds. Load the addon again: everything's there.
-Then unload and load it about five times with nothing sending (SEC-036): each unload finishes at
-once.
-
-## M. Text size
-
-**M1. The choices.** Open the **Text size** dropdown at the end of the library's toolbar. Note
-every entry and its size (question: which fonts and sizes does your Nexus offer?). Pick the
-biggest: within a frame the library's text, buttons, title bar and window all get bigger, and the
-window stays on screen. Pick the smallest, then the biggest again: the window shrinks and grows
-back to about the same size.
-
-**M2. Everything follows.** At the biggest size, check: the tree, the macro editor (the header and its **...** menu, lines,
-Where it's active, Hotkey and favourite, Note, and Advanced with Raw text and the text file link), the Rename and Delete pop-ups, the Import window, the
-quick menu pop-up, the Quick Access right-click menu, and tooltips (hover a macro in the quick
-menu, the Placeholders (?) label). All use the big text. Nexus' own options page doesn't.
-
-**M3. Nothing cut off.** At the biggest size, make the library window narrow:
-- toolbar buttons that don't fit move to a second row;
-- status messages, long hints and the error window's text wrap instead of running off the edge;
-- a macro with 6+ maps in its filter shows the map buttons over several rows;
-- a long macro name deep in the tree can be reached with the tree's sideways scrollbar.
-Report anything that's still cut off, with a screenshot.
-
-**M4. Saved.** Restart the game: the same size is used. `settings.json` in the addon folder has
-`"text_size"`. Change the size from the addon's page in Nexus options: the library follows.
-
-**M5. Font reload.** Change Nexus' own font or UI settings (if it has any) while the library is
-open: no crash, and the library keeps working (it may show the default size for a moment).
-
-## N. The error window
-
-These look at the error window itself. The other sessions have already opened it many times:
-note anything odd you saw there too.
-
-**N1. Looks and buttons.** In the library, make a second folder called `test` next to `Test`:
-an error pop-up opens over the name box with the error (wrapped, not cut off), "What you did:
-Created a folder named "test" in ...", **OK** and **Copy to clipboard**. Click Copy to
-clipboard ("Copied." shows), paste into Notepad: the version with its build stamp, time, what you did, the error and
-"In game: ..." are there (paste it in your report). OK: back in the name box.
-
-**N2. Queue and the game.** Give macros `Say` and `Two` the hotkey Ctrl+F9, and two other macros
-Ctrl+F10 (all active here). Close the library and press Ctrl+F9 twice, then Ctrl+F10: a Nexus
-alert shows each time, and the error window appears without taking focus. While it's open the
-game keeps all its input (move, click to target, turn the camera, skills). It says "Error 1 of
-2" (the repeated Ctrl+F9 is kept once); OK shows the next one, OK again closes it. Put the
-hotkeys back afterwards.
-
-**N3. Text size.** At the biggest text size the error window and its text get bigger and nothing
-is cut off.
-
-## O. Trash bin
-
-Turn on (if you turned it off) Nexus > Options > Addons > Chat Messages > General > **Use a trash bin for
-deleted folders and macros**, and read its description. Make a scratch folder `Bin test` with a
-sub-folder `Sub` and a macro `Junk` (one line) inside `Sub`.
-
-**O1. Delete and restore.** Select `Junk`, click **Delete**: no question, it's gone from `Sub`, the
-message under the toolbar says it's in the trash bin, and **Trash bin (1)** at the bottom of the
-tree holds it, counted as **Trash bin (0/1)** (folders/macros). Click it: the details show when (your local time) and where from, its line, and no editor. Its
-hotkey (give it one first, e.g. Ctrl+F11) does nothing and it's not in the quick menu.
-Right-click it > **Restore**: it's back in `Sub`, in its old place, and its hotkey works again.
-
-**O2. Folder gone.** Delete `Junk`, then delete `Sub` too. In the bin, right-click `Sub` >
-**Delete permanently...** (it asks; confirm). Now restore `Junk`: a pop-up says its folder no
-longer exists. **Recreate the folders**: `Bin test > Sub > Junk` is back.
-Do it again and choose **Put it at the top level**: `Junk` is at the top level.
-
-**O3. Name taken and drag.** Make a new macro `Junk` in `Sub`, delete it, make another `Junk`
-there and restore the deleted one: it comes back as `Junk (2)` and the message says so. Drag a
-macro onto **Trash bin**: it's moved to the bin.
-*Long name:* name a macro with 100 characters (paste `aaaaaaaaaa` ten times), delete it, make
-another with the same name and restore the first: the game doesn't freeze, and it comes back
-named with 96 `a`s and ` (2)`. Export that macro and import the file into the same folder: the
-preview offers it as a new name ending ` (2)` (or ` (3)`), and the import works.
-
-**O4. Empty and saved.** Delete a couple of items, restart the game: they're still in the bin.
-Right-click the bin > **Empty trash bin...**: it asks, then the bin is empty.
-
-**O5. Turned off.** Untick the setting: Delete asks first and removes for good; items already in
-the bin stay, and the bin still shows until emptied. Tick it again. Delete `Bin test` when done.
-
-## P. Search box
-
-Use the `Test` folder from A3 (with `Say` on Ctrl+F1 from F1, and the `Accents` macro).
-
-**P1. Finding by name.** Type `say` in the **Search (Ctrl+F)** box above the tree: only `Say`
-shows, with `Test` (and any folders above it) opened, and "say" highlighted in its name. The line
-above the tree says "Found: 0 folder(s), 1 macro(s)". Type `SAY`: the same (case doesn't matter).
-Type `test`: the `Test` folder matches and shows everything inside it. Type `zzz`: "Nothing
-matches "zzz"."
-
-**P2. Lines, recipients, hotkeys, accents.** `test map` finds `Two` with "(found in its lines)";
-your own character name finds `Whisper` (its recipient); `ctrl+f1` finds `Say` with "(found in its
-hotkey)"; `hello` finds `Accents` (its line says `héllo`: accents don't matter).
-
-**P3. While searching.** With a search typed: dragging an item does nothing; right-click > **Move
-up** and **Move down** are greyed out; the trash bin isn't shown. Folders that were closed before
-the search open to show matches. Select `Say`, then change the search so `Say` no longer shows: it
-isn't selected any more. Rename a match or edit its lines: the tree updates.
-
-**P4. Clearing and keys.** Click the **x** next to the box: the whole tree is back, with the same
-folders open and closed as before the search, and the trash bin shows again. Click into the
-library window (not the box) and press **Ctrl+F**: the cursor goes into the box. Type something
-and press **Escape**: the box is cleared and the full tree is back. **(question)** Does Ctrl+F or
-that Escape also do anything in the game (Escape opening the game menu, for example)? While typing
-in the box, macro hotkeys don't fire (try Ctrl+F1).
-
-**P5. Text size and narrow windows.** At the biggest text size, make the library narrow: the box
-and its **x** stay inside the tree pane, the box gets narrower, and nothing is cut off.
-
-**P6. Only active here.** Give `Emote` a PvE-only filter (as in H1). In the open world, look at
-the checkbox under the search box: it names where you are, e.g. **Only active in PvE on Queensdale
-(15)**. Tick it: `Emote` still shows, and the line above the tree says how many macros are active
-here. Go into WvW (or the Edge of the Mists): the label changes to **Only active in WvW on ...**,
-`Emote` is gone, and folders with nothing active are hidden. With the box ticked, type `emo`:
-"Nothing active here matches". Restart the game: the box is still ticked. Untick it and clear
-`Emote`'s filter afterwards. On the character select screen (or while loading), note what the
-label says.
-
-**P7. Search in the quick menu (pop-up).** Open the quick menu with its key: the cursor is
-already in the search box at the top. Type `say`: the menu becomes a flat list, `Say  (Test)`,
-coloured by channel, with its hotkey on the right and the line preview on hover. Press **Enter**:
-`Say` is sent and the menu closes. Open it again: the box is empty and the folders are back. Type
-`zzz`: "No macro active here matches". **(question)** While typing in the box, did any letter, or
-the Enter, also reach the game (chat opening, a skill, movement)?
-
-**P8. Search in the Quick Access menu.** Right-click the chat bubble icon: the search box is there but
-not focused. Click it and type `say`: the same flat list. Click `Say` to send it. Close and reopen
-the menu: the box is empty. A macro that isn't active here (P6's `Emote` in WvW) never shows in the
-results.
-
-## Q. Languages
-
-Languages are on the addon's page in **Nexus > Options** (the **General** tab), under **Text size**. The German, French
-and Spanish texts were made by AI: if you speak one of them, note any text that reads oddly.
-
-**Q1. Following Nexus.** The **Language** dropdown shows **Follow Nexus (English (US))**. In
-Nexus' own options, switch Nexus to Deutsch: within a second or two the addon's windows (library,
-quick menu, this page) switch to German, and the dropdown shows **Nexus folgen (Deutsch)**. Switch
-Nexus back to English: the addon follows. Set Nexus to a language the addon doesn't have (e.g.
-Italiano): the addon stays in English, the dropdown shows **Follow Nexus (it)**, and a line under it says there's no translation yet. Set Nexus back.
-
-**Q2. Picking a language.** Pick **Français**: everything switches to French at once, while
-Nexus stays in English. Restart the game: still French. Pick **Follow Nexus** again afterwards.
-
-**Q3. German in the windows.** With German on, open the library, the macro editor, the Import
-window, the trash bin's pop-ups and the error window (e.g. a duplicate name). Note anything cut
-off, overlapping or running out of a window, at the default and the biggest text size.
-
-**Q4. Accented letters.** In French and German, letters like é, è, à, ç, ö, ü and ß show
-correctly (no `?` boxes) in the library, the menus and the tooltips.
-
-**Q5. Names in Nexus.** With Nexus set to Deutsch, **Nexus > Options > Keybinds** shows the
-addon's two keybinds in German, and hovering the chat bubble icon shows a German tooltip.
-
-**Q6. A file of your own.** Run it with **Advanced options** off (it no longer matters). Under the
-Language dropdown, **Use language files from the localization folder** is unticked (the default),
-with a grey line saying what it's for, and there's no **Open localization folder** or **Reload
-language files**. Tick it: the two buttons and the text about adding a language appear. Click
-**Open localization folder**: Explorer opens
-`<GW2>\addons\GW2_Chat_Messages\localization\`. Copy `localization\template.json` from the
-repository into it as `nl.json`, set `"Identifier": "nl"`, `"DisplayName": "Nederlands"`, and
-translate one text, e.g. `"Open macro library": "Macrobibliotheek openen"`. Click **Reload
-language files**: **Nederlands (0%) - file from your localization folder** is in the list. Pick
-it: that one text is in Dutch, the rest in English.
-
-**Q7. A bad file.** In `nl.json`, change a text with a `%s` so the `%s` is missing (e.g. `"Sent
-%s from the quick menu": "Verzonden"`), then click **Reload language files**: the error window
-says one text was left out, and that text shows in English. Then break the file (delete the last
-`}`) and reload: the error window says the file wasn't loaded and why, and the dropdown falls
-back. Put the last `}` back and reload, for Q9.
-
-**Q8. Messages and key names.** With German on, the hotkey row and the tree show key names in
-German: **Ctrl+Mouse 4** shows as `Ctrl+Maus 4` and Page Up as `Bild auf` (Ctrl, Alt and Shift
-keep their names). Make a duplicate name, send a macro with the Chat key cleared, and import a
-damaged file: each error window message is in German. Searching the library for `maus 4` and for
-`mouse 4` both find the macro with that hotkey. `macros.json` still stores the hotkey in English.
-
-**Q9. Files from other versions, and the opt-in (new 2026-11-26).** With Q6's `nl.json` (fixed
-again) and **Nederlands** picked:
-- in `nl.json`, change `"Format": 1` to `"Format": 2`, add `"Plurals": {"one": 1},` on the next
-  line, and add a text this version doesn't have under `Texts` (`"A text from a newer version":
-  "Nieuw",`). Click **Reload language files**: no error window; Nederlands is still picked, Q6's
-  text is still in Dutch, and a yellow line under the box says `nl.json` was made for a newer
-  version. Put `"Format": 1` back, take the two additions out again and reload: the yellow line
-  is gone;
-- change the English side of Q6's text (`"Open the macro library": "Macrobibliotheek openen"`) and
-  reload: no error window, and that text is back in English (as for a text reworded in an update);
-- untick **Use language files from the localization folder**: the buttons go, Nederlands isn't in
-  the list any more, the addon is in English and the dropdown shows "nl (a language file: turn on
-  language files below)". Restart the game: still unticked, still English. Tick it again:
-  Nederlands is back and shown again. In `settings.json`, `"own_language_files"` is `true`;
-- tick **Advanced options**, then untick it: the language box and Nederlands don't change.
-Delete `nl.json`, reload, and untick the box afterwards.
-
-## R. Backups and restore
-
-Open the addon's page in **Nexus > Options**. Keep a UTC clock at hand (search "UTC time" on the
-web) to compare the times.
-
-**R1. The tabs.** The page has **General**, **Backups** and **Restore** tabs. General has
-everything that was on the page before (the buttons, text size, language, trash bin, map list);
-the version, build and links stay above the tabs. `<GW2>\addons\GW2_Chat_Messages\backups\`
-exists.
-
-**R2. The safety copy (backups off).** With **Make backups of my macros** unticked (the default)
-and a library that isn't empty, play for a minute: `backups\` has one
-`macros_safety_<date>_<time>_UTC.json`, with the current UTC date and time. The Backups tab says
-backups are off, explains the weekly safety copy (4 kept), and shows "Last safety copy: ... UTC".
-No message or alert appeared in game.
-
-**R3. Backups on.** Tick **Make backups of my macros**, set **Back up every** 1 **hour(s)** and
-**Copies to keep** 2. Within a minute a `macros_backup_..._UTC.json` appears and "Last backup"
-shows it. Click **Back up now** three times, a few seconds apart: "Backed up as ..." each time,
-and the folder keeps only the 2 newest backups (the safety copy is still there). Try out-of-range
-values: **every** 0 becomes 1, 100 hours becomes 48, then switch to **month(s)**: it shows 12.
-**Keep** 0 becomes 1 and 60 becomes 50. Set it back to 1 hour, keep 2, and restart the game: the
-settings are kept.
-
-**R4. Only when changed** (optional, takes an hour). With hourly backups on, change nothing for
-just over an hour: no new backup. Then rename a macro: a new backup appears within a minute.
-
-**R5. Restore.** On the Restore tab, the list is newest first, with the date and time (UTC),
-folder and macro counts that match the library at that time, and the type (Backup or Safety
-copy); hovering a date shows the file name. Rename a macro and delete another, then click
-**Restore...** on a backup from before: it asks, with the date, time and counts. Click
-**Restore**: the library window opens with the old library, and "Restored the backup from ..."
-with **Undo restore** above the tree. Click **Undo restore**: your changes are back. Restore
-again and restart the game: the library is still the restored one.
-
-**R6. Other files in the folder.** Put a `notes.txt` into `backups\`, and a text file named
-`macros_backup_2020-01-01_00-00-00_UTC.json` containing just `{`. Click **Refresh**: `notes.txt`
-isn't listed, and the 2020 row shows **Can't be read** (hover: why) with no Restore button. Make
-more backups than you keep: `notes.txt` is never deleted. Delete both files afterwards.
-
-**R7. A linked macro.** With a macro linked to a `.txt` file (session K), edit the file, then
-restore a backup from before the edit: the macro shows the file's text, and the file isn't
-changed.
-
-## S. Advanced options (new 2026-11-25)
+### S. Advanced options
 
 The checkbox at the bottom of the options page's **General** tab. Have K's `test.txt` linked to
 `Two`, and `Say` with Ctrl+F1 and a **Cooldown:** of `10`.
@@ -850,237 +1029,127 @@ delete the `"advanced_options"` entry (keep the JSON valid). Start the game: **A
 is unticked, even though `Two` is linked (a new install, or a settings file without it, starts
 with it off). Tick it again if you have more checks to do.
 
-## T. Saved files: older and newer versions (new 2026-11-26)
+## Priority 4: looks, languages and rare cases
 
-Run each check with **Advanced options** off, then once more with it on (T3's Raw text and link
-file points only apply with it on). Close the game before each edit of `macros.json`, keep a copy
-of the file first, and put it back after the check. Edit with Notepad and keep the JSON valid.
+Text size and the languages. Rare cases inside other sessions (U3 on a patch day, the **(question)** checks) can be skipped when time is short.
 
-**T1. A newer library opens read-only.** In `macros.json`, change `"format": 1` to `"format": 2`.
-Start the game and open the library:
-- a yellow line under the toolbar says it's read-only (saved by a newer version), and the error
-  window says the same once;
-- send `Say` (Send now and its hotkey): it's sent;
-- rename `Say` to `Say 2` and wait 10 seconds, then unload the addon (or close the game): the
-  file still has `"format": 2` and the name `Say`;
-- on the options page, **Back up now**: the new file in `backups\` is a copy of `macros.json` as
-  it was (`"format": 2`);
-- on the Restore tab, **Restore...** an older backup: the error window says the library is
-  read-only and nothing is restored; `macros.json` still has `"format": 2`.
+### M. Text size
 
-**T2. Fields from a newer version are kept.** Put `"format": 1` back. Add `"colour": "red",` to a
-folder's object and `"delay_ms": 250,` to one of `Two`'s lines. Start the game, rename `Two` to
-`Two b`, wait for the save, close the game: both fields are still in `macros.json`, unchanged.
-The file starts with `"format": 1`, `"saved_by"` (this build's version) and `"kind": "library"`.
+**M1. The choices.** Open the **Text size** dropdown at the end of the library's toolbar. Note
+every entry and its size (question: which fonts and sizes does your Nexus offer?). Pick the
+biggest: within a frame the library's text, buttons, title bar and window all get bigger, and the
+window stays on screen. Pick the smallest, then the biggest again: the window shrinks and grows
+back to about the same size.
 
-**T3. An unknown channel.** Change one of `Two`'s lines to `"channel": "guild_hall"`. Start the
-game:
-- that line's channel box shows **? guild_hall** in red, with an error under it: it won't be
-  sent;
-- **Send now**: nothing is sent, and the error window names the line and the channel; the
-  hotkey and the quick menu send nothing either;
-- Advanced options on: the **Raw text** tab shows a note instead of the text; right-click >
-  Export > as .txt is refused with its own message; if `Two` is linked to a file, the link
-  section says it isn't kept in step (the file doesn't change); linking another macro with such
-  a line to a new file is refused with its own message;
-- the quick menu's hover preview and the trash bin show that line as **? guild_hall** in red;
-- save something else, close the game: the line still has `"channel": "guild_hall"`;
-- pick **Say** in that line's channel box: the error goes, and **Send now** sends both lines; if
-  `Two` is linked, within a second its file gets the Say line (the macro wins, it isn't replaced
-  by the file).
+**M2. Everything follows.** At the biggest size, check: the tree, the macro editor (the header and its **...** menu, lines,
+Where it's active, Hotkey and favourite, Note, and Advanced with Raw text and the text file link), the Rename and Delete pop-ups, the Import window, the
+quick menu pop-up, the Quick Access right-click menu, the welcome pop-up and What's new (session
+W), and tooltips (hover a macro in the quick menu, the Placeholders (?) label). All use the big text. Nexus' own options page doesn't.
 
-**T4. Importing a newer export.** Export `Two` (as .json). In the file, change `"format": 1` to
-`"format": 2` and add `"pinned_at": 5,` to the macro. Import it: the import window warns it was
-saved by a newer version, the preview marks `Two` **NEWER VERSION** (hover: why), and the line
-above the preview counts it. Import it: it comes in, and after the next save `pinned_at` is in
-`macros.json` with it.
+**M3. Nothing cut off.** At the biggest size, make the library window narrow:
+- toolbar buttons that don't fit move to a second row;
+- status messages, long hints and the error window's text wrap instead of running off the edge;
+- a macro with 6+ maps in its filter shows the map buttons over several rows;
+- a long macro name deep in the tree can be reached with the tree's sideways scrollbar.
+Report anything that's still cut off, with a screenshot.
 
-**T5. Trash bin times and maps visited.** Delete a macro to the trash bin and click it there: the
-time is your **local** time. In `macros.json`, its `"deleted_at"` is in UTC with a `Z`
-(`"2026-11-26T18:03:00Z"`). Then change map once, close the game and delete `maps.json`: start
-the game again, and a filter's **Maps you've been to** still lists your maps (they're in
-`settings.json`, `"visited_maps"`); `settings.json` has `"format": 1`.
+**M4. Saved.** Restart the game: the same size is used. `settings.json` in the addon folder has
+`"text_size"`. Change the size from the addon's page in Nexus options: the library follows.
 
-## U. Duplicate, notes, and the map list after a game update (new 2026-11-26)
+**M5. Font reload.** Change Nexus' own font or UI settings (if it has any) while the library is
+open: no crash, and the library keeps working (it may show the default size for a moment).
 
-Run U1 and U2 with **Advanced options** off, then once more with it on.
+### Q. Languages
 
-**U1. Duplicate.** Give `Say` a hotkey, tick **Favourite**, and add a game mode filter (untick
-PvP). Right-click `Say` > **Duplicate** (hover first: the tooltip says what isn't copied):
-- `Say (2)` appears right below `Say`, selected, with the same line and filter;
-- it has no hotkey, **Favourite** is off, and with Advanced options on it isn't linked to a
-  file even if `Say` is; `Say` keeps its hotkey and favourite;
-- duplicate `Say (2)`: the new one is `Say (3)`; duplicate `Say` again: `Say (4)`, right below
-  `Say`;
-- a folder's right-click menu has no **Duplicate**;
-- close the game and start it again: the copies are still there; delete them.
+Languages are on the addon's page in **Nexus > Options** (the **General** tab), under **Text size**. The German, French
+and Spanish texts were made by AI: if you speak one of them, note any text that reads oddly.
 
-**U2. Notes.** Select `Two`. Open the **Note: none** section: a grey line says what it's for
-(never typed into chat), with a box about 3 lines tall under it:
-- type `Before each boss`, Enter, `Needs commander tag`; select another macro and come back:
-  the note is still there; spaces you type at the end stay while you're typing;
-- open the quick menu and hover `Two`: the note is in grey above the lines, with a line between
-  them;
-- search `commander`: `Two` shows with "(found in its note)"; search `test map`: "(found in its
-  lines)";
-- **Send now**: only the lines are sent, never the note;
-- paste over 1000 letters into the box: a yellow warning says the rest isn't kept; click
-  elsewhere: the note is cut;
-- export `Two` (as .json), delete it, import the file: the note came back; close the game:
-  `macros.json` has `"note"` for `Two` and none for macros without one.
-- Fold the section: its header shows "Note: Before each boss..." (the first line, cut, with
-  "...").
-- With a big text size (Text size, the largest): the box and the warning fit the pane.
+**Q1. Following Nexus.** The **Language** dropdown shows **Follow Nexus (English (US))**. In
+Nexus' own options, switch Nexus to Deutsch: within a second or two the addon's windows (library,
+quick menu, this page) switch to German, and the dropdown shows **Nexus folgen (Deutsch)**. Switch
+Nexus back to English: the addon follows. Set Nexus to a language the addon doesn't have (e.g.
+Italiano): the addon stays in English, the dropdown shows **Follow Nexus (it)**, and a line under it says there's no translation yet. Set Nexus back.
 
-**U3. The map list after a game update** (only on a patch day, or skip). Before the update, note
-the map list's time on the options page. After the game updates and you're in a map for a
-minute or two: the Nexus log (Advanced options on: **Nexus > Log**, filter "Chat Messages") says
-"Map list: the game was updated (build ...)", and within a couple of minutes the options page
-shows a new time. In `maps.json`, `"build"` and `"listed_build"` are the new build. A day later
-the time changes once more. On a first start with no `maps.json`, the list is fetched only once.
+**Q2. Picking a language.** Pick **Français**: everything switches to French at once, while
+Nexus stays in English. Restart the game: still French. Pick **Follow Nexus** again afterwards.
 
-## V. The macro editor layout (new 2026-11-26)
+**Q3. German in the windows.** With German on, open the library, the macro editor, the Import
+window, the trash bin's pop-ups, the error window (e.g. a duplicate name) and the tour (options
+page, **Take the tour**). Note anything cut
+off, overlapping or running out of a window, at the default and the biggest text size.
 
-The details pane was rearranged (`docs/design.md`, "Macro editor layout"). Run V1 to V4 with
-**Advanced options** off, then V5 with it on.
+**Q4. Accented letters.** In French and German, letters like é, è, à, ç, ö, ü and ß show
+correctly (no `?` boxes) in the library, the menus and the tooltips.
 
-**V1. The header.** Select `Two`:
-- the name is at the top, with **Send now**, **Preview** and **...** on its row; under it in grey
-  "Top level > ... · Everywhere" (the folder path, the hotkey if it has one, where it's active);
-- **...** opens a small menu: **Rename** and **Delete** open their usual pop-ups, **Duplicate**
-  makes `Two (2)`; delete the copy;
-- **Send now** sends both lines; **Preview** shows the preview under the header; sending shows
-  "Sending line 1 of 2..." under the header;
-- select a folder: the same header with only **...** (Rename, Delete), the grey path and where
-  it's active, then the folder level, what it contains, **Favourite**, **Where it's active** and
-  the New folder/macro buttons;
-- rename `Two` to something long (80 characters): the buttons go under the name, nothing runs off
-  the right; rename it back.
+**Q5. Names in Nexus.** With Nexus set to Deutsch, **Nexus > Options > Keybinds** shows the
+addon's two keybinds in German, and hovering the chat bubble icon shows a German tooltip.
 
-**V2. Line rows.** On `Two`:
-- under **Lines (2)** (with **Placeholders (?)** on the right; hover it: the list), each line is
-  one row: its number, the channel, the message, the count, up/down arrows and **X**;
-- hover the arrows and **X**: they say what they do; move line 2 up and back; **X** removes a
-  line (add it back);
-- change a line to **Whisper**: a **Recipient** box appears in the row; to **Squad**: a
-  **Broadcast** box;
-- **Add line** is as wide as the pane and adds a row with the last line's channel;
-- make the library window narrow: the message box goes on its own row under the channel, the
-  count and buttons stay at its right; nothing overlaps.
+**Q6. A file of your own.** Run it with **Advanced options** off (it no longer matters). Under the
+Language dropdown, **Use language files from the localization folder** is unticked (the default),
+with a grey line saying what it's for, and there's no **Open localization folder** or **Reload
+language files**. Tick it: the two buttons and the text about adding a language appear. Click
+**Open localization folder**: Explorer opens
+`<GW2>\addons\GW2_Chat_Messages\localization\`. Copy `localization\template.json` from the
+repository into it as `nl.json`, set `"Identifier": "nl"`, `"DisplayName": "Nederlands"`, and
+translate one text, e.g. `"Open macro library": "Macrobibliotheek openen"`. Click **Reload
+language files**: **Nederlands (0%) - file from your localization folder** is in the list. Pick
+it: that one text is in Dutch, the rest in English.
 
-**V3. Folding sections.** Under the lines: **Where it's active: Everywhere**, **Hotkey and
-favourite: no hotkey** (or `Ctrl+F1`, `Ctrl+F1, favourite`), **Note: none**:
-- each opens and closes with a click; select another macro: the same sections are open; close
-  the game and start it again: still the same (`settings.json` has `"editor_sections"`);
-- give `Emote` the same hotkey as `Say` and fold **Hotkey and favourite**: its header still says
-  "(the hotkey is shared)" in yellow; clear it again; give a macro plain `F` (a game key): the
-  folded header says "(it may be a game key)"; give it Ctrl+F1 again;
-- give a macro the map list of another game mode so it can't be active anywhere (e.g. PvP only in
-  a WvW-only folder): the folded **Where it's active** header says "(can't be active anywhere)";
-  a macro that's only inactive on this map says "(not here)";
-- open **Hotkey and favourite**, click **Set...**, then fold it while it waits for a key: it opens
-  again so the prompt stays visible; press Escape.
+**Q7. A bad file.** In `nl.json`, change a text with a `%s` so the `%s` is missing (e.g. `"Sent
+%s from the quick menu": "Verzonden"`), then click **Reload language files**: the error window
+says one text was left out, and that text shows in English. Then break the file (delete the last
+`}`) and reload: the error window says the file wasn't loaded and why, and the dropdown falls
+back. Put the last `}` back and reload, for Q9.
 
-**V4. Big text.** Pick the biggest text size: the header, rows and sections fit and wrap; nothing
-is cut off.
+**Q8. Messages and key names.** With German on, the hotkey row and the tree show key names in
+German: **Ctrl+Mouse 4** shows as `Ctrl+Maus 4` and Page Up as `Bild auf` (Ctrl, Alt and Shift
+keep their names). Make a duplicate name, send a macro with the Chat key cleared, and import a
+damaged file: each error window message is in German. Searching the library for `maus 4` and for
+`mouse 4` both find the macro with that hotkey. `macros.json` still stores the hotkey in English.
 
-**V5. Advanced on.** Tick **Advanced options**:
-- an **Advanced** section is at the bottom (folded at first): **Edit the lines as:** Lines /
-  Raw text, **Cooldown:**, and **Text file link: none** with its box and **Link**;
-- a linked macro whose file is missing: the folded **Advanced** header says "(needs attention)"
-  in yellow;
-- untick the box: the section is gone with no gap; a macro with a cooldown shows the grey "kept,
-  ignored" line under the header instead.
-
-## W. First-run welcome, tour and What's new (new 2026-11-26)
-
-Close the game first, and keep a copy of the addon folder (`<GW2>\addons\GW2_Chat_Messages\`).
-Run W1 to W4 with **Advanced options** off (the default on a new install), then W5.
-
-**W1. The welcome.** Rename the addon folder to `GW2_Chat_Messages.keep` (a real first run).
-Start the game and load a character:
-- on the loading screen and at character select nothing opens; once in game, the library opens
-  by itself with **Welcome to Chat Messages** in it;
-- **Start empty**: the second page asks about the tour; **Not now**: an empty library. Close the
-  game: `settings.json` has `"welcome_shown": true`, no `"examples_added"`, and `"notes_seen"`
-  is this version. Start again: no welcome;
-- delete the new folder and start again: the welcome is back. Close the game before answering
-  and start again: it asks again. This time **Add the examples**: the Examples folder is added,
-  selected and opened, with the status line; on the options page **Add the example macros** now
-  asks "Replace the examples?".
-
-**W2. The tour.** From W1's second page, **Take the tour** (or **Take the tour** on the options
-page, General tab):
-- step 1 outlines the tree in yellow, with a box beside it: title, text, "Step 1 of 8",
-  **Next**, **Skip the tour**; then the toolbar, the search box, the selected macro's header
-  (the tour selected `Hello`), the lines and the folding sections, each outlined, the box never
-  covering what it's about; steps 7 and 8 (quick menu, options) are boxes in the middle of the
-  library, with no outline;
-- **Back** goes back; **Finish** on step 8 ends it; **Skip the tour** ends it at once;
-- click in the library while the box shows: the box stays in front; type in the search box: the
-  keys go there;
-- move and resize the library window during a step: the outline and the box follow; close the
-  library: the tour ends;
-- open a pop-up during the tour (right-click > Rename): the box hides, and comes back after it;
-- with an empty library (no macros), steps 4 to 6 say "Make a macro, or select one..." in the
-  middle of the window;
-- select a long macro, scroll the details pane to its bottom, take the tour: at step 4 the pane
-  scrolls up to the header, and no outline ever spills outside its pane;
-- type `xyz` in the search box at step 3 (nothing matches), clear it and type `hello`, then
-  **Next**: step 4 selects a macro the search shows;
-- biggest text size: the box and the outline fit and wrap.
-
-**W3. An update.** Put your own folder back (`GW2_Chat_Messages.keep` to `GW2_Chat_Messages`;
-no `"welcome_shown"` in it yet). Start the game: no welcome (you have a library), and
-`settings.json` gets `"welcome_shown": true`. This Dev build has no section of its own in the
-changelog, so What's new doesn't open and `"notes_seen"` is set to this version.
-
-**W4. What's new.** Needs a build whose `CHANGELOG.md` has a section for its version (run
-`tools\set_version.ps1` on a test branch and build, or wait for the first release). In
-`settings.json` delete `"notes_seen"`, or set it to an older version (`"2026.11.21.1412"`). Start
-the game and load a character:
-- **What's new in Chat Messages** opens once in game (not at character select), about half the
-  screen at most, with the version's title, headings, bullets (nested ones indented) and a
-  scrollbar when it's long; no `**` or backticks show;
-- in German, French or Spanish it says the notes are in English;
-- **Close**: `"notes_seen"` is this version; restart: it doesn't open again;
-- set `"notes_seen"` back, untick **Show what's new after each update** in the window and close:
-  the options page's box is unticked too; set `"notes_seen"` back again and restart: it doesn't
-  open, and `"notes_seen"` is updated;
-- by channel: on a test branch, add hand-made sections to `CHANGELOG.md` between `"notes_seen"`
-  and this version, one each ending `(Dev)`, `(Beta)` and `(Rel)`, plus one older than
-  `"notes_seen"`, then run `tools\set_version.ps1 -Channel Beta` and build. The window shows the
-  Beta and Rel sections and this version's, newest first, but not the Dev one or the older one.
-  Set `"notes_seen"` back each time, and run it again with `-Channel Rel`: the Rel ones only;
-  with `-Channel Dev`: all but the older one;
-- an older DLL: with `"notes_seen"` set to a newer version (`"2099.01.01.0000"`), start the
-  game: nothing opens, and `"notes_seen"` is now this version.
-
-**W5. Advanced options on.** Tick **Advanced options** and take the tour again: the same 8
-steps; none points at the Advanced section; step 8 names the box.
+**Q9. Files from other versions, and the opt-in (new 2026-11-26).** With Q6's `nl.json` (fixed
+again) and **Nederlands** picked:
+- in `nl.json`, change `"Format": 1` to `"Format": 2`, add `"Plurals": {"one": 1},` on the next
+  line, and add a text this version doesn't have under `Texts` (`"A text from a newer version":
+  "Nieuw",`). Click **Reload language files**: no error window; Nederlands is still picked, Q6's
+  text is still in Dutch, and a yellow line under the box says `nl.json` was made for a newer
+  version. Put `"Format": 1` back, take the two additions out again and reload: the yellow line
+  is gone;
+- change the English side of Q6's text (`"Open the macro library": "Macrobibliotheek openen"`) and
+  reload: no error window, and that text is back in English (as for a text reworded in an update);
+- untick **Use language files from the localization folder**: the buttons go, Nederlands isn't in
+  the list any more, the addon is in English and the dropdown shows "nl (a language file: turn on
+  language files below)". Restart the game: still unticked, still English. Tick it again:
+  Nederlands is back and shown again. In `settings.json`, `"own_language_files"` is `true`;
+- tick **Advanced options**, then untick it: the language box and Nederlands don't change.
+Delete `nl.json`, reload, and untick the box afterwards.
 
 ## Report template
 
 ```
 Build: (stamp from the log)   Nexus version:   Game language:
-A1  A2 (both re-checks)  A3  A4 (yellow/red easy to see?):  A5  A6
-B1  B2  B3  B4 (what arrived):  B5 (any line missing?):
+A1  A1b  A2 (both re-checks)  A3  A4 (yellow/red easy to see?):  A5  A6
+B1  B2  B3  B3b  B4 (what arrived):  B5 (any line missing?):
 D2  D3  D4  D5  D6
+F1  F2 (which mouse buttons, where):  F3  F4  F5  F6  F7  F8  F9
 E1
-F1  F2 (which mouse buttons, where):  F3  F4  F5  F6  F7  F8
-G1  G2  G3 (where did it appear?):  G4  G5  G6
+L1  L2
+W1  W2  W3  W4  W5
+V1  V2  V3  V4  V5
+G1  G2  G4  G6  G5  G3 (where did it appear?):
+P1  P2  P3  P4 (did Ctrl+F / Escape reach the game?):  P5  P6 (label at character select):  P7 (did typing or Enter reach the game?):  P8
+T1  T2  T3  T4  T5
+R1  R2  R3  R4  R5  R6  R7
+O1  O2  O3 (long name too)  O4  O5
 H1  H2  H3  H4 (map: mode, map id):  H5  H6  H7  H8  H9  H10
 I1 (date format sent):  I2  I3  I4  I5  I6  I7  I8  I9
 J1  J2  J3  J3b  J4  J5  J6  J7  J8  J9  J10  J11
-K1  K2  K3  K4  K5  K6
-L1  L2
-M1 (entries and sizes):  M2  M3  M4  M5
+U1  U2  U3
 N1 (pasted text):  N2  N3
-O1  O2  O3 (long name too)  O4  O5
-P1  P2  P3  P4 (did Ctrl+F / Escape reach the game?):  P5  P6 (label at character select):  P7 (did typing or Enter reach the game?):  P8
-Q1  Q2  Q3 (anything cut off?):  Q4  Q5  Q6  Q7  Q8  Q9   Translations that read oddly:
-R1  R2  R3  R4  R5  R6  R7
+K1  K2  K3  K4  K5  K6
 S1  S2  S3  S4
+M1 (entries and sizes):  M2  M3  M4  M5
+Q1  Q2  Q3 (anything cut off?):  Q4  Q5  Q6  Q7  Q8  Q9   Translations that read oddly:
 Nexus log warnings:
 ```
 
