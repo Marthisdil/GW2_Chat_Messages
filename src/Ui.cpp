@@ -5114,6 +5114,7 @@ namespace
             if (s_BackupInfos.count(r.Name) || s_BackupInfoAsked.count(r.Name)) continue;
             s_BackupInfoAsked.insert(r.Name);
             const std::string name = r.Name;
+            // NOLINTNEXTLINE(bugprone-exception-escape): a job's exception is caught and counted by WorkQueue::RunSafely
             Storage::Post([name] {
                 if (s_StopBackupReads) return; // unloading
                 BackupInfo bi;

@@ -119,7 +119,7 @@ static void TestExceptionIsContained()
     CHECK(q.Failures() == 1);
     q.Stop();
     // Inline (not started) too.
-    q.Post([] { throw 42; });
+    q.Post([] { throw 42; }); // NOLINT(bugprone-std-exception-baseclass): tests that a non-std exception is contained too
     CHECK(q.Failures() == 2);
 }
 

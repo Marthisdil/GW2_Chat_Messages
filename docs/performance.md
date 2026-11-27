@@ -33,6 +33,9 @@ changed, and the actions you click (import, export, restore), which you'd wait f
    macro is cached: key it on what it depends on (`s_TreeGen` for the library, the map and mode,
    the language, the text typed) and rebuild it at least every `kCacheRefreshSec` (0.5 s). Any
    change that alters the tree must go through `MarkDirty()` so `s_TreeGen` moves.
+   This is also a memory-safety rule: the link round (`s_LinkRound`) keeps `Node*` pointers
+   only while `s_TreeGen` is unchanged, so a change that frees nodes without `MarkDirty()`
+   would leave it pointing at freed memory.
 4. **Spread bursts.** Work that grows with the library or the number of links runs a few items
    per frame (link files: `kLinksPerFrame`).
 5. **Avoid per-frame allocations in hot paths** when it's easy: reuse a vector, return a const
