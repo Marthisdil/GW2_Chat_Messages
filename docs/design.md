@@ -454,7 +454,7 @@ its own box.
 - **By channel** (owner, 2026-11-27): each heading ends with its release's channel, and a build
   shows the releases its channel follows: a **Rel** build the Rel releases only, a **Beta** build
   Beta and Rel, a **Dev** build all of them. A heading without a channel (written by hand, or any
-  other word in the brackets) shows on every channel (`ReleaseNotes::ParseChannel`,
+  other word in the parentheses) shows on every channel (`ReleaseNotes::ParseChannel`,
   `ChannelShows`; the running channel is `CHATMSG_VER_CHANNEL`). Considered and not built: fetching
   the notes from the GitHub releases (they could be edited after a release, but it needs the
   network, a new host and a new untrusted input, with the built-in notes as the fallback).
@@ -468,7 +468,8 @@ its own box.
   - a first run (the welcome shows instead), notes turned off, or no section with notes to show
     (a Dev build between releases; an empty section, or only other channels' releases, counts as
     none): nothing shows and `"notes_seen"` is set now;
-  - the same version or an older DLL: nothing, and the newer mark is kept.
+  - the same version: nothing; an older DLL: nothing, and its version is set now, so
+    `"notes_seen"` is always the version that was running last.
 - **The window** (`###chatmsg_notes`, about 540x440, resizable): the notes in a scrolling box
   (each version's title, its `###` headings, bullets with their indent, wrapped; `**`, backticks
   and links shown as plain text), **Show what's new after each update** and **Close**.

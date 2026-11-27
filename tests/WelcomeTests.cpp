@@ -225,11 +225,13 @@ static void TestDecideNotes()
     CHECK(!s.Show && s.Remember);
     s = Decide(true, false, "", "2026.12.02.0900", false);
     CHECK(!s.Show && s.Remember);
-    // Same version, or an older DLL: nothing at all.
+    // Same version: nothing at all.
     s = Decide(true, false, "2026.12.02.0900", "2026.12.02.0900.Dev", true);
     CHECK(!s.Show && !s.Remember);
+    // An older DLL: nothing shown, and its version remembered (the next update shows what's
+    // newer than the version running before it).
     s = Decide(true, false, "2026.12.02.0900", "2026.11.30.1200", true);
-    CHECK(!s.Show && !s.Remember);
+    CHECK(!s.Show && s.Remember);
     s = Decide(true, false, "", "not a version", true);
     CHECK(!s.Show && !s.Remember);
 

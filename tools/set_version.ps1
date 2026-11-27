@@ -52,9 +52,10 @@ $path = Join-Path $PSScriptRoot "..\src\Version.h"
 Write-Output "Version: $text  (GitHub release tag: $num)"
 
 # CHANGELOG.md: what's under "## [Unreleased]" becomes this version's section, with a new empty
-# "## [Unreleased]" above it. The heading ends with the channel: "What's new" shows a Rel build
-# the Rel releases only, a Beta build Beta and Rel, a Dev build all of them. The DLL carries the changelog, and "What's new" after an update shows
-# the running version's section (docs/design.md, "Update notes"), so commit it with Version.h.
+# "## [Unreleased]" above it, and the heading ends with the channel. The DLL carries the
+# changelog, and "What's new" after an update shows the running version's section (a Rel build
+# the Rel releases only, a Beta build Beta and Rel, a Dev build all of them; docs/design.md,
+# "Update notes"), so commit it with Version.h.
 $date = "{0}-{1:D2}-{2:D2}" -f $y, $m, $d
 $log = $log.Substring(0, $at) + "$marker$nl$nl## [$num] - $date ($Channel)" + $log.Substring($at + $marker.Length)
 [System.IO.File]::WriteAllText($logPath, $log, (New-Object System.Text.UTF8Encoding($false)))

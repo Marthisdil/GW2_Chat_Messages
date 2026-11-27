@@ -1051,7 +1051,10 @@ the game and load a character:
   and this version, one each ending `(Dev)`, `(Beta)` and `(Rel)`, plus one older than
   `"notes_seen"`, then run `tools\set_version.ps1 -Channel Beta` and build. The window shows the
   Beta and Rel sections and this version's, newest first, but not the Dev one or the older one.
-  Again with `-Channel Rel`: the Rel ones only; with `-Channel Dev`: all but the older one.
+  Set `"notes_seen"` back each time, and run it again with `-Channel Rel`: the Rel ones only;
+  with `-Channel Dev`: all but the older one;
+- an older DLL: with `"notes_seen"` set to a newer version (`"2099.01.01.0000"`), start the
+  game: nothing opens, and `"notes_seen"` is now this version.
 
 **W5. Advanced options on.** Tick **Advanced options** and take the tour again: the same 8
 steps; none points at the Advanced section; step 8 names the box.

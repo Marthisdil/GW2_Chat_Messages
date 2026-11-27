@@ -56,7 +56,8 @@ namespace ReleaseNotes
     // What Ui::Init does at load. aFirstRun: the welcome is shown instead (and the version is
     // remembered). Show is false when the notes are turned off, nothing's new, or there's no
     // section to show; Remember is true whenever "notes_seen" should be set to aCurrent now
-    // (when Show is true it's set once the window is closed).
+    // (when Show is true it's set once the window is closed), an older DLL than aSeen included,
+    // so "notes_seen" is always the version that was running last.
     struct Start
     {
         bool Show     = false;

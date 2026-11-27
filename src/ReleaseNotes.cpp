@@ -189,7 +189,12 @@ ReleaseNotes::Start ReleaseNotes::Decide(bool aShowSetting, bool aFirstRun, cons
     Version current, seen;
     if (!ParseVersion(aCurrent, current)) return s;
     const bool hasSeen = ParseVersion(aSeen, seen);
-    if (hasSeen && !(seen < current)) return s; // nothing new (or an older DLL: keep the newer mark)
+    if (hasSeen && !(seen < current))
+    {
+        // Nothing new. An older DLL is remembered, so the next update shows what's newer than it.
+        s.Remember = current < seen;
+        return s;
+    }
     if (aFirstRun || !aShowSetting || !aHasSections)
     {
         s.Remember = true;
