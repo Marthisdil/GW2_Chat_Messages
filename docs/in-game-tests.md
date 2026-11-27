@@ -652,8 +652,8 @@ changed.
 **R8. Backups in the background.** With 20 or more backups in `backups\` (set **Copies to
 keep** to 25 and click **Back up now** repeatedly), open the Restore tab: the rows fill in
 within a second or two, with no stutter, and the counts are right. Click **Back up now**: "Backed
-up as ..." appears. Click it twice quickly: the second click does nothing or makes a second
-backup, never an error. Rename a macro and unload the addon at once: the next load shows no
+up as ..." appears. Click it twice quickly: the second click makes another backup right after
+the first ("Backed up as ..." again), or, in the same second, the "couldn't be written" error. Rename a macro and unload the addon at once: the next load shows no
 backup error in the Nexus log.
 
 ### O. Trash bin

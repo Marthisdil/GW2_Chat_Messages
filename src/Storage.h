@@ -102,6 +102,8 @@ namespace Storage
     // LoadSettings sees it) and the writer thread writes the file. Any thread.
     constexpr int kSettingsFormat = 1;
     nlohmann::json LoadSettings();
+    // True once the change is kept in memory (false only for a non-object): the file is written
+    // by the writer thread, which logs a failed write.
     bool SaveSetting(const char* aKey, const nlohmann::json& aValue); // changes one key; written soon
     bool SaveSettings(const nlohmann::json& aSettings);
 }

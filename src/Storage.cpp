@@ -567,9 +567,11 @@ namespace
         {
             nlohmann::json withFormat = aSettings;
             withFormat["format"] = Storage::kSettingsFormat;
-            Storage::WriteJson(dir / kSettingsFile, withFormat, false);
+            if (!Storage::WriteJson(dir / kSettingsFile, withFormat, false))
+                LogF(LOGL_WARNING, "settings.json couldn't be written; your settings are kept until the next change or unload.");
             return;
         }
-        Storage::WriteJson(dir / kSettingsFile, aSettings, false);
+        if (!Storage::WriteJson(dir / kSettingsFile, aSettings, false))
+            LogF(LOGL_WARNING, "settings.json couldn't be written; your settings are kept until the next change or unload.");
     }
 }

@@ -1,6 +1,7 @@
 #include "Ui.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <cfloat>
 #include <cstdint>
@@ -2620,8 +2621,15 @@ namespace
     {
         if (!s_AdvancedOn) return; // paused; the agreed states are kept for when it's back on
         const double now = ImGui::GetTime();
-        // The listed pointers are only good while the library is unchanged: start over if it changed.
-        if (s_LinkRoundGen != s_TreeGen) { s_LinkRound.clear(); s_LinkRoundAt = 0; }
+        // The listed pointers are only good while the library is unchanged: list them again if it
+        // changed, and go on from the same place (typing in a macro changes it every few frames).
+        if (s_LinkRoundGen != s_TreeGen)
+        {
+            s_LinkRound.clear();
+            CollectLinked(s_Tree.Root(), s_LinkRound);
+            s_LinkRoundGen = s_TreeGen;
+            s_LinkRoundAt  = std::min(s_LinkRoundAt, s_LinkRound.size());
+        }
         if (aNow || (s_LinkRoundAt >= s_LinkRound.size() && now >= s_NextLinkSync))
         {
             s_NextLinkSync = now + kLinkSyncEverySec;
@@ -3187,7 +3195,8 @@ namespace
         const double now = ImGui::GetTime();
         SearchCache& c = s_MenuCache;
         const bool same = c.Valid && c.Query == aQuery && c.Mode == aHere.Mode && c.MapId == aHere.MapId &&
-                          c.Gen == s_TreeGen && now >= c.At && now - c.At < kCacheRefreshSec;
+                          c.Gen == s_TreeGen && c.Lang == Localization::Active() && now >= c.At &&
+                          now - c.At < kCacheRefreshSec;
         if (!same)
         {
             Search::Where where;
@@ -3200,6 +3209,7 @@ namespace
             c.Mode  = aHere.Mode;
             c.MapId = aHere.MapId;
             c.Gen   = s_TreeGen;
+            c.Lang  = Localization::Active();
             c.At    = now;
         }
         std::vector<const Node*> found;
@@ -4728,6 +4738,9 @@ namespace
     std::optional<std::vector<std::string>> s_BackupListed;    // the once-a-minute look at the folder
     std::map<std::string, BackupInfo>       s_BackupInfoDone;  // the Restore tab's reads
     bool                  s_BackupRunning = false; // a backup job is posted, its result not in yet
+    bool                  s_BackupManualWanted = false; // Back up now was clicked while one was running
+    std::atomic<bool>     s_StopBackupReads{false};     // Ui::Shutdown: skip the Restore tab's reads still waiting
+    constexpr size_t      kBackupReadsInFlight = 2;     // Restore tab reads posted at a time
     bool                  s_BackupListing = false; // the same for the folder listing
     std::set<std::string> s_BackupInfoAsked;       // Restore tab: reads posted, results not in yet
 
@@ -4853,8 +4866,20 @@ namespace
         }, "backup-list");
     }
 
-    // Once a frame: results from the writer thread.
+    void PollBackupResults();
+
+    // Once a frame: results from the writer thread, then a Back up now that had to wait.
     void PollBackups()
+    {
+        PollBackupResults();
+        if (s_BackupManualWanted && !s_BackupRunning)
+        {
+            s_BackupManualWanted = false;
+            StartBackup(Backups::EKind::Backup, Backups::Clamped(s_Backup).Keep, true, true);
+        }
+    }
+
+    void PollBackupResults()
     {
         std::optional<BackupDone> done;
         std::optional<std::vector<std::string>> listed;
@@ -4971,7 +4996,8 @@ namespace
         UiFont::Row row;
         // Written on the writer thread: PollBackups shows "Backed up as ..." or the error. A click
         // while one is still being written does nothing (that one's result shows soon).
-        if (ImGui::Button(T("Back up now"))) StartBackup(Backups::EKind::Backup, Backups::Clamped(s_Backup).Keep, true, true);
+        if (ImGui::Button(T("Back up now")) && !StartBackup(Backups::EKind::Backup, Backups::Clamped(s_Backup).Keep, true, true))
+            s_BackupManualWanted = true; // made as soon as the running one is done (PollBackups)
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip(T("Makes a backup now, even if nothing changed. It counts as one of the copies you keep."));
         row.Next(UiFont::ButtonWidth(T("Open the backups folder")));
@@ -5081,12 +5107,15 @@ namespace
             }
             s_BackupInfoDone.clear();
         }
+        // A few at a time, so a save posted meanwhile doesn't wait behind every backup's read.
         for (const Row& r : rows)
         {
+            if (s_BackupInfoAsked.size() >= kBackupReadsInFlight) break;
             if (s_BackupInfos.count(r.Name) || s_BackupInfoAsked.count(r.Name)) continue;
             s_BackupInfoAsked.insert(r.Name);
             const std::string name = r.Name;
             Storage::Post([name] {
+                if (s_StopBackupReads) return; // unloading
                 BackupInfo bi;
                 try
                 {
@@ -5240,11 +5269,29 @@ void Ui::Init()
 void Ui::Shutdown()
 {
     SyncLinks(true); // last edits to linked macros reach their files
+    s_StopBackupReads = true; // Restore tab reads still waiting are skipped: the unload doesn't wait for them
+    Storage::Flush();         // every job of ours (saves, backups) has finished
+    // A save handed to the writer that failed (or whose result wasn't looked at yet) is tried
+    // once more here, as a failed save always was.
+    if (s_SaveSeq != 0)
+    {
+        const Storage::SaveResult r = Storage::LastMacrosSave();
+        if (r.Seq != s_SaveSeq || !r.Ok) s_Dirty = true;
+    }
     if (s_Dirty && !s_Tree.FromNewerVersion() && !Storage::SaveMacros(s_Tree))
         LogF(LOGL_WARNING, "Unsaved macro changes could not be written on unload.");
-    Storage::Flush(); // every job of ours (saves, backups, Restore tab reads) has finished
+    s_StopBackupReads = false;
     s_Dirty   = false;
     s_SaveSeq = 0;
+    s_SaveFailed = false;
+    // The caches hold ids (and the link round pointers) of the tree that's about to go.
+    s_ActiveHere.Valid  = false;
+    s_SearchCache.Valid = false;
+    s_MenuCache.Valid   = false;
+    s_RowLabels.clear();
+    s_LinkRound.clear();
+    s_LinkRoundAt = 0;
+    s_BackupManualWanted = false;
     {
         std::lock_guard<std::mutex> lock(s_BackupDoneMutex);
         s_BackupDone.reset();
