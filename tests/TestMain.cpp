@@ -26,6 +26,7 @@ void RunAdvancedTests();
 void RunFormatTests();
 void RunEditorLayoutTests();
 void RunWelcomeTests();
+void RunWorkQueueTests();
 
 int main()
 {
@@ -53,6 +54,7 @@ int main()
     RunFormatTests();
     RunEditorLayoutTests();
     RunWelcomeTests();
+    RunWorkQueueTests();
     std::printf("%d checks, %d failures\n", g_TestChecks, g_TestFailures);
     return g_TestFailures == 0 ? 0 : 1;
 }

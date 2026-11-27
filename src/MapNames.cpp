@@ -43,6 +43,7 @@ namespace
     std::deque<uint32_t>                            s_Queue;
     std::unordered_map<uint32_t, Clock::time_point> s_NotBefore; // failed or unknown ids: don't ask again yet
     bool                                            s_Dirty = false;
+    bool                                            s_SaveWanted = false; // the lookup thread writes maps.json soon
     bool                                            s_LangSet = false;
     bool                                            s_RefreshWanted = false;
     Clock::time_point                               s_RefreshAt;
@@ -76,11 +77,34 @@ namespace
         MapCatalog::FromJson(text, lang, s_Cache);
     }
 
-    void SaveFile() // caller holds s_Mutex
+    // Writes maps.json without holding s_Mutex: the render thread asks for names under it every
+    // frame the library is open, so a file write under it would hold up those frames. Only a copy
+    // of the cache is taken under the lock. Called by the lookup thread (and by Shutdown after it
+    // has stopped), so two writes never overlap. Caller doesn't hold s_Mutex.
+    void SaveOutsideLock()
     {
-        if (!s_Dirty || s_File.empty()) return;
-        const nlohmann::json j = nlohmann::json::parse(MapCatalog::ToJson(s_Cache), nullptr, false);
-        if (!j.is_discarded() && Storage::WriteJson(s_File, j, false)) s_Dirty = false;
+        MapCatalog::Cache copy;
+        {
+            std::lock_guard<std::mutex> lock(s_Mutex);
+            s_SaveWanted = false;
+            if (!s_Dirty || s_File.empty()) return;
+            copy = s_Cache;
+            s_Dirty = false;
+        }
+        bool written = false;
+        try
+        {
+            written = Storage::WriteText(s_File, MapCatalog::ToJson(copy));
+        }
+        catch (...)
+        {
+            std::lock_guard<std::mutex> lock(s_Mutex);
+            s_Dirty = true;
+            throw; // ThreadMain logs it
+        }
+        if (written) return;
+        std::lock_guard<std::mutex> lock(s_Mutex);
+        s_Dirty = true; // tried again with the next change, or at unload
     }
 
     std::string Lang()
@@ -114,21 +138,26 @@ namespace
     void Store(const std::vector<uint32_t>& aIds, const std::string& aLang,
                const std::unordered_map<uint32_t, MapCatalog::Map>& aFound, bool aReached)
     {
-        std::lock_guard<std::mutex> lock(s_Mutex);
-        const bool sameLang = aLang == s_Cache.Lang; // the language may have changed meanwhile
-        for (uint32_t id : aIds)
+        bool save = false;
         {
-            s_Queued.erase(id);
-            auto it = aFound.find(id);
-            if (it != aFound.end() && sameLang)
+            std::lock_guard<std::mutex> lock(s_Mutex);
+            const bool sameLang = aLang == s_Cache.Lang; // the language may have changed meanwhile
+            for (uint32_t id : aIds)
             {
-                s_Cache.Maps[id] = it->second;
-                s_NotBefore.erase(id);
-                s_Dirty = true;
+                s_Queued.erase(id);
+                auto it = aFound.find(id);
+                if (it != aFound.end() && sameLang)
+                {
+                    s_Cache.Maps[id] = it->second;
+                    s_NotBefore.erase(id);
+                    s_Dirty = true;
+                }
+                else if (sameLang) s_NotBefore[id] = Clock::now() + kRetryAfter;
             }
-            else if (sameLang) s_NotBefore[id] = Clock::now() + kRetryAfter;
+            save = aReached && s_Dirty;
+            if (save) s_SaveWanted = true; // written by the lookup thread (Get runs on the sender's)
         }
-        if (aReached) SaveFile();
+        if (save) s_Cv.notify_one();
     }
 
     // Fetches the API's full list: every id, then their names in batches. Replaces the names and
@@ -167,7 +196,7 @@ namespace
         s_Cache.Listed = std::set<uint32_t>(ids.begin(), ids.end());
         MapCatalog::ListFetched(s_Cache, NowUtc());
         s_Dirty = true;
-        SaveFile();
+        s_SaveWanted = true; // the next ThreadStep writes it, outside the lock
         LogF(LOGL_INFO, "Map list: %zu maps from the GW2 API.", ids.size());
     }
 
@@ -212,11 +241,12 @@ namespace
     {
         std::vector<uint32_t> batch;
         bool list = false;
+        bool save = false;
         std::string lang;
         {
             std::unique_lock<std::mutex> lock(s_Mutex);
             auto ready = [] {
-                return s_Stop.load() || !s_Queue.empty() || (s_RefreshWanted && Clock::now() >= s_RefreshAt);
+                return s_Stop.load() || !s_Queue.empty() || s_SaveWanted || (s_RefreshWanted && Clock::now() >= s_RefreshAt);
             };
             if (s_RefreshWanted) s_Cv.wait_until(lock, s_RefreshAt, ready);
             else s_Cv.wait(lock, ready);
@@ -227,7 +257,7 @@ namespace
                 s_Refreshing = true;
                 list = true;
             }
-            else
+            else if (!s_Queue.empty())
             {
                 while (!s_Queue.empty() && batch.size() < kBatch)
                 {
@@ -236,6 +266,12 @@ namespace
                 }
                 lang = s_Cache.Lang;
             }
+            else save = s_SaveWanted;
+        }
+        if (save)
+        {
+            SaveOutsideLock();
+            return;
         }
         if (list)
         {
@@ -306,8 +342,18 @@ void MapNames::Shutdown()
     }
     s_Cv.notify_all();
     if (s_Thread.joinable()) s_Thread.join();
-    std::lock_guard<std::mutex> lock(s_Mutex);
-    SaveFile();
+    try
+    {
+        SaveOutsideLock(); // the lookup thread has stopped: nothing else writes the file now
+    }
+    catch (const std::exception& e)
+    {
+        LogF(LOGL_WARNING, "Map names: maps.json couldn't be saved: %s", e.what());
+    }
+    catch (...)
+    {
+        LogF(LOGL_WARNING, "Map names: maps.json couldn't be saved.");
+    }
 }
 
 void MapNames::SetLanguage(const std::string& aAddonLang)
@@ -437,23 +483,27 @@ bool MapNames::Unlisted(uint32_t aMapId)
 
 void MapNames::Check(uint32_t aGameBuild)
 {
+    bool wake = false;
     {
         std::lock_guard<std::mutex> lock(s_Mutex);
         const int64_t now = NowUtc();
         if (MapCatalog::NoteBuild(s_Cache, aGameBuild, now))
         {
             s_Dirty = true;
-            SaveFile();
+            s_SaveWanted = true; // the lookup thread writes it: never a file write on the render thread
+            wake = true;
             if (s_Cache.BuildSeenAt == now)
                 LogF(LOGL_INFO, "Map list: the game was updated (build %u), so the map list is fetched again.", aGameBuild);
         }
         // Only once the language is known (SetLanguage), never while one runs or is queued, and
         // not again soon after a failed one.
-        if (!s_LangSet || s_Refreshing || s_RefreshWanted || Clock::now() < s_ListRetryAt) return;
-        if (!MapCatalog::RefreshDue(s_Cache, now)) return;
-        WantRefresh(kBuildDelay);
+        if (s_LangSet && !s_Refreshing && !s_RefreshWanted && Clock::now() >= s_ListRetryAt && MapCatalog::RefreshDue(s_Cache, now))
+        {
+            WantRefresh(kBuildDelay);
+            wake = true;
+        }
     }
-    s_Cv.notify_one();
+    if (wake) s_Cv.notify_one();
 }
 
 void MapNames::RefreshNow()

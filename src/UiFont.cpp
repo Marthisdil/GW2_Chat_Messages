@@ -22,11 +22,14 @@ namespace
     float s_Scale = 1.0f; // chosen size / default size (what the layout was designed for), this frame
     std::vector<bool> s_PushStack; // per Push: whether it pushed a font (so Pop knows)
 
-    // The fonts as Nexus has them right now. Read fresh every time: never keep an ImFont*.
-    std::vector<TextSize::Font> CurrentFonts()
+    // The fonts as Nexus has them right now. Read fresh every time: never keep an ImFont*. The
+    // list is refilled in place (render thread only), so it doesn't allocate every frame; copy it
+    // if something else may call this while you use it.
+    const std::vector<TextSize::Font>& CurrentFonts()
     {
         using TextSize::EFont;
-        std::vector<TextSize::Font> fonts;
+        static std::vector<TextSize::Font> fonts;
+        fonts.clear();
         auto add = [&](EFont aKind, void* aFont) {
             const ImFont* f = static_cast<const ImFont*>(aFont);
             fonts.push_back({aKind, f, f && f->IsLoaded() ? f->FontSize : 0.0f});
@@ -78,7 +81,7 @@ void UiFont::Init()
 
 void UiFont::NewFrame()
 {
-    const std::vector<TextSize::Font> fonts = CurrentFonts();
+    const std::vector<TextSize::Font>& fonts = CurrentFonts();
     const TextSize::Font def    = TextSize::Pick(fonts, TextSize::EFont::Default);
     const TextSize::Font chosen = TextSize::Pick(fonts, s_Choice);
     // While Nexus rebuilds its fonts the chosen one is briefly missing: keep the last scale, or
@@ -106,7 +109,7 @@ ImVec2 UiFont::Px(float aDesignW, float aDesignH) { return ImVec2(aDesignW * s_S
 
 void UiFont::DrawCombo(const char* aLabel)
 {
-    const std::vector<TextSize::Font> fonts   = CurrentFonts();
+    const std::vector<TextSize::Font> fonts   = CurrentFonts(); // a copy: Save() and drawing may read it again
     const std::vector<TextSize::Font> choices = TextSize::Choices(fonts);
     const TextSize::Font picked = TextSize::Pick(fonts, s_Choice);
     const std::string preview = TextSize::Label(picked);
@@ -128,7 +131,7 @@ void UiFont::DrawCombo(const char* aLabel)
 
 float UiFont::ComboWidth(const char* aLabel)
 {
-    const std::vector<TextSize::Font> fonts = CurrentFonts();
+    const std::vector<TextSize::Font>& fonts = CurrentFonts();
     const float box = ComboBoxWidth(TextSize::Choices(fonts), TextSize::Label(TextSize::Pick(fonts, s_Choice)));
     return box + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize(aLabel, nullptr, true).x;
 }

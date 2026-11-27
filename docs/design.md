@@ -651,7 +651,9 @@ its own box.
 - **Content:** the library as `macros.json` would be written (with the trash bin), from memory,
   so unsaved edits are in it too. Written via a temp file and rename; an existing name is never
   overwritten.
-- **When:** the render thread looks once a minute. Due when there's no copy of that kind yet, or
+- **When:** once a minute the folder is listed in the background (the render thread only looks
+  at the result; the copy itself is written in the background too, from a snapshot of the
+  library taken on the render thread). Due when there's no copy of that kind yet, or
   the newest is `every` units old (months are calendar months in UTC, clamped to the month's last
   day). A copy dated in the future (clock changed) waits. An empty library, or one identical to
   the newest copy of that kind, isn't copied; it's looked at again after the next change. A
@@ -664,7 +666,7 @@ its own box.
   same second is refused (error window).
 - **Restore tab:** every backup and safety copy, newest first: Date (UTC), Time (UTC), Folders,
   Macros (the tree, not the trash bin), Type, and **Restore...**. Hovering the date shows the file
-  name. The files are read a few per frame (at most 32 MB each); one that can't be read shows
+  name. The files are read in the background, one job each (at most 32 MB each); one that can't be read shows
   "Can't be read" with the reason, and no button. **Refresh** reads the folder again.
 - **Restore:** a pop-up asks first (date, time, counts; "the trash bin too"). The file is read
   and checked into a new tree before anything changes; then the whole library is replaced, the
@@ -872,6 +874,39 @@ folder**.)*
   so the bin isn't in them, and while the bin holds anything, export messages, the Export submenu
   and the Export all tooltip say "Items in the trash bin (F/M) aren't exported". Importing a
   whole `macros.json` drops its bin, with a warning in the Import window.
+
+## Saving off the render thread (2026-11-27)
+
+*(From the frame-rate review. `src/WorkQueue.*`, tested by `tests/WorkQueueTests.cpp`; used by
+`Storage`, `Ui.cpp` and `MapNames`. The render-thread rules for future changes are in
+`docs/performance.md`.)*
+
+Nothing the game's frame waits for touches the disk, except reading a link file that changed.
+
+- **One writer thread** (`Storage::Init` starts it, `Storage::Shutdown` drains it and joins it,
+  last in `AddonUnload`). Jobs run in order. A job with a key replaces the waiting job with the
+  same key, keeping its place in the line, so ten quick saves are one write. A job's exception is
+  caught and counted (logged at unload), never fatal. Before `Init` and after `Shutdown` a job
+  runs at once on the caller's thread.
+- **Jobs only use `Storage`/`Backups` and what they were given:** never the tree, ImGui or
+  another module's state. The render thread hands them a copy (`shared_ptr<const json>`).
+- **`macros.json`:** the JSON is built on the render thread (the tree is only touched there) and
+  written by the writer (key `macros`). Each save has a number; the render thread checks the
+  result once a frame (`Storage::LastMacrosSave`). A failed save shows the error once and is
+  tried again 5 seconds later. A newer-version library is still never saved.
+  `Storage::SaveMacros` (unload, restore, import) waits for its write.
+- **`settings.json`:** kept in memory. `LoadSettings` returns the copy (the file is read once);
+  `SaveSetting` changes the copy and asks for one write (key `settings`), which copies it under
+  a lock and writes it.
+- **Backups:** the due check, the copy and the pruning, the folder listing and the Restore tab's
+  reads are writer jobs; their results come back to the render thread under a lock.
+- **`maps.json`:** written by MapNames' own lookup thread, outside its lock (a copy is taken
+  under the lock), so the render thread never waits on a lock held during a write.
+- **Per-frame work is cached:** what's active here (per map, mode and library change), the
+  library search and the quick menu search (per text, filter, map and change), the tree's row
+  labels, and the editor's shared-hotkey check. Every cache is also rebuilt at least twice a
+  second, so a missed change only lasts half a second. Link files are checked a couple per frame,
+  a round each second.
 
 ## Input safety (highest priority)
 
