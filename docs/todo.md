@@ -182,7 +182,9 @@ To look into (none of this is checked yet):
 Add an icon next to the message box that opens a small window of special characters, so they can
 be clicked into a message.
 
-- Only offer characters that actually show up correctly in Guild Wars 2's chat. This needs
+- Research (2026-11-26): [docs/reference/gw2-chat-characters.md](reference/gw2-chat-characters.md)
+  lists what the chat font draws, what it doesn't, and what that means for the picker.
+- Only offer characters that actually show up correctly in Guild Wars 2's chat. This needed
   research: which symbols the game's chat font can draw (for example arrows, hearts, stars,
   music notes, box and block characters), and which ones show as empty boxes or get stripped.
 - Points to settle:
