@@ -4896,7 +4896,7 @@ void Ui::Init()
 
         // What's new: once after an update, from the changelog built into the DLL.
         const std::vector<ReleaseNotes::Section> notes =
-            ReleaseNotes::Since(ReleaseNotes::Parse(ReadChangelog()), notesSeen, kVersionTag);
+            ReleaseNotes::Since(ReleaseNotes::Parse(ReadChangelog()), notesSeen, kVersionTag, kVersionChannel);
         const ReleaseNotes::Start show =
             ReleaseNotes::Decide(s_ShowNotes, start.ShowWelcome, notesSeen, kVersionTag, !notes.empty());
         s_Notes.clear();

@@ -27,23 +27,37 @@ namespace ReleaseNotes
     };
     bool ParseVersion(const std::string& aText, Version& aOut);
 
+    // A release's channel, from the end of its heading ("## [...] - 2026-12-01 (Beta)", written by
+    // tools\set_version.ps1). None: a heading without one (written by hand), shown on every channel.
+    enum class EChannel { None, Dev, Beta, Rel };
+    // "Dev", "Beta" or "Rel" (any case); None for anything else.
+    EChannel ParseChannel(const std::string& aText);
+    // Whether a build on aRunning shows a release on aRelease: a Rel build shows Rel releases
+    // only, a Beta build Beta and Rel, a Dev build all of them. None (or an unknown running
+    // channel, taken as Dev) shows everything.
+    bool ChannelShows(EChannel aRelease, EChannel aRunning);
+
     // One "## [2026.11.21.1412] ..." section of the changelog ("## [Unreleased]" is skipped).
     struct Section
     {
         std::string Version; // as written between the brackets
+        EChannel    Channel = EChannel::None;
         std::string Body;    // the lines under it, up to the next "## "
     };
     std::vector<Section> Parse(const std::string& aChangelog);
 
-    // The sections to show: those newer than aSeen, up to and including aCurrent, newest first.
-    // An empty or unreadable aSeen (an update from before this feature) shows aCurrent's only.
+    // The sections to show: those newer than aSeen (the version last running), up to and including
+    // aCurrent, on a channel aChannel (the running build's, "Dev"/"Beta"/"Rel") shows, with notes
+    // in them, newest first. An empty or unreadable aSeen (an update from before this feature)
+    // shows aCurrent's only.
     std::vector<Section> Since(const std::vector<Section>& aSections, const std::string& aSeen,
-                               const std::string& aCurrent);
+                               const std::string& aCurrent, const std::string& aChannel);
 
     // What Ui::Init does at load. aFirstRun: the welcome is shown instead (and the version is
     // remembered). Show is false when the notes are turned off, nothing's new, or there's no
     // section to show; Remember is true whenever "notes_seen" should be set to aCurrent now
-    // (when Show is true it's set once the window is closed).
+    // (when Show is true it's set once the window is closed), an older DLL than aSeen included,
+    // so "notes_seen" is always the version that was running last.
     struct Start
     {
         bool Show     = false;

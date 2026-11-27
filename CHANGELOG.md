@@ -56,8 +56,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   asking), then offers a short **tour** of the library window: eight steps, each outlining a part
   of the window with a box beside it (Back, Next, Skip). **Take the tour** on the addon's options
   page runs it again. Players updating with a library already don't see the welcome.
-- **What's new after an update:** once after each update, a window lists what changed in that
-  version (in English, scrolling if it's long). Untick **Show what's new after each update** (in
+- **What's new after an update:** once after each update, a window lists what changed since the
+  version you were running before (in English, scrolling if it's long). A regular release shows
+  regular releases' notes only; a beta also shows the betas'. Untick **Show what's new after each update** (in
   the window or on the options page) to turn it off.
 - **Duplicate a macro:** right-click a macro > **Duplicate** makes a copy right below it, named
   "Hello (2)" (a copy of "Hello (2)" is "Hello (3)"). It has the same lines, filters, cooldown

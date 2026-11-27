@@ -52,6 +52,22 @@ bool ReleaseNotes::ShowFromSettings(const nlohmann::json& aSettings)
     return it == aSettings.end() || !it->is_boolean() || it->get<bool>();
 }
 
+ReleaseNotes::EChannel ReleaseNotes::ParseChannel(const std::string& aText)
+{
+    std::string t;
+    for (char c : aText) t += (c >= 'A' && c <= 'Z') ? static_cast<char>(c - 'A' + 'a') : c;
+    if (t == "dev") return EChannel::Dev;
+    if (t == "beta") return EChannel::Beta;
+    if (t == "rel") return EChannel::Rel;
+    return EChannel::None;
+}
+
+bool ReleaseNotes::ChannelShows(EChannel aRelease, EChannel aRunning)
+{
+    if (aRelease == EChannel::None || aRunning == EChannel::None) return true;
+    return static_cast<int>(aRelease) >= static_cast<int>(aRunning); // Dev < Beta < Rel
+}
+
 bool ReleaseNotes::Version::operator<(const Version& o) const
 {
     for (int i = 0; i < 4; i++)
@@ -112,7 +128,12 @@ std::vector<ReleaseNotes::Section> ReleaseNotes::Parse(const std::string& aChang
             Version v;
             if (ParseVersion(ver, v))
             {
-                out.push_back({ver, std::string()});
+                // The channel, if the heading ends with "(Dev)", "(Beta)" or "(Rel)".
+                EChannel channel = EChannel::None;
+                const size_t open = line.rfind('(');
+                if (open != std::string::npos && open > close && line.back() == ')')
+                    channel = ParseChannel(line.substr(open + 1, line.size() - open - 2));
+                out.push_back({ver, channel, std::string()});
                 cur = &out.back();
             }
             else cur = nullptr; // [Unreleased], or anything else
@@ -131,17 +152,19 @@ std::vector<ReleaseNotes::Section> ReleaseNotes::Parse(const std::string& aChang
 }
 
 std::vector<ReleaseNotes::Section> ReleaseNotes::Since(const std::vector<Section>& aSections, const std::string& aSeen,
-                                                       const std::string& aCurrent)
+                                                       const std::string& aCurrent, const std::string& aChannel)
 {
     std::vector<Section> out;
     Version current, seen;
     if (!ParseVersion(aCurrent, current)) return out;
     const bool hasSeen = ParseVersion(aSeen, seen);
+    const EChannel running = ParseChannel(aChannel);
     for (const Section& s : aSections)
     {
         Version v;
         if (!ParseVersion(s.Version, v)) continue;
         if (s.Body.find_first_not_of(" \t\r\n") == std::string::npos) continue; // nothing to show
+        if (!ChannelShows(s.Channel, running)) continue;                          // another channel's
         if (current < v) continue;                           // newer than this DLL
         if (hasSeen ? !(seen < v) : !(v == current)) continue; // already seen, or only the current one
         out.push_back(s);
@@ -166,7 +189,12 @@ ReleaseNotes::Start ReleaseNotes::Decide(bool aShowSetting, bool aFirstRun, cons
     Version current, seen;
     if (!ParseVersion(aCurrent, current)) return s;
     const bool hasSeen = ParseVersion(aSeen, seen);
-    if (hasSeen && !(seen < current)) return s; // nothing new (or an older DLL: keep the newer mark)
+    if (hasSeen && !(seen < current))
+    {
+        // Nothing new. An older DLL is remembered, so the next update shows what's newer than it.
+        s.Remember = current < seen;
+        return s;
+    }
     if (aFirstRun || !aShowSetting || !aHasSections)
     {
         s.Remember = true;
