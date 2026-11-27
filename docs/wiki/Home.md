@@ -38,3 +38,10 @@ chat macros in folders and types them into chat for you.
 2. Make a macro: give it one or more lines, each with its own channel and message.
 3. Send it with **Send now**, a hotkey of your own, or the quick menu (right-click the chat
    bubble icon).
+
+## Credits
+
+The addon is modelled on [Chat Shorts](https://github.com/agaertner/bhm-chat-macros), a Blish
+HUD module by Nekres (agaertner on GitHub): its feature set, and a few facts from it (the chat
+commands in each game language, the channel colours, the name length limit). No code was
+copied; this addon was written from scratch in C++ for Nexus.
