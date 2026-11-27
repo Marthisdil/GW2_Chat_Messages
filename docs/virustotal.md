@@ -95,6 +95,22 @@ Only a **draft** (one held for review, below) can be re-run: its DLL and text ar
 it's published if the new scan is clean. To re-run for a tag that's already pushed: Actions >
 **Release** > **Run workflow** > enter the tag.
 
+## A test release
+
+To check the scan and the release text without releasing a version: Actions > **Release** >
+**Run workflow**, **Use workflow from: main**, leave the tag empty, tick **test**, **Run
+workflow**. It builds `main` as it is, tags it `test-<short sha>`, takes the notes from
+`[Unreleased]`, and publishes a pre-release titled "TEST ..., to be deleted" with a warning at
+the top. `CHANGELOG.md` and the version aren't touched, and Nexus ignores the tag (it isn't
+numbers only). Delete it afterwards, tag included:
+
+```powershell
+gh release delete test-<short sha> --cleanup-tag --yes
+```
+
+The DLL stays on VirusTotal (uploads can't be taken back), which is fine for a build of public
+code.
+
 ## When it's held as a draft
 
 The release is saved as a **draft** (not visible to players, not offered by Nexus) and the
