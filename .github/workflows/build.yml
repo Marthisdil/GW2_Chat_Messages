@@ -15,11 +15,11 @@ jobs:
       matrix:
         configuration: [Debug, Release]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
 
-      - uses: microsoft/setup-msbuild@v2
+      - uses: microsoft/setup-msbuild@v3
 
       - name: Build
         run: msbuild GW2_Chat_Messages.sln /m /p:Configuration=${{ matrix.configuration }} /p:Platform=x64
@@ -37,7 +37,7 @@ jobs:
         shell: pwsh
         run: powershell -NoProfile -ExecutionPolicy Bypass -File tools\run_tests.ps1
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: matrix.configuration == 'Release'
         with:
           name: GW2_Chat_Messages
@@ -50,7 +50,7 @@ jobs:
         shell: pwsh
         run: powershell -NoProfile -ExecutionPolicy Bypass -File tools\run_audit.ps1 -Tests
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always() && matrix.configuration == 'Release'
         with:
           name: clang-audit
