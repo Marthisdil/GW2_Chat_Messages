@@ -78,7 +78,9 @@ to scan, where untrusted data comes in, which bug classes matter here, and how p
 - **Win32 results:** unchecked `BOOL`/`HRESULT`/handles, handles not closed (WinHTTP),
   `INVALID_HANDLE_VALUE` vs `nullptr`.
 - **`tools/*.ps1` and CI:** paths with spaces (the repo is under `C:\Dropbox\~ Github`), and
-  nothing that runs untrusted input.
+  nothing that runs untrusted input. The release workflow: the tag is checked before use and
+  passed through the environment, never pasted into a script; the `VT_API_KEY` secret only
+  reaches the scan step and is never printed; VirusTotal's answers are only read as data.
 
 ## Not worth reporting
 

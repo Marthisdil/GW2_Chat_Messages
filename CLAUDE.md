@@ -244,6 +244,13 @@ to the todo list", add it there (don't start building it). Move agreed items int
   `.vcxproj`.
 - `.github/workflows/build.yml`: CI builds Debug and Release, checks the `GetAddonDef` export,
   and uploads the DLL.
+- `.github/workflows/release.yml`: on a pushed version tag (on `main`, matching `Version.h`)
+  builds Release, runs the tests, scans the DLL on VirusTotal (`tools/virustotal_scan.ps1`,
+  secret `VT_API_KEY`) and publishes the GitHub release (changelog section from
+  `tools/release_notes.ps1`, SHA-256, scan link, build stamp). Too many engines flagging it
+  (variable `VT_MAX_FLAGS`, default 3) or an unfinished scan holds it as a draft. Setup and reuse
+  in other projects: `docs/virustotal.md`. `virustotal_scan.ps1` stays self-contained (no
+  project paths) so it can be copied as it is.
 - Addon data lives in `<GW2>\addons\GW2_Chat_Messages\`. Nexus does not create this folder.
 
 ## Nexus addon rules
@@ -269,7 +276,9 @@ to the todo list", add it there (don't start building it). Move agreed items int
   `src/Version.h` and `CHANGELOG.md` (it moves the `[Unreleased]` notes under the new version,
   with the channel in the heading, which "What's new" shows after the update: Rel builds show
   Rel releases only, Beta builds Beta and Rel, Dev builds all). The GitHub release tag is the numbers only (`2026.11.21.1412`; Nexus ignores
-  suffixed tags); Dev and Beta releases are GitHub pre-releases.
+  suffixed tags); Dev and Beta releases are GitHub pre-releases. Release by pushing that tag on
+  the merged commit (only on the owner's OK: it publishes): the Release workflow builds, scans
+  and publishes it (`docs/virustotal.md`). Never create a release by hand.
 
 ## Building (local notes)
 

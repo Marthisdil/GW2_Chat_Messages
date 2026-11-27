@@ -1,0 +1,156 @@
+name: Release
+
+# Builds a release from a version tag, scans the DLL on VirusTotal, and publishes the GitHub
+# release with the changelog section, the SHA-256 and the scan link (docs/virustotal.md).
+#
+# Start it by pushing a tag that is the version's numbers (src/Version.h's CHATMSG_VER_TAG), on
+# a commit that is on main:
+#   git tag 2026.11.21.1412 <sha on main>
+#   git push origin 2026.11.21.1412
+# or, for a tag that's already pushed, from the Actions tab: Release > Run workflow > the tag.
+#
+# Needs the repository secret VT_API_KEY (a VirusTotal API key). The repository variable
+# VT_MAX_FLAGS (default 3) is how many engines may flag the DLL before the release is held as
+# a draft for review.
+
+on:
+  push:
+    tags: ['[0-9][0-9][0-9][0-9].[0-9][0-9].[0-9][0-9].[0-9][0-9][0-9][0-9]']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'The release tag (numbers only, e.g. 2026.11.21.1412)'
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-2022
+    # Build ~10 minutes, scan up to 20 more.
+    timeout-minutes: 45
+    env:
+      # Passed through the environment and checked before use, never pasted into a script.
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - name: Check the tag and the VirusTotal key
+        shell: pwsh
+        env:
+          VT_API_KEY: ${{ secrets.VT_API_KEY }}
+        run: |
+          if ($env:TAG -notmatch '^\d{4}\.\d{2}\.\d{2}\.\d{4}$') { throw "'$env:TAG' isn't a release tag (numbers only: 2026.11.21.1412)." }
+          if ([string]::IsNullOrWhiteSpace($env:VT_API_KEY)) { throw "The VT_API_KEY secret isn't set (docs/virustotal.md, 'Setting it up')." }
+
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ env.TAG }}
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Check the version and that the commit is on main
+        id: version
+        shell: pwsh
+        run: |
+          $h = Get-Content src\Version.h -Raw
+          $tag = [regex]::Match($h, '#define CHATMSG_VER_TAG\s+"([^"]+)"').Groups[1].Value
+          $text = [regex]::Match($h, '#define CHATMSG_VER_TEXT\s+"([^"]+)"').Groups[1].Value
+          $channel = [regex]::Match($h, '#define CHATMSG_VER_CHANNEL\s+"([^"]+)"').Groups[1].Value
+          if ($tag -ne $env:TAG) { throw "The tag is $env:TAG but src\Version.h says ${tag}: run tools\set_version.ps1, merge, and tag that commit." }
+          if ($channel -notin @('Dev', 'Beta', 'Rel')) { throw "Unknown channel '$channel' in src\Version.h." }
+          git merge-base --is-ancestor HEAD origin/main
+          if ($LASTEXITCODE -ne 0) { throw "The tagged commit isn't on main: only merged code is released." }
+          "text=$text" >> $env:GITHUB_OUTPUT
+          "channel=$channel" >> $env:GITHUB_OUTPUT
+          Write-Host "Releasing $text ($channel) from $(git rev-parse --short HEAD)"
+
+      - uses: microsoft/setup-msbuild@v2
+
+      - name: Build
+        run: msbuild GW2_Chat_Messages.sln /m /p:Configuration=Release /p:Platform=x64
+
+      - name: Check GetAddonDef export
+        shell: pwsh
+        run: |
+          $dumpbin = Get-ChildItem "${env:ProgramFiles}\Microsoft Visual Studio\2022\*\VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe" | Select-Object -First 1
+          $exports = & $dumpbin.FullName /exports "build\Release\GW2_Chat_Messages.dll"
+          if (-not ($exports -match '\bGetAddonDef\b')) { throw "GetAddonDef is not exported" }
+
+      - name: Unit tests
+        shell: pwsh
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tools\run_tests.ps1
+
+      - name: Release notes from CHANGELOG.md
+        shell: pwsh
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tools\release_notes.ps1 -Version $env:TAG -Out build\notes.md
+
+      - name: VirusTotal scan
+        id: scan
+        shell: pwsh
+        env:
+          VT_API_KEY: ${{ secrets.VT_API_KEY }}
+          VT_MAX_FLAGS: ${{ vars.VT_MAX_FLAGS }}
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File tools\virustotal_scan.ps1 -Path build\Release\GW2_Chat_Messages.dll -MarkdownOut build\vt.md -JsonOut build\vt.json
+          $code = $LASTEXITCODE
+          if ($code -eq 1) { throw "The VirusTotal scan failed (see above)." }
+          $max = 3
+          if ($env:VT_MAX_FLAGS -match '^\d+$') { $max = [int]$env:VT_MAX_FLAGS }
+          $r = @(Get-Content build\vt.json -Raw | ConvertFrom-Json)
+          $hold = @()
+          foreach ($x in $r) {
+            if ($x.Status -ne 'completed') { $hold += "$($x.Name): the scan didn't finish in time." }
+            elseif (($x.Malicious + $x.Suspicious) -gt $max) { $hold += "$($x.Name): $($x.Malicious + $x.Suspicious) engines flagged it (more than $max)." }
+          }
+          "hold=$(if ($hold.Count) { 'true' } else { 'false' })" >> $env:GITHUB_OUTPUT
+          $hold | Set-Content build\hold.txt
+          exit 0   # a timeout (exit 2) is handled by the hold above, not a failed step
+
+      - name: Publish the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TEXT: ${{ steps.version.outputs.text }}
+          CHANNEL: ${{ steps.version.outputs.channel }}
+          HOLD: ${{ steps.scan.outputs.hold }}
+        run: |
+          $stamp = (Get-Item build\Release\GW2_Chat_Messages.dll).VersionInfo.Comments
+          $notes = (Get-Content build\notes.md -Raw).TrimEnd() + "`n`n" + (Get-Content build\vt.md -Raw).TrimEnd() + "`n`nBuild: $stamp`n"
+          [System.IO.File]::WriteAllText("$PWD\build\release.md", $notes, (New-Object System.Text.UTF8Encoding($false)))
+          $pre = if ($env:CHANNEL -ne 'Rel') { 'true' } else { 'false' }
+          $dll = 'build\Release\GW2_Chat_Messages.dll'
+          gh release view $env:TAG *> $null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Release $env:TAG exists: replacing its DLL and text."
+            gh release upload $env:TAG $dll --clobber
+            if ($LASTEXITCODE -ne 0) { throw "Upload failed" }
+            $ghArgs = @('release', 'edit', $env:TAG, '--title', $env:TEXT, '--notes-file', 'build\release.md', "--prerelease=$pre")
+            if ($env:HOLD -eq 'true') { $ghArgs += '--draft=true' }
+            gh @args
+          } else {
+            $ghArgs = @('release', 'create', $env:TAG, $dll, '--verify-tag', '--title', $env:TEXT, '--notes-file', 'build\release.md', "--prerelease=$pre")
+            if ($env:HOLD -eq 'true') { $ghArgs += '--draft' }
+            gh @args
+          }
+          if ($LASTEXITCODE -ne 0) { throw "gh release failed" }
+
+      - name: Held for review
+        if: steps.scan.outputs.hold == 'true'
+        shell: pwsh
+        run: |
+          Get-Content build\hold.txt | ForEach-Object { Write-Host "::error::$_" }
+          throw "The release was saved as a draft. Check the VirusTotal report (link in the draft), then publish it on GitHub, or fix and tag again."
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-${{ env.TAG }}
+          path: |
+            build/Release/GW2_Chat_Messages.dll
+            build/release.md
+            build/vt.json
+          if-no-files-found: ignore
