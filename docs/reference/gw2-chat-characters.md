@@ -87,7 +87,8 @@ Punctuation, so covered) and `© ™ ®`. These are one player's list, more than
   glyph ranges, or the picker shows "?" even where the game shows the character. Check which
   ranges Nexus loads (the fonts are Nexus', not ours), and whether the addon can add a font with
   the extra ranges without changing `imconfig.h` or keeping an `ImFont*` (both forbidden in
-  `CLAUDE.md`).
+  `CLAUDE.md`). The game's own font can't be used (it's packed inside `Gw2.dat`); the plan, a
+  built-in open-licence font loaded with just the picker's glyph ranges, is in the todo item.
 - **Be careful with what gets offered:** some characters in these blocks are offensive (the
   forum list above includes a swastika); the picker's list is hand-picked, not a whole block
   dump.

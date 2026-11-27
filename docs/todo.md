@@ -194,6 +194,18 @@ be clicked into a message.
   - Grouping (arrows, symbols, shapes...), a "recently used" row, and inserting at the text
     cursor rather than at the end of the message.
   - Each special character counts toward the 199-character limit (one or two units).
+- **The picker's font (2026-11-26):** the game's own font can't be used: it's packed inside
+  `Gw2.dat`, no API exposes it, and shipping it would mean handing out ArenaNet's files. What
+  other players see depends only on their game's font, so what matters is offering only
+  characters checked in game. For our own window:
+  - Build in a font with an open licence (e.g. from the Noto family) as a resource and load it
+    with `Fonts_AddFromResource`/`Fonts_AddFromMemory`, with ImGui glyph ranges set to just the
+    picker's characters, so the window draws exactly those. Leave the CJK range out (atlas size).
+  - At startup, test each picker character with `ImFont::FindGlyphNoFallback` and hide (and log)
+    any the font lacks, so the picker never shows a "?" box. It may also show whether Nexus'
+    own fonts already have them (not known yet).
+  - Every tested character is one UTF-16 unit, which ImGui v1.80 handles as it is. Never keep the
+    `ImFont*` (`CLAUDE.md`, Nexus addon rules).
 
 **Advanced option?** No (2026-11-26): it only inserts text.
 
