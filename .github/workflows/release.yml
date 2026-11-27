@@ -32,8 +32,8 @@ concurrency:
 jobs:
   release:
     runs-on: windows-2022
-    # Build ~10 minutes, scan up to 20 more.
-    timeout-minutes: 45
+    # Build and tests ~12 minutes, the scan up to 20 more, plus VirusTotal's back-offs.
+    timeout-minutes: 60
     env:
       # Passed through the environment and checked before use, never pasted into a script.
       TAG: ${{ github.event.inputs.tag || github.ref_name }}
@@ -123,18 +123,22 @@ jobs:
           [System.IO.File]::WriteAllText("$PWD\build\release.md", $notes, (New-Object System.Text.UTF8Encoding($false)))
           $pre = if ($env:CHANNEL -ne 'Rel') { 'true' } else { 'false' }
           $dll = 'build\Release\GW2_Chat_Messages.dll'
-          gh release view $env:TAG *> $null
+          # A published release is never changed: players already have its DLL, and a rebuild has
+          # a different SHA-256 (the build stamp's time). A fix needs a new version. Only a draft
+          # (held earlier) is replaced, and published once its new scan is clean.
+          $draft = gh release view $env:TAG --json isDraft -q .isDraft 2> $null
           if ($LASTEXITCODE -eq 0) {
-            Write-Host "Release $env:TAG exists: replacing its DLL and text."
+            if ($draft -ne 'true') { throw "Release $env:TAG is already published; it's never replaced. Set a new version (tools\set_version.ps1) and tag that." }
+            Write-Host "Draft release $env:TAG exists: replacing its DLL and text."
             gh release upload $env:TAG $dll --clobber
             if ($LASTEXITCODE -ne 0) { throw "Upload failed" }
-            $ghArgs = @('release', 'edit', $env:TAG, '--title', $env:TEXT, '--notes-file', 'build\release.md', "--prerelease=$pre")
-            if ($env:HOLD -eq 'true') { $ghArgs += '--draft=true' }
-            gh @args
+            $ghArgs = @('release', 'edit', $env:TAG, '--title', $env:TEXT, '--notes-file', 'build/release.md', "--prerelease=$pre")
+            if ($env:HOLD -ne 'true') { $ghArgs += '--draft=false' }
+            gh @ghArgs
           } else {
-            $ghArgs = @('release', 'create', $env:TAG, $dll, '--verify-tag', '--title', $env:TEXT, '--notes-file', 'build\release.md', "--prerelease=$pre")
+            $ghArgs = @('release', 'create', $env:TAG, $dll, '--verify-tag', '--title', $env:TEXT, '--notes-file', 'build/release.md', "--prerelease=$pre")
             if ($env:HOLD -eq 'true') { $ghArgs += '--draft' }
-            gh @args
+            gh @ghArgs
           }
           if ($LASTEXITCODE -ne 0) { throw "gh release failed" }
 
