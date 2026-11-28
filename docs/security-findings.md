@@ -53,7 +53,7 @@ folder with someone else's file), **Medium** (wrong behaviour reachable with rea
 | [SEC-034](#sec-034) | 2026-11-24 05:01 | High | `src/MacroTree.cpp:289` (`ParseMacro`) | A JSON import (or a shared library) skipped the 50-line limit: one macro can hold about 1.4 million lines, and selecting it freezes the game | Fixed | PR #67, commit `7389e5d`, build `7d9876e` |
 | [SEC-035](#sec-035) | 2026-11-24 12:58 | High | `src/SendPlan.cpp:110` (`Build`), `src/Sender.cpp:146` (`TypeUtf8`) | A whisper recipient from a file has no length limit: sending it types every character on the game's window thread (the game freezes) and leaves chat open | Fixed | PR #70, commit `7f3167e`, build `e1d33cf` |
 | [SEC-036](#sec-036) | 2026-11-24 22:12 | Low | `src/MapNames.cpp:291` (`Shutdown`), `src/Sender.cpp:406` (`Shutdown`) | The stop flag is set and the worker woken without its mutex: a wakeup lost at exactly the wrong moment would hang unloading the addon (the game freezes) | Fixed | PR #73, commit `134714d`, build `b4815cd` |
-| [SEC-037](#sec-037) | 2026-11-28 13:30 | Low | `src/ChatShorts.cpp` (`Build`) | The new Blish HUD import didn't clean lines as every other import does: control characters stayed in messages and whisper recipients, and a recipient had no length limit (SEC-035's cap) | Fixed | `feature/blish-import`, before its first commit |
+| [SEC-037](#sec-037) | 2026-11-28 13:30 | Low | `src/ChatShorts.cpp` (`Build`) | The new Blish HUD import didn't clean lines as every other import does: control characters stayed in messages and whisper recipients, and a recipient had no length limit (SEC-035's cap) | Fixed | PR #107, commit `ae83fa2` |
 
 "Build" is the build stamp's commit (shown in the Nexus log and the DLL's Properties). Until a
 release is tagged, it's the PR's commit; the release that first ships a fix is added when it's
@@ -640,8 +640,8 @@ made.
   every send and a recipient of any length into `macros.json`.
 - **Decision (2026-11-28):** fix it on the same branch.
 - **Status:** Fixed on `feature/blish-import` before its first commit: both fields are cleaned,
-  the recipient is cut with a warning, tested in `tests/ChatShortsTests.cpp`. The PR is named
-  here once it's open.
+  the recipient is cut with a warning, tested in `tests/ChatShortsTests.cpp`. **PR #107**,
+  commit `ae83fa2` (the first build with it is that commit).
 
 ## Scan log
 
