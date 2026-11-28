@@ -6,7 +6,7 @@
 # Usage:
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tools\perf_report.ps1 -File <path to perf_...csv>
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tools\perf_report.ps1 -Dir <GW2>\addons\GW2_Chat_Messages\perf
-#     (-Dir: the newest file in that folder)
+#     (-Dir: the file in that folder written last)
 # -Top N: how many of the slowest frames to list (default 10).
 # Works in Windows PowerShell 5.1 and PowerShell 7.
 param(
@@ -18,7 +18,7 @@ $ErrorActionPreference = "Stop"
 
 if (-not $File) {
     if (-not $Dir) { throw "Give -File <perf_...csv> or -Dir <the perf folder>." }
-    $newest = Get-ChildItem -LiteralPath $Dir -Filter "perf_*_UTC.csv" | Sort-Object Name -Descending | Select-Object -First 1
+    $newest = Get-ChildItem -LiteralPath $Dir -Filter "perf_*_UTC.csv" | Sort-Object LastWriteTimeUtc, Name -Descending | Select-Object -First 1
     if (-not $newest) { throw "No perf_*_UTC.csv in $Dir" }
     $File = $newest.FullName
 }
@@ -82,7 +82,7 @@ Write-Host ""
 Write-Host "This addon"
 Write-Host ("  {0} ms a frame on average ({1}% of the frame); slowest {2} ms; worst second's 99th percentile {3} ms" -f (F $addonAvg 3), (F (100.0 * $addonAvg / $gameAvg) 2), (F $addonMax 2), (F $addonP99Max 2))
 Write-Host ("  frames over 2 ms: {0} ({1}%)" -f $slow, (F (100.0 * $slow / $frames) 3))
-Write-Host ("  slowest pass through our WndProc hooks: {0} us" -f (F $wndMax 1))
+Write-Host ("  slowest pass through the hotkey hook: {0} us" -f (F $wndMax 1))
 Write-Host ""
 Write-Host "Where the addon's time went (average ms a frame)"
 foreach ($s in ($sections | Sort-Object { -$sec[$_] })) {

@@ -72,12 +72,14 @@ rules, tested by `tests/PerfTests.cpp`; `src/PerfRecorder.*`, the timing and the
   to the next), the addon's time in it (`AddonRender`, the options page and the Quick Access
   menu), and the sections: languages, poll (sender, map, link files, hotkeys), library window,
   quick menu, other windows, saves (saves, backups, map list check), options page. Also the
-  slowest pass through our two WndProc hooks each second. Not recording costs one `bool` check
+  slowest pass through the hotkey hook (`Hotkeys.cpp`) each second (not Sender's hook: its
+  passes are the send steps, mostly the game handling our keys). Not recording costs one `bool` check
   per scope.
-- **The file:** `<addon>\perf\perf_YYYY-MM-DD_HH-MM-SS_UTC.csv`. A `#` line (version, build,
+- **The file:** `<addon>\perf\perf_YYYY-MM-DD_HH-MM-SS_UTC.csv` (`..._SS_2_UTC.csv` for a
+  second one started in the same second). A `#` line (version, build,
   limit), the column names, then rows:
   - `second`: once a second: frames, game and addon avg/max/99th percentile (ms), frames over
-    2 ms in the addon, each section's average, the WndProc maximum (us), and what the player
+    2 ms in the addon, each section's average, the hotkey hook's maximum (us), and what the player
     was doing (gameplay, map id, library open, quick menu open, sending, macro count);
   - `spike`: a frame where the addon took over 2 ms or the game over 50 ms (at most 20 a
     second), with its sections;
@@ -88,7 +90,7 @@ rules, tested by `tests/PerfTests.cpp`; `src/PerfRecorder.*`, the timing and the
 - **Stops by itself** at the chosen length (5, 10, 30 or 60 minutes), at 50 MB, when the addon
   unloads, or when Advanced options are turned off. The options page shows a live line while it
   runs and the last file's name and how it stopped.
-- **The summary:** `tools\perf_report.ps1 -Dir <addon>\perf` (the newest file) or `-File`:
+- **The summary:** `tools\perf_report.ps1 -Dir <addon>\perf` (the last one written) or `-File`:
   game and addon averages and maxima, the addon's share of the frame, frames over 2 ms, the
   sections, the same by what the player was doing, the slowest frames with the events around
   them, and the marks.

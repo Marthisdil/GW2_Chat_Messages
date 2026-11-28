@@ -132,13 +132,17 @@ std::string Perf::CleanName(std::string_view aName)
     return out;
 }
 
-std::string Perf::FileName(std::time_t aUtc)
+std::string Perf::FileName(std::time_t aUtc, unsigned aCopy)
 {
     std::tm t{};
-    if (!TimeParts(aUtc, t)) return "perf_unknown_UTC.csv";
-    char buf[64];
-    std::snprintf(buf, sizeof(buf), "perf_%04d-%02d-%02d_%02d-%02d-%02d_UTC.csv", t.tm_year + 1900, t.tm_mon + 1, t.tm_mday,
-                  t.tm_hour, t.tm_min, t.tm_sec);
+    char copy[16] = "";
+    if (aCopy > 1) std::snprintf(copy, sizeof(copy), "_%u", aCopy);
+    char buf[80];
+    if (!TimeParts(aUtc, t))
+        std::snprintf(buf, sizeof(buf), "perf_unknown%s_UTC.csv", copy);
+    else
+        std::snprintf(buf, sizeof(buf), "perf_%04d-%02d-%02d_%02d-%02d-%02d%s_UTC.csv", t.tm_year + 1900, t.tm_mon + 1,
+                      t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, copy);
     return buf;
 }
 

@@ -75,7 +75,8 @@ namespace PerfRec
         bool          m_TopLevel;
     };
 
-    // Times one pass through a WndProc hook (any thread; the slowest per second is kept).
+    // Times one pass through the hotkey hook (Hotkeys.cpp; the slowest per second is kept). Not in
+    // Sender's hook: its passes are our send steps, mostly the game's own handling of the keys.
     class WndProcTimer
     {
     public:

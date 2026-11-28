@@ -53,6 +53,8 @@ namespace
     bool                  s_On = false;
     std::filesystem::path s_File;
     std::string           s_FileName;
+    std::time_t           s_FileUtc  = 0;  // the second s_FileName was made in
+    unsigned              s_FileCopy = 1;  // its copy number (several starts in one second)
     int64_t               s_StartTick  = 0;
     double                s_LimitSec   = 0.0;
     uint64_t              s_Bytes      = 0;
@@ -136,10 +138,15 @@ bool PerfRec::Start(int aMinutes, std::string& aError)
     aError.clear();
     if (!Available()) { aError = TR("The frame recorder is only in Dev builds made on your own PC."); return false; }
     if (s_On) return true;
-    const std::filesystem::path dir = Storage::PerfDir();
-    if (dir.empty()) { aError = TR("The addon folder isn't available."); return false; }
+    // No disk work here (the options page): the writer job makes the folder (AppendText).
+    const std::filesystem::path addon = Storage::AddonDir();
+    if (addon.empty()) { aError = TR("The addon folder isn't available."); return false; }
+    const std::filesystem::path dir = addon / "perf";
     const std::time_t utc = std::time(nullptr);
-    s_FileName = Perf::FileName(utc);
+    // A new name every time: a restart within the same second must not empty the last file.
+    s_FileCopy = (utc == s_FileUtc && !s_FileName.empty()) ? s_FileCopy + 1 : 1;
+    s_FileUtc  = utc;
+    s_FileName = Perf::FileName(utc, s_FileCopy);
     s_File     = dir / PathText::FromUtf8(s_FileName);
     s_LimitSec = std::max(aMinutes, 1) * 60.0;
     s_WriteFailed = false;

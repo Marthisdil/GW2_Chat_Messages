@@ -65,7 +65,7 @@ namespace Perf
         double AddonAvg = 0.0, AddonMax = 0.0, AddonP99 = 0.0;
         size_t AddonSlow = 0; // frames over kSlowAddonMs
         double SectionAvg[kSections] = {};
-        double WndProcMaxUs = 0.0; // the slowest pass through our WndProc hooks
+        double WndProcMaxUs = 0.0; // the slowest pass through our hotkey hook (Hotkeys.cpp)
     };
 
     // One second's frames. Keeps its memory between seconds (no allocation per frame).
@@ -91,7 +91,8 @@ namespace Perf
     std::string CleanName(std::string_view aName);
 
     // "perf_YYYY-MM-DD_HH-MM-SS_UTC.csv"
-    std::string FileName(std::time_t aUtc);
+    // aCopy > 1: a second recording started in the same second ("..._01-02-03_2_UTC.csv").
+    std::string FileName(std::time_t aUtc, unsigned aCopy = 1);
     // "HH:MM:SS" (UTC)
     std::string ClockText(std::time_t aUtc);
 

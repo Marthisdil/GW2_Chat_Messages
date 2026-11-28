@@ -97,6 +97,9 @@ static void TestFileName()
     // 2026-11-28 01:02:03 UTC
     const std::time_t t = 1795827723;
     CHECK(Perf::FileName(t) == "perf_2026-11-28_01-02-03_UTC.csv");
+    CHECK(Perf::FileName(t, 1) == "perf_2026-11-28_01-02-03_UTC.csv");
+    CHECK(Perf::FileName(t, 2) == "perf_2026-11-28_01-02-03_2_UTC.csv");
+    CHECK(Perf::FileName(t, 2) != Perf::FileName(t));
     CHECK(Perf::ClockText(t) == "01:02:03");
 }
 
