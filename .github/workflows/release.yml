@@ -94,7 +94,12 @@ jobs:
       - uses: microsoft/setup-msbuild@v3
 
       - name: Build
-        run: msbuild GW2_Chat_Messages.sln /m /p:Configuration=Release /p:Platform=x64
+        # The frame recorder is never in a release (src/PerfRecorder.h); checked below.
+        run: msbuild GW2_Chat_Messages.sln /m /p:Configuration=Release /p:Platform=x64 /p:ChatMsgNoPerfRecorder=true
+
+      - name: Check the frame recorder isn't in the DLL
+        shell: pwsh
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tools\check_no_recorder.ps1 -Dll "build\Release\GW2_Chat_Messages.dll"
 
       - name: Check GetAddonDef export
         shell: pwsh

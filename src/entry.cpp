@@ -16,6 +16,7 @@
 #include "Languages.h"
 #include "Localization.h"
 #include "MapNames.h"
+#include "PerfRecorder.h"
 #include "Sender.h"
 #include "Storage.h"
 #include "Ui.h"
@@ -96,6 +97,7 @@ namespace
         Ui::Init();
         Sender::Init();  // its WndProc hook only reacts to our own private message
         Hotkeys::Init(); // its WndProc hook only reads key presses, never blocks them
+        PerfRec::Init(); // the frame recorder: only in builds made on the owner's PC (PerfRecorder.h)
 
         // Quick Access textures must exist before the shortcut is added.
         g_Api->Textures_LoadFromResource(kIconId, IDB_ICON, s_Module, nullptr);
@@ -127,6 +129,7 @@ namespace
         g_Api->InputBinds_Deregister(kMenuKeybind);
         g_Api->InputBinds_Deregister(kToggleKeybind);
 
+        PerfRec::Shutdown(); // a recording stops (its last rows go to the writer thread)
         Hotkeys::Shutdown(); // no new presses from here on
         Sender::Shutdown(); // joins the send thread, then removes the WndProc hook
         Ui::Shutdown();     // saves pending changes
@@ -141,19 +144,26 @@ namespace
 
     void AddonRender()
     {
+        PerfRec::FrameBegin(); // the frame recorder (only while recording): the previous frame ends here
         if (s_ToggleRequested.exchange(false)) Ui::ToggleMainWindow();
         if (s_MenuRequested.exchange(false)) Ui::ToggleQuickMenu();
-        Languages::Update(); // a language change or reload takes effect here, before anything is drawn
+        {
+            const PerfRec::Scope perf(Perf::Section::Languages);
+            Languages::Update(); // a language change or reload takes effect here, before anything is drawn
+        }
         Ui::Render();
+        PerfRec::FrameEnd();
     }
 
     void AddonOptions()
     {
+        const PerfRec::Scope perf(Perf::Section::Options, true);
         Ui::RenderOptions();
     }
 
     void AddonQuickAccessMenu()
     {
+        const PerfRec::Scope perf(Perf::Section::QuickMenu, true);
         Ui::RenderQuickAccessMenu();
     }
 

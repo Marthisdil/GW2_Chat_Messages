@@ -17,6 +17,7 @@
 #include "Localization.h"
 #include "MapNames.h"
 #include "Mumble.h"
+#include "PerfRecorder.h"
 #include "Placeholders.h"
 #include "SendPlan.h"
 
@@ -85,6 +86,7 @@ namespace
     {
         (void)wParam;
         (void)lParam;
+        [[maybe_unused]] const PerfRec::WndProcTimer perf; // the frame recorder (only while recording)
         if (!s_Hwnd.load()) s_Hwnd = hWnd;
         if (uMsg != s_CallMsg || s_CallMsg == 0) return uMsg; // everything else passes through untouched
 

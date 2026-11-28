@@ -8,6 +8,7 @@
 
 #include "Globals.h"
 #include "Mumble.h"
+#include "PerfRecorder.h"
 
 namespace
 {
@@ -47,6 +48,7 @@ namespace
     UINT OnWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     {
         (void)hWnd;
+        [[maybe_unused]] const PerfRec::WndProcTimer perf; // the frame recorder (only while recording)
         const uint16_t key = KeyOf(uMsg, wParam, lParam);
         if (key == 0 || Hotkey::IsModifierKey(key)) return uMsg;
 

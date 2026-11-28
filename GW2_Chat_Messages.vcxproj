@@ -65,6 +65,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)tools\compile_
       <AdditionalDependencies>winhttp.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
+  <!-- The frame recorder (src/PerfRecorder.*) is only in builds made on the owner's PC: never on
+       GitHub Actions, so no published release has it (CI checks its DLLs for it). Build with
+       /p:ChatMsgNoPerfRecorder=true to leave it out locally too. -->
+  <ItemDefinitionGroup Condition="'$(GITHUB_ACTIONS)' != 'true' And '$(ChatMsgNoPerfRecorder)' != 'true'">
+    <ClCompile>
+      <PreprocessorDefinitions>CHATMSG_PERF_RECORDER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <ClCompile>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -120,6 +128,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)tools\compile_
     <ClCompile Include="src\ReleaseNotes.cpp" />
     <ClCompile Include="src\Welcome.cpp" />
     <ClCompile Include="src\WorkQueue.cpp" />
+    <ClCompile Include="src\Perf.cpp" />
+    <ClCompile Include="src\PerfRecorder.cpp" />
     <ClCompile Include="src\Advanced.cpp" />
     <ClCompile Include="src\Placeholders.cpp" />
     <ClCompile Include="src\Sender.cpp" />
@@ -155,6 +165,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)tools\compile_
     <ClInclude Include="src\ReleaseNotes.h" />
     <ClInclude Include="src\Welcome.h" />
     <ClInclude Include="src\WorkQueue.h" />
+    <ClInclude Include="src\Perf.h" />
+    <ClInclude Include="src\PerfRecorder.h" />
     <ClInclude Include="src\Advanced.h" />
     <ClInclude Include="src\Placeholders.h" />
     <ClInclude Include="src\resource.h" />

@@ -53,6 +53,8 @@
 #include "SendPlan.h"
 #include "Sender.h"
 #include "PathText.h"
+#include "Perf.h"
+#include "PerfRecorder.h"
 #include "Storage.h"
 #include "UiFont.h"
 #include "Welcome.h"
@@ -202,6 +204,7 @@ namespace
         if (s_Tree.FromNewerVersion()) { s_Dirty = false; return; }
         const uint64_t seq = Storage::SaveMacrosLater(s_Tree);
         if (seq == 0) return;
+        PerfRec::Event("save macros"); // the frame recorder (only while recording)
         s_SaveSeq = seq;
         s_Dirty   = false;
     }
@@ -4559,6 +4562,111 @@ namespace
         if (ImGui::IsItemClicked()) Storage::OpenWebPage(aUrl);
     }
 
+    // The frame recorder (PerfRecorder.h): only in builds made on the owner's PC, and only with
+    // Advanced options on. Not in any published release, so it's not in the wiki.
+    int s_PerfMinutes = 10;
+
+    const char* PerfStopText(PerfRec::EStop aWhy)
+    {
+        switch (aWhy)
+        {
+        case PerfRec::EStop::ByUser:      return T("stopped by you");
+        case PerfRec::EStop::TimeLimit:   return T("stopped at the time limit");
+        case PerfRec::EStop::SizeLimit:   return T("stopped at 50 MB");
+        case PerfRec::EStop::Unload:      return T("stopped when the addon unloaded");
+        case PerfRec::EStop::AdvancedOff: return T("stopped when Advanced options were turned off");
+        case PerfRec::EStop::WriteFailed: return T("stopped: the file couldn't be written, see the Nexus log");
+        default:                          return "";
+        }
+    }
+
+    std::string MinutesText(double aSec)
+    {
+        const int s = static_cast<int>(aSec < 0.0 ? 0.0 : aSec);
+        char buf[24];
+        std::snprintf(buf, sizeof(buf), "%d:%02d", s / 60, s % 60);
+        return buf;
+    }
+
+    void DrawFrameRecorder()
+    {
+        if (!PerfRec::Available() || !s_AdvancedOn) return;
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::TextUnformatted(T("Frame recorder (only in builds made on your own PC)"));
+        ImGui::TextWrapped(T("Records how long each game frame takes and how much of it this addon uses, into a file in "
+                           "<GW2>\\addons\\GW2_Chat_Messages\\perf\\. Play as usual while it runs. It stops by itself "
+                           "at the time limit, at 50 MB, or when the addon unloads. tools\\perf_report.ps1 sums the file up."));
+        const PerfRec::Live live = PerfRec::GetLive();
+        UiFont::Row row;
+        if (!live.Recording)
+        {
+            ImGui::AlignTextToFramePadding();
+            ImGui::TextUnformatted(T("Record for"));
+            const std::string current = Fmt(T("%d minutes"), s_PerfMinutes);
+            row.Next(ImGui::CalcTextSize(current.c_str()).x + ImGui::GetFrameHeight() * 2.0f);
+            ImGui::SetNextItemWidth(ImGui::CalcTextSize(current.c_str()).x + ImGui::GetFrameHeight() * 2.0f);
+            if (ImGui::BeginCombo("##perf_minutes", current.c_str()))
+            {
+                for (const int m : Perf::kMinutes)
+                    if (ImGui::Selectable(Fmt(T("%d minutes"), m).c_str(), m == s_PerfMinutes)) s_PerfMinutes = m;
+                ImGui::EndCombo();
+            }
+            row.Next(UiFont::ButtonWidth(T("Start recording")));
+            if (ImGui::Button(T("Start recording")))
+            {
+                std::string error;
+                if (!PerfRec::Start(s_PerfMinutes, error))
+                    ShowError(T("Clicked Start recording in the addon's options"), error);
+            }
+        }
+        else
+        {
+            if (ImGui::Button(T("Stop recording"))) PerfRec::Stop(PerfRec::EStop::ByUser);
+            row.Next(UiFont::ButtonWidth(T("Mark")));
+            if (ImGui::Button(T("Mark"))) PerfRec::Mark();
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip(T("Adds a numbered mark to the file, to find this moment later."));
+            const double fps = live.GameAvgMs > 0.0 ? 1000.0 / live.GameAvgMs : 0.0;
+            ImGui::TextColored(kWarnColor, T("Recording %s of %s: game %.1f ms a frame (%.0f fps); this addon %.2f ms on average, %.2f ms at most."),
+                               MinutesText(live.ElapsedSec).c_str(), MinutesText(live.LimitSec).c_str(), live.GameAvgMs, fps,
+                               live.AddonAvgMs, live.AddonMaxMs);
+            ImGui::TextDisabled(T("Frames: %s, of which over 2 ms in this addon: %s. File: %s"), std::to_string(live.Frames).c_str(),
+                                std::to_string(live.SlowFrames).c_str(), live.File.c_str());
+        }
+        if (!live.Recording && !live.File.empty())
+            ImGui::TextDisabled(T("Last recording: %s (%s)."), live.File.c_str(), PerfStopText(live.LastStop));
+        if (ImGui::Button(T("Open the perf folder"))) Storage::OpenFolder(Storage::PerfDir());
+    }
+
+    // Once a frame, while recording: what the player is doing, for the file. Advanced options
+    // turned off stops it (the recorder is behind them).
+    void PerfContext()
+    {
+        if (!PerfRec::Recording()) return;
+        if (!s_AdvancedOn)
+        {
+            PerfRec::Stop(PerfRec::EStop::AdvancedOff);
+            return;
+        }
+        static uint64_t s_CountGen = ~0ull;
+        static uint32_t s_Count    = 0;
+        if (s_CountGen != s_TreeGen) // counted again only when the library changed
+        {
+            size_t macros = 0;
+            Tree::CountDescendants(s_Tree.Root(), nullptr, &macros);
+            s_Count    = static_cast<uint32_t>(std::min<size_t>(macros, UINT32_MAX));
+            s_CountGen = s_TreeGen;
+        }
+        Perf::Context c;
+        c.Gameplay    = InGameplay();
+        c.MapId       = WhereAmI().MapId;
+        c.LibraryOpen = s_ShowMainWindow;
+        c.MenuOpen    = ImGui::IsPopupOpen(kQuickMenuPopup);
+        c.Sending     = Sender::IsBusy();
+        c.Macros      = s_Count;
+        PerfRec::SetContext(c);
+    }
+
     // "Advanced options": one box for the features most players never need (Advanced.h). [?] opens
     // the wiki page that explains it.
     void DrawAdvancedOption()
@@ -4586,6 +4694,7 @@ namespace
             if (in.Cooldowns > 0)
                 ImGui::TextColored(kWarnColor, T("%zu macro(s) with a cooldown: it's ignored while this is off."), in.Cooldowns);
         }
+        DrawFrameRecorder();
     }
 
     // The options page's map list: when the GW2 API's list was last fetched, and a button to do
@@ -4785,6 +4894,7 @@ namespace
         std::shared_ptr<const nlohmann::json> json;
         if (!s_Tree.FromNewerVersion()) json = std::make_shared<const nlohmann::json>(s_Tree.ToJson());
         s_BackupRunning = true;
+        PerfRec::Event(aManual ? "backup now" : "backup");
         const uint64_t gen = s_TreeGen;
         Storage::Post([json, aKind, aKeep, aForce, aManual, gen] {
             BackupDone d;
@@ -5331,11 +5441,14 @@ void Ui::Shutdown()
 void Ui::Render()
 {
     Sender::FrameRendered(); // first: the sender's whisper pauses count frames
-    ShowLanguageProblems(); // after a reload (Languages::Update ran before this)
-    PollSender();
-    WatchMap();
-    SyncLinks(false);
-    HandleHotkeys();
+    {
+        const PerfRec::Scope perf(Perf::Section::Poll); // the frame recorder (only while recording)
+        ShowLanguageProblems(); // after a reload (Languages::Update ran before this)
+        PollSender();
+        WatchMap();
+        SyncLinks(false);
+        HandleHotkeys();
+    }
     UiFont::NewFrame();
     UiFont::Push(); // the chosen text size, for our windows only
     if (s_WelcomePending && InGameplay()) // a first run: the library opens with the welcome in it
@@ -5355,19 +5468,36 @@ void Ui::Render()
         s_ShowMainWindow   = true;
         StartTour();
     }
-    if (s_ShowMainWindow) DrawMainWindow();
-    DrawTour();
-    DrawNotesWindow();
-    DrawImportWindow();
-    DrawExportWindow();
-    DrawQuickMenuPopup();
-    DrawErrorWindow();
+    if (s_ShowMainWindow)
+    {
+        const PerfRec::Scope perf(Perf::Section::Library);
+        DrawMainWindow();
+    }
+    {
+        const PerfRec::Scope perf(Perf::Section::Windows);
+        DrawTour();
+        DrawNotesWindow();
+        DrawImportWindow();
+        DrawExportWindow();
+    }
+    {
+        const PerfRec::Scope perf(Perf::Section::QuickMenu);
+        DrawQuickMenuPopup();
+    }
+    {
+        const PerfRec::Scope perf(Perf::Section::Windows);
+        DrawErrorWindow();
+    }
     UiFont::Pop();
-    if (s_Dirty && ImGui::GetTime() >= s_SaveAt) SaveNow();
-    PollSave();
-    PollBackups();
-    CheckBackups();
-    CheckMapList();
+    {
+        const PerfRec::Scope perf(Perf::Section::Saves);
+        if (s_Dirty && ImGui::GetTime() >= s_SaveAt) SaveNow();
+        PollSave();
+        PollBackups();
+        CheckBackups();
+        CheckMapList();
+    }
+    PerfContext();
 }
 
 void Ui::RenderOptions()

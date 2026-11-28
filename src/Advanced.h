@@ -9,7 +9,9 @@
 // - link files: a linked macro can't be sent while it's off (Blocks, Blocked);
 // - a macro's hotkey cooldown: ignored while it's off (CooldownSec);
 // - the Raw text tab, importing a whole library, Keep hotkeys on import, the Refresh map list
-//   button: hidden while it's off.
+//   button: hidden while it's off;
+// - the frame recorder (only in builds made on the owner's PC, src/PerfRecorder.h): hidden, and
+//   a recording stops, while it's off.
 // Your own language files have their own opt-in instead (Localization::kOwnFilesSetting).
 
 #include <cstddef>
