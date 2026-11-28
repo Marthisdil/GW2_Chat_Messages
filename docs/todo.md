@@ -332,6 +332,25 @@ From MumbleLink's identity (already read for the map), e.g. "LF2M, {spec} here".
 
 **Advanced option?** No (2026-11-26): like `{map}`, it fills in text from MumbleLink.
 
+### Location placeholders: `{wp}`, `{poi}`, `{area}` (added 2026-11-28)
+
+Chat Shorts (Blish HUD) has these three: the nearest waypoint's and point of interest's chat
+link, and the name of the area you're in (check exactly what each sends in bhm-chat-macros'
+source). Here they're sent as typed, and the Blish HUD import warns about them. This reopens
+the "no `{wp}`, `{poi}` or `{area}`" decision of 2026-11-20 (`docs/design.md`, "Placeholders").
+
+- Points to settle: where the positions come from (the GW2 API's continent and floor data, much
+  bigger than the map list; fetched how, cached in `maps.json` or a file of its own, refreshed
+  when), how the player's MumbleLink position maps onto those coordinates, what "nearest"
+  means (straight line, same map only), and what to send while the data isn't there yet (an
+  error, like an unknown map). Underwater and instanced maps, and areas the API has no name for.
+- **If/when they're built:** update the Blish HUD import (`src/ChatShorts.cpp`,
+  `FixPlaceholders` and its `kMissing` list) so they come through without the warning, and the
+  tests, `docs/design.md` ("From Blish HUD") and the wiki's Import-and-Export page with it.
+
+**Advanced option?** Suggested no (2026-11-28, owner to confirm): like `{map}`, it fills in text
+from MumbleLink and the GW2 API, and a waypoint link is ordinary chat text.
+
 ### A tabbed macro editor, chosen in the settings (added 2026-11-26)
 
 From the layout brainstorm for "Look at the layout of the macro settings" (built 2026-11-26, `docs/design.md`): the owner
