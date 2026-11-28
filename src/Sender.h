@@ -39,8 +39,9 @@ namespace Sender
     // Render thread, once per frame: the sender's whisper pauses count drawn frames.
     void FrameRendered();
 
-    Status GetStatus();
-    bool   IsBusy();
+    Status   GetStatus();
+    uint64_t StatusSeq(); // GetStatus().Seq without copying the status (no lock): poll this first
+    bool     IsBusy();
 
     // What Send now would type, without sending anything (render thread). Placeholders are filled
     // in now, and every check of a real send runs. {map} only uses map names already known: an

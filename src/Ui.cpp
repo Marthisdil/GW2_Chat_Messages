@@ -1,6 +1,7 @@
 #include "Ui.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <cfloat>
 #include <cstdint>
@@ -12,7 +13,10 @@
 #include <iterator>
 #include <map>
 #include <memory>
+#include <mutex>
+#include <set>
 #include <unordered_map>
+#include <unordered_set>
 #include <optional>
 #include <string>
 #include <vector>
@@ -116,6 +120,30 @@ namespace
     Search::Result s_Search;
     const ImU32    kSearchHighlight = IM_COL32(255, 215, 0, 80);
 
+    // What s_Search was worked out for (UpdateSearch).
+    struct SearchCache
+    {
+        bool        Valid = false;
+        std::string Query;
+        bool        ActiveOnly = false;
+        uint8_t     Mode  = 0;
+        uint32_t    MapId = 0;
+        uint64_t    Gen   = 0;
+        const void* Lang  = nullptr; // Localization::Active(): the labels are translated
+        double      At    = 0.0;
+    };
+    SearchCache s_SearchCache;
+
+    // A tree row's text, and where the search matched in its name, built once per search change
+    // (UpdateSearch clears them) instead of every frame.
+    struct RowLabel
+    {
+        std::string Text;
+        bool        Highlight = false;
+        size_t      At = 0, Len = 0; // the match in the name
+    };
+    std::unordered_map<uint64_t, RowLabel> s_RowLabels;
+
     // Name popup (new folder, new macro, rename).
     enum class ENameMode { NewFolder, NewMacro, Rename };
     ENameMode   s_NameMode     = ENameMode::NewFolder;
@@ -163,16 +191,35 @@ namespace
     // while the user is playing. Defined with the error window below.
     void ShowError(const std::string& aAction, const std::string& aMessage, bool aFocus = true);
 
+    uint64_t s_SaveSeq = 0; // the newest save handed to the writer thread, until its result is in (0 = none)
+
+    // The tree becomes JSON here (only the render thread may read it); the writer thread writes
+    // the file, so a save never holds up a frame. PollSave picks up how it went.
     void SaveNow()
     {
         if (!s_Dirty) return;
         // A newer version's library is read-only (DrawMessages says so): never saved over.
         if (s_Tree.FromNewerVersion()) { s_Dirty = false; return; }
+        const uint64_t seq = Storage::SaveMacrosLater(s_Tree);
+        if (seq == 0) return;
+        s_SaveSeq = seq;
+        s_Dirty   = false;
+    }
+
+    // Once a frame: the result of the newest save. A failure retries in 5 seconds (without
+    // hammering the disk) and says so once.
+    void PollSave()
+    {
+        if (s_SaveSeq == 0) return;
+        const Storage::SaveResult r = Storage::LastMacrosSave();
+        if (r.Seq != s_SaveSeq) return; // still being written
+        s_SaveSeq = 0;
         const bool failedBefore = s_SaveFailed;
-        s_SaveFailed = !Storage::SaveMacros(s_Tree);
-        if (!s_SaveFailed) s_Dirty = false;
-        else s_SaveAt = ImGui::GetTime() + 5.0; // retry later, without hammering the disk
-        if (s_SaveFailed && !failedBefore)
+        s_SaveFailed = !r.Ok;
+        if (r.Ok) return;
+        s_Dirty  = true;
+        s_SaveAt = ImGui::GetTime() + 5.0;
+        if (!failedBefore)
             ShowError(T("Changed the library (it's saved to macros.json automatically)"),
                       T("Your macros couldn't be saved. Check the Nexus log. The addon keeps trying every 5 seconds."), false);
     }
@@ -204,8 +251,81 @@ namespace
         return h;
     }
 
+    // Which folders and macros are active where the player is (their filters and the folders'
+    // above them), worked out once per map change or library change and reused: the tree and the
+    // quick menu ask for every row every frame, and each answer walks the node's folders. Also
+    // worked out again twice a second, in case a change ever skips MarkDirty.
+    struct ActiveHere
+    {
+        bool     Valid = false;
+        uint8_t  Mode  = GM_None;
+        uint32_t MapId = 0;
+        uint64_t Gen   = 0;
+        double   At    = 0.0;
+        bool     RootHasActive = false;
+        std::unordered_map<uint64_t, bool> Active;    // every node in the tree
+        std::unordered_map<uint64_t, bool> HasActive; // folders: an active macro somewhere inside
+    };
+    ActiveHere       s_ActiveHere;
+    constexpr double kCacheRefreshSec = 0.5; // the caches below are rebuilt at least this often
+
+    // Fills aOut for aFolder's contents; true when an active macro is somewhere inside.
+    bool FillActive(const Node& aFolder, const Here& aHere, ActiveHere& aOut)
+    {
+        bool any = false;
+        for (const auto& c : aFolder.Children)
+        {
+            const bool active = IsActive(*c, aHere.Mode, aHere.MapId);
+            aOut.Active[c->Id] = active;
+            if (c->IsMacro()) any = any || active;
+            else
+            {
+                const bool inside = FillActive(*c, aHere, aOut);
+                aOut.HasActive[c->Id] = inside;
+                any = any || inside;
+            }
+        }
+        return any;
+    }
+
+    const ActiveHere& ActiveFor(const Here& aHere)
+    {
+        ActiveHere& a = s_ActiveHere;
+        const double now = ImGui::GetTime();
+        if (a.Valid && a.Mode == aHere.Mode && a.MapId == aHere.MapId && a.Gen == s_TreeGen && now >= a.At &&
+            now - a.At < kCacheRefreshSec)
+            return a;
+        a.Active.clear();
+        a.HasActive.clear();
+        a.Valid = true;
+        a.Mode  = aHere.Mode;
+        a.MapId = aHere.MapId;
+        a.Gen   = s_TreeGen;
+        a.At    = now;
+        a.RootHasActive = FillActive(s_Tree.Root(), aHere, a);
+        return a;
+    }
+
     // A macro or folder, with the filters of the folders above it.
-    bool IsActiveHere(const Node& aNode, const Here& aHere) { return IsActive(aNode, aHere.Mode, aHere.MapId); }
+    bool IsActiveHere(const Node& aNode, const Here& aHere)
+    {
+        const ActiveHere& a = ActiveFor(aHere);
+        const auto it = a.Active.find(aNode.Id);
+        if (it != a.Active.end()) return it->second;
+        return IsActive(aNode, aHere.Mode, aHere.MapId); // not in the tree (the trash bin, an import)
+    }
+
+    // An active macro somewhere inside aFolder.
+    bool HasActiveMacros(const Node& aFolder, const Here& aHere)
+    {
+        const ActiveHere& a = ActiveFor(aHere);
+        if (&aFolder == &s_Tree.Root()) return a.RootHasActive;
+        const auto it = a.HasActive.find(aFolder.Id);
+        if (it != a.HasActive.end()) return it->second;
+        for (const auto& c : aFolder.Children) // not in the tree
+            if (c->IsMacro() ? IsActive(*c, aHere.Mode, aHere.MapId) : HasActiveMacros(*c, aHere)) return true;
+        return false;
+    }
 
     const char* ModeName(uint8_t aMode)
     {
@@ -512,6 +632,7 @@ namespace
 
     void PollSender()
     {
+        if (Sender::StatusSeq() == s_SendSeenSeq) return; // nothing ended: skip copying the status
         const Sender::Status st = Sender::GetStatus();
         if (st.Seq == s_SendSeenSeq) return;
         s_SendSeenSeq = st.Seq;
@@ -665,10 +786,22 @@ namespace
                                                 "Shift. Click Change... to set a new one."));
                 return;
             }
-            // A shared hotkey is only a conflict where both macros can be active at once.
-            std::string names;
-            for (const Node* n : s_Tree.MacrosWithHotkey(aMacro.Hotkey))
-                if (n != &aMacro && FiltersOverlap(aMacro, *n)) names += (names.empty() ? "" : ", ") + n->Name;
+            // A shared hotkey is only a conflict where both macros can be active at once. Worked
+            // out again when the macro, its hotkey or the library changed (or twice a second).
+            static struct { uint64_t Id = 0; Hotkey::Combo Key; uint64_t Gen = 0; double At = -1.0; std::string Names; } shared;
+            const double now = ImGui::GetTime();
+            if (shared.Id != aMacro.Id || !(shared.Key == aMacro.Hotkey) || shared.Gen != s_TreeGen || now < shared.At ||
+                now - shared.At >= kCacheRefreshSec)
+            {
+                shared.Id  = aMacro.Id;
+                shared.Key = aMacro.Hotkey;
+                shared.Gen = s_TreeGen;
+                shared.At  = now;
+                shared.Names.clear();
+                for (const Node* n : s_Tree.MacrosWithHotkey(aMacro.Hotkey))
+                    if (n != &aMacro && FiltersOverlap(aMacro, *n)) shared.Names += (shared.Names.empty() ? "" : ", ") + n->Name;
+            }
+            const std::string& names = shared.Names;
             if (!names.empty())
             {
                 ImGui::TextColored(kWarnColor, T("Also set on: %s. Where both are active, this hotkey sends nothing."),
@@ -1412,17 +1545,36 @@ namespace
         return std::string("  ") + T("(found in its lines)");
     }
 
-    void HighlightSearch(const Node& aNode)
+    void HighlightSearch(const Node& aNode, const RowLabel& aLabel)
     {
-        if (!s_Search.Active || !s_Search.Matches.count(aNode.Id)) return;
-        size_t at = 0, len = 0;
-        if (!Search::FindRange(aNode.Name, s_SearchBuf, at, len)) return;
+        if (!aLabel.Highlight || !ImGui::IsItemVisible()) return;
         const ImVec2 min = ImGui::GetItemRectMin();
         const ImVec2 max = ImGui::GetItemRectMax();
         const char* name = aNode.Name.c_str();
+        const size_t at  = std::min(aLabel.At, aNode.Name.size());
+        const size_t end = std::min(aLabel.At + aLabel.Len, aNode.Name.size());
         const float x0 = min.x + ImGui::GetTreeNodeToLabelSpacing() + ImGui::CalcTextSize(name, name + at).x;
-        const float x1 = x0 + ImGui::CalcTextSize(name + at, name + at + len).x;
+        const float x1 = x0 + ImGui::CalcTextSize(name + at, name + end).x;
         ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(x0, min.y), ImVec2(x1, max.y), kSearchHighlight, 2.0f);
+    }
+
+    // The row's text: its name, the hotkey (macros), what the search found, the folder's own
+    // filter and the favourite mark.
+    const RowLabel& LabelOf(const Node& aNode)
+    {
+        const auto hit = s_RowLabels.find(aNode.Id);
+        if (hit != s_RowLabels.end()) return hit->second;
+        RowLabel l;
+        std::string suffix = SearchSuffix(aNode);
+        suffix += FolderTag(aNode); // "[WvW, 2 maps]": the folder's own filter
+        if (aNode.Favourite) suffix += "  *"; // a favourite (the quick menu's top)
+        if (aNode.IsFolder() || aNode.Hotkey.Empty()) l.Text = aNode.Name + suffix;
+        else if (Hotkey::NeedsModifier(aNode.Hotkey))
+            l.Text = Fmt(T("%s  [%s: off, needs Ctrl/Alt/Shift]%s"), aNode.Name.c_str(), Hotkey::Display(aNode.Hotkey).c_str(), suffix.c_str());
+        else l.Text = aNode.Name + "  [" + Hotkey::Display(aNode.Hotkey) + "]" + suffix;
+        if (s_Search.Active && s_Search.Matches.count(aNode.Id))
+            l.Highlight = Search::FindRange(aNode.Name, s_SearchBuf, l.At, l.Len);
+        return s_RowLabels.emplace(aNode.Id, std::move(l)).first->second;
     }
 
     void DrawNode(Node& aNode)
@@ -1433,9 +1585,7 @@ namespace
 
         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAvailWidth;
         if (aNode.Id == s_SelectedId) flags |= ImGuiTreeNodeFlags_Selected;
-        std::string suffix = SearchSuffix(aNode);
-        suffix += FolderTag(aNode); // "[WvW, 2 maps]": the folder's own filter
-        if (aNode.Favourite) suffix += "  *"; // a favourite (the quick menu's top)
+        const RowLabel& label = LabelOf(aNode);
 
         bool open = false;
         if (aNode.IsFolder())
@@ -1449,7 +1599,7 @@ namespace
             ImVec4 folderColor = kFolderColor;
             if (!IsActiveHere(aNode, WhereAmI())) folderColor.w *= 0.45f; // its filter (or a folder above) is off here: dimmed
             ImGui::PushStyleColor(ImGuiCol_Text, folderColor);
-            open = ImGui::TreeNodeEx("##node", flags, "%s%s", aNode.Name.c_str(), suffix.c_str());
+            open = ImGui::TreeNodeEx("##node", flags, "%s", label.Text.c_str());
             ImGui::PopStyleColor();
             if (!forced && open != aNode.Expanded && !aNode.Children.empty())
             {
@@ -1466,14 +1616,10 @@ namespace
             // Filtered out here, or uses an advanced option that's off: dimmed.
             if (!IsActiveHere(aNode, WhereAmI()) || IsBlocked(aNode)) color.w *= 0.45f;
             ImGui::PushStyleColor(ImGuiCol_Text, color);
-            if (aNode.Hotkey.Empty()) ImGui::TreeNodeEx("##node", flags, "%s%s", aNode.Name.c_str(), suffix.c_str());
-            else if (Hotkey::NeedsModifier(aNode.Hotkey))
-                ImGui::TreeNodeEx("##node", flags, T("%s  [%s: off, needs Ctrl/Alt/Shift]%s"), aNode.Name.c_str(),
-                                  Hotkey::Display(aNode.Hotkey).c_str(), suffix.c_str());
-            else ImGui::TreeNodeEx("##node", flags, "%s  [%s]%s", aNode.Name.c_str(), Hotkey::Display(aNode.Hotkey).c_str(), suffix.c_str());
+            ImGui::TreeNodeEx("##node", flags, "%s", label.Text.c_str());
             ImGui::PopStyleColor();
         }
-        HighlightSearch(aNode);
+        HighlightSearch(aNode, label);
 
         if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) s_SelectedId = aNode.Id;
 
@@ -2355,8 +2501,9 @@ namespace
     }
 
     // --- Link files ---------------------------------------------------------------------------
-    // A macro can be kept in step with a .txt file (src/LinkSync.*). The files are checked once a
-    // second on the render thread, outside the tree drawing; only a changed file is read.
+    // A macro can be kept in step with a .txt file (src/LinkSync.*). The files are checked every
+    // second on the render thread, a couple per frame, outside the tree drawing; only a changed
+    // file is read.
 
     constexpr double kLinkSyncEverySec = 1.0;
     constexpr char   kLinkMissing[]    = TX("The file isn't there. Changes aren't saved to it until it's back or recreated.");
@@ -2364,6 +2511,10 @@ namespace
     std::unordered_map<uint64_t, LinkSync::State> s_LinkStates;
     std::unordered_map<uint64_t, std::string>     s_LinkProblems; // what's wrong with a link, for the editor
     double      s_NextLinkSync = 0.0;
+    constexpr size_t kLinksPerFrame = 2; // linked macros checked per frame (SyncLinks)
+    std::vector<Node*> s_LinkRound;        // this round's linked macros
+    size_t             s_LinkRoundAt  = 0; // the next one to check
+    uint64_t           s_LinkRoundGen = 0; // s_TreeGen when the round was listed
     std::string s_LinkPath;          // the path being typed in the editor
     uint64_t    s_LinkPathFor = 0;   // which macro s_LinkPath belongs to
 
@@ -2411,73 +2562,97 @@ namespace
         }
     }
 
+    // Checks one linked macro against its file (and writes or loads it when one side changed).
+    void SyncOne(Node* m, const std::filesystem::path& aDir)
+    {
+        if (m->LinkFile.empty()) return; // unlinked since the round began
+        // Its file is raw text, which can't hold a newer version's channel: syncing would turn
+        // that line into a current-channel line. Paused until the line gets another channel.
+        const std::filesystem::path file = LinkSync::Resolve(aDir, m->LinkFile);
+        LinkSync::State& st = s_LinkStates[m->Id];
+        if (MacroTree::HasUnknownChannel(*m))
+        {
+            // The file as it is now counts as agreed: when the line gets a channel again, the
+            // macro's edits go to the file instead of the file replacing them (a first sync
+            // would load the file). A later change to the file still wins, as always.
+            if (!st.Known)
+            {
+                bool exists = false;
+                st.Mtime = FileMtime(file, exists);
+                st.Text  = ChatLine::SerializeRaw(m->Lines);
+                st.Known = exists;
+            }
+            s_LinkProblems[m->Id] = T("Not kept in step with its file: a line's channel is from a newer version of the addon.");
+            return;
+        }
+        const LinkSync::State before = st;
+        LinkSync::File view;
+        view.Mtime = FileMtime(file, view.Exists);
+        view.Read  = [&file](std::string& aText, std::string& aError) { return ReadLinkFile(file, aText, aError); };
+
+        const LinkSync::Outcome o = LinkSync::Sync(st, m->Lines, view);
+        std::string problem;
+        if (o.Missing) problem = T(kLinkMissing);
+        else if (!o.Error.empty()) problem = Fmt(T("The file can't be read: %s"), o.Error.c_str());
+        else if (o.LoadMacro)
+        {
+            m->Lines = o.Lines;
+            if (s_RawForId == m->Id) s_RawForId = 0;
+            MarkDirty();
+        }
+        else if (o.WriteFile)
+        {
+            if (WriteLinkFile(*m, file, st)) {}
+            else
+            {
+                st = before; // try again next time
+                problem = T("The file couldn't be written. Check the Nexus log.");
+            }
+        }
+        if (problem.empty() && !o.Warning.empty()) problem = o.Warning;
+        if (problem.empty()) s_LinkProblems.erase(m->Id);
+        else s_LinkProblems[m->Id] = problem;
+    }
+
+    // A round starts every second: it lists the linked macros, then checks a few of them each
+    // frame (kLinksPerFrame), so many links never stall one frame on file checks. aNow checks
+    // them all at once (unload, linking a macro, turning Advanced options on).
     void SyncLinks(bool aNow)
     {
         if (!s_AdvancedOn) return; // paused; the agreed states are kept for when it's back on
-        if (!aNow && ImGui::GetTime() < s_NextLinkSync) return;
-        s_NextLinkSync = ImGui::GetTime() + kLinkSyncEverySec;
-
-        std::vector<Node*> linked;
-        CollectLinked(s_Tree.Root(), linked);
-        // Forget macros that were unlinked or deleted.
-        for (auto it = s_LinkStates.begin(); it != s_LinkStates.end();)
+        const double now = ImGui::GetTime();
+        // The listed pointers are only good while the library is unchanged: list them again if it
+        // changed, and go on from the same place (typing in a macro changes it every few frames).
+        if (s_LinkRoundGen != s_TreeGen)
         {
-            bool still = false;
-            for (const Node* n : linked) still = still || n->Id == it->first;
-            it = still ? std::next(it) : s_LinkStates.erase(it);
+            s_LinkRound.clear();
+            CollectLinked(s_Tree.Root(), s_LinkRound);
+            s_LinkRoundGen = s_TreeGen;
+            s_LinkRoundAt  = std::min(s_LinkRoundAt, s_LinkRound.size());
         }
-        if (linked.empty()) return;
-        const std::filesystem::path dir = Storage::AddonDir();
-        if (dir.empty()) return;
-
-        for (Node* m : linked)
+        if (aNow || (s_LinkRoundAt >= s_LinkRound.size() && now >= s_NextLinkSync))
         {
-            // Its file is raw text, which can't hold a newer version's channel: syncing would turn
-            // that line into a current-channel line. Paused until the line gets another channel.
-            const std::filesystem::path file = LinkSync::Resolve(dir, m->LinkFile);
-            LinkSync::State& st = s_LinkStates[m->Id];
-            if (MacroTree::HasUnknownChannel(*m))
-            {
-                // The file as it is now counts as agreed: when the line gets a channel again, the
-                // macro's edits go to the file instead of the file replacing them (a first sync
-                // would load the file). A later change to the file still wins, as always.
-                if (!st.Known)
-                {
-                    bool exists = false;
-                    st.Mtime = FileMtime(file, exists);
-                    st.Text  = ChatLine::SerializeRaw(m->Lines);
-                    st.Known = exists;
-                }
-                s_LinkProblems[m->Id] = T("Not kept in step with its file: a line's channel is from a newer version of the addon.");
-                continue;
-            }
-            const LinkSync::State before = st;
-            LinkSync::File view;
-            view.Mtime = FileMtime(file, view.Exists);
-            view.Read  = [&file](std::string& aText, std::string& aError) { return ReadLinkFile(file, aText, aError); };
-
-            const LinkSync::Outcome o = LinkSync::Sync(st, m->Lines, view);
-            std::string problem;
-            if (o.Missing) problem = T(kLinkMissing);
-            else if (!o.Error.empty()) problem = Fmt(T("The file can't be read: %s"), o.Error.c_str());
-            else if (o.LoadMacro)
-            {
-                m->Lines = o.Lines;
-                if (s_RawForId == m->Id) s_RawForId = 0;
-                MarkDirty();
-            }
-            else if (o.WriteFile)
-            {
-                if (WriteLinkFile(*m, file, st)) {}
-                else
-                {
-                    st = before; // try again next time
-                    problem = T("The file couldn't be written. Check the Nexus log.");
-                }
-            }
-            if (problem.empty() && !o.Warning.empty()) problem = o.Warning;
-            if (problem.empty()) s_LinkProblems.erase(m->Id);
-            else s_LinkProblems[m->Id] = problem;
+            s_NextLinkSync = now + kLinkSyncEverySec;
+            s_LinkRound.clear();
+            s_LinkRoundAt  = 0;
+            s_LinkRoundGen = s_TreeGen;
+            CollectLinked(s_Tree.Root(), s_LinkRound);
+            // Forget macros that were unlinked or deleted.
+            std::unordered_set<uint64_t> ids;
+            for (const Node* n : s_LinkRound) ids.insert(n->Id);
+            for (auto it = s_LinkStates.begin(); it != s_LinkStates.end();)
+                it = ids.count(it->first) ? std::next(it) : s_LinkStates.erase(it);
+        }
+        if (s_LinkRoundAt >= s_LinkRound.size()) return;
+        const std::filesystem::path dir = Storage::AddonDir();
+        if (dir.empty()) { s_LinkRoundAt = s_LinkRound.size(); return; }
+        const size_t until = aNow ? s_LinkRound.size() : std::min(s_LinkRound.size(), s_LinkRoundAt + kLinksPerFrame);
+        while (s_LinkRoundAt < until)
+        {
+            Node* m = s_LinkRound[s_LinkRoundAt++];
+            SyncOne(m, dir);
+            // A file loaded into its macro (MarkDirty) only changed that macro's lines: the list holds.
+            s_LinkRoundGen = s_TreeGen;
         }
     }
 
@@ -2864,13 +3039,6 @@ namespace
     bool s_QuickMenuCloseRequest = false;
 
     // Whether a folder has any macro active here, at any depth (folders without one aren't listed).
-    bool HasActiveMacros(const Node& aFolder, const Here& aHere)
-    {
-        for (const auto& c : aFolder.Children)
-            if (c->IsMacro() ? IsActiveHere(*c, aHere) : HasActiveMacros(*c, aHere)) return true;
-        return false;
-    }
-
     void MacroPreviewTooltip(const Node& aMacro, bool aInactive = false)
     {
         ImGui::BeginTooltip();
@@ -2995,6 +3163,7 @@ namespace
     MenuSearch     s_PopupSearch;
     MenuSearch     s_QaSearch;
     Search::Result s_MenuResult;
+    SearchCache    s_MenuCache; // what s_MenuResult was worked out for (ActiveOnly is always true)
     constexpr size_t kMenuResultsMax = 30;
 
     // The folders a search result sits in, "A > B" ("" at the top level).
@@ -3021,11 +3190,28 @@ namespace
     // Enter sends the first one.
     void DrawMenuResults(const Here& aHere, const std::string& aQuery, bool aEnter)
     {
-        Search::Where where;
-        where.ActiveOnly = true;
-        where.Mode       = aHere.Mode;
-        where.MapId      = aHere.MapId;
-        Search::Run(s_Tree.Root(), aQuery, where, s_MenuResult);
+        // Worked out again only when the text, where you are or the library changed (or twice a
+        // second anyway), not every frame.
+        const double now = ImGui::GetTime();
+        SearchCache& c = s_MenuCache;
+        const bool same = c.Valid && c.Query == aQuery && c.Mode == aHere.Mode && c.MapId == aHere.MapId &&
+                          c.Gen == s_TreeGen && c.Lang == Localization::Active() && now >= c.At &&
+                          now - c.At < kCacheRefreshSec;
+        if (!same)
+        {
+            Search::Where where;
+            where.ActiveOnly = true;
+            where.Mode       = aHere.Mode;
+            where.MapId      = aHere.MapId;
+            Search::Run(s_Tree.Root(), aQuery, where, s_MenuResult);
+            c.Valid = true;
+            c.Query = aQuery;
+            c.Mode  = aHere.Mode;
+            c.MapId = aHere.MapId;
+            c.Gen   = s_TreeGen;
+            c.Lang  = Localization::Active();
+            c.At    = now;
+        }
         std::vector<const Node*> found;
         CollectShownMacros(s_Tree.Root(), s_MenuResult, found);
         const bool busy = Sender::IsBusy();
@@ -3892,15 +4078,35 @@ namespace
         }
     }
 
-    // Works out the search for this frame. A selected item that's no longer shown is unselected.
+    // Works out the search when its text, the filter, where you are, the library or the language
+    // changed (and twice a second anyway), not every frame: it folds every name and line. The
+    // tree's row labels are built again with it. A selected item that's no longer shown is
+    // unselected.
     void UpdateSearch()
     {
         const Here here = WhereAmI();
-        Search::Where where;
-        where.ActiveOnly = s_ActiveOnly;
-        where.Mode       = here.Mode;
-        where.MapId      = here.MapId;
-        Search::Run(s_Tree.Root(), s_SearchBuf, where, s_Search);
+        const double now = ImGui::GetTime();
+        SearchCache& c = s_SearchCache;
+        const bool same = c.Valid && c.Query == s_SearchBuf && c.ActiveOnly == s_ActiveOnly && c.Mode == here.Mode &&
+                          c.MapId == here.MapId && c.Gen == s_TreeGen && c.Lang == Localization::Active() &&
+                          now >= c.At && now - c.At < kCacheRefreshSec;
+        if (!same)
+        {
+            Search::Where where;
+            where.ActiveOnly = s_ActiveOnly;
+            where.Mode       = here.Mode;
+            where.MapId      = here.MapId;
+            Search::Run(s_Tree.Root(), s_SearchBuf, where, s_Search);
+            c.Valid      = true;
+            c.Query      = s_SearchBuf;
+            c.ActiveOnly = s_ActiveOnly;
+            c.Mode       = here.Mode;
+            c.MapId      = here.MapId;
+            c.Gen        = s_TreeGen;
+            c.Lang       = Localization::Active();
+            c.At         = now;
+            s_RowLabels.clear();
+        }
         if (s_Search.Active && s_SelectedId && !s_Search.Shows(s_SelectedId)) s_SelectedId = 0;
     }
 
@@ -4489,7 +4695,6 @@ namespace
     constexpr const char* kBackupsSetting  = "backups";
     constexpr double      kBackupCheckSec  = 60.0;   // how often the schedule is looked at
     constexpr double      kBackupRetrySec  = 3600.0; // after a backup couldn't be written
-    constexpr int         kParsePerFrame   = 4;      // backups read per frame for the Restore tab
     constexpr char kRestoreBackupPopup[] = TX("Restore this backup?###chatmsg_restore_backup");
     constexpr const char* kUnitLabels[] = {TX("hour(s)"), TX("day(s)"), TX("week(s)"), TX("month(s)")};
 
@@ -4513,22 +4718,46 @@ namespace
 
     enum class EBackup { Made, Unchanged, Failed };
 
+    // At the start and on Refresh (both a click or the game starting): the folder's file names.
     void RefreshBackupNames() { s_BackupNames = Storage::BackupNames(); }
 
-    // Writes a backup of the library as it is now, then deletes the oldest of that kind beyond
-    // aKeep. Without aForce, nothing is written when the newest one of that kind is the same.
-    EBackup MakeBackup(Backups::EKind aKind, int aKeep, bool aForce, std::string* aName = nullptr)
+    // Backups run on the writer thread (Storage::Post): the library becomes JSON here, on the
+    // render thread that owns it; reading the last backup, writing, listing and deleting happen
+    // there. One at a time; PollBackups picks up the result.
+    struct BackupDone
+    {
+        EBackup                  Result = EBackup::Failed;
+        bool                     Manual = false; // Back up now
+        uint64_t                 Gen    = 0;     // s_TreeGen when it was started
+        Backups::EKind           Kind   = Backups::EKind::Backup;
+        std::string              Name;           // the file made (Made)
+        std::vector<std::string> Names;          // the backups folder afterwards
+    };
+    std::mutex                              s_BackupDoneMutex; // guards the three results below
+    std::optional<BackupDone>               s_BackupDone;      // a finished backup
+    std::optional<std::vector<std::string>> s_BackupListed;    // the once-a-minute look at the folder
+    std::map<std::string, BackupInfo>       s_BackupInfoDone;  // the Restore tab's reads
+    bool                  s_BackupRunning = false; // a backup job is posted, its result not in yet
+    bool                  s_BackupManualWanted = false; // Back up now was clicked while one was running
+    std::atomic<bool>     s_StopBackupReads{false};     // Ui::Shutdown: skip the Restore tab's reads still waiting
+    constexpr size_t      kBackupReadsInFlight = 2;     // Restore tab reads posted at a time
+    bool                  s_BackupListing = false; // the same for the folder listing
+    std::set<std::string> s_BackupInfoAsked;       // Restore tab: reads posted, results not in yet
+
+    // On the writer thread: writes a backup of aJson (null: a newer version's library, whose
+    // file is copied as it is, since this build would write it in its own way), then deletes the
+    // oldest of that kind beyond aKeep. Without aForce, nothing is written when the newest one
+    // of that kind is the same. Only Storage and Backups functions: nothing of the UI.
+    EBackup WriteBackupFile(const std::shared_ptr<const nlohmann::json>& aJson, Backups::EKind aKind, int aKeep,
+                            bool aForce, std::string& aName)
     {
         if (Storage::BackupsDir().empty()) return EBackup::Failed;
-        RefreshBackupNames();
-        // A newer version's library: copy its file as it is, since this build would write it in
-        // its own way (and changes here aren't saved anyway).
         std::string text;
-        if (!s_Tree.FromNewerVersion()) text = Storage::LibraryText(s_Tree);
+        if (aJson) text = Storage::JsonText(*aJson);
         else if (!Storage::ReadLibraryText(text)) return EBackup::Failed;
         if (!aForce)
         {
-            const std::time_t newest = Backups::Newest(s_BackupNames, aKind);
+            const std::time_t newest = Backups::Newest(Storage::BackupNames(), aKind);
             std::string old;
             if (newest != 0 && Storage::ReadBackupText(Backups::FileName(aKind, newest), old) && old == text)
                 return EBackup::Unchanged;
@@ -4540,15 +4769,53 @@ namespace
             return EBackup::Failed;
         }
         LogF(LOGL_INFO, "Backed up the macros as %s.", name.c_str());
-        if (aName) *aName = name;
-        RefreshBackupNames();
-        for (const std::string& old : Backups::ToDelete(s_BackupNames, aKind, aKeep))
+        aName = name;
+        for (const std::string& old : Backups::ToDelete(Storage::BackupNames(), aKind, aKeep))
         {
             if (old == name) continue; // never the one just made (a clock set back)
-            if (Storage::DeleteBackup(old)) s_BackupInfos.erase(old);
+            Storage::DeleteBackup(old);
         }
-        RefreshBackupNames();
         return EBackup::Made;
+    }
+
+    // Starts a backup of the library as it is now. False while one is still running.
+    bool StartBackup(Backups::EKind aKind, int aKeep, bool aForce, bool aManual)
+    {
+        if (s_BackupRunning) return false;
+        std::shared_ptr<const nlohmann::json> json;
+        if (!s_Tree.FromNewerVersion()) json = std::make_shared<const nlohmann::json>(s_Tree.ToJson());
+        s_BackupRunning = true;
+        const uint64_t gen = s_TreeGen;
+        Storage::Post([json, aKind, aKeep, aForce, aManual, gen] {
+            BackupDone d;
+            d.Manual = aManual;
+            d.Gen    = gen;
+            d.Kind   = aKind;
+            try
+            {
+                d.Result = WriteBackupFile(json, aKind, aKeep, aForce, d.Name);
+                d.Names  = Storage::BackupNames();
+            }
+            catch (const std::exception& e)
+            {
+                LogF(LOGL_WARNING, "The backup failed: %s", e.what());
+                d.Result = EBackup::Failed;
+            }
+            // Always handed back, or s_BackupRunning would never clear.
+            std::lock_guard<std::mutex> lock(s_BackupDoneMutex);
+            s_BackupDone = std::move(d);
+        });
+        return true;
+    }
+
+    // Restore tab entries whose file is gone.
+    void ForgetMissingBackupInfos()
+    {
+        for (auto it = s_BackupInfos.begin(); it != s_BackupInfos.end();)
+        {
+            const bool there = std::find(s_BackupNames.begin(), s_BackupNames.end(), it->first) != s_BackupNames.end();
+            it = there ? std::next(it) : s_BackupInfos.erase(it);
+        }
     }
 
     constexpr double kMapCheckSec = 60.0;
@@ -4562,15 +4829,11 @@ namespace
         MapNames::Check(s_Mumble ? s_Mumble->Context.BuildID : 0);
     }
 
-    // Once a minute: the user's schedule, or the weekly safety copy while backups are off.
-    void CheckBackups()
+    // With the folder's names fresh from the writer thread: is the schedule's backup due?
+    void StartBackupIfDue()
     {
-        if (ImGui::GetTime() < s_BackupCheckAt) return;
-        s_BackupCheckAt = ImGui::GetTime() + kBackupCheckSec;
-        if (Storage::AddonDir().empty()) return;
+        if (s_BackupRunning) return;
         const Backups::EKind kind = Backups::Kind(s_Backup);
-        if (s_TreeGen == s_BackupSkipGen && kind == s_BackupSkipKind) return; // nothing new to back up
-        RefreshBackupNames();
         if (!Backups::IsDue(Backups::Newest(s_BackupNames, kind), std::time(nullptr), Backups::UnitInEffect(s_Backup),
                             Backups::EveryInEffect(s_Backup)))
             return;
@@ -4580,12 +4843,79 @@ namespace
             s_BackupSkipKind = kind;
             return;
         }
-        switch (MakeBackup(kind, Backups::KeepInEffect(s_Backup), false))
+        StartBackup(kind, Backups::KeepInEffect(s_Backup), false, false);
+    }
+
+    // Once a minute: the user's schedule, or the weekly safety copy while backups are off. The
+    // folder is listed on the writer thread; StartBackupIfDue runs when its names are in.
+    void CheckBackups()
+    {
+        if (ImGui::GetTime() < s_BackupCheckAt) return;
+        s_BackupCheckAt = ImGui::GetTime() + kBackupCheckSec;
+        if (Storage::AddonDir().empty()) return;
+        const Backups::EKind kind = Backups::Kind(s_Backup);
+        if (s_TreeGen == s_BackupSkipGen && kind == s_BackupSkipKind) return; // nothing new to back up
+        if (s_BackupRunning || s_BackupListing) return;
+        s_BackupListing = true;
+        Storage::Post([] {
+            std::vector<std::string> names;
+            try { names = Storage::BackupNames(); }
+            catch (const std::exception& e) { LogF(LOGL_WARNING, "The backups folder couldn't be listed: %s", e.what()); }
+            std::lock_guard<std::mutex> lock(s_BackupDoneMutex);
+            s_BackupListed = std::move(names);
+        }, "backup-list");
+    }
+
+    void PollBackupResults();
+
+    // Once a frame: results from the writer thread, then a Back up now that had to wait.
+    void PollBackups()
+    {
+        PollBackupResults();
+        if (s_BackupManualWanted && !s_BackupRunning)
+        {
+            s_BackupManualWanted = false;
+            StartBackup(Backups::EKind::Backup, Backups::Clamped(s_Backup).Keep, true, true);
+        }
+    }
+
+    void PollBackupResults()
+    {
+        std::optional<BackupDone> done;
+        std::optional<std::vector<std::string>> listed;
+        {
+            std::lock_guard<std::mutex> lock(s_BackupDoneMutex);
+            done.swap(s_BackupDone);
+            listed.swap(s_BackupListed);
+        }
+        if (listed)
+        {
+            s_BackupListing = false;
+            s_BackupNames = std::move(*listed);
+            ForgetMissingBackupInfos();
+            StartBackupIfDue();
+        }
+        if (!done) return;
+        s_BackupRunning = false;
+        if (done->Result != EBackup::Failed || !done->Names.empty()) s_BackupNames = std::move(done->Names);
+        ForgetMissingBackupInfos();
+        if (done->Manual)
+        {
+            if (done->Result == EBackup::Made) s_BackupInfo = Fmt(T("Backed up as %s."), done->Name.c_str());
+            else
+            {
+                s_BackupInfo.clear();
+                ShowError(T("Clicked Back up now in the addon's options"),
+                          T("The backup couldn't be written (one may have been made this second already). Check the Nexus log."));
+            }
+            return;
+        }
+        switch (done->Result)
         {
         case EBackup::Made: break;
         case EBackup::Unchanged:
-            s_BackupSkipGen  = s_TreeGen; // look again after the next change
-            s_BackupSkipKind = kind;
+            s_BackupSkipGen  = done->Gen; // look again after the next change
+            s_BackupSkipKind = done->Kind;
             break;
         case EBackup::Failed: s_BackupCheckAt = ImGui::GetTime() + kBackupRetrySec; break;
         }
@@ -4664,18 +4994,10 @@ namespace
                                 Backups::DateText(newest).c_str(), Backups::TimeText(newest).c_str());
 
         UiFont::Row row;
-        if (ImGui::Button(T("Back up now")))
-        {
-            std::string name;
-            if (MakeBackup(Backups::EKind::Backup, Backups::Clamped(s_Backup).Keep, true, &name) == EBackup::Made)
-                s_BackupInfo = Fmt(T("Backed up as %s."), name.c_str());
-            else
-            {
-                s_BackupInfo.clear();
-                ShowError(T("Clicked Back up now in the addon's options"),
-                          T("The backup couldn't be written (one may have been made this second already). Check the Nexus log."));
-            }
-        }
+        // Written on the writer thread: PollBackups shows "Backed up as ..." or the error. A click
+        // while one is still being written does nothing (that one's result shows soon).
+        if (ImGui::Button(T("Back up now")) && !StartBackup(Backups::EKind::Backup, Backups::Clamped(s_Backup).Keep, true, true))
+            s_BackupManualWanted = true; // made as soon as the running one is done (PollBackups)
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip(T("Makes a backup now, even if nothing changed. It counts as one of the copies you keep."));
         row.Next(UiFont::ButtonWidth(T("Open the backups folder")));
@@ -4754,6 +5076,7 @@ namespace
         if (ImGui::Button(T("Refresh")))
         {
             s_BackupInfos.clear();
+            s_BackupInfoAsked.clear(); // read again (a read still waiting is replaced, not doubled)
             RefreshBackupNames();
         }
         row.Next(UiFont::ButtonWidth(T("Open the backups folder")));
@@ -4773,18 +5096,42 @@ namespace
             return;
         }
 
-        // A few files are read per frame, so a long list never stalls the game.
-        int parsed = 0;
+        // Each backup is read and counted on the writer thread: parsing a big library takes a
+        // while, and the game keeps drawing meanwhile ("..." until it's in).
+        {
+            std::lock_guard<std::mutex> lock(s_BackupDoneMutex);
+            for (auto& kv : s_BackupInfoDone)
+            {
+                s_BackupInfoAsked.erase(kv.first);
+                s_BackupInfos[kv.first] = std::move(kv.second);
+            }
+            s_BackupInfoDone.clear();
+        }
+        // A few at a time, so a save posted meanwhile doesn't wait behind every backup's read.
         for (const Row& r : rows)
         {
-            if (parsed >= kParsePerFrame) break;
-            if (s_BackupInfos.count(r.Name)) continue;
-            BackupInfo bi;
-            MacroTree::Tree tree;
-            bi.Ok = Storage::ReadBackup(r.Name, tree, bi.Error);
-            if (bi.Ok) Tree::CountDescendants(tree.Root(), &bi.Folders, &bi.Macros);
-            s_BackupInfos[r.Name] = std::move(bi);
-            ++parsed;
+            if (s_BackupInfoAsked.size() >= kBackupReadsInFlight) break;
+            if (s_BackupInfos.count(r.Name) || s_BackupInfoAsked.count(r.Name)) continue;
+            s_BackupInfoAsked.insert(r.Name);
+            const std::string name = r.Name;
+            // NOLINTNEXTLINE(bugprone-exception-escape): a job's exception is caught and counted by WorkQueue::RunSafely
+            Storage::Post([name] {
+                if (s_StopBackupReads) return; // unloading
+                BackupInfo bi;
+                try
+                {
+                    MacroTree::Tree tree;
+                    bi.Ok = Storage::ReadBackup(name, tree, bi.Error);
+                    if (bi.Ok) Tree::CountDescendants(tree.Root(), &bi.Folders, &bi.Macros);
+                }
+                catch (const std::exception&)
+                {
+                    bi.Ok    = false;
+                    bi.Error = TR("The file isn't a macro library.");
+                }
+                std::lock_guard<std::mutex> lock(s_BackupDoneMutex);
+                s_BackupInfoDone[name] = std::move(bi);
+            }, "backup-info:" + name);
         }
 
         const ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit;
@@ -4923,9 +5270,38 @@ void Ui::Init()
 void Ui::Shutdown()
 {
     SyncLinks(true); // last edits to linked macros reach their files
+    s_StopBackupReads = true; // Restore tab reads still waiting are skipped: the unload doesn't wait for them
+    Storage::Flush();         // every job of ours (saves, backups) has finished
+    // A save handed to the writer that failed (or whose result wasn't looked at yet) is tried
+    // once more here, as a failed save always was.
+    if (s_SaveSeq != 0)
+    {
+        const Storage::SaveResult r = Storage::LastMacrosSave();
+        if (r.Seq != s_SaveSeq || !r.Ok) s_Dirty = true;
+    }
     if (s_Dirty && !s_Tree.FromNewerVersion() && !Storage::SaveMacros(s_Tree))
         LogF(LOGL_WARNING, "Unsaved macro changes could not be written on unload.");
-    s_Dirty = false;
+    s_StopBackupReads = false;
+    s_Dirty   = false;
+    s_SaveSeq = 0;
+    s_SaveFailed = false;
+    // The caches hold ids (and the link round pointers) of the tree that's about to go.
+    s_ActiveHere.Valid  = false;
+    s_SearchCache.Valid = false;
+    s_MenuCache.Valid   = false;
+    s_RowLabels.clear();
+    s_LinkRound.clear();
+    s_LinkRoundAt = 0;
+    s_BackupManualWanted = false;
+    {
+        std::lock_guard<std::mutex> lock(s_BackupDoneMutex);
+        s_BackupDone.reset();
+        s_BackupListed.reset();
+        s_BackupInfoDone.clear();
+    }
+    s_BackupRunning = false;
+    s_BackupListing = false;
+    s_BackupInfoAsked.clear();
     s_Tree  = Tree();
     s_SelectedId = 0;
     CloseImport();
@@ -4988,6 +5364,8 @@ void Ui::Render()
     DrawErrorWindow();
     UiFont::Pop();
     if (s_Dirty && ImGui::GetTime() >= s_SaveAt) SaveNow();
+    PollSave();
+    PollBackups();
     CheckBackups();
     CheckMapList();
 }

@@ -1,6 +1,8 @@
 #pragma once
 
+#include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -19,7 +21,18 @@ namespace MacroTree { class Tree; }
 // The folder comes from Nexus' Paths_GetAddonDirectory(). Nexus does not create it, so we do.
 namespace Storage
 {
-    std::filesystem::path AddonDir(); // created on first call; empty if Nexus is unavailable
+    // AddonLoad, before anything reads or writes a file: looks up the addon folder once (and
+    // creates it) and starts the writer thread. AddonUnload, last: Shutdown writes everything
+    // still waiting, then stops the thread (docs/design.md, "Saving off the render thread").
+    void Init();
+    void Shutdown();
+    // Runs aJob on the writer thread, after everything posted before it. A job with a key
+    // replaces that key's job while it's still waiting (a burst of saves writes once). Jobs may
+    // only use the file functions below, never the tree, ImGui or another module's state.
+    void Post(std::function<void()> aJob, const std::string& aKey = std::string());
+    void Flush(); // waits until every job posted so far has run (render thread only, never in a job)
+
+    std::filesystem::path AddonDir(); // looked up once (Init); empty if Nexus is unavailable
     std::filesystem::path ExportsDir(); // <addon>\exports, created on first call (empty if unavailable)
     std::filesystem::path ImportsDir(); // <addon>\imports, the same
     std::filesystem::path LocalizationDir(); // <addon>\localization (language files), the same
@@ -47,13 +60,26 @@ namespace Storage
     // the user removed both).
     bool LoadMacros(MacroTree::Tree& aTree, std::vector<std::string>& aMessages);
 
-    // Returns false if the file couldn't be written (the reason is logged), and always for a tree
-    // from a newer version (Tree::FromNewerVersion): that file is never written over. A tree read
-    // from an older format first keeps the file as "macros.json.v<N>.bak" (once).
+    // Saves the library on the writer thread: the tree becomes JSON here (call it on the render
+    // thread, which owns the tree), the file is written there. Returns the save's number, or 0
+    // for a tree from a newer version (Tree::FromNewerVersion): that file is never written over.
+    // A tree read from an older format first keeps the file as "macros.json.v<N>.bak" (once).
+    // LastMacrosSave says how the newest finished save went (a save replaced by a newer one
+    // while it waited never finishes: compare with the number you got last).
+    uint64_t SaveMacrosLater(const MacroTree::Tree& aTree);
+    struct SaveResult
+    {
+        uint64_t Seq = 0;    // 0: none finished yet
+        bool     Ok  = true; // false: the file couldn't be written (the reason is logged)
+    };
+    SaveResult LastMacrosSave();
+    // SaveMacrosLater, then waits for it (at unload). False if it couldn't be written.
     bool SaveMacros(const MacroTree::Tree& aTree);
 
-    // The library as it's written to macros.json (and to a backup).
+    // The library as it's written to macros.json (and to a backup). JsonText turns the tree's
+    // JSON (MacroTree::Tree::ToJson) into that text, so a job can do it off the render thread.
     std::string LibraryText(const MacroTree::Tree& aTree);
+    std::string JsonText(const nlohmann::json& aJson);
     // macros.json as it is on disk (at most kMaxBackupBytes); false if it can't be read. Backups
     // of a read-only library copy this, not LibraryText.
     bool ReadLibraryText(std::string& aText);
@@ -72,8 +98,12 @@ namespace Storage
     // settings.json as an object; an empty object if it's missing or can't be read (logged).
     // It has "format" (kSettingsFormat). Settings never need a new number: a changed setting
     // gets a new name instead (docs/design.md, "Saved files").
+    // The file is read once and kept in memory; SaveSetting changes it there (at once: the next
+    // LoadSettings sees it) and the writer thread writes the file. Any thread.
     constexpr int kSettingsFormat = 1;
     nlohmann::json LoadSettings();
-    bool SaveSetting(const char* aKey, const nlohmann::json& aValue); // reads, changes one key, writes
+    // True once the change is kept in memory (false only for a non-object): the file is written
+    // by the writer thread, which logs a failed write.
+    bool SaveSetting(const char* aKey, const nlohmann::json& aValue); // changes one key; written soon
     bool SaveSettings(const nlohmann::json& aSettings);
 }

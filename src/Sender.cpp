@@ -183,6 +183,7 @@ namespace
 
     std::mutex      s_StatusMutex;
     Sender::Status  s_Status;
+    std::atomic<uint64_t> s_StatusSeq{0}; // s_Status.Seq, readable without the lock
 
     void SetStatus(Sender::EState aState, size_t aLine, size_t aLines, const std::string& aMsg, uint64_t aMacro)
     {
@@ -192,7 +193,7 @@ namespace
         s_Status.Lines   = aLines;
         s_Status.Message = aMsg;
         s_Status.MacroId = aMacro;
-        if (aState == Sender::EState::Done || aState == Sender::EState::Failed) s_Status.Seq++;
+        if (aState == Sender::EState::Done || aState == Sender::EState::Failed) s_StatusSeq = ++s_Status.Seq;
     }
 
     // Why the game isn't ready for us to type, or empty if it is.
@@ -477,6 +478,8 @@ Sender::Status Sender::GetStatus()
     std::lock_guard<std::mutex> lock(s_StatusMutex);
     return s_Status;
 }
+
+uint64_t Sender::StatusSeq() { return s_StatusSeq.load(); }
 
 bool Sender::IsBusy() { return s_Busy.load(); }
 

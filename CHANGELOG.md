@@ -14,6 +14,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   closed.
 
 ### Changed
+- **Smoother in game:** saving your macros and settings, backups, the map list and the Restore
+  tab's reads now happen in the background, never while the game draws a frame. The library's
+  search, the quick menu and the tree do less work per frame, and many text file links are
+  checked a couple at a time. Nothing changes in what's saved or where.
 - **A clearer macro editor:** the name sits at the top with **Send now**, **Preview** and a
   **...** menu (Rename, Duplicate, Delete), and a grey line under it shows the folder, the hotkey
   and where it's active. The lines come first, one compact row each (channel, message, count,

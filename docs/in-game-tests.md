@@ -327,6 +327,11 @@ game doesn't freeze and the unload finishes within about a second. Do the same r
 Then unload and load it about five times with nothing sending (SEC-036): each unload finishes at
 once.
 
+**L3. Unloading saves what's waiting.** Saves are written in the background now. Rename a
+macro and, right away (within a second), unload the addon in Nexus > Addons; do the same after
+changing the text size on the options page. Load it again: the new name and the text size are
+both there. The unload still finishes at once.
+
 ## Priority 2: your macros' safety, and what every player sees
 
 Losing or damaging macros, and the screens every player meets: the first run, the editor, the quick menu and the search boxes (whose typing must never reach the game).
@@ -537,6 +542,12 @@ not focused. Click it and type `say`: the same flat list. Click `Say` to send it
 the menu: the box is empty. A macro that isn't active here (P6's `Emote` in WvW) never shows in the
 results.
 
+**P9. Searching a big library.** Import or make a library with a few hundred macros (copy a
+folder several times with Duplicate). Type in the library's search box: the tree follows each
+letter at once, without a stutter in the game. With a search showing, rename a matching macro:
+its row shows the new name within half a second, highlighted where it matches. Switch the
+language (session Q) with a search showing: the rows' hotkey labels change language too.
+
 ### T. Saved files: older and newer versions
 
 Run each check with **Advanced options** off, then once more with it on (T3's Raw text and link
@@ -588,6 +599,12 @@ time is your **local** time. In `macros.json`, its `"deleted_at"` is in UTC with
 the game again, and a filter's **Maps you've been to** still lists your maps (they're in
 `settings.json`, `"visited_maps"`); `settings.json` has `"format": 1`.
 
+**T6. A save that fails, then works.** Close the game, make `macros.json` read-only (right-click
+> Properties > Read-only), start the game and rename a macro: the error window says the library
+couldn't be saved, once (not again every few seconds). Untick Read-only while the game runs:
+within about 5 seconds the library saves (the file has the new name), with no new error. Restart
+the game: the rename is kept.
+
 ### R. Backups and restore
 
 Open the addon's page in **Nexus > Options**. Keep a UTC clock at hand (search "UTC time" on the
@@ -631,6 +648,13 @@ more backups than you keep: `notes.txt` is never deleted. Delete both files afte
 **R7. A linked macro.** With a macro linked to a `.txt` file (session K), edit the file, then
 restore a backup from before the edit: the macro shows the file's text, and the file isn't
 changed.
+
+**R8. Backups in the background.** With 20 or more backups in `backups\` (set **Copies to
+keep** to 25 and click **Back up now** repeatedly), open the Restore tab: the rows fill in
+within a second or two, with no stutter, and the counts are right. Click **Back up now**: "Backed
+up as ..." appears. Click it twice quickly: the second click makes another backup right after
+the first ("Backed up as ..." again), or, in the same second, the "couldn't be written" error. Rename a macro and unload the addon at once: the next load shows no
+backup error in the Nexus log.
 
 ### O. Trash bin
 
@@ -975,6 +999,11 @@ Encoding **ANSI**. Make a new macro `Ansi` in `Test` and link it to `ansi.txt`: 
 without editing: the file isn't rewritten (Notepad doesn't ask to reload). Edit `Ansi` in the
 addon: the file is rewritten as UTF-8, with `�` for the `ä`. Delete `Ansi`.
 
+**K7. Several links.** Link five macros to five files (`k1.txt` to `k5.txt`). Edit all five
+files in Notepad and save them one after another: within about 2 seconds every macro shows its
+file's text. Edit the five macros in the addon: every file changes within about 2 seconds. Unlink
+one and delete another macro: no error, and the other three still follow their files.
+
 ### S. Advanced options
 
 The checkbox at the bottom of the options page's **General** tab. Have K's `test.txt` linked to
@@ -1133,20 +1162,20 @@ B1  B2  B3  B3b  B4 (what arrived):  B5 (any line missing?):
 D2  D3  D4  D5  D6
 F1  F2 (which mouse buttons, where):  F3  F4  F5  F6  F7  F8  F9
 E1
-L1  L2
+L1  L2  L3
 W1  W2  W3  W4  W5
 V1  V2  V3  V4  V5
 G1  G2  G4  G6  G5  G3 (where did it appear?):
-P1  P2  P3  P4 (did Ctrl+F / Escape reach the game?):  P5  P6 (label at character select):  P7 (did typing or Enter reach the game?):  P8
-T1  T2  T3  T4  T5
-R1  R2  R3  R4  R5  R6  R7
+P1  P2  P3  P4 (did Ctrl+F / Escape reach the game?):  P5  P6 (label at character select):  P7 (did typing or Enter reach the game?):  P8  P9
+T1  T2  T3  T4  T5  T6
+R1  R2  R3  R4  R5  R6  R7  R8
 O1  O2  O3 (long name too)  O4  O5
 H1  H2  H3  H4 (map: mode, map id):  H5  H6  H7  H8  H9  H10
 I1 (date format sent):  I2  I3  I4  I5  I6  I7  I8  I9
 J1  J2  J3  J3b  J4  J5  J6  J7  J8  J9  J10  J11
 U1  U2  U3
 N1 (pasted text):  N2  N3
-K1  K2  K3  K4  K5  K6
+K1  K2  K3  K4  K5  K6  K7
 S1  S2  S3  S4
 M1 (entries and sizes):  M2  M3  M4  M5
 Q1  Q2  Q3 (anything cut off?):  Q4  Q5  Q6  Q7  Q8  Q9   Translations that read oddly:

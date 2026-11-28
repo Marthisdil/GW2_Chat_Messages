@@ -1,8 +1,11 @@
 #include "Storage.h"
 
+#include <atomic>
 #include <cstring>
 #include <ctime>
 #include <fstream>
+#include <memory>
+#include <mutex>
 #include <sstream>
 #include <system_error>
 
@@ -16,6 +19,7 @@
 #include "Localization.h"
 #include "MacroTree.h"
 #include "PathText.h"
+#include "WorkQueue.h"
 
 namespace fs = std::filesystem;
 
@@ -23,6 +27,37 @@ namespace
 {
     constexpr const char* kLibraryFile  = "macros.json";
     constexpr const char* kSettingsFile = "settings.json";
+
+    // Set by Init (before any other thread starts) and cleared by Shutdown: read-only between.
+    fs::path  s_Dir;
+    WorkQueue s_Writer;
+
+    // settings.json, read once (LoadSettings) and changed in memory (SaveSetting).
+    std::mutex     s_SettingsMutex;
+    nlohmann::json s_Settings = nlohmann::json::object();
+    bool           s_SettingsLoaded = false;
+
+    // The macros.json saves (SaveMacrosLater).
+    std::atomic<uint64_t> s_MacrosSeq{0};
+    std::mutex            s_ResultMutex;
+    Storage::SaveResult   s_LastMacros;
+
+    fs::path LookUpAddonDir()
+    {
+        const char* dir = g_Api ? g_Api->Paths_GetAddonDirectory(kDataFolder) : nullptr;
+        if (!dir) return {};
+        fs::path path = PathText::FromUtf8(dir);
+        std::error_code ec;
+        fs::create_directories(path, ec);
+        return path;
+    }
+
+    // The folder a file goes in, made again if it was deleted while the game runs.
+    void MakeParent(const fs::path& aFile)
+    {
+        std::error_code ec;
+        if (aFile.has_parent_path()) fs::create_directories(aFile.parent_path(), ec);
+    }
 
     fs::path LibraryFile()
     {
@@ -86,14 +121,40 @@ namespace
     }
 }
 
+void Storage::Init()
+{
+    s_Dir = LookUpAddonDir();
+    {
+        std::lock_guard<std::mutex> lock(s_SettingsMutex);
+        s_Settings = nlohmann::json::object();
+        s_SettingsLoaded = false;
+    }
+    s_Writer.Start();
+}
+
+void Storage::Shutdown()
+{
+    s_Writer.Stop(); // runs every write still waiting
+    if (const size_t n = s_Writer.Failures())
+        LogF(LOGL_WARNING, "%zu background write(s) failed with an internal error.", n);
+    {
+        std::lock_guard<std::mutex> lock(s_SettingsMutex);
+        s_Settings = nlohmann::json::object();
+        s_SettingsLoaded = false; // a reload reads the file again
+    }
+    s_Dir.clear();
+}
+
+void Storage::Post(std::function<void()> aJob, const std::string& aKey) { s_Writer.Post(std::move(aJob), aKey); }
+
+void Storage::Flush() { s_Writer.Flush(); }
+
 fs::path Storage::AddonDir()
 {
-    const char* dir = g_Api ? g_Api->Paths_GetAddonDirectory(kDataFolder) : nullptr;
-    if (!dir) return {};
-    fs::path path = PathText::FromUtf8(dir);
-    std::error_code ec;
-    fs::create_directories(path, ec);
-    return path;
+    // Looked up once: Nexus' answer never changes while the addon is loaded, and asking (and
+    // creating the folder) every frame cost a file-system call each time.
+    if (!s_Dir.empty()) return s_Dir;
+    return LookUpAddonDir(); // before Init (or after Shutdown)
 }
 
 namespace
@@ -132,6 +193,7 @@ fs::path Storage::FreeFile(const fs::path& aDir, const std::string& aFileName)
 bool Storage::WriteText(const fs::path& aFile, const std::string& aText)
 {
     if (aFile.empty()) return false;
+    MakeParent(aFile);
     const fs::path tmp = WithSuffix(aFile, ".tmp");
     {
         std::ofstream out(tmp, std::ios::binary | std::ios::trunc);
@@ -172,6 +234,7 @@ void Storage::OpenWebPage(const char* aUrl)
 bool Storage::WriteJson(const fs::path& aFile, const nlohmann::json& aJson, bool aKeepBackup)
 {
     if (aFile.empty()) return false;
+    MakeParent(aFile);
     const fs::path tmp = WithSuffix(aFile, ".tmp");
     try
     {
@@ -252,29 +315,64 @@ bool Storage::LoadMacros(MacroTree::Tree& aTree, std::vector<std::string>& aMess
     return false;
 }
 
-bool Storage::SaveMacros(const MacroTree::Tree& aTree)
+namespace
+{
+    // The writer thread's half of SaveMacrosLater.
+    bool WriteLibrary(const nlohmann::json& aJson, int aFormatRead)
+    {
+        const fs::path file = LibraryFile();
+        // An older format, upgraded as it was read: keep the file as it was, once, before the first save.
+        if (!file.empty() && aFormatRead < MacroTree::kFormatVersion)
+        {
+            const fs::path old = WithSuffix(file, ".v" + std::to_string(aFormatRead) + ".bak");
+            std::error_code ec;
+            if (fs::exists(file, ec) && !fs::exists(old, ec))
+            {
+                fs::copy_file(file, old, ec);
+                if (ec) LogF(LOGL_WARNING, "Could not keep the old macros.json as %s: %s", PathText::Utf8(old.filename()).c_str(),
+                             ec.message().c_str());
+            }
+        }
+        return Storage::WriteJson(file, aJson, true);
+    }
+}
+
+uint64_t Storage::SaveMacrosLater(const MacroTree::Tree& aTree)
 {
     // A newer version's file is never written over: this build would lose what it doesn't
     // understand of a breaking change (docs/design.md, "Saved files").
     if (aTree.FromNewerVersion())
     {
         LogF(LOGL_WARNING, "macros.json is from a newer version of the addon (format %d); it isn't saved.", aTree.FormatRead());
-        return false;
+        return 0;
     }
-    const fs::path file = LibraryFile();
-    // An older format, upgraded as it was read: keep the file as it was, once, before the first save.
-    if (!file.empty() && aTree.FormatRead() < MacroTree::kFormatVersion)
-    {
-        const fs::path old = WithSuffix(file, ".v" + std::to_string(aTree.FormatRead()) + ".bak");
-        std::error_code ec;
-        if (fs::exists(file, ec) && !fs::exists(old, ec))
-        {
-            fs::copy_file(file, old, ec);
-            if (ec) LogF(LOGL_WARNING, "Could not keep the old macros.json as %s: %s", PathText::Utf8(old.filename()).c_str(),
-                         ec.message().c_str());
-        }
-    }
-    return WriteJson(file, aTree.ToJson(), true);
+    // The tree is only safe to read here (the render thread): the job gets its own copy.
+    const auto json = std::make_shared<const nlohmann::json>(aTree.ToJson());
+    const int formatRead = aTree.FormatRead();
+    const uint64_t seq = ++s_MacrosSeq;
+    s_Writer.Post([json, formatRead, seq] {
+        bool ok = false;
+        try { ok = WriteLibrary(*json, formatRead); }
+        catch (const std::exception& e) { LogF(LOGL_WARNING, "Could not write macros.json: %s", e.what()); }
+        std::lock_guard<std::mutex> lock(s_ResultMutex);
+        s_LastMacros = {seq, ok};
+    }, "macros");
+    return seq;
+}
+
+Storage::SaveResult Storage::LastMacrosSave()
+{
+    std::lock_guard<std::mutex> lock(s_ResultMutex);
+    return s_LastMacros;
+}
+
+bool Storage::SaveMacros(const MacroTree::Tree& aTree)
+{
+    const uint64_t seq = SaveMacrosLater(aTree);
+    if (seq == 0) return false;
+    Flush();
+    const SaveResult r = LastMacrosSave();
+    return r.Seq == seq && r.Ok;
 }
 
 bool Storage::ReadLibraryText(std::string& aText)
@@ -294,6 +392,8 @@ bool Storage::ReadLibraryText(std::string& aText)
 }
 
 std::string Storage::LibraryText(const MacroTree::Tree& aTree) { return Dump(aTree.ToJson()); }
+
+std::string Storage::JsonText(const nlohmann::json& aJson) { return Dump(aJson); }
 
 std::vector<std::string> Storage::BackupNames()
 {
@@ -376,45 +476,102 @@ bool Storage::ReadBackup(const std::string& aName, MacroTree::Tree& aTree, std::
     }
 }
 
+namespace
+{
+    nlohmann::json ReadSettingsFile();
+    void WriteSettingsFile(const nlohmann::json& aSettings);
+
+    // Caller holds s_SettingsMutex.
+    void EnsureSettingsLoaded()
+    {
+        if (s_SettingsLoaded) return;
+        s_Settings = ReadSettingsFile();
+        s_SettingsLoaded = true;
+    }
+
+    // Writes the settings as they are when the job runs: several changes in a row write once.
+    void PostSettingsWrite()
+    {
+        s_Writer.Post([] {
+            nlohmann::json copy;
+            {
+                std::lock_guard<std::mutex> lock(s_SettingsMutex);
+                copy = s_Settings;
+            }
+            WriteSettingsFile(copy);
+        }, "settings");
+    }
+}
+
 nlohmann::json Storage::LoadSettings()
 {
-    const fs::path dir = AddonDir();
-    if (dir.empty()) return nlohmann::json::object();
-    const fs::path file = dir / kSettingsFile;
-    std::error_code ec;
-    if (!fs::exists(file, ec)) return nlohmann::json::object();
-    try
-    {
-        std::ifstream in(file, std::ios::binary);
-        nlohmann::json j = nlohmann::json::parse(in);
-        if (j.is_object()) return j;
-        LogF(LOGL_WARNING, "%s isn't a settings file; using the default settings.", PathText::Utf8(file).c_str());
-    }
-    catch (const std::exception& e)
-    {
-        LogF(LOGL_WARNING, "Could not read %s: %s. Using the default settings.", PathText::Utf8(file).c_str(), e.what());
-    }
-    return nlohmann::json::object();
+    std::lock_guard<std::mutex> lock(s_SettingsMutex);
+    EnsureSettingsLoaded();
+    return s_Settings;
 }
 
 bool Storage::SaveSetting(const char* aKey, const nlohmann::json& aValue)
 {
-    nlohmann::json s = LoadSettings(); // re-read so one setting never overwrites another
-    s[aKey] = aValue;
-    return SaveSettings(s);
+    {
+        std::lock_guard<std::mutex> lock(s_SettingsMutex);
+        EnsureSettingsLoaded(); // so one setting never overwrites another
+        s_Settings[aKey] = aValue;
+    }
+    PostSettingsWrite();
+    return true; // a failed write is logged by the writer
 }
 
 bool Storage::SaveSettings(const nlohmann::json& aSettings)
 {
-    const fs::path dir = AddonDir();
-    if (dir.empty()) return false;
-    // "format": added when missing; a newer number is kept (each setting is checked on its own
-    // and unknown ones are kept, so a newer file reads fine).
-    if (aSettings.is_object() && !aSettings.contains("format"))
+    if (!aSettings.is_object()) return false;
     {
-        nlohmann::json withFormat = aSettings;
-        withFormat["format"] = kSettingsFormat;
-        return WriteJson(dir / kSettingsFile, withFormat, false);
+        std::lock_guard<std::mutex> lock(s_SettingsMutex);
+        s_Settings = aSettings;
+        s_SettingsLoaded = true;
     }
-    return WriteJson(dir / kSettingsFile, aSettings, false);
+    PostSettingsWrite();
+    return true;
+}
+
+namespace
+{
+    // settings.json from disk (LoadSettings keeps it in memory after the first read).
+    nlohmann::json ReadSettingsFile()
+    {
+        const fs::path dir = Storage::AddonDir();
+        if (dir.empty()) return nlohmann::json::object();
+        const fs::path file = dir / kSettingsFile;
+        std::error_code ec;
+        if (!fs::exists(file, ec)) return nlohmann::json::object();
+        try
+        {
+            std::ifstream in(file, std::ios::binary);
+            nlohmann::json j = nlohmann::json::parse(in);
+            if (j.is_object()) return j;
+            LogF(LOGL_WARNING, "%s isn't a settings file; using the default settings.", PathText::Utf8(file).c_str());
+        }
+        catch (const std::exception& e)
+        {
+            LogF(LOGL_WARNING, "Could not read %s: %s. Using the default settings.", PathText::Utf8(file).c_str(), e.what());
+        }
+        return nlohmann::json::object();
+    }
+
+    void WriteSettingsFile(const nlohmann::json& aSettings)
+    {
+        const fs::path dir = Storage::AddonDir();
+        if (dir.empty()) return;
+        // "format": added when missing; a newer number is kept (each setting is checked on its own
+        // and unknown ones are kept, so a newer file reads fine).
+        if (aSettings.is_object() && !aSettings.contains("format"))
+        {
+            nlohmann::json withFormat = aSettings;
+            withFormat["format"] = Storage::kSettingsFormat;
+            if (!Storage::WriteJson(dir / kSettingsFile, withFormat, false))
+                LogF(LOGL_WARNING, "settings.json couldn't be written; your settings are kept until the next change or unload.");
+            return;
+        }
+        if (!Storage::WriteJson(dir / kSettingsFile, aSettings, false))
+            LogF(LOGL_WARNING, "settings.json couldn't be written; your settings are kept until the next change or unload.");
+    }
 }

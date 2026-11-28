@@ -17,6 +17,7 @@
 #include "Localization.h"
 #include "MapNames.h"
 #include "Sender.h"
+#include "Storage.h"
 #include "Ui.h"
 #include "resource.h"
 
@@ -86,6 +87,7 @@ namespace
             reinterpret_cast<void (*)(void*, void*)>(g_Api->ImguiFree));
 
         // Initialise state before registering anything that can call back into us.
+        Storage::Init();  // first: the addon folder and the writer thread every save goes through
         MapNames::Init(); // before Ui and Sender, which ask it for names
         Languages::AddNexusText(kToggleKeybind, kToggleName);
         Languages::AddNexusText(kMenuKeybind, kMenuName);
@@ -130,6 +132,7 @@ namespace
         Ui::Shutdown();     // saves pending changes
         Languages::Shutdown(); // after Ui: nothing draws translated text any more
         MapNames::Shutdown(); // stops its lookup thread, saves maps.json
+        Storage::Shutdown();  // last saver: writes what's still waiting (macros.json, settings.json), stops its thread
         Localization::ClearShared(); // every thread that could hold a TR() text has stopped
 
         LogF(LOGL_INFO, "Unloaded.");

@@ -66,6 +66,18 @@ to the todo list", add it there (don't start building it). Move agreed items int
   consumed**, ignored while any text box is focused. Only the library toggle and the quick-menu
   pop-up are Nexus InputBinds, registered with `"(null)"` (no default key).
 
+## Frame rate (owner, 2026-11-27: the addon must never cost the game frames)
+
+- **Render-thread budget:** nothing called from `AddonRender`, the options page or a WndProc
+  hook may touch the disk, the network, or wait on a lock that is held during file or network
+  work. File writes go to the writer thread (`Storage::Post`, `src/WorkQueue.*`); reads that can
+  wait go there too, with the result picked up on the render thread.
+- **No whole-library work every frame:** walking the tree, searching, or building strings per
+  macro is cached (key on what it depends on, `s_TreeGen` for the library, and rebuild at least
+  every `kCacheRefreshSec`). A new per-frame loop over the library needs a cache.
+- Rules and how to check a change: `docs/performance.md`. A PR that changes code says
+  "Render-thread budget: ..." in its body (what runs per frame, or "no change").
+
 ## Nexus references
 
 - Nexus addon manager: https://raidcore.gg/Nexus
@@ -121,8 +133,16 @@ to the todo list", add it there (don't start building it). Move agreed items int
   units, as the game counts). No Nexus or ImGui dependency. Tested by `tests/ChatLineTests.cpp`.
 - `tests/`: `TestMain.cpp` runs every `Run*Tests()`, and `TestCheck.h` has `CHECK`. Add new test
   files and their sources to `tools/run_tests.ps1`.
-- `src/Storage.*`: the addon folder, atomic JSON writes (temp + rename, `.bak` of the previous
-  file), and `LoadMacros`/`SaveMacros`. An unreadable `macros.json` is renamed aside, never
+- `src/WorkQueue.*`: one background thread running jobs in order; a job with a key replaces
+  the waiting one with that key; exceptions are caught and counted; `Flush` waits; `Stop`
+  drains. Before `Start` a job runs at once. No Nexus or ImGui dependency. Tested by
+  `tests/WorkQueueTests.cpp`.
+- `src/Storage.*`: the addon folder (looked up once in `Storage::Init`), the writer thread
+  (`Init`/`Shutdown`, `Post`, `Flush`: `docs/design.md`, "Saving off the render thread"; writer
+  jobs only use `Storage`/`Backups` and what they're given, never the tree or ImGui), atomic
+  JSON writes (temp + rename, `.bak` of the previous file), and `LoadMacros`/`SaveMacros`
+  (`SaveMacrosLater` + `LastMacrosSave` for the render thread). `settings.json` is cached in
+  memory and written by the writer. An unreadable `macros.json` is renamed aside, never
   overwritten; a newer one is never saved over, and an older one is copied to
   `macros.json.v<N>.bak` before its first save. `settings.json` has `"format"`
   (`kSettingsFormat`). Don't name functions `LoadLibrary` etc.: `windows.h` macros clash.
