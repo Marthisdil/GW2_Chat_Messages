@@ -174,6 +174,18 @@ fs::path Storage::ExportsDir() { return SubDir("exports"); }
 fs::path Storage::ImportsDir() { return SubDir("imports"); }
 fs::path Storage::LocalizationDir() { return SubDir("localization"); }
 fs::path Storage::BackupsDir() { return SubDir("backups"); }
+fs::path Storage::PerfDir() { return SubDir("perf"); }
+
+bool Storage::AppendText(const fs::path& aFile, const std::string& aText, bool aStart)
+{
+    if (aFile.empty()) return false;
+    MakeParent(aFile);
+    std::ofstream out(aFile, std::ios::binary | (aStart ? std::ios::trunc : std::ios::app));
+    if (!out) return false;
+    out.write(aText.data(), static_cast<std::streamsize>(aText.size()));
+    out.flush();
+    return static_cast<bool>(out);
+}
 
 fs::path Storage::FreeFile(const fs::path& aDir, const std::string& aFileName)
 {

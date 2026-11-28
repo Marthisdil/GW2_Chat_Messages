@@ -137,6 +137,14 @@ to the todo list", add it there (don't start building it). Move agreed items int
   the waiting one with that key; exceptions are caught and counted; `Flush` waits; `Stop`
   drains. Before `Start` a job runs at once. No Nexus or ImGui dependency. Tested by
   `tests/WorkQueueTests.cpp`.
+- `src/Perf.*`: the frame recorder's rules (a second's summary, percentiles, the CSV rows, the
+  file name, the limits). No Nexus or ImGui dependency. Tested by `tests/PerfTests.cpp`.
+  `src/PerfRecorder.*`: the recorder itself (timing, the file through the writer thread), only
+  compiled in where the `.vcxproj` defines `CHATMSG_PERF_RECORDER`: builds made on the owner's
+  PC, never on GitHub Actions, so **no published release has it** (owner, 2026-11-28). CI checks
+  every DLL with `tools\check_no_recorder.ps1`; keep `kMarker` and that script's text the same.
+  Behind Advanced options. `tools\perf_report.ps1` sums a recording up. `docs/performance.md`,
+  "The frame recorder".
 - `src/Storage.*`: the addon folder (looked up once in `Storage::Init`), the writer thread
   (`Init`/`Shutdown`, `Post`, `Flush`: `docs/design.md`, "Saving off the render thread"; writer
   jobs only use `Storage`/`Backups` and what they're given, never the tree or ImGui), atomic

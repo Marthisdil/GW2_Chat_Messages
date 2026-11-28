@@ -48,23 +48,24 @@ current build.
 | 3 | D. Refusals and recovery | 1 | A3. | Not run yet |
 | 4 | F. Hotkeys | 1 | A3 (`Fill` for F8). F9: Advanced options on. | Not run yet |
 | 5 | E. Commander | 1 | A3, and a commander tag (skip without one). | Not run yet |
-| 6 | L. Final checks | 1 | A3 (`Long`). L1 again at the end of every play session. | Not run yet |
-| 7 | W. First-run welcome, tour and What's new | 2 | A copy of the addon folder (W renames it). W4: a test build with a changelog section. | Not run yet |
-| 8 | V. The macro editor layout | 2 | A3, F1 (`Say` on Ctrl+F1). V5: Advanced options on. | Not run yet |
-| 9 | G. Quick menu | 2 | A3, F1. | Not run yet |
-| 10 | P. Search box | 2 | A3, F1. | Not run yet |
-| 11 | T. Saved files: older and newer versions | 2 | A3. T3's link parts: K1 and Advanced options on (or skip them). | Not run yet |
-| 12 | R. Backups and restore | 2 | A library with a few macros. R7: K (or skip it). | Not run yet |
-| 13 | O. Trash bin | 2 | Nothing. | Not run yet |
-| 14 | H. Filters (where a macro is active) | 3 | A3, F2 (`Emote` on Ctrl+Mouse 4). H8: Advanced options on. | Not run yet |
-| 15 | I. Placeholders | 3 | A3 (`Fill`). I9: German (Q2 explains it). | Not run yet |
-| 16 | J. Import and export | 3 | A3, F1. J2, J7, J10: Advanced options on. | Not run yet |
-| 17 | U. Duplicate, notes, and the map list after a game update | 3 | A3. | Not run yet |
-| 18 | N. The error window | 3 | A3. | Not run yet |
-| 19 | K. Text file links | 3 | A3, Advanced options on. | Not run yet |
-| 20 | S. Advanced options | 3 | K1 (`test.txt` linked to `Two`), F9 (`Say`'s cooldown). | Not run yet |
-| 21 | M. Text size | 4 | Nothing. | Not run yet |
-| 22 | Q. Languages | 4 | Nothing (Q6 to Q9 build on each other). | Not run yet |
+| 6 | X. Frame recorder | 1 | A build made on your own PC (not a GitHub download), Advanced options on, A3 (`Long`). | Not run yet |
+| 7 | L. Final checks | 1 | A3 (`Long`). L1 again at the end of every play session. | Not run yet |
+| 8 | W. First-run welcome, tour and What's new | 2 | A copy of the addon folder (W renames it). W4: a test build with a changelog section. | Not run yet |
+| 9 | V. The macro editor layout | 2 | A3, F1 (`Say` on Ctrl+F1). V5: Advanced options on. | Not run yet |
+| 10 | G. Quick menu | 2 | A3, F1. | Not run yet |
+| 11 | P. Search box | 2 | A3, F1. | Not run yet |
+| 12 | T. Saved files: older and newer versions | 2 | A3. T3's link parts: K1 and Advanced options on (or skip them). | Not run yet |
+| 13 | R. Backups and restore | 2 | A library with a few macros. R7: K (or skip it). | Not run yet |
+| 14 | O. Trash bin | 2 | Nothing. | Not run yet |
+| 15 | H. Filters (where a macro is active) | 3 | A3, F2 (`Emote` on Ctrl+Mouse 4). H8: Advanced options on. | Not run yet |
+| 16 | I. Placeholders | 3 | A3 (`Fill`). I9: German (Q2 explains it). | Not run yet |
+| 17 | J. Import and export | 3 | A3, F1. J2, J7, J10: Advanced options on. | Not run yet |
+| 18 | U. Duplicate, notes, and the map list after a game update | 3 | A3. | Not run yet |
+| 19 | N. The error window | 3 | A3. | Not run yet |
+| 20 | K. Text file links | 3 | A3, Advanced options on. | Not run yet |
+| 21 | S. Advanced options | 3 | K1 (`test.txt` linked to `Two`), F9 (`Say`'s cooldown). | Not run yet |
+| 22 | M. Text size | 4 | Nothing. | Not run yet |
+| 23 | Q. Languages | 4 | Nothing (Q6 to Q9 build on each other). | Not run yet |
 | - | C. Whispers and Tab | 1 | A3 | All done (see [Done](#done-passed-checks)) |
 
 ## How to report
@@ -314,6 +315,36 @@ cooldown is still set (and the hotkey works at once). Set it back to `0`.
 
 **E1.** Add a Squad line with **Broadcast** ticked. As commander it goes out as a squad broadcast;
 when you're not commander, the same macro is sent as normal squad chat.
+
+### X. Frame recorder
+
+Only in a build made on your own PC: a DLL from GitHub (any release, or a CI artifact) doesn't
+have it. Turn **Advanced options** on (options page, General tab). The recorder sits under the
+box. `docs/performance.md`, "The frame recorder", explains the file.
+
+**X1. Hidden while the box is off.** With Advanced options off, the options page shows no
+frame recorder. Turn the box on: it appears under it.
+
+**X2. Start, mark and stop.** Pick **5 minutes**, click **Start recording**. The live line
+shows the time, the game's ms a frame and fps, and this addon's average and maximum, and
+changes every second. Click **Mark** twice. Open the library, send `Long`, close the library,
+open the quick menu and close it. Click **Stop recording**: "Last recording" names the file and
+says "stopped by you". **Open the perf folder** opens `<addon>\perf\` with that
+`perf_..._UTC.csv`.
+
+**X3. No input disturbed while recording.** During X2 and X4, play normally: movement, skills,
+Tab targeting, chat, and a macro hotkey all work as usual, and `Long` arrives complete.
+
+**X4. Stops by itself.** Start a 5-minute recording and wait: it stops at 5:00 and says
+"stopped at the time limit". Start another and turn **Advanced options** off: it stops ("stopped
+when Advanced options were turned off"). Turn the box back on, start one more and unload the
+addon in Nexus > Addons: the unload finishes at once, and the file ends with a `stop: unload` event row.
+
+**X5. The summary.** Run
+`powershell -NoProfile -ExecutionPolicy Bypass -File tools\perf_report.ps1 -Dir <addon>\perf`
+on the X2 file (move the later ones aside, or use `-File`): it shows the game and addon
+numbers, the sections, "By what you were doing" with "library open" and "sending" rows, and
+both marks.
 
 ### L. Final checks
 
@@ -1162,6 +1193,7 @@ B1  B2  B3  B3b  B4 (what arrived):  B5 (any line missing?):
 D2  D3  D4  D5  D6
 F1  F2 (which mouse buttons, where):  F3  F4  F5  F6  F7  F8  F9
 E1
+X1  X2  X3  X4  X5 (addon average and maximum):
 L1  L2  L3
 W1  W2  W3  W4  W5
 V1  V2  V3  V4  V5

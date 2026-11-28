@@ -37,11 +37,15 @@ namespace Storage
     std::filesystem::path ImportsDir(); // <addon>\imports, the same
     std::filesystem::path LocalizationDir(); // <addon>\localization (language files), the same
     std::filesystem::path BackupsDir(); // <addon>\backups, the same
+    std::filesystem::path PerfDir();    // <addon>\perf (the frame recorder's files), the same
 
     // A path in aDir for aFileName that doesn't exist yet: "name.json", else "name (2).json"...
     std::filesystem::path FreeFile(const std::filesystem::path& aDir, const std::string& aFileName);
     // Writes UTF-8 text via a temporary file and rename. Returns false (logged) on failure.
     bool WriteText(const std::filesystem::path& aFile, const std::string& aText);
+    // Adds aText to the end of aFile (made if it's missing). aStart: the file is emptied first.
+    // For the frame recorder's file, from a writer job. False if it couldn't be written.
+    bool AppendText(const std::filesystem::path& aFile, const std::string& aText, bool aStart);
     // Opens a folder in Windows Explorer (only ever on a click).
     void OpenFolder(const std::filesystem::path& aDir);
     // Opens one of the addon's built-in web addresses (Globals.h) in the browser, only ever on a

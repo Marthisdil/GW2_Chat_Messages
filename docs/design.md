@@ -272,7 +272,10 @@ reading a newer one (someone going back a version, or importing a friend's expor
     - Import's **A whole library**: hidden, macros only;
     - Import's **Keep hotkeys**: hidden and forced off;
     - **Refresh map list**: hidden (the automatic refreshes go on), and the map picker's hint no
-      longer points at it.
+      longer points at it;
+    - the **frame recorder** (2026-11-28), only in builds made on the owner's PC: hidden, and a
+      recording stops when the box is turned off. Not per-macro; behind the box because it's a
+      developer's tool (`docs/performance.md`, "The frame recorder").
     The options page counts the macros that use one (linked, with a cooldown) while it's off.
   - Your own language files were behind it from 2026-11-25 to 2026-11-26; they now have their
     own opt-in next to the Language dropdown ("Languages"), since players who use a language file

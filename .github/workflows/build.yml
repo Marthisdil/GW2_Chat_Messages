@@ -22,7 +22,13 @@ jobs:
       - uses: microsoft/setup-msbuild@v3
 
       - name: Build
-        run: msbuild GW2_Chat_Messages.sln /m /p:Configuration=${{ matrix.configuration }} /p:Platform=x64
+        # ChatMsgNoPerfRecorder: the frame recorder is never in a CI build (it's also left out
+        # because GITHUB_ACTIONS is set; tools\check_no_recorder.ps1 checks the DLL).
+        run: msbuild GW2_Chat_Messages.sln /m /p:Configuration=${{ matrix.configuration }} /p:Platform=x64 /p:ChatMsgNoPerfRecorder=true
+
+      - name: Check the frame recorder isn't in the DLL
+        shell: pwsh
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tools\check_no_recorder.ps1 -Dll "build\${{ matrix.configuration }}\GW2_Chat_Messages.dll"
 
       - name: Check GetAddonDef export
         shell: pwsh
