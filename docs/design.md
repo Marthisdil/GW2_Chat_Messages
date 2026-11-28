@@ -873,6 +873,42 @@ folder**.)*
     import. Their folders are one level deeper, so the usual too-deep rules apply.
   - Not taken: their `settings.json` (text size and the trash bin setting are personal).
   - Switching modes, or closing the window, clears what was loaded; the window opens on Macros.
+- **From Blish HUD** (built 2026-11-28 from the todo list; owner's choices that day): the macros
+  someone made in Blish HUD's Chat Shorts module (`bhm-chat-macros`), so moving to Nexus doesn't
+  mean typing them again. Rules in `src/LiteDb.*` (the file), `src/ChatShorts.*` (the mapping)
+  and `Exchange::FromChatShorts`, tested in `tests/LiteDbTests.cpp` and
+  `tests/ChatShortsTests.cpp` (with `tests/samples/chatshorts_macros.db`: a real file, its text
+  replaced by filler).
+  - **The file:** Chat Shorts keeps everything in `macros.db`, a LiteDB 5 database, in Blish HUD's
+    module folder (`Documents\Guild Wars 2\addons\blishhud\chat_shorts\` unless Blish HUD's
+    settings were moved). `src/LiteDb.*` is a small read-only reader of our own (no .NET
+    library): page by page, slot by slot, following each document's blocks, every offset and
+    length checked, at most 16 MB, 1 MB a document and 20,000 documents. Only the documents are
+    read: not the indexes and not LiteDB's `macros-log.db`; a non-empty `macros-log.db` next to
+    it adds a warning (Blish HUD still running or not closed cleanly: the newest changes may be
+    missing). A password-protected file or another LiteDB version is refused.
+  - **Where it's read from:** step 1's **From Blish HUD** choice has a **Load from Blish HUD**
+    button (the usual folder, from Windows' Documents folder), and the imports list shows `.db`
+    files (not `*-log.db`), for a copy from a moved Blish HUD folder; the path box takes the file
+    or its `chat_shorts` folder. No **Paste from clipboard** (it isn't text).
+  - **The mapping:** a flat list of macros (`chat_macros`), each pointing at its lines
+    (`chat_lines`) by id. Title -> name (empty: "Imported macro"; a repeated title gets " (2)"),
+    lines in the macro's order, the same 16 channels (by name or number), whisper recipient (only
+    on Whisper lines), squad broadcast (only on Squad lines). Game modes from its flags ("PvE,
+    WvW"; none = all). Maps: when a macro has maps, Chat Shorts ignores its game modes, so it
+    becomes all modes + those maps (at most `kMaxMapIds`). Hotkey from its `key_binding`
+    (`PrimaryKey` = Windows key code, `ModifierKeys` Ctrl 1 / Alt 2 / Shift 4), kept only with
+    **Keep hotkeys** as for every import. `{blish}` becomes `{nexus}`; `{wp}`, `{poi}` and
+    `{area}`, which this addon doesn't have, stay as typed with a warning; `{txt}`/`{json}` are
+    marked REMOVED PLACEHOLDER as usual. Lines no macro points at (Chat Shorts leaves them
+    behind) are ignored; a missing line, an unknown channel or more than 50 lines is a warning;
+    a macro with no lines is left out. Voice commands and linked text files aren't taken
+    (counted in a warning). Text that isn't UTF-8 is repaired.
+  - **Where they go:** one new folder at the top level, **Imported** (editable in step 2, like a
+    whole library; a taken name gets " (2)"), the macros in it sorted A to Z by title, no
+    sub-folders (owner: flat, sort them afterwards).
+  - **Advanced option?** No (owner, 2026-11-26): players moving from Blish HUD are new users, with
+    the box off. **A whole library** stays behind it.
 - **The trash bin is never exported or imported** (2026-11-21): exports are built from tree nodes,
   so the bin isn't in them, and while the bin holds anything, export messages, the Export submenu
   and the Export all tooltip say "Items in the trash bin (F/M) aren't exported". Importing a

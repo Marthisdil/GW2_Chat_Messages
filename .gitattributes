@@ -1,0 +1,2 @@
+# Test samples that are binary files (git would guess, but never convert line endings in them).
+tests/samples/*.db binary

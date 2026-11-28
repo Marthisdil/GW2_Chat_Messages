@@ -103,6 +103,14 @@ namespace Exchange
     // LibraryFolderFallback() if empty). Returns that folder, or nullptr if the package is empty.
     Node* WrapInFolder(Package& aPkg, const std::string& aName);
 
+    // --- From Blish HUD (Chat Shorts' macros.db) -------------------------------------------------
+    // Read like any import (src/ChatShorts.*, src/LiteDb.*), and the UI puts the macros into one
+    // new folder at the top level (WrapInFolder, named ChatShortsFolderName()), sorted A-Z.
+    // aPath: the macros.db file, or the chat_shorts folder that holds it. A non-empty
+    // "macros-log.db" next to it adds a warning (the newest changes may be missing).
+    Package     FromChatShorts(const std::filesystem::path& aPath);
+    const char* ChatShortsFolderName(); // "Imported", in the active language (TR)
+
     // --- Preview and import ---------------------------------------------------------------------
 
     // What to do when an item has the same name as one already in the target folder.

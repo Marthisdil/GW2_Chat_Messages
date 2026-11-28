@@ -10,6 +10,8 @@
 #include <nlohmann/json.hpp>
 
 #include "ChatLine.h"
+#include "ChatShorts.h"
+#include "LiteDb.h"
 #include "PathText.h"
 #include "Placeholders.h"
 #include "Version.h"
@@ -918,6 +920,59 @@ namespace Exchange
         if (stem.empty() || Lower(stem) == "macros") return LibraryFolderFallback();
         return Tree::CleanName(Localization::Fmt(TR("From %s"), stem.c_str()));
     }
+
+    Package FromChatShorts(const fs::path& aPath)
+    {
+        Package p;
+        try
+        {
+            std::error_code ec;
+            fs::path file = aPath;
+            if (fs::is_directory(file, ec)) file /= ChatShorts::kFileName;
+            p.Source = Utf8Name(file.filename());
+            std::string bytes, error;
+            if (!fs::is_regular_file(file, ec))
+            {
+                p.Error = TR("It isn't there, or it isn't a file.");
+                return p;
+            }
+            if (!ReadFile(file, LiteDb::kMaxFileBytes, bytes, error))
+            {
+                p.Error = error;
+                return p;
+            }
+            const LiteDb::Result db = LiteDb::Read(bytes);
+            if (!db.Ok())
+            {
+                p.Error = db.Error;
+                return p;
+            }
+            p.Warnings = db.Warnings;
+            const fs::path log = ChatShorts::LogFileOf(file);
+            if (fs::is_regular_file(log, ec) && fs::file_size(log, ec) > 0 && !ec)
+                p.Warnings.push_back(TR("Blish HUD hasn't finished saving this file (macros-log.db next to it isn't empty), so "
+                                        "your newest changes may be missing. Close Blish HUD and load it again."));
+            const auto it = db.Collections.find("chat_macros");
+            if (it == db.Collections.end())
+            {
+                p.Error = TR("It isn't a Blish HUD Chat Shorts database (macros.db).");
+                return p;
+            }
+            ChatShorts::Build(db.Collections, p.Items, p.Warnings);
+            CapWarnings(p.Warnings);
+            Finish(p);
+        }
+        catch (const std::exception&)
+        {
+            Package failed; // nothing half-read is kept
+            failed.Source = p.Source;
+            failed.Error  = TR("It couldn't be read.");
+            return failed;
+        }
+        return p;
+    }
+
+    const char* ChatShortsFolderName() { return TR("Imported"); }
 
     Node* WrapInFolder(Package& aPkg, const std::string& aName)
     {

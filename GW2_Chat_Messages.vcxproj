@@ -107,7 +107,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)tools\compile_
     <ClCompile Include="src\Hotkey.cpp" />
     <ClCompile Include="src\MapCatalog.cpp" />
     <ClCompile Include="src\GameKeys.cpp" />
+    <ClCompile Include="src\ChatShorts.cpp" />
     <ClCompile Include="src\Exchange.cpp" />
+    <ClCompile Include="src\LiteDb.cpp" />
     <ClCompile Include="src\Hotkeys.cpp" />
     <ClCompile Include="src\Http.cpp" />
     <ClCompile Include="src\LinkSync.cpp" />
@@ -144,7 +146,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)tools\compile_
     <ClInclude Include="src\Hotkey.h" />
     <ClInclude Include="src\MapCatalog.h" />
     <ClInclude Include="src\GameKeys.h" />
+    <ClInclude Include="src\ChatShorts.h" />
     <ClInclude Include="src\Exchange.h" />
+    <ClInclude Include="src\LiteDb.h" />
     <ClInclude Include="src\Hotkeys.h" />
     <ClInclude Include="src\Http.h" />
     <ClInclude Include="src\LinkSync.h" />

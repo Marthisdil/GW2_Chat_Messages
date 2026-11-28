@@ -59,7 +59,7 @@ current build.
 | 14 | O. Trash bin | 2 | Nothing. | Not run yet |
 | 15 | H. Filters (where a macro is active) | 3 | A3, F2 (`Emote` on Ctrl+Mouse 4). H8: Advanced options on. | Not run yet |
 | 16 | I. Placeholders | 3 | A3 (`Fill`). I9: German (Q2 explains it). | Not run yet |
-| 17 | J. Import and export | 3 | A3, F1. J2, J7, J10: Advanced options on. | Not run yet |
+| 17 | J. Import and export | 3 | A3, F1. J2, J7, J10: Advanced options on. J12: Blish HUD with Chat Shorts macros (or a copy of its `macros.db`). | Not run yet |
 | 18 | U. Duplicate, notes, and the map list after a game update | 3 | A3. | Not run yet |
 | 19 | N. The error window | 3 | A3. | Not run yet |
 | 20 | K. Text file links | 3 | A3, Advanced options on. | Not run yet |
@@ -942,6 +942,24 @@ export...**: the window starts again with only that macro ticked. While the wind
 rename and delete a ticked macro in the library: nothing breaks, and the deleted one isn't
 exported. Keys and Tab still work in the game afterwards.
 
+
+**J12. From Blish HUD.** You need Blish HUD's Chat Shorts module with a few macros (or a copy of
+its `macros.db`). Close Blish HUD. With **Advanced options** off, open **Import...**: step 1
+shows **Macros** and **From Blish HUD** (no **A whole library**). Choose **From Blish HUD** (no
+**Paste from clipboard**), click **Load from Blish HUD**:
+- step 2 asks for the new folder's name, filled in as `Imported`;
+- the preview has one new folder, `Imported`, with every Chat Shorts macro in it, A to Z; select
+  one after importing and compare it with Chat Shorts: the same lines, channels (Guild 1-6,
+  Squad, Map...), whisper names, squad broadcast, and where it's active;
+- no hotkeys come along (turn **Advanced options** on and tick **Keep hotkeys**: a macro that had
+  one in Chat Shorts shows it, e.g. `Name  [Ctrl+F1]`);
+- with Blish HUD running (or a non-empty `macros-log.db` next to the file), a warning says the
+  newest changes may be missing.
+Click **Import selected**, then send one imported macro: it arrives as it did from Chat Shorts.
+**Undo import**. Rename `Documents\Guild Wars 2\addons\blishhud\chat_shorts` for a moment and
+click **Load from Blish HUD**: the error window names the path it looked in. Put a copy of
+`macros.db` in `imports\`: it's listed (a `macros-log.db` isn't) and loads when clicked. Rename
+the folder back. Keys and Tab still work in the game afterwards.
 ### U. Duplicate, notes, and the map list after a game update
 
 Run U1 and U2 with **Advanced options** off, then once more with it on.
@@ -1065,7 +1083,7 @@ same one. Untick **Advanced options**:
 - no macro's editor has the **Edit the lines as: Lines / Raw text** choice (it's in Advanced): just
   the lines under **Lines (n)** and **Placeholders (?)**. If Raw text was showing before you
   unticked the box, the editor is back on Lines;
-- **Import...**: no **Macros / A whole library** choice (macros only), and no **Keep hotkeys**
+- **Import...**: **Macros** and **From Blish HUD** only (no **A whole library**), and no **Keep hotkeys**
   box. Import an export of `Say`: it comes without its hotkey;
 - the options page has no **Refresh map list** button (the map list line is still there). The
   Language section still has **Use language files from the localization folder** (it has its own
@@ -1204,7 +1222,7 @@ R1  R2  R3  R4  R5  R6  R7  R8
 O1  O2  O3 (long name too)  O4  O5
 H1  H2  H3  H4 (map: mode, map id):  H5  H6  H7  H8  H9  H10
 I1 (date format sent):  I2  I3  I4  I5  I6  I7  I8  I9
-J1  J2  J3  J3b  J4  J5  J6  J7  J8  J9  J10  J11
+J1  J2  J3  J3b  J4  J5  J6  J7  J8  J9  J10  J11  J12 (macros and lines counted):
 U1  U2  U3
 N1 (pasted text):  N2  N3
 K1  K2  K3  K4  K5  K6  K7

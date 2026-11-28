@@ -53,6 +53,7 @@ folder with someone else's file), **Medium** (wrong behaviour reachable with rea
 | [SEC-034](#sec-034) | 2026-11-24 05:01 | High | `src/MacroTree.cpp:289` (`ParseMacro`) | A JSON import (or a shared library) skipped the 50-line limit: one macro can hold about 1.4 million lines, and selecting it freezes the game | Fixed | PR #67, commit `7389e5d`, build `7d9876e` |
 | [SEC-035](#sec-035) | 2026-11-24 12:58 | High | `src/SendPlan.cpp:110` (`Build`), `src/Sender.cpp:146` (`TypeUtf8`) | A whisper recipient from a file has no length limit: sending it types every character on the game's window thread (the game freezes) and leaves chat open | Fixed | PR #70, commit `7f3167e`, build `e1d33cf` |
 | [SEC-036](#sec-036) | 2026-11-24 22:12 | Low | `src/MapNames.cpp:291` (`Shutdown`), `src/Sender.cpp:406` (`Shutdown`) | The stop flag is set and the worker woken without its mutex: a wakeup lost at exactly the wrong moment would hang unloading the addon (the game freezes) | Fixed | PR #73, commit `134714d`, build `b4815cd` |
+| [SEC-037](#sec-037) | 2026-11-28 13:30 | Low | `src/ChatShorts.cpp` (`Build`) | The new Blish HUD import didn't clean lines as every other import does: control characters stayed in messages and whisper recipients, and a recipient had no length limit (SEC-035's cap) | Fixed | `feature/blish-import`, before its first commit |
 
 "Build" is the build stamp's commit (shown in the Nexus log and the DLL's Properties). Until a
 release is tagged, it's the PR's commit; the release that first ships a fix is added when it's
@@ -625,6 +626,23 @@ made.
   first build `b4815cd`. No unit test (`Sender` and `MapNames` need Nexus); in-game check L2
   (idle unload/load).
 
+### SEC-037
+
+- **Found:** 2026-11-28 13:30 UTC, by `/code-review` (medium) on `feature/blish-import`, before
+  its first commit. The quick audit of the same branch (`run_audit.ps1 -Changed -Tests` and
+  `/security-review`) found nothing else.
+- **Severity:** Low (never reached a release or `main`; `SendPlan` already refuses a line with a
+  control character or a recipient over `kMaxRecipientLength`, so nothing wrong could be typed).
+  **Where:** `src/ChatShorts.cpp` (`ChatShorts::Build`), reading Chat Shorts' `macros.db`.
+- **Finding:** `Tree::FromJson` puts every message and whisper recipient from a file through
+  `ChatLine::ControlsToSpaces` and cuts recipients to `kMaxRecipientLength` (SEC-035). The new
+  import only repaired UTF-8, so a crafted `macros.db` could bring lines that are refused at
+  every send and a recipient of any length into `macros.json`.
+- **Decision (2026-11-28):** fix it on the same branch.
+- **Status:** Fixed on `feature/blish-import` before its first commit: both fields are cleaned,
+  the recipient is cut with a warning, tested in `tests/ChatShortsTests.cpp`. The PR is named
+  here once it's open.
+
 ## Scan log
 
 Every claude-security scan, for planning the next one ([security-audit.md](security-audit.md),
@@ -648,6 +666,10 @@ With the D scan, every area (A-D) has a whole-repository scan for the first rele
 `be4c6e8`, B at `cd2868b`, C at `cac1442`, D at `0a13ef7`. Their findings (SEC-034, SEC-035,
 SEC-036) are fixed. The only later changes to A-C's files are those fixes: `7389e5d` (SEC-034,
 A), `7f3167e` (SEC-035, A and B) and `134714d` (SEC-036, B and C).
+
+Since then `feature/blish-import` added a new untrusted input to area A (Chat Shorts'
+`macros.db`: `src/LiteDb.*`, `src/ChatShorts.*`, `Exchange::FromChatShorts`), so the first
+release also needs a changes-only scan of area A from `0a13ef7`.
 
 ## Tuning decisions (checks turned off)
 

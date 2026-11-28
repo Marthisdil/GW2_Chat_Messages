@@ -221,6 +221,12 @@ to the todo list", add it there (don't start building it). Move agreed items int
   `tests/ExchangeTests.cpp`. Exports go to `<addon>\exports\`; the Import window lists
   `<addon>\imports\`. "A whole library" (`FromLibraryFile`, `WrapInFolder`) imports someone's
   `macros.json` into one new top-level folder.
+- `src/LiteDb.*`: a read-only LiteDB 5 reader (pages, slots, block chains, BSON as JSON), for
+  Blish HUD Chat Shorts' `macros.db`; an untrusted input with size caps. `src/ChatShorts.*`: its
+  macros as ours (`Build`: channels, filters, hotkeys, `{blish}` -> `{nexus}`, A-Z), read by
+  `Exchange::FromChatShorts` into one "Imported" folder (`docs/design.md`, "Import / export").
+  No Nexus or ImGui dependency. Tested by `tests/LiteDbTests.cpp` and `tests/ChatShortsTests.cpp`
+  (sample `tests/samples/chatshorts_macros.db`: a real file with its text replaced by filler).
 - `src/LinkSync.*`: link files (a macro kept in step with a `.txt` file both ways): path rules
   and the sync decision. No Nexus or ImGui dependency. Tested by `tests/LinkSyncTests.cpp`. The
   UI (`Ui.cpp`) polls once a second and does the reads and writes.
@@ -333,7 +339,7 @@ to the todo list", add it there (don't start building it). Move agreed items int
   first within a tier; letters and check ids never change (a new session takes the next letter,
   a new check the next number in its session), and the Progress table and report template
   follow the same order. Screenshots are grouped by area and setup (one sitting per group), in
-  the order to take them; the `#` is a fixed id (next: 47).
+  the order to take them; the `#` is a fixed id (next: 48).
 - **Done sections (owner, 2026-11-25):** both lists show only what's still to do at the top.
   An in-game check that passes (or fails, is fixed and passes its re-check) moves, text and
   Progress row, to "Done (passed checks)" at the bottom of `docs/in-game-tests.md`. A captured

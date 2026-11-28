@@ -43,7 +43,8 @@ chat for you, from a hotkey, a menu or a button.
 - **Import and export:** share or back up the whole library, a folder or one macro, as `.json`
   or `.txt` files or through the clipboard. Imports show a preview first (new, merged, renamed,
   replaced), and the last import can be undone. A friend's whole library (their `macros.json`)
-  can be imported into a folder of its own.
+  can be imported into a folder of its own, and so can your macros from Blish HUD's Chat Shorts
+  module.
 - **Advanced options:** extras most players never need stay hidden behind one checkbox, so the
   addon stays simple: **text file links** (keep a macro in step with a `.txt` file, both ways),
   hotkey cooldowns, the Raw text tab, importing a whole library, keeping hotkeys on import and

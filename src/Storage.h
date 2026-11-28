@@ -38,6 +38,8 @@ namespace Storage
     std::filesystem::path LocalizationDir(); // <addon>\localization (language files), the same
     std::filesystem::path BackupsDir(); // <addon>\backups, the same
     std::filesystem::path PerfDir();    // <addon>\perf (the frame recorder's files), the same
+    // The user's Documents folder (where Blish HUD keeps its settings), or empty. Only on a click.
+    std::filesystem::path DocumentsDir();
 
     // A path in aDir for aFileName that doesn't exist yet: "name.json", else "name (2).json"...
     std::filesystem::path FreeFile(const std::filesystem::path& aDir, const std::string& aFileName);

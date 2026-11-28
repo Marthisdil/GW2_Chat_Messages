@@ -55,6 +55,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   bolt (it was a scroll), so it reads as "chat, fast" even at small sizes.
 
 ### Added
+- **Import from Blish HUD:** the Import window's **From Blish HUD** brings over the macros you
+  made in Blish HUD's Chat Shorts module. **Load from Blish HUD** reads them from Blish HUD's
+  folder (or pick a copy of its `macros.db` in the imports folder). They go into a new
+  **Imported** folder, sorted A to Z, with their lines, channels, whisper names, squad
+  broadcasts and where they're active; `{blish}` becomes `{nexus}`. Hotkeys come only with
+  **Keep hotkeys**; voice commands and text file links aren't taken. Close Blish HUD first.
 - **Releases are scanned on VirusTotal:** each release's page on GitHub shows the DLL's SHA-256
   and links to its VirusTotal report, so you can check the file you download.
 - **A welcome for new players:** the first time the addon starts (no library yet), the library
