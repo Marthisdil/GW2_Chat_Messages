@@ -11,6 +11,7 @@
 
 #include <windows.h>
 #include <shellapi.h>
+#include <shlobj.h>
 
 #include <nlohmann/json.hpp>
 
@@ -175,6 +176,15 @@ fs::path Storage::ImportsDir() { return SubDir("imports"); }
 fs::path Storage::LocalizationDir() { return SubDir("localization"); }
 fs::path Storage::BackupsDir() { return SubDir("backups"); }
 fs::path Storage::PerfDir() { return SubDir("perf"); }
+
+fs::path Storage::DocumentsDir()
+{
+    PWSTR path = nullptr;
+    fs::path out;
+    if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Documents, KF_FLAG_DEFAULT, nullptr, &path)) && path) out = fs::path(path);
+    CoTaskMemFree(path);
+    return out;
+}
 
 bool Storage::AppendText(const fs::path& aFile, const std::string& aText, bool aStart)
 {

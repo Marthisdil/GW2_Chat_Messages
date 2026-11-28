@@ -16,6 +16,9 @@ priority order too.
 Work through `docs/in-game-tests.md` (A1 passed, A2 mostly; the rest is still to do). Session B,
 whether the game takes the addon's keys and text, matters most: everything else depends on it.
 
+The Blish HUD import (Chat Shorts' macros.db) was built on 2026-11-28 ("Import / export" in
+`docs/design.md`).
+
 ### Cleanup PR for `Ui.cpp` after the in-game testing (added 2026-11-24)
 
 **Reminder (owner):** once every session in `docs/in-game-tests.md` has been run and passed,
@@ -25,30 +28,6 @@ stays the same (texts, popup IDs, JSON keys, the `Action` queue), the input path
 then the build, the tests, `/code-review`, and the in-game checks of every screen it touched,
 named in the PR. Not before the in-game testing, so a break can't be mixed up with a feature
 bug.
-
-### Import macros from Blish HUD's chat macro module (added 2026-11-24, moved from section 5 on 2026-11-26)
-
-Could the Import window read the macros someone made in Blish HUD's chat macro module ("chat
-shorts"; this addon is modelled on agaertner's `bhm-chat-macros`, see `docs/design.md`), so a
-player moving from Blish HUD to Nexus doesn't have to type them all again?
-
-- Points to settle:
-  - Which module exactly ("chat_shorts" may be `bhm-chat-macros` or another one), and where and
-    how it keeps its macros: the file, its folder under Blish HUD's settings, and its format (a
-    database file, JSON...). Read its source before deciding anything; a database format may
-    need a reader we don't have, and the file is untrusted input like any import
-    (`docs/security-review.md`).
-  - How its data maps onto ours: lines and channels (including squad broadcast and whispers),
-    its placeholders (`{blish}` is our `{nexus}`; anything we don't have is marked in the
-    preview, like `REMOVED PLACEHOLDER`), game mode and map filters, hotkeys (off unless **Keep
-    hotkeys**, as for every import), and its folders or lists, if any.
-  - Where it appears: a new source in the Import window ("From Blish HUD"), going through the
-    usual preview, so nothing changes until **Import selected**; whether the addon looks for the
-    file in Blish HUD's usual folder or the user copies it into `imports\`.
-  - Whether its export or share format (if it has one) is easier to read than its saved file.
-
-**Advanced option?** No (2026-11-26): players moving from Blish HUD are new users, who start
-with the box off.
 
 ## 2. Quick wins
 

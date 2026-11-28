@@ -33,6 +33,7 @@
 #include "Backups.h"
 #include "BuildStamp.h"
 #include "ChatLine.h"
+#include "ChatShorts.h"
 #include "Cooldown.h"
 #include "EditorLayout.h"
 #include "ErrorReport.h"
@@ -3364,10 +3365,18 @@ namespace
     std::string                        s_ImportPath;
     std::vector<std::filesystem::path> s_ImportList;
     bool                               s_ImportListStale = true;
-    // "A whole library" (docs/design.md, "Import / export"): someone's macros.json, put into one
-    // new top-level folder (the package's only top-level node), named s_LibraryName.
-    bool                               s_ImportLibrary = false;
+    // What step 1 reads (docs/design.md, "Import / export"): macros, "A whole library" (someone's
+    // macros.json) or "From Blish HUD" (Chat Shorts' macros.db). The last two go into one new
+    // top-level folder (the package's only top-level node), named s_LibraryName.
+    enum class EImportMode : uint8_t { Macros, Library, Blish };
+    EImportMode                        s_ImportMode = EImportMode::Macros;
     std::string                        s_LibraryName;
+
+    // The new folder's name when the user empties the name box.
+    const char* WrapFallback()
+    {
+        return s_ImportMode == EImportMode::Blish ? Exchange::ChatShortsFolderName() : Exchange::LibraryFolderFallback();
+    }
 
     std::optional<nlohmann::json> s_UndoImport; // the library before the last import
     std::string                   s_UndoText;
@@ -3386,34 +3395,39 @@ namespace
             s_ImportPkg.reset();
             return;
         }
-        if (s_ImportLibrary)
+        if (s_ImportMode == EImportMode::Library)
         {
             s_LibraryName = aPasted ? std::string(Exchange::LibraryFolderFallback()) : Exchange::LibraryFolderName(aPkg.Source);
+            Exchange::WrapInFolder(aPkg, s_LibraryName);
+        }
+        else if (s_ImportMode == EImportMode::Blish)
+        {
+            s_LibraryName = Exchange::ChatShortsFolderName();
             Exchange::WrapInFolder(aPkg, s_LibraryName);
         }
         s_ImportPkg = std::make_unique<Exchange::Package>(std::move(aPkg));
     }
 
-    // Switches between importing macros and importing a whole library. Each starts with its own
-    // defaults: hotkeys are off for both (see LoadImport), and in a library a taken folder name is
-    // renamed, never merged.
-    void SetImportLibrary(bool aOn)
+    // Switches what step 1 reads. Each starts with its own defaults: hotkeys are off (see
+    // LoadImport), and where everything goes into a new folder, a taken folder name is renamed,
+    // never merged.
+    void SetImportMode(EImportMode aMode)
     {
-        if (aOn == s_ImportLibrary) return;
-        s_ImportLibrary = aOn;
+        if (aMode == s_ImportMode) return;
+        s_ImportMode = aMode;
         s_ImportPkg.reset();
         s_ImportOpt = Exchange::Options{};
-        if (aOn)
+        if (aMode != EImportMode::Macros)
         {
             s_ImportOpt.FolderConflict = Exchange::EChoice::Rename;
         }
         s_ImportListStale = true;
     }
 
-    // The new folder a library goes into (the package's only top-level node).
+    // The new folder a library or Blish HUD's macros go into (the package's only top-level node).
     Node* LibraryFolder()
     {
-        if (!s_ImportLibrary || !s_ImportPkg) return nullptr;
+        if (s_ImportMode == EImportMode::Macros || !s_ImportPkg) return nullptr;
         auto& top = s_ImportPkg->Items.Root().Children;
         return top.size() == 1 && top[0]->IsFolder() ? top[0].get() : nullptr;
     }
@@ -3431,8 +3445,13 @@ namespace
             std::string ext = PathText::Utf8(it->path().extension());
             for (char& c : ext) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
             const bool dir = it->is_directory(ec2);
-            const bool fits = s_ImportLibrary ? !dir && Exchange::IsLibraryFileName(it->path())
-                                              : dir || ext == ".json" || ext == ".txt";
+            bool fits = false;
+            switch (s_ImportMode)
+            {
+            case EImportMode::Macros:  fits = dir || ext == ".json" || ext == ".txt"; break;
+            case EImportMode::Library: fits = !dir && Exchange::IsLibraryFileName(it->path()); break;
+            case EImportMode::Blish:   fits = !dir && ChatShorts::IsDbFileName(it->path()); break;
+            }
             if (fits) s_ImportList.push_back(it->path());
             if (s_ImportList.size() >= 200) break;
         }
@@ -3575,25 +3594,75 @@ namespace
         }
     }
 
+    // Reads a package for the current mode: a file or folder from the list or the path box.
+    Exchange::Package ReadImport(const std::filesystem::path& aPath)
+    {
+        switch (s_ImportMode)
+        {
+        case EImportMode::Library: return Exchange::FromLibraryFile(aPath);
+        case EImportMode::Blish:   return Exchange::FromChatShorts(aPath);
+        case EImportMode::Macros:  break;
+        }
+        return Exchange::FromPath(aPath);
+    }
+
+    // "Load from Blish HUD": Chat Shorts' macros.db where Blish HUD keeps it (a click, so the
+    // file is read on the render thread like every other import source).
+    void LoadFromBlishHud()
+    {
+        const std::filesystem::path file = ChatShorts::DefaultFile(Storage::DocumentsDir());
+        std::error_code ec;
+        if (file.empty() || !std::filesystem::is_regular_file(file, ec))
+        {
+            ShowError(T("Clicked Load from Blish HUD in the Import window"),
+                      Fmt(T("There's no Chat Shorts file at \"%s\". If Blish HUD keeps its settings somewhere else, copy "
+                            "chat_shorts\\macros.db from there into the imports folder, or type its full path below."),
+                          PathText::Utf8(file).c_str()));
+            return;
+        }
+        LoadImport(Exchange::FromChatShorts(file));
+    }
+
     void DrawImportSource()
     {
         ImGui::TextUnformatted(T("1. Choose what to import"));
-        // Importing a whole library is an advanced option: while they're off, only macros.
-        if (!s_AdvancedOn) SetImportLibrary(false);
-        else
+        // Importing a whole library is an advanced option: while they're off, it isn't offered.
+        if (!s_AdvancedOn && s_ImportMode == EImportMode::Library) SetImportMode(EImportMode::Macros);
+        if (ImGui::RadioButton(T("Macros"), s_ImportMode == EImportMode::Macros)) SetImportMode(EImportMode::Macros);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip(T("A .json export, a .txt file (one macro), or a folder of .txt files."));
+        ImGui::SameLine();
+        if (ImGui::RadioButton(T("From Blish HUD"), s_ImportMode == EImportMode::Blish)) SetImportMode(EImportMode::Blish);
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip(T("The macros you made in Blish HUD's Chat Shorts module.\n"
+                              "They go into a new folder of their own, so they never mix with your folders."));
+        if (s_AdvancedOn)
         {
-            if (ImGui::RadioButton(T("Macros"), !s_ImportLibrary)) SetImportLibrary(false);
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip(T("A .json export, a .txt file (one macro), or a folder of .txt files."));
             ImGui::SameLine();
-            if (ImGui::RadioButton(T("A whole library"), s_ImportLibrary)) SetImportLibrary(true);
+            if (ImGui::RadioButton(T("A whole library"), s_ImportMode == EImportMode::Library)) SetImportMode(EImportMode::Library);
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip(T("Someone else's macros.json (or macros.json.bak), as they sent it to you.\n"
                                   "It goes into a new folder of its own, so it never mixes with your folders."));
         }
-        if (s_ImportLibrary)
+        switch (s_ImportMode)
+        {
+        case EImportMode::Library:
             ImGui::TextDisabled(T("Someone's macros.json or macros.json.bak. Rename it (e.g. Alex.json) so it's easy to tell apart. "
                                 "It goes into a new folder at the top level. Their trash bin and text file links aren't taken."));
-        else ImGui::TextDisabled(T("A .json export, a .txt file (one macro), or a folder of .txt files."));
+            break;
+        case EImportMode::Blish:
+            ImGui::TextDisabled(T("Chat Shorts keeps your macros in macros.db, in Blish HUD's chat_shorts folder. Close Blish HUD "
+                                "first, so it has saved everything. They go into a new folder at the top level, A to Z; voice "
+                                "commands and text file links aren't taken."));
+            if (ImGui::Button(T("Load from Blish HUD"))) LoadFromBlishHud();
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("%s", T("Reads Documents\\Guild Wars 2\\addons\\blishhud\\chat_shorts\\macros.db.\n"
+                                          "Nothing changes until you click Import selected."));
+            ImGui::TextDisabled(T("Or pick a copy of macros.db in the imports folder:"));
+            break;
+        case EImportMode::Macros:
+            ImGui::TextDisabled(T("A .json export, a .txt file (one macro), or a folder of .txt files."));
+            break;
+        }
         if (s_ImportListStale) RefreshImportList();
 
         ImGui::BeginChild("##imports", ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 5.0f), true,
@@ -3606,7 +3675,7 @@ namespace
             std::error_code ec;
             const bool dir = std::filesystem::is_directory(p, ec);
             const std::string label = PathText::Utf8(p.filename()) + (dir ? "\\" : "");
-            if (ImGui::Selectable(label.c_str())) LoadImport(s_ImportLibrary ? Exchange::FromLibraryFile(p) : Exchange::FromPath(p));
+            if (ImGui::Selectable(label.c_str())) LoadImport(ReadImport(p));
         }
         ImGui::PopTextWrapPos();
         ImGui::EndChild();
@@ -3614,29 +3683,36 @@ namespace
         if (ImGui::SmallButton(T("Open imports folder"))) Storage::OpenFolder(Storage::ImportsDir());
         row.Next(UiFont::ButtonWidth(T("Refresh")));
         if (ImGui::SmallButton(T("Refresh"))) s_ImportListStale = true;
-        row.Next(UiFont::ButtonWidth(T("Paste from clipboard")));
-        if (ImGui::SmallButton(T("Paste from clipboard")))
+        // A database isn't text: nothing to paste in Blish HUD mode.
+        if (s_ImportMode != EImportMode::Blish)
         {
-            const char* text = ImGui::GetClipboardText();
-            if (!text || !*text) ShowError(T("Clicked Paste from clipboard in the Import window"), T("The clipboard has no text."));
-            else
+            row.Next(UiFont::ButtonWidth(T("Paste from clipboard")));
+            if (ImGui::SmallButton(T("Paste from clipboard")))
             {
-                Exchange::Package pkg = s_ImportLibrary ? Exchange::FromJsonText(text) : Exchange::FromText(T("Pasted macro"), text);
-                pkg.Source = T("Pasted text");
-                LoadImport(std::move(pkg), true);
+                const char* text = ImGui::GetClipboardText();
+                if (!text || !*text) ShowError(T("Clicked Paste from clipboard in the Import window"), T("The clipboard has no text."));
+                else
+                {
+                    Exchange::Package pkg = s_ImportMode == EImportMode::Library ? Exchange::FromJsonText(text)
+                                                                                 : Exchange::FromText(T("Pasted macro"), text);
+                    pkg.Source = T("Pasted text");
+                    LoadImport(std::move(pkg), true);
+                }
             }
         }
 
+        const char* pathHint = T("Or a full path to a file or folder");
+        if (s_ImportMode == EImportMode::Library) pathHint = T("Or a full path to the file");
+        else if (s_ImportMode == EImportMode::Blish) pathHint = T("Or a full path to macros.db or its chat_shorts folder");
         ImGui::SetNextItemWidth(-(UiFont::ButtonWidth(T("Load")) + ImGui::GetStyle().ItemSpacing.x));
-        const bool enter = InputString("##path", s_ImportLibrary ? T("Or a full path to the file") : T("Or a full path to a file or folder"),
-                                       s_ImportPath, ImGuiInputTextFlags_EnterReturnsTrue);
+        const bool enter = InputString("##path", pathHint, s_ImportPath, ImGuiInputTextFlags_EnterReturnsTrue);
         ImGui::SameLine();
         if ((ImGui::Button(T("Load")) || enter) && !s_ImportPath.empty())
         {
             std::string path = s_ImportPath;
             if (path.size() >= 2 && path.front() == '"' && path.back() == '"') path = path.substr(1, path.size() - 2); // "Copy as path"
             const std::filesystem::path p = PathText::FromUtf8(path);
-            LoadImport(s_ImportLibrary ? Exchange::FromLibraryFile(p) : Exchange::FromPath(p));
+            LoadImport(ReadImport(p));
         }
     }
 
@@ -3646,7 +3722,7 @@ namespace
         s_ImportPkg.reset();
         s_ImportOpt.PerItem.clear();
         s_ImportOpt.Unselected.clear();
-        SetImportLibrary(false); // the window opens on "Macros" next time
+        SetImportMode(EImportMode::Macros); // the window opens on "Macros" next time
         s_ImportListStale = true;
     }
 
@@ -3819,10 +3895,10 @@ namespace
             // A library always goes into its own new folder at the top level.
             ImGui::Text(T("2. Name the new folder it goes into (from %s)"), s_ImportPkg->Source.c_str());
             ImGui::SetNextItemWidth(-1.0f);
-            if (InputString("##libname", Exchange::LibraryFolderFallback(), s_LibraryName))
+            if (InputString("##libname", WrapFallback(), s_LibraryName))
             {
                 const std::string clean = Tree::CleanName(s_LibraryName);
-                folder->Name = clean.empty() ? std::string(Exchange::LibraryFolderFallback()) : clean;
+                folder->Name = clean.empty() ? std::string(WrapFallback()) : clean;
             }
             ImGui::TextDisabled(T("It's added at the top level of your library. If that name is taken, it gets \" (2)\"."));
             target = &s_Tree.Root();
@@ -3865,8 +3941,13 @@ namespace
         {
             ImGui::Checkbox(T("Keep hotkeys"), &s_ImportOpt.KeepHotkeys);
             if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("%s", s_ImportLibrary ? T("Off by default for someone else's library, so their keys don't clash with yours.")
-                                                        : T("Off at first, so macros from someone else come without their hotkeys. Tick it for your own exports; the preview then shows each macro's hotkey."));
+            {
+                const char* tip = T("Off at first, so macros from someone else come without their hotkeys. Tick it for your own exports; the preview then shows each macro's hotkey.");
+                if (s_ImportMode == EImportMode::Library) tip = T("Off by default for someone else's library, so their keys don't clash with yours.");
+                else if (s_ImportMode == EImportMode::Blish)
+                    tip = T("Off at first. Tick it to bring the hotkeys you set in Chat Shorts; the preview then shows each one.");
+                ImGui::SetTooltip("%s", tip);
+            }
         }
         for (const std::string& w : s_ImportPkg->Warnings) ImGui::TextColored(kWarnColor, "%s", w.c_str());
 

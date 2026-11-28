@@ -60,9 +60,11 @@ folder...**. The Import window has three steps.
 
 ### 1. Choose what to import
 
-At the top, choose **Macros** (the usual) or **A whole library** (someone else's `macros.json`,
-see [Importing a whole library](#importing-a-whole-library) below). **A whole library** is an
-[advanced option](Advanced-Options): without it, the Import window imports macros only.
+At the top, choose **Macros** (the usual), **From Blish HUD** (your Chat Shorts macros, see
+[Importing from Blish HUD](#importing-from-blish-hud) below) or **A whole library** (someone else's
+`macros.json`, see [Importing a whole library](#importing-a-whole-library) below). **A whole
+library** is an [advanced option](Advanced-Options): without it, the Import window offers
+**Macros** and **From Blish HUD** only.
 
 With **Macros**, you can import:
 
@@ -145,6 +147,37 @@ click **Import selected**.
 
 <!-- screenshot: import-window.png (docs/screenshots.md) -->
 > 📷 *Screenshot to come: the Import window with its preview.*
+
+## Importing from Blish HUD
+
+If you used Blish HUD's **Chat Shorts** module, you can bring its macros over instead of typing
+them again.
+
+1. **Close Blish HUD** first, so it has saved everything.
+2. Open **Import...**, choose **From Blish HUD** and click **Load from Blish HUD**. It reads
+   `Documents\Guild Wars 2\addons\blishhud\chat_shorts\macros.db`, where Blish HUD keeps them.
+   If your Blish HUD keeps its settings somewhere else, copy `macros.db` from its `chat_shorts`
+   folder into your `imports\` folder and click it in the list, or type its full path.
+3. They go into **one new folder at the top level**, called **Imported** (change the name if you
+   like; if it's taken, the new one gets " (2)"), sorted A to Z. Chat Shorts has no folders, so
+   they're all in that one folder: move them into folders of your own afterwards.
+4. Check the preview and click **Import selected**.
+
+What comes over:
+
+| From Chat Shorts | Here |
+|---|---|
+| Title | The macro's name (a title used twice gets " (2)") |
+| Lines, channels, whisper names, squad broadcast | The same |
+| Game modes and maps | [Where it's active](Filters). A macro with maps is active on those maps in every mode, as in Chat Shorts. |
+| Hotkey | Only with **Keep hotkeys** ([advanced option](Advanced-Options)), as for every import |
+| `{blish}` | `{nexus}`. `{wp}`, `{poi}` and `{area}` aren't in this addon: they stay as typed, and the Import window warns about them. See [Placeholders](Placeholders). |
+| Voice commands, linked text files | Not taken (the Import window says how many) |
+
+Nothing changes in Blish HUD: the addon only reads the file.
+
+<!-- screenshot: import-blish.png (docs/screenshots.md) -->
+> 📷 *Screenshot to come: the Import window with your Blish HUD macros loaded.*
 
 ## Importing a whole library
 

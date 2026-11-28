@@ -28,6 +28,8 @@ void RunEditorLayoutTests();
 void RunWelcomeTests();
 void RunWorkQueueTests();
 void RunPerfTests();
+void RunLiteDbTests();
+void RunChatShortsTests();
 
 int main()
 {
@@ -57,6 +59,8 @@ int main()
     RunWelcomeTests();
     RunWorkQueueTests();
     RunPerfTests();
+    RunLiteDbTests();
+    RunChatShortsTests();
     std::printf("%d checks, %d failures\n", g_TestChecks, g_TestFailures);
     return g_TestFailures == 0 ? 0 : 1;
 }

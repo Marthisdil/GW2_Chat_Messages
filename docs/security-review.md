@@ -25,6 +25,13 @@ to scan, where untrusted data comes in, which bug classes matter here, and how p
    folders), names (`kMaxNameLength`), line counts (`kMaxLines`), and the size limits in
    `Exchange.h` (`kMaxJsonBytes`, `kMaxTextBytes`, `kMaxFolderFiles`, `kMaxImportItems`). Link
    file paths and the trash bin must never come in through an import.
+   - **Blish HUD's Chat Shorts `macros.db`** (since 2026-11-28): a binary LiteDB 5 file, read by
+     our own parser in `src/LiteDb.*` (pages, slot tables, block chains, BSON), then mapped by
+     `src/ChatShorts.*`. Check every offset and length against the page and the file, block
+     chains that loop or leave the collection, BSON lengths, nesting (`kMaxDepth`) and the caps
+     (`kMaxFileBytes`, `kMaxDocBytes`, `kMaxDocuments`); text from the file is repaired to UTF-8
+     and its link file is never taken. Only `Documents\...\chat_shorts\macros.db`, `imports\`
+     or a path the user types is read.
 2. **File paths:**
    - Link files (`src/LinkSync.*`): the user may type an absolute path (allowed), but no path may
      come from an imported file.
